@@ -1,0 +1,84 @@
+# Decision Log
+
+Use one entry per meaningful technical or product decision.
+
+## Template
+
+### YYYY-MM-DD: Decision Title
+
+- Status: proposed | accepted | superseded
+- Context: What forced the decision?
+- Decision: What was chosen?
+- Consequences: What does this enable or constrain?
+
+## Entries
+
+### 2026-03-10: Create project context scaffold
+
+- Status: accepted
+- Context: The repository is starting as a relatively large project with no existing structure.
+- Decision: Add a minimal context system for project brief, current status, decisions, work log, and open questions.
+- Consequences: Future work has a consistent place for project memory without imposing a heavy process yet.
+
+### 2026-03-10: Target Netlify-hosted Next.js architecture
+
+- Status: superseded
+- Context: The project needs to deploy on Netlify, use Next.js, support Google login, and start with a free-friendly database path.
+- Decision: Favor a Next.js architecture with operational data in a relational database and defer CMS usage unless a clear content-management need appears.
+- Consequences: This keeps the core product centered on application workflows instead of forcing CMS patterns onto scheduling and billing data.
+
+### 2026-03-10: Prefer per-school deployment and database for the first version
+
+- Status: superseded
+- Context: The long-term idea may include spinning up isolated instances for multiple music schools.
+- Decision: Start with one deployment and one database per school rather than building a shared multi-tenant app first.
+- Consequences: The first release stays simpler in auth, data isolation, branding, and support operations, while leaving room for later automation.
+
+### 2026-03-10: Use Square for payment processing integration
+
+- Status: accepted
+- Context: The app needs payment processing without building custom card handling from scratch.
+- Decision: Keep all checkout and invoice payment experiences in Square-hosted flows and only maintain lightweight associations inside the app.
+- Consequences: Payment handling stays simpler, PCI scope remains lower, and the app can focus on scheduling and business operations instead of payment UI.
+
+### 2026-03-10: Treat SMS as an optional but supported communication channel
+
+- Status: proposed
+- Context: The product may need lesson reminders, payment reminders, and rescheduling communication by text message.
+- Decision: Plan around a dedicated SMS provider instead of trying to rely on payment-platform messaging.
+- Consequences: Messaging stays decoupled from billing and can later expand into two-way communication if needed.
+
+### 2026-03-10: Model billables as configurable service types
+
+- Status: proposed
+- Context: The app must support lessons, rehearsals, group classes, and space rentals rather than one fixed appointment type.
+- Decision: Use a service-catalog model where scheduled events reference configurable service types with pricing and duration rules.
+- Consequences: The product can support multiple business offerings without rewriting the billing and scheduling model for each one.
+
+### 2026-08-04: Adopt the Agency Brain platform pattern
+
+- Status: accepted
+- Context: The local Agency Brain application provides a working reference for Next.js, Vercel, Supabase SSR authentication, tenant-scoped RLS, invitations, Google login, and Stripe billing.
+- Decision: Use the same platform shape for the music application, but create a fresh and smaller domain model rather than copying Agency Brain's business tables.
+- Consequences: Core stack choices are resolved and implementation can reuse proven patterns without inheriting unrelated product complexity.
+
+### 2026-08-04: Use true multi-tenancy with explicit school context
+
+- Status: accepted
+- Context: The product is intended to serve multiple schools without maintaining a deployment and database for every customer.
+- Decision: Use one application and Supabase database, `schools` and `school_members`, `school_id` on tenant-owned rows, RLS isolation, and an explicit selected-school context.
+- Consequences: Isolation and authorization require careful policy testing, but onboarding and operations scale much better than per-school deployments.
+
+### 2026-08-04: Separate SaaS billing from school billing
+
+- Status: accepted
+- Context: The software vendor may charge schools while schools separately collect lesson payments from families.
+- Decision: Use Stripe for school subscriptions to the software and Square-hosted flows for school-to-family invoices and payments.
+- Consequences: Stripe and Square identifiers, webhooks, records, and terminology must remain separate throughout the schema and interface.
+
+### 2026-08-04: Use Supabase Auth and direct Supabase data access
+
+- Status: accepted
+- Context: Agency Brain demonstrates a working Supabase SSR and Google OAuth pattern, making separate Auth.js and ORM layers unnecessary for v1.
+- Decision: Use Supabase Auth, Supabase server/browser/admin clients, SQL migrations, RLS, and generated TypeScript database types without an ORM initially.
+- Consequences: The architecture has fewer layers, while SQL migration and RLS quality become especially important.
