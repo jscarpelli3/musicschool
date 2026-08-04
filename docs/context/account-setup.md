@@ -31,6 +31,8 @@
 - Create an OAuth 2.0 Web Application client.
 - Add local, preview, and production callback URLs as they become available.
 - For v1, request basic identity scopes only. Do not request Gmail, Calendar, or Drive access unless a feature requires it.
+- Use `https://twhexxokrjwzsoxgzlme.supabase.co/auth/v1/callback` as the Google OAuth authorized redirect URI.
+- Enable Google under Supabase Authentication providers after creating the client, entering the client ID and client secret directly in Supabase.
 
 ### 5. Square
 

@@ -2,19 +2,19 @@
 
 ## Phase
 
-Foundation scaffolded and Supabase linked; authentication and domain design next
+Tenant foundation deployed; Google OAuth configuration next
 
 ## Active Focus
 
-Configure Google OAuth, then design the v1 multi-tenant music-school schema and authentication flow.
+Enable Google OAuth, exercise the owner onboarding flow, then design the people and customer-account domain.
 
 ## Next Steps
 
 1. Enable and configure Google OAuth in Google Cloud and Supabase Auth
-2. Define the v1 schema, relationships, indexes, and Row Level Security policies
-3. Define roles and permissions for owners, administrators, teachers, staff, guardians, and students
-4. Define availability, recurrence, cancellation, rescheduling, and timezone rules
-5. Implement Google login, school creation, selected-school context, and invitations
+2. Test Google login, profile creation, atomic school creation, owner membership, and protected dashboard access
+3. Add people, customer accounts, students, guardians, teachers, and their RLS policies
+4. Add the school macro calendar and teacher availability
+5. Add staff and portal invitations
 6. Build the private-lesson scheduling vertical slice
 7. Add Square customer/invoice associations, then Stripe SaaS subscriptions
 8. Add transactional email; defer SMS until its consent and compliance workflow is designed
@@ -27,6 +27,19 @@ Configure Google OAuth, then design the v1 multi-tenant music-school schema and 
 - Billing and scheduling rules are not yet specified
 - Service pricing and duration rules are not yet specified
 - Calendar, cancellation, and reminder rules are not yet specified
+
+## Completed Foundation
+
+- Next.js application and Supabase SSR clients
+- Linked Supabase project and generated database types
+- Profiles synchronized from Supabase Auth
+- Schools and active school memberships
+- Owner/admin/teacher/staff role vocabulary
+- Atomic `create_school` database function
+- Row-scoped membership and role helpers
+- RLS on profiles, schools, memberships, and audit records
+- Immutable-column grant restrictions
+- Google login UI, OAuth callback, sign-out, onboarding, school chooser, and protected dashboard routes
 
 ## Updated
 

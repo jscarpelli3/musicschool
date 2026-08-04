@@ -82,3 +82,31 @@ Use one entry per meaningful technical or product decision.
 - Context: Agency Brain demonstrates a working Supabase SSR and Google OAuth pattern, making separate Auth.js and ORM layers unnecessary for v1.
 - Decision: Use Supabase Auth, Supabase server/browser/admin clients, SQL migrations, RLS, and generated TypeScript database types without an ORM initially.
 - Consequences: The architecture has fewer layers, while SQL migration and RLS quality become especially important.
+
+### 2026-08-04: Model scheduling and family billing around monthly service periods
+
+- Status: accepted
+- Context: Teachers offer recurring windows by weekday, students need controlled self-service rescheduling, schools define cancellation rules, and lesson scheduling and collection operate monthly.
+- Decision: Separate recurring teacher availability, effective-dated lesson enrollments, monthly service periods, materialized scheduled events, and immutable event-change history. Aggregate billable items into monthly Square invoices.
+- Consequences: Reschedules and cancellations remain traceable, policy enforcement can be reproduced, and monthly invoices can explain their underlying lessons and adjustments.
+
+### 2026-08-04: Make cancellation policies school-specific and effective-dated
+
+- Status: accepted
+- Context: Schools may enforce different notice periods, reschedule limits, late-cancellation charges, no-show rules, and teacher-cancellation remedies.
+- Decision: Store structured, effective-dated scheduling policies and preserve the applicable policy result on each cancellation or reschedule.
+- Consequences: Policy changes do not alter historical records, and self-service actions can be authorized consistently on both the server and database paths.
+
+### 2026-08-04: Support fixed tuition and monthly usage billing
+
+- Status: accepted
+- Context: Some schools charge stable monthly tuition, while others invoice monthly from actual lesson or service occurrences. A school may also offer recurring lessons alongside irregular rentals or rehearsals.
+- Decision: Each school selects a default family billing mode of `fixed_monthly` or `monthly_usage`. Individual service agreements may override that default when a school uses both models.
+- Consequences: Monthly billing can serve both tuition and usage-driven businesses, while snapshotted terms prevent later configuration changes from rewriting historical charges.
+
+### 2026-08-04: Add a school-level macro calendar
+
+- Status: accepted
+- Context: Each school needs to organize terms, closures, holidays, performances, camps, registration windows, and other events that affect or inform lower-level scheduling.
+- Decision: Model named school calendar periods separately from dated calendar events. Give each event an explicit visibility and scheduling effect, and evaluate macro calendar restrictions before teacher availability when generating occurrences.
+- Consequences: School-wide schedule structure remains distinct from teacher hours and appointments. New closures surface conflicts for explicit resolution rather than silently changing existing lessons or billing.

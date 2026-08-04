@@ -93,9 +93,212 @@ This foundation intentionally follows the proven patterns in the local Agency Br
 
 ## Scheduling And Billing Model
 
+- Each school owns a macro calendar that defines its terms, closures, holidays, performances, registration windows, camps, and other school-level events.
 - A scheduled event should be the operational record for something that happens on the calendar.
 - A service type should define the default rules for that event.
 - Billing should be derived from the event plus the linked service type configuration, while still allowing explicit overrides when needed.
+- Teachers define recurring weekly availability windows in the school's timezone, with dated exceptions for time off and one-off availability.
+- Private-lesson commitments are represented by effective-dated enrollments that connect a student, teacher, service type, billing account, and preferred recurring slot.
+- Actual lesson occurrences are materialized as scheduled events in monthly schedule periods; recurring rules are never treated as completed appointments by themselves.
+- Student or guardian reschedules move an existing occurrence rather than creating an unrelated new lesson. Every change preserves its original time, actor, reason, and policy result.
+- Cancellations never delete an event. They record who canceled, when, why, whether the cancellation was timely, and the resulting billing disposition.
+- Teacher, student, and room conflicts must be prevented transactionally in Postgres rather than checked only in the interface.
+
+## School Macro Calendar
+
+The macro calendar sits above teacher availability and lesson occurrences:
+
+```text
+School calendar periods and events
+        ↓
+Teacher recurring availability and exceptions
+        ↓
+Enrollment or service recurrence
+        ↓
+Individual scheduled events
+```
+
+Macro calendar entries can be informational or operational. A recital may appear on calendars without blocking lessons, while a school closure prevents new bookings and affects occurrence generation.
+
+### `school_calendar_periods`
+
+Longer named ranges such as:
+
+- academic year
+- semester or term
+- summer session
+- registration period
+- scheduling period
+
+Suggested fields:
+
+- `school_id`
+- `name`
+- `period_type`
+- `starts_on`
+- `ends_on`
+- `parent_period_id` nullable
+- `status`
+
+### `school_calendar_events`
+
+School-level dated or timed entries:
+
+- `school_id`
+- `calendar_period_id` nullable
+- `event_type`: `closure`, `holiday`, `recital`, `performance`, `camp`, `workshop`, `registration`, `deadline`, or `other`
+- `title`
+- `description` nullable
+- `starts_at`
+- `ends_at`
+- `all_day`
+- `location_id` nullable; null can mean school-wide
+- `visibility`: `staff`, `school_community`, or `public`
+- `scheduling_effect`: `informational`, `block_new_bookings`, or `closed`
+- `created_by_profile_id`
+- timestamps
+
+Calendar events should not silently delete or rewrite existing lessons. When a new closure conflicts with materialized events, the application creates a conflict list for staff to resolve through cancellation, rescheduling, credits, or another explicit action. Future occurrence generation skips periods where the resolved macro event blocks scheduling.
+
+Billing consequences still come from the effective cancellation and service-agreement policies. A macro event describes what happened; it does not independently invent a financial adjustment.
+
+## Monthly Operating Cycle
+
+- Scheduling and family billing operate in monthly service periods, normally aligned to the school's local calendar month.
+- Each school controls when a future month opens for self-service scheduling and rescheduling.
+- A monthly period materializes the expected lesson occurrences from active enrollments and provides the boundary for reschedule limits and billing aggregation.
+- Occurrence generation evaluates school macro events before teacher availability, ensuring closures and term boundaries are respected.
+- Billing items are generated from the applicable monthly agreement and/or completed, canceled, or adjusted events according to school policy.
+- One Square invoice can aggregate multiple billing items for the same billing account and month.
+- Square remains the payment processor and invoice delivery system; this application remains the source of truth for lesson entitlement, scheduling changes, and why an amount is owed.
+
+## Family Billing Modes
+
+The product supports both monthly billing approaches:
+
+### Fixed monthly tuition
+
+- The customer owes an agreed monthly amount for an active enrollment or service agreement.
+- The amount is not recalculated merely because a calendar month contains a different number of lesson weekdays.
+- Cancellation, teacher absence, school closure, credits, and make-up rules determine whether an adjustment is created.
+
+### Monthly usage billing
+
+- The customer is invoiced monthly from actual billable occurrences and adjustments in the service period.
+- This is appropriate for irregular lessons, rehearsals, rentals, drop-ins, and other usage-driven services.
+
+Each school selects a default `family_billing_mode`: `fixed_monthly` or `monthly_usage`. An enrollment or service agreement may override the school default so a school can charge fixed tuition for private lessons while billing rentals or irregular services by occurrence.
+
+The resolved billing mode and price terms must be snapshotted for the applicable service period or billing items. Changing a school's default must not retroactively recalculate prior months.
+
+## Scheduling Entities
+
+### `teacher_availability_rules`
+
+- `school_id`
+- `teacher_id`
+- `weekday`
+- `local_start_time`
+- `local_end_time`
+- `effective_from`
+- `effective_until` nullable
+- `active`
+
+Rules describe recurring windows such as Mondays from 3:00 PM to 8:00 PM. They do not create lessons.
+
+### `teacher_availability_exceptions`
+
+- `school_id`
+- `teacher_id`
+- `starts_at`
+- `ends_at`
+- `exception_type`: `unavailable` or `available`
+- `reason` nullable
+
+Exceptions support vacations, closures, performances, and one-off added hours.
+
+### `lesson_enrollments`
+
+- `school_id`
+- `student_id`
+- `teacher_id`
+- `service_type_id`
+- `billing_account_id`
+- `preferred_weekday`
+- `preferred_local_start_time`
+- `starts_on`
+- `ends_on` nullable
+- `status`
+- `billing_mode` nullable; falls back to the school default
+- monthly tuition or per-occurrence pricing terms
+
+An enrollment expresses the ongoing lesson relationship. It does not replace individual scheduled events.
+
+### `service_periods`
+
+- `school_id`
+- `starts_on`
+- `ends_on`
+- `scheduling_opens_at`
+- `scheduling_closes_at` nullable
+- `billing_status`
+- unique `(school_id, starts_on, ends_on)`
+
+### `service_agreements`
+
+- `school_id`
+- `customer_account_id`
+- `student_id` nullable
+- `service_type_id`
+- `billing_mode` nullable; falls back to the school default
+- fixed monthly amount or per-occurrence rate
+- `starts_on`
+- `ends_on` nullable
+- `status`
+
+A lesson enrollment may reference a service agreement. Keeping commercial terms in the agreement prevents scheduling records from becoming the sole source of pricing configuration.
+
+### `scheduled_events`
+
+In addition to service, participant, location, and current-time fields, preserve:
+
+- `service_period_id`
+- `lesson_enrollment_id` nullable
+- `original_starts_at`
+- `original_ends_at`
+- `starts_at`
+- `ends_at`
+- `status`
+- pricing and policy snapshots needed for historical accuracy
+
+### `event_changes`
+
+- `school_id`
+- `scheduled_event_id`
+- `change_type`: `rescheduled`, `canceled`, `restored`, or `administrative`
+- previous and new start/end values
+- `changed_by_profile_id`
+- `actor_type`
+- `reason`
+- `policy_result`
+- `created_at`
+
+This is an immutable event history rather than a second source of current schedule state.
+
+## Cancellation And Rescheduling Policy
+
+- Policies are school-specific and effective-dated so changing a policy does not rewrite the meaning of historical cancellations.
+- Initial policy fields should include:
+- student cancellation cutoff
+- student reschedule cutoff
+- maximum self-service reschedules per monthly period
+- whether reschedules must stay with the assigned teacher
+- how far into the future a replacement lesson may move
+- late-cancellation billing disposition
+- no-show billing disposition
+- teacher-cancellation billing disposition
+- whether credits or make-up entitlements expire
+- Student and guardian permissions still come from their relationship records; satisfying the time policy alone does not grant access.
 
 ## Payments
 

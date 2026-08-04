@@ -5,10 +5,13 @@ Capture unresolved questions here so they do not get lost between sessions.
 ## Product
 
 - What are the first teacher-facing workflows?
-- What cancellation and rescheduling rules should the system enforce?
 - Can students schedule with any teacher, or only assigned teachers?
 - Which workflow follows private lessons: rehearsal, group class, or space rental?
 - Should pricing always be derived from duration, or can a service type override with flat pricing?
+- Are monthly service periods always calendar months, or can a school select another billing day?
+- How many self-service reschedules are allowed per student and monthly period?
+- Can a make-up lesson cross into a later monthly period, and when does that entitlement expire?
+- What billing result applies to timely cancellation, late cancellation, no-show, teacher cancellation, and school closure?
 
 ## Technical
 
