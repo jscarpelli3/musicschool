@@ -173,6 +173,7 @@ export type Database = {
       }
       lesson_events: {
         Row: {
+          cancellation_timing: string | null
           created_at: string
           created_by: string
           ends_at: string
@@ -180,6 +181,7 @@ export type Database = {
           notes: string | null
           place_id: string
           product_id: string
+          rescheduled_to_event_id: string | null
           school_id: string
           starts_at: string
           status: string
@@ -188,6 +190,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cancellation_timing?: string | null
           created_at?: string
           created_by: string
           ends_at: string
@@ -195,6 +198,7 @@ export type Database = {
           notes?: string | null
           place_id: string
           product_id: string
+          rescheduled_to_event_id?: string | null
           school_id: string
           starts_at: string
           status?: string
@@ -203,6 +207,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cancellation_timing?: string | null
           created_at?: string
           created_by?: string
           ends_at?: string
@@ -210,6 +215,7 @@ export type Database = {
           notes?: string | null
           place_id?: string
           product_id?: string
+          rescheduled_to_event_id?: string | null
           school_id?: string
           starts_at?: string
           status?: string
@@ -459,6 +465,9 @@ export type Database = {
       }
       schools: {
         Row: {
+          address_line_1: string | null
+          address_line_2: string | null
+          city: string | null
           created_at: string
           created_by: string
           currency: string
@@ -467,11 +476,17 @@ export type Database = {
           logo_path: string | null
           name: string
           primary_color: string | null
+          phone: string | null
+          postal_code: string | null
+          region: string | null
           slug: string
           timezone: string
           updated_at: string
         }
         Insert: {
+          address_line_1?: string | null
+          address_line_2?: string | null
+          city?: string | null
           created_at?: string
           created_by: string
           currency?: string
@@ -480,11 +495,17 @@ export type Database = {
           logo_path?: string | null
           name: string
           primary_color?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          region?: string | null
           slug: string
           timezone: string
           updated_at?: string
         }
         Update: {
+          address_line_1?: string | null
+          address_line_2?: string | null
+          city?: string | null
           created_at?: string
           created_by?: string
           currency?: string
@@ -493,6 +514,9 @@ export type Database = {
           logo_path?: string | null
           name?: string
           primary_color?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          region?: string | null
           slug?: string
           timezone?: string
           updated_at?: string
@@ -719,6 +743,41 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "teachers"
             referencedColumns: ["school_id", "person_id"]
+          },
+        ]
+      }
+      user_view_preferences: {
+        Row: {
+          created_at: string
+          profile_id: string
+          school_id: string
+          settings: Json
+          updated_at: string
+          view_key: string
+        }
+        Insert: {
+          created_at?: string
+          profile_id: string
+          school_id: string
+          settings?: Json
+          updated_at?: string
+          view_key: string
+        }
+        Update: {
+          created_at?: string
+          profile_id?: string
+          school_id?: string
+          settings?: Json
+          updated_at?: string
+          view_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_view_preferences_school_id_profile_id_fkey"
+            columns: ["school_id", "profile_id"]
+            isOneToOne: false
+            referencedRelation: "school_members"
+            referencedColumns: ["school_id", "profile_id"]
           },
         ]
       }

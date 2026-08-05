@@ -1,0 +1,67 @@
+.horizontal-scroll-frame {
+  position: relative;
+}
+
+.horizontal-scroll-rail,
+.horizontal-scroll-body {
+  overflow-x: scroll;
+  overscroll-behavior-inline: contain;
+  scrollbar-color: var(--ui-brand) var(--ui-surface);
+  scrollbar-width: auto;
+  scrollbar-gutter: stable;
+}
+
+.horizontal-scroll-rail {
+  height: 16px;
+  border-block: 1px solid var(--ui-line);
+  background: var(--ui-surface);
+}
+
+.horizontal-scroll-body {
+  -webkit-overflow-scrolling: touch;
+  border-bottom: 1px solid var(--ui-line);
+}
+
+.horizontal-scroll-rail::-webkit-scrollbar,
+.horizontal-scroll-body::-webkit-scrollbar {
+  height: 12px;
+}
+
+.horizontal-scroll-rail::-webkit-scrollbar-track,
+.horizontal-scroll-body::-webkit-scrollbar-track {
+  background: var(--ui-surface);
+}
+
+.horizontal-scroll-rail::-webkit-scrollbar-thumb,
+.horizontal-scroll-body::-webkit-scrollbar-thumb {
+  border: 3px solid var(--ui-surface);
+  background: var(--ui-brand);
+}
+
+.horizontal-scroll-frame::before,
+.horizontal-scroll-frame::after {
+  position: absolute;
+  z-index: 5;
+  top: 53px;
+  bottom: 12px;
+  width: 2px;
+  pointer-events: none;
+  content: "";
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.horizontal-scroll-frame::before {
+  left: 0;
+  background: var(--ui-brand);
+}
+
+.horizontal-scroll-frame::after {
+  right: 0;
+  background: var(--ui-brand);
+}
+
+.horizontal-scroll-frame[data-can-left="true"]::before,
+.horizontal-scroll-frame[data-can-right="true"]::after {
+  opacity: 0.85;
+}

@@ -20,6 +20,26 @@ The product should feel like a well-run independent music school: cultivated, hu
 12. Motion must explain a state change or preserve spatial context. No ambient motion.
 13. School branding may alter the accent color and logo, but not contrast, spacing, or basic interaction rules.
 14. Add a new visual token only when it expresses a repeated design decision. Do not turn every one-off measurement into configuration.
+15. Every feature must be intentionally designed for phone, tablet, and desktop. Responsive behavior is part of the feature definition, not cleanup after the desktop view ships.
+16. Hover may enhance an interaction but may never be the only way to discover information or perform an action. Touch and keyboard behavior must be explicit.
+17. When phone or tablet behavior differs materially from desktop, record the difference and tell the user before treating the design as complete.
+
+## Responsive View Rules
+
+- Phone baseline: verify narrow portrait layouts around 375px. Prefer single-purpose screens, stacked information, and touch targets that do not depend on precision pointing.
+- Tablet baseline: verify portrait and landscape layouts around 768–1024px. Do not assume a tablet has persistent hover, even when a trackpad might be present.
+- Desktop baseline: use added width for simultaneous context, comparison, and precise pointer interactions—not simply larger spacing.
+- Avoid accidental horizontal scrolling. A deliberately scrollable schedule or table must have a visible affordance and preserve essential controls outside the scrolling region.
+- Dense desktop calendars may become an agenda, single-teacher track, or summarized grid on smaller screens. Preserve the task and data, not necessarily the desktop geometry.
+- Sheets and dialogs become full-width or nearly full-screen on phones when needed. Closing, saving, and destructive actions must remain reachable without awkward scrolling.
+- Test long names, large text, keyboard focus, reduced motion, empty states, and populated states at all three size classes.
+
+### Planner-specific responsive decisions
+
+- Desktop: hover or focus expands teacher tracks; all teachers can be compared simultaneously.
+- Tablet: tapping an availability rail selects and expands it; tapping a lesson opens details. Hover quick views are optional enhancement only.
+- Phone: default to one selected teacher in day view. Week view should favor an agenda or horizontally paged days. Month view should show compact counts/capacity and open a day rather than squeeze full lesson details into seven narrow columns.
+- The current planner still uses desktop-first horizontal overflow for some narrow views. It must receive the phone/tablet adaptations above before being considered production-complete.
 
 ## Interaction Grammar
 

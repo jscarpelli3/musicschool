@@ -16,5 +16,10 @@
 8. Keep data transformations separate from rendering when they become substantial. Server pages should prepare clear view models rather than forcing generic UI components to understand database rows.
 9. Shared components must preserve keyboard use, visible focus, semantic markup, and reduced-motion behavior.
 10. Before adding a new component, check whether an existing primitive or feature component can be extended cleanly. Before extending one, confirm the new responsibility belongs there.
+11. Every component and feature must define behavior for phone, tablet, and desktop. Responsive acceptance is required alongside type, lint, and build checks.
+12. Pointer hover cannot carry required functionality. Reusable interactions must expose equivalent touch and keyboard paths.
+13. Flag material phone/tablet departures from desktop behavior to the user while designing the feature, not after implementation.
 
 These rules are part of the project architecture and apply to all new work and refactoring.
+- A production control may be optimistic only when failure is visible and recoverable. Business mutations must await a database/provider result, report failure without implying success, and use idempotency where retries could duplicate work.
+- Never derive payment truth from a browser redirect or client callback. Persist provider event IDs and update payment state from verified, idempotent webhooks.

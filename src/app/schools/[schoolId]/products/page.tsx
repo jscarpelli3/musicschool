@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { SetupHeader } from "@/components/school-setup/setup-header";
 import { createClient } from "@/lib/supabase/server";
 import { archiveProduct } from "./actions";
 import { ProductForm } from "./product-form";
@@ -16,15 +16,22 @@ function cadence(product: {
   return `${product.sessions_per_interval} ${sessions} every ${interval}`;
 }
 
+function fourWeekEstimate(product: { sessions_per_interval: number; interval_count: number; interval_unit: string; price_cents: number }) {
+  const sessions = product.interval_unit === "week"
+    ? product.sessions_per_interval * (4 / product.interval_count)
+    : product.sessions_per_interval / product.interval_count;
+  return Math.round(product.price_cents * sessions);
+}
+
 export default async function ProductsPage({
   params,
   searchParams,
 }: {
   params: Promise<{ schoolId: string }>;
-  searchParams: Promise<{ created?: string }>;
+  searchParams: Promise<{ created?: string; archived?: string; error?: string }>;
 }) {
   const { schoolId } = await params;
-  const { created } = await searchParams;
+  const { created, archived, error } = await searchParams;
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getClaims();
   const profileId = authData?.claims?.sub;
@@ -42,19 +49,12 @@ export default async function ProductsPage({
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-6 py-section">
-      <header className="grid gap-8 border-b border-line pb-10 md:grid-cols-[1fr_2fr]">
-        <div>
-          <Link href={`/schools/${schoolId}`} className="text-sm text-muted hover:text-ink">← {school.name}</Link>
-        </div>
-        <div>
-          <h1 className="font-display text-6xl font-normal tracking-[-0.04em]">Products.</h1>
-          <p className="mt-5 max-w-xl text-sm leading-6 text-muted">
-            Define the lessons and classes your school offers. Enrollment terms will snapshot these defaults later.
-          </p>
-        </div>
-      </header>
+      <SetupHeader schoolId={schoolId} schoolName={school.name} active="offerings" />
+      <p className="border-b border-line py-6 text-sm leading-6 text-muted">Define the lessons and classes your school offers. Enrollment terms will snapshot these defaults later.</p>
 
-      {created ? <p className="border-b border-line py-4 text-sm text-brand">Product created.</p> : null}
+      {created ? <p className="border-b border-line py-4 text-sm text-brand">Offering created.</p> : null}
+      {archived ? <p className="border-b border-line py-4 text-sm text-brand">Offering archived.</p> : null}
+      {error ? <p className="border-b border-line py-4 text-sm text-danger">The offering could not be archived. Nothing changed.</p> : null}
 
       <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
         <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">
@@ -70,8 +70,9 @@ export default async function ProductsPage({
                   {product.format === "private_lesson" ? "Private" : `Group · ${product.capacity} seats`} · {product.duration_minutes} min · {cadence(product)}
                 </p>
                 <p className="mt-1 text-sm text-muted">
-                  {money.format(product.price_cents / 100)} {product.pricing_model === "fixed_monthly" ? "monthly" : "per session"}
+                  {money.format(product.price_cents / 100)} per lesson
                 </p>
+                <p className="mt-1 text-xs text-muted">About {money.format(fourWeekEstimate(product) / 100)} across a four-week schedule; the calendar month total follows its actual lesson count.</p>
               </div>
               {canManage && product.status === "active" ? (
                 <form action={archiveProduct.bind(null, schoolId, product.id)}>
@@ -79,14 +80,14 @@ export default async function ProductsPage({
                 </form>
               ) : <span className="text-xs capitalize text-muted">{product.status}</span>}
             </article>
-          )) : <p className="text-sm text-muted">No products yet. Define the first offering below.</p>}
+          )) : <p className="text-sm text-muted">No lessons or classes yet. Define the first offering below.</p>}
         </div>
       </section>
 
       {canManage ? (
         <section className="grid md:grid-cols-[1fr_2fr]">
           <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">
-            <h2 className="font-display text-3xl font-normal">New product</h2>
+            <h2 className="font-display text-3xl font-normal">New lesson or class</h2>
           </div>
           <div className="py-10 md:pl-10"><ProductForm schoolId={schoolId} /></div>
         </section>

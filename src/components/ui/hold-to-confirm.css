@@ -1,0 +1,49 @@
+.hold-confirm {
+  --hold-duration: 1400ms;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--ui-brand);
+  background: transparent;
+  color: var(--ui-ink);
+  cursor: pointer;
+  touch-action: none;
+  transition: color 180ms ease, border-color 180ms ease;
+}
+
+.hold-confirm::before {
+  position: absolute;
+  inset: 0;
+  width: 0;
+  content: "";
+  background: var(--ui-brand);
+}
+
+.hold-confirm[data-state="holding"]::before {
+  width: 100%;
+  transition: width var(--hold-duration) linear;
+}
+
+.hold-confirm[data-state="holding"] {
+  color: var(--ui-canvas);
+}
+
+.hold-confirm[data-state="success"] {
+  border-color: var(--ui-brand);
+  background: var(--ui-brand);
+  color: var(--ui-canvas);
+}
+
+.hold-confirm:focus-visible {
+  outline: 1px solid var(--ui-brand-hover);
+  outline-offset: 4px;
+}
+
+.hold-confirm:disabled {
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hold-confirm[data-state="holding"]::before {
+    transition-duration: var(--hold-duration);
+  }
+}

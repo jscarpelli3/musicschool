@@ -18,6 +18,9 @@ Use this file for short chronological notes about meaningful work.
 - Replaced hard-coded lesson location categories with a reusable school-owned Places list, migrated existing occurrences, and added owner/admin/teacher place management.
 - Added lesson duration to the delayed calendar quick view alongside the time range and place.
 - Enforced non-overlapping teacher availability while preserving multiple same-day blocks, and added split Wednesday hours to the demo owner schedule.
+- Recorded flexible billing collection and approval modes, including owner-triggered off-session charges using authorized saved payment methods.
+- Added mandatory phone, tablet, and desktop design/code rules and documented the planner adaptations still required for touch and narrow screens.
+- Designed channel-independent monthly charge approvals with a single-use web link first and auditable unique-code SMS replies as a later two-way channel.
 
 ## 2026-08-04
 
@@ -62,3 +65,5 @@ Use this file for short chronological notes about meaningful work.
 - Added SMS as a supported future communication channel and recorded related architecture questions.
 - Clarified that Square should own all checkout and invoice management experiences, with this app only maintaining minimal external associations.
 - Expanded the domain model to include configurable billable service types such as lessons, rehearsals, group classes, and space rentals.
+- Built the first billing-consent vertical slice: hashed single-use approval URLs, exact monthly line items, separate approval/payment state, audit events, and a responsive hold-to-approve page. Live SMS, Stripe charging, and Stripe receipts remain provider-integration work.
+- Reorganized owner configuration into a shared five-tab School Setup shell, moved owner-facing language from products to lessons/classes/offerings, added School Info and Staff views, and modeled versioned policies plus planned-versus-actual lesson occurrences.

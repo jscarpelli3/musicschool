@@ -42,11 +42,16 @@ export async function archivePlace(schoolId: string, placeId: string) {
   const { data } = await supabase.auth.getClaims();
   if (!data?.claims?.sub) redirect(`/login?next=/schools/${schoolId}/places`);
 
-  await supabase
+  const { data: archived, error } = await supabase
     .from("lesson_places")
     .update({ status: "archived" })
     .eq("school_id", schoolId)
-    .eq("id", placeId);
+    .eq("id", placeId)
+    .select("id")
+    .maybeSingle();
+
+  if (error || !archived) redirect(`/schools/${schoolId}/places?error=archive`);
 
   revalidatePath(`/schools/${schoolId}/places`);
+  redirect(`/schools/${schoolId}/places?archived=1`);
 }

@@ -85,6 +85,8 @@ Twilio pricing currently starts at:
 
 For a small school, SMS cost is likely low in absolute dollars, but it adds compliance setup and recurring per-message charges.
 
+For monthly charge approvals, one outbound request plus one inbound reply currently has a base Twilio message cost of roughly 1.66 cents per family before carrier fees, number rental, registration, taxes, and any confirmation reply. At 50 families, the base two-message traffic is under $1 per monthly approval cycle. Compliance setup and reliable webhook handling are more material than message volume at this scale.
+
 ## Stripe payment costs
 
 Stripe payment processing is expected to be the largest usage-based cost for each school.

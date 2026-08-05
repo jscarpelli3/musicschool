@@ -1,20 +1,18 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { OwnerPlanner } from "@/components/planner/owner-planner";
+import { StudentRosterTable, type LessonOutcome, type RosterViewSettings, type StudentRosterRow } from "@/components/students/student-roster-table";
 import { createClient } from "@/lib/supabase/server";
-import { uploadAvatar, uploadSchoolLogo } from "./media-actions";
+import { saveStudentRosterView } from "./dashboard-actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function SchoolDashboard({
   params,
-  searchParams,
 }: {
   params: Promise<{ schoolId: string }>;
-  searchParams: Promise<{ media?: string }>;
 }) {
   const { schoolId } = await params;
-  const { media } = await searchParams;
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getClaims();
   const profileId = authData?.claims?.sub;
@@ -42,18 +40,7 @@ export default async function SchoolDashboard({
 
   if (!school || !membership) notFound();
 
-  const [
-    { data: teacherRows },
-    { data: studentRows },
-    { data: peopleRows },
-    { data: availabilityRows },
-    { data: lessonRows },
-    { data: productRows },
-    { data: contactRows },
-    { data: billingLinkRows },
-    { data: billingAccountRows },
-    { data: placeRows },
-  ] = await Promise.all([
+  const dashboardQueries = await Promise.all([
     supabase.from("teachers").select("person_id").eq("school_id", schoolId),
     supabase.from("students").select("person_id").eq("school_id", schoolId),
     supabase.from("people").select("id, first_name, last_name, preferred_name, profile_id, email, phone").eq("school_id", schoolId),
@@ -63,10 +50,10 @@ export default async function SchoolDashboard({
       .eq("school_id", schoolId),
     supabase
       .from("lesson_events")
-      .select("id, product_id, teacher_id, student_id, starts_at, ends_at, status, notes, place_id")
+      .select("id, product_id, teacher_id, student_id, starts_at, ends_at, status, cancellation_timing, notes, place_id")
       .eq("school_id", schoolId)
       .order("starts_at"),
-    supabase.from("service_products").select("id, name").eq("school_id", schoolId),
+    supabase.from("service_products").select("id, name, sessions_per_interval, interval_count, interval_unit").eq("school_id", schoolId),
     supabase
       .from("student_contacts")
       .select("student_id, contact_person_id, relationship, is_primary, is_billing_contact")
@@ -80,7 +67,25 @@ export default async function SchoolDashboard({
       .select("id, name, billing_contact_person_id")
       .eq("school_id", schoolId),
     supabase.from("lesson_places").select("id, name, details").eq("school_id", schoolId),
+    supabase.from("user_view_preferences").select("settings").eq("school_id", schoolId).eq("profile_id", profileId).eq("view_key", "student_roster").maybeSingle(),
   ]);
+
+  const failedDashboardQuery = dashboardQueries.find((result) => result.error);
+  if (failedDashboardQuery?.error) throw new Error(`The dashboard could not load: ${failedDashboardQuery.error.message}`);
+
+  const [
+    { data: teacherRows },
+    { data: studentRows },
+    { data: peopleRows },
+    { data: availabilityRows },
+    { data: lessonRows },
+    { data: productRows },
+    { data: contactRows },
+    { data: billingLinkRows },
+    { data: billingAccountRows },
+    { data: placeRows },
+    { data: rosterPreference },
+  ] = dashboardQueries;
 
   const people = new Map((peopleRows ?? []).map((person) => [person.id, person]));
   const teachers = (teacherRows ?? []).flatMap(({ person_id }) => {
@@ -98,6 +103,7 @@ export default async function SchoolDashboard({
     return person ? [[person.id, `${person.preferred_name || person.first_name} ${person.last_name}`]] : [];
   }));
   const productNames = Object.fromEntries((productRows ?? []).map((product) => [product.id, product.name]));
+  const products = new Map((productRows ?? []).map((product) => [product.id, product]));
   const placeDetails = Object.fromEntries((placeRows ?? []).map((place) => [place.id, { name: place.name, details: place.details }]));
   const billingAccounts = new Map((billingAccountRows ?? []).map((account) => [account.id, account]));
   const studentDetails = Object.fromEntries((studentRows ?? []).flatMap(({ person_id }) => {
@@ -128,6 +134,9 @@ export default async function SchoolDashboard({
           email: payer.email,
           phone: payer.phone,
           selfPaying: payer.id === person_id,
+          relationship: payer.id === person_id
+            ? "self"
+            : (contactRows ?? []).find((contact) => contact.student_id === person_id && contact.contact_person_id === payer.id)?.relationship ?? "payer",
         }] : [];
       });
     return [[person_id, { name: displayName, email: student.email, phone: student.phone, contacts, payers }]];
@@ -140,6 +149,81 @@ export default async function SchoolDashboard({
   }).formatToParts(new Date());
   const todayPart = (type: string) => todayParts.find((part) => part.type === type)?.value;
   const initialDate = `${todayPart("year")}-${todayPart("month")}-${todayPart("day")}`;
+  const monthKey = initialDate.slice(0, 7);
+  const monthLabel = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: school.timezone }).format(new Date());
+  const teacherNames = new Map(teachers.map((teacher) => [teacher.id, teacher.name]));
+  const occurrenceParts = (iso: string) => {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: school.timezone,
+      year: "numeric",
+      month: "2-digit",
+      weekday: "long",
+      hour: "numeric",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(new Date(iso));
+    const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+    const weekday = get("weekday");
+    const dayIndex = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].indexOf(weekday);
+    return {
+      month: `${get("year")}-${get("month")}`,
+      weekday,
+      dayOrder: dayIndex < 0 ? 7 : dayIndex,
+      minutes: Number(get("hour")) * 60 + Number(get("minute")),
+    };
+  };
+  const time = (iso: string) => new Intl.DateTimeFormat("en-US", {
+    timeZone: school.timezone,
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(iso));
+  const now = new Date().getTime();
+  const studentRowsForTable: StudentRosterRow[] = (studentRows ?? []).flatMap(({ person_id }) => {
+    const student = people.get(person_id);
+    const details = studentDetails[person_id];
+    if (!student || !details) return [];
+    const studentLessons = (lessonRows ?? []).filter((lesson) => lesson.student_id === person_id).sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+    const representative = studentLessons.find((lesson) => new Date(lesson.starts_at).getTime() >= now) ?? studentLessons.at(-1);
+    const product = representative ? products.get(representative.product_id) : null;
+    const place = representative ? placeDetails[representative.place_id]?.name : null;
+    const teacher = representative ? teacherNames.get(representative.teacher_id) : null;
+    const schedule = representative ? occurrenceParts(representative.starts_at) : null;
+    const frequency = product?.sessions_per_interval === 1 && product.interval_count === 1 && product.interval_unit === "week"
+      ? "Every"
+      : product
+        ? `${product.sessions_per_interval} lessons every ${product.interval_count === 1 ? "" : `${product.interval_count} `}${product.interval_unit}`
+        : "No recurring plan";
+    const payer = details.payers[0];
+    const primary = details.contacts.find((contact) => contact.isPrimary) ?? details.contacts[0];
+    const monthLessons = studentLessons.filter((lesson) => occurrenceParts(lesson.starts_at).month === monthKey).map((lesson) => {
+      let outcome: LessonOutcome;
+      if (lesson.status === "completed") outcome = "completed";
+      else if (lesson.status === "rescheduled") outcome = "rescheduled";
+      else if (lesson.status === "cancelled") outcome = lesson.cancellation_timing === "timely" ? "cancelled_timely" : "cancelled_late";
+      else if (lesson.status === "no_show") outcome = "no_show";
+      else outcome = new Date(lesson.starts_at).getTime() >= now ? "upcoming" : "unrecorded";
+      return { id: lesson.id, outcome };
+    });
+    return [{
+      id: person_id,
+      family: payer?.accountName ?? `${student.last_name} family`,
+      student: details.name,
+      studentFirst: student.preferred_name || student.first_name,
+      studentLast: student.last_name,
+      parent: payer?.selfPaying
+        ? "Self-paying · self"
+        : `${payer?.name ?? primary?.name ?? "—"}${payer?.relationship || primary?.relationship ? ` · ${payer?.relationship ?? primary?.relationship}` : ""}`,
+      payerName: payer?.name ?? primary?.name ?? details.name,
+      payerRelationship: payer?.relationship ?? primary?.relationship ?? (payer?.selfPaying ? "self" : "payer"),
+      day: representative && schedule ? `${frequency} ${schedule.weekday}` : "—",
+      dayOrder: schedule?.dayOrder ?? 7,
+      time: representative ? `${time(representative.starts_at)}–${time(representative.ends_at)}` : "—",
+      timeMinutes: schedule?.minutes ?? 1440,
+      teacher: teacher ?? "Unassigned",
+      place: place?.toUpperCase() ?? "Unassigned",
+      lessons: monthLessons,
+    }];
+  }).sort((a, b) => a.family.localeCompare(b.family) || a.student.localeCompare(b.student));
 
   const [{ data: avatar }, { data: logo }] = await Promise.all([
     profile?.avatar_path
@@ -151,16 +235,6 @@ export default async function SchoolDashboard({
   ]);
   const avatarUrl = avatar?.signedUrl ?? profile?.avatar_url;
   const canManageSchool = membership.role === "owner" || membership.role === "admin";
-  const mediaMessage =
-    media === "avatar-updated"
-      ? "Avatar updated."
-      : media === "logo-updated"
-        ? "School logo updated."
-        : media?.startsWith("invalid-")
-          ? "Choose a JPG, PNG, or WebP image no larger than 2 MB."
-          : media?.endsWith("-error")
-            ? "The image could not be saved. Please try again."
-            : null;
 
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-6 py-section">
@@ -187,10 +261,13 @@ export default async function SchoolDashboard({
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <Link href="/profile" aria-label="Profile settings" className="flex items-center gap-3 text-sm text-muted hover:text-ink">
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={avatarUrl} alt="Your avatar" className="h-10 w-10 rounded-full border border-line object-cover" />
           ) : null}
+            <span className="hidden sm:inline">Profile</span>
+          </Link>
           <form action="/auth/signout" method="post">
             <button className="rounded-control border border-line px-4 py-control text-sm text-muted transition hover:text-ink">
               Sign out
@@ -198,24 +275,19 @@ export default async function SchoolDashboard({
           </form>
         </div>
       </header>
-      {mediaMessage ? (
-        <p className={`mt-6 rounded-control border p-3 text-sm ${media?.endsWith("updated") ? "border-brand/30 text-brand" : "border-danger/30 text-danger"}`}>
-          {mediaMessage}
-        </p>
-      ) : null}
       <nav className="flex gap-8 py-6" aria-label="School management">
-        <Link href="/" className="text-sm text-brand hover:text-brand-hover">
-          Switch school
-        </Link>
         {canManageSchool ? (
-          <Link href={`/schools/${schoolId}/products`} className="text-sm text-brand hover:text-brand-hover">
-            Set up products →
+          <Link href={`/schools/${schoolId}/setup`} className="text-sm text-brand hover:text-brand-hover">
+            School setup →
           </Link>
         ) : null}
-        <Link href={`/schools/${schoolId}/places`} className="text-sm text-brand hover:text-brand-hover">
-          Places →
-        </Link>
       </nav>
+      <StudentRosterTable
+        rows={studentRowsForTable}
+        monthLabel={monthLabel}
+        initialView={rosterPreference?.settings as Partial<RosterViewSettings> | null}
+        saveView={saveStudentRosterView.bind(null, schoolId)}
+      />
       <OwnerPlanner
         initialDate={initialDate}
         timezone={school.timezone}
@@ -227,44 +299,6 @@ export default async function SchoolDashboard({
         availability={availabilityRows ?? []}
         lessons={lessonRows ?? []}
       />
-      <section className="grid border-t border-line py-section md:grid-cols-2 md:divide-x md:divide-line">
-        <form
-          action={uploadAvatar.bind(null, schoolId)}
-          className="pb-10 md:pr-10 md:pb-0"
-        >
-          <h2 className="font-display text-2xl font-normal">Your avatar</h2>
-          <p className="mt-2 text-sm text-muted">JPG, PNG, or WebP. Maximum 2 MB.</p>
-          <input
-            required
-            name="avatar"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="mt-5 block w-full text-sm text-muted file:mr-4 file:rounded-control file:border-0 file:bg-surface-raised file:px-4 file:py-control file:text-ink"
-          />
-          <button className="mt-5 rounded-control bg-brand px-4 py-control text-sm font-medium text-zinc-950 hover:bg-brand-hover">
-            Upload avatar
-          </button>
-        </form>
-        {canManageSchool ? (
-          <form
-            action={uploadSchoolLogo.bind(null, schoolId)}
-            className="border-t border-line pt-10 md:border-t-0 md:pt-0 md:pl-10"
-          >
-            <h2 className="font-display text-2xl font-normal">School logo</h2>
-            <p className="mt-2 text-sm text-muted">Visible to members of this school. Maximum 2 MB.</p>
-            <input
-              required
-              name="logo"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="mt-5 block w-full text-sm text-muted file:mr-4 file:rounded-control file:border-0 file:bg-surface-raised file:px-4 file:py-control file:text-ink"
-            />
-            <button className="mt-5 rounded-control bg-brand px-4 py-control text-sm font-medium text-zinc-950 hover:bg-brand-hover">
-              Upload logo
-            </button>
-          </form>
-        ) : null}
-      </section>
     </main>
   );
 }

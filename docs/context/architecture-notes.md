@@ -310,6 +310,20 @@ This is an immutable event history rather than a second source of current schedu
 - whether credits or make-up entitlements expire
 - Student and guardian permissions still come from their relationship records; satisfying the time policy alone does not grant access.
 
+## School setup
+
+- The owner dashboard has one entry into School Setup; owners do not see a school switcher in the normal single-school workflow.
+- Setup navigation order is: School Info, Lessons & Classes, Lesson Spaces, Policies & Documents, Staff.
+- “Product” may remain an internal billing/domain term, but owner-facing copy says “lesson,” “class,” or “offering.”
+- Policies use a hybrid model: structured, versioned rule fields drive application behavior while rich text explains the policy to people. Never parse rich text to decide whether a cancellation, payment, refund, or reschedule is permitted.
+- Policy records have a type, name, rich-text body, lifecycle status, version/effective dates, and type-specific structured rules. A school may designate one default per policy type; an offering can use that default or select a specific policy version.
+- Uploaded documents are separate from policies. Store private file metadata and signed storage paths for PDFs and other reference material without implying that every uploaded document is machine-enforceable.
+- Lesson series hold recurring intent and defaults. Individual lesson occurrences snapshot their planned time, teacher, and place, and may override those values without rewriting the series.
+- Planned and actual lesson facts remain distinct. An occurrence can record actual place, actual start/end, outcome/status, exception reason, and staff notes. Notes add context; they are not the only record that a scheduled lesson happened differently.
+- Offering prices are quoted per lesson or class meeting. Monthly billing totals derive from the actual occurrences in that calendar/service period; never assume that a weekly enrollment always produces four charges.
+- Monthly roster reporting distinguishes completed, rescheduled, timely cancellation, late cancellation, no-show, upcoming, and past-due/unrecorded occurrences. Cancellation timing is structured data, not inferred from notes.
+- Authenticated view preferences are stored per profile, school, and named view. Column order and sort settings follow the user across devices without leaking one staff member's layout to another.
+
 ## Payments
 
 - Keep the two payment domains logically separate even though both use Stripe.
@@ -323,6 +337,30 @@ This is an immutable event history rather than a second source of current schedu
 - store Stripe invoice, subscription, payment, refund, and dispute references when needed
 - link users to Stripe-hosted Checkout, invoices, and customer portal experiences
 - This is a strong initial path for private lesson billing because it keeps payment complexity and PCI scope outside the app.
+
+### Collection methods and approval
+
+- Keep amount calculation, customer approval, and payment collection as separate concepts.
+- A school or service agreement may choose a collection method such as `automatic_charge`, `send_invoice`, or `manual_collection`.
+- Approval may come from a standing authorization or a per-period/per-invoice approval. The applicable authorization and approved amount must be auditable.
+- A school owner may initiate an off-session charge against a payment method the customer previously consented to save and reuse.
+- Saved payment credentials stay in Stripe on the connected school's account. The app stores only Stripe references, display metadata, status, and consent/authorization evidence.
+- Payment attempts must tolerate authentication requirements, declines, expired cards, and a fallback path that brings the customer back on-session.
+- Do not assume fixed subscriptions are the only convenient collection flow; variable monthly amounts with owner-triggered collection are a supported business case.
+
+### Approval channels
+
+- Represent approval as a channel-independent record tied to one billing account, amount, currency, billing period or invoice, expiration time, and collection action.
+- Initial channels may include `approval_link`, `sms_reply`, and `in_app` without changing the underlying billing model.
+- A single-use approval URL is the recommended first implementation. It should show the school, exact amount, billing period, saved-method display details, expiration, and approval terms before recording consent.
+- The approval page records authorization only by default. It must say plainly that approval is not payment; the school initiates collection afterward, and payment status changes only from verified Stripe events.
+- Approval link tokens are high-entropy bearer credentials. Store only their hashes, expire them, make approval idempotent, prevent indexing and referrer leakage, and never place customer details directly in the URL.
+- Stripe owns the payment receipt. After a successful connected-account charge, Stripe emails its standard receipt to the payer; MusicSchool sends approval and status notifications but does not create a competing payment receipt.
+- Two-way SMS approval is supported through an inbound-message webhook. Use a unique response such as `APPROVE 7K4P`, not a bare `YES`, so the reply maps unambiguously to one pending amount and does not collide with messaging opt-in behavior.
+- Store an auditable approval event with the normalized response, provider message identifier, sender phone, received time, matched request, exact approved amount, and request version. Preserve provider payload evidence securely without treating free-form SMS as trusted application input.
+- Verify inbound webhook signatures, make approval idempotent, reject expired or already-used codes, and acknowledge ambiguous replies without charging.
+- Respond to the webhook quickly, then enqueue the Stripe payment attempt rather than blocking the inbound-message response on payment processing.
+- SMS messaging consent and opt-out state are separate from payment-method consent and approval of a particular charge. `STOP`, `START`, and `HELP` handling must remain intact.
 
 ## First-School Payment Cutover
 

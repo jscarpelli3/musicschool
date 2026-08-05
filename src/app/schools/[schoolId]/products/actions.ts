@@ -34,7 +34,7 @@ export async function createProduct(
   const requestedCapacity = integer(formData, "capacity");
   const capacity = format === "private_lesson" ? 1 : requestedCapacity;
 
-  if (!name || name.length > 120) return { error: "Enter a product name up to 120 characters." };
+  if (!name || name.length > 120) return { error: "Enter an offering name up to 120 characters." };
   if (!(["private_lesson", "group_class"] as string[]).includes(format)) return { error: "Choose a valid format." };
   if (!durationMinutes || durationMinutes < 15 || durationMinutes > 480) return { error: "Duration must be between 15 and 480 minutes." };
   if (!sessionsPerInterval || sessionsPerInterval < 1 || sessionsPerInterval > 31) return { error: "Enter between 1 and 31 sessions per interval." };
@@ -73,7 +73,7 @@ export async function createProduct(
   });
 
   if (error) {
-    return { error: error.code === "23505" ? "A product with this name already exists." : error.message };
+    return { error: error.code === "23505" ? "An offering with this name already exists." : error.message };
   }
 
   revalidatePath(`/schools/${schoolId}/products`);
@@ -85,11 +85,16 @@ export async function archiveProduct(schoolId: string, productId: string) {
   const { data } = await supabase.auth.getClaims();
   if (!data?.claims?.sub) redirect(`/login?next=/schools/${schoolId}/products`);
 
-  await supabase
+  const { data: archived, error } = await supabase
     .from("service_products")
     .update({ status: "archived" })
     .eq("id", productId)
-    .eq("school_id", schoolId);
+    .eq("school_id", schoolId)
+    .select("id")
+    .maybeSingle();
+
+  if (error || !archived) redirect(`/schools/${schoolId}/products?error=archive`);
 
   revalidatePath(`/schools/${schoolId}/products`);
+  redirect(`/schools/${schoolId}/products?archived=1`);
 }

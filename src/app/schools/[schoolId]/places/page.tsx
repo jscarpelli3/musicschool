@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { SetupHeader } from "@/components/school-setup/setup-header";
 import { createClient } from "@/lib/supabase/server";
 import { archivePlace } from "./actions";
 import { PlaceForm } from "./place-form";
@@ -11,10 +11,10 @@ export default async function PlacesPage({
   searchParams,
 }: {
   params: Promise<{ schoolId: string }>;
-  searchParams: Promise<{ created?: string }>;
+  searchParams: Promise<{ created?: string; archived?: string; error?: string }>;
 }) {
   const { schoolId } = await params;
-  const { created } = await searchParams;
+  const { created, archived, error } = await searchParams;
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getClaims();
   const profileId = authData?.claims?.sub;
@@ -32,17 +32,12 @@ export default async function PlacesPage({
 
   return (
     <main className="mx-auto min-h-screen max-w-5xl px-6 py-section">
-      <header className="grid gap-8 border-b border-line pb-10 md:grid-cols-[1fr_2fr]">
-        <Link href={`/schools/${schoolId}`} className="text-sm text-muted hover:text-ink">← {school.name}</Link>
-        <div>
-          <h1 className="font-display text-6xl font-normal tracking-[-0.04em]">Places.</h1>
-          <p className="mt-5 max-w-xl text-sm leading-6 text-muted">
-            Use the language your school uses. Places can be rooms, homes, stages, addresses, or online spaces.
-          </p>
-        </div>
-      </header>
+      <SetupHeader schoolId={schoolId} schoolName={school.name} active="spaces" />
+      <p className="border-b border-line py-6 text-sm leading-6 text-muted">Use the language your school uses. Spaces can be rooms, homes, stages, addresses, or online spaces.</p>
 
       {created ? <p className="border-b border-line py-4 text-sm text-brand">Place added.</p> : null}
+      {archived ? <p className="border-b border-line py-4 text-sm text-brand">Space archived.</p> : null}
+      {error ? <p className="border-b border-line py-4 text-sm text-danger">The space could not be archived. Nothing changed.</p> : null}
 
       <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
         <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">

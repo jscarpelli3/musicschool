@@ -51,19 +51,14 @@ export function ProductForm({ schoolId }: { schoolId: string }) {
             </div>
           </div>
         </fieldset>
-        <label>
-          <span className="block text-xs text-muted">Pricing</span>
-          <select name="pricing_model" defaultValue="fixed_monthly" className={fieldClass}>
-            <option value="fixed_monthly">Fixed monthly</option>
-            <option value="per_session">Per session</option>
-          </select>
-        </label>
-        <label>
-          <span className="block text-xs text-muted">Price in dollars</span>
+        <input type="hidden" name="pricing_model" value="per_session" />
+        <label className="md:col-span-2">
+          <span className="block text-xs text-muted">Price per lesson or class meeting</span>
           <div className="flex border-b border-line focus-within:border-brand">
             <span className="py-3 text-muted">$</span>
-            <input required name="price" inputMode="decimal" className="w-full bg-transparent py-3 pl-2 outline-none" placeholder="160.00" />
+            <input required name="price" inputMode="decimal" className="w-full bg-transparent py-3 pl-2 outline-none" placeholder="40.00" />
           </div>
+          <span className="mt-2 block text-xs leading-5 text-muted">Monthly totals use the number of lessons actually scheduled. A weekly lesson may occur three, four, or five times in a calendar month.</span>
         </label>
         {format === "group_class" ? (
           <label>
@@ -80,7 +75,7 @@ export function ProductForm({ schoolId }: { schoolId: string }) {
       </div>
       {state.error ? <p className="mt-6 border-l border-danger pl-4 text-sm text-danger">{state.error}</p> : null}
       <button disabled={pending} className="mt-10 border-b border-brand pb-2 text-sm text-brand-hover disabled:opacity-50">
-        {pending ? "Creating…" : "Create product →"}
+        {pending ? "Creating…" : "Create offering →"}
       </button>
     </form>
   );

@@ -44,6 +44,7 @@ type StudentDetail = {
     email: string | null;
     phone: string | null;
     selfPaying: boolean;
+    relationship: string;
   }>;
 };
 

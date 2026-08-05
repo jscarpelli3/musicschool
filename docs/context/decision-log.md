@@ -145,3 +145,48 @@ Use one entry per meaningful technical or product decision.
 - Context: Hard-coded categories such as in-school, room, student-home, and custom impose platform terminology and create unnecessary subcategories.
 - Decision: Maintain a school-scoped Places list with a name and optional details. Every lesson occurrence references one place. Owners/admins manage the list, while authenticated teachers may add places and maintain entries they created.
 - Consequences: Schools can use operational language that fits their facilities and teaching model. Places remain reusable, archivable records rather than repeated free text on lesson occurrences.
+
+### 2026-08-05: Separate billing calculation, approval, and collection
+
+- Status: accepted
+- Context: Some schools keep an authorized card on file, confirm a variable monthly amount informally with the family, and have the owner initiate the charge. Others need automatic recurring charges, invoices, or manual collection.
+- Decision: Support multiple collection methods and approval modes independently from the pricing model. Model standing and per-period authorization evidence, and let the connected school initiate off-session Stripe payments using saved methods when appropriately authorized.
+- Consequences: Billing accounts and future service agreements need configurable collection and approval behavior. The platform never stores raw card data and must handle off-session failures or authentication fallbacks.
+
+### 2026-08-05: Treat phone and tablet behavior as first-class design work
+
+- Status: accepted
+- Context: Desktop-first calendar interactions, especially hover and dense multi-column layouts, do not automatically translate to touch devices or narrow screens.
+- Decision: Every feature must define and verify phone, tablet, and desktop behavior. Material differences must be documented and communicated during design.
+- Consequences: Some views may change form across breakpoints—for example, a desktop calendar may become a selected-teacher timeline or agenda on phone—while preserving the underlying task and information.
+
+### 2026-08-05: Use channel-independent billing approvals
+
+- Status: accepted
+- Context: Families may approve a variable monthly charge through a web link or by replying to an SMS, while the school owner initiates collection against an authorized saved method.
+- Decision: Model one exact, expiring approval request independently from its delivery channel. Build single-use approval links first and support inbound SMS replies such as `APPROVE 7K4P` through the same record later.
+- Consequences: Link and SMS workflows share audit, expiration, idempotency, and amount-matching rules. Messaging opt-in/out consent remains separate from payment consent, and a reply never acts as unlimited future authorization.
+# 2026-08-05 — Approval-link payment workflow
+
+- Start with an SMS containing a single-use URL rather than inbound keyword approval.
+- The page shows an immutable monthly line-item breakdown and exact total, then requires an accessible hold-to-approve action.
+- V1 approval is authorization-only: it queues the amount for school collection and does not itself claim that the card was charged.
+- Stripe sends the formal receipt after a successful charge on the school's connected account. MusicSchool does not generate a parallel receipt.
+- Keep approval and payment statuses separate so immediate auto-charge can be offered later without changing the consent model.
+
+# 2026-08-05 — School setup, policies, and lesson reality
+
+- Remove the owner-facing school switcher and expose one School Setup entry from the dashboard.
+- Setup tabs are School Info, Lessons & Classes, Lesson Spaces, Policies & Documents, and Staff.
+- Use structured policy rules plus a rich-text presentation layer; do not make business logic depend on WYSIWYG content.
+- Give each policy type one school default while allowing an offering to pin a specific policy version.
+- Model recurring lesson intent separately from occurrence-level planned overrides and actual delivery facts.
+
+# 2026-08-05 — Parent payment flow implementation order
+
+- Families do not create Stripe accounts. Each school owns a connected Stripe merchant account; each family is a Stripe Customer scoped to that connected account.
+- Never collect raw card numbers in MusicSchool inputs or transmit them through MusicSchool servers. Send the payer through Stripe-hosted payment-method setup with explicit future off-session consent.
+- Treat card setup, monthly amount approval, payment attempt, settlement, and receipt as separate states.
+- First user-facing payment work is the owner’s Stripe connection/onboarding status. Before enabling live charges, implement the local payment ledger, idempotency, immutable provider-event log, and verified Connect webhook.
+- The first-school monthly flow is owner-controlled: calculate and lock the exact period, send the MusicSchool approval URL, record approval, let the owner initiate the approved charge, and accept the final result only from Stripe webhooks.
+- Stripe sends the payment receipt after a successful connected-account charge. MusicSchool records and communicates workflow status but does not issue a competing receipt.
