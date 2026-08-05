@@ -6,7 +6,7 @@ Use this file for short chronological notes about meaningful work.
 
 - Reviewed the local Agency Brain repository as a read-only architecture reference.
 - Adopted Next.js, Vercel, Supabase Auth/Postgres/RLS, Google OAuth, and a shared multi-tenant database as the platform direction.
-- Separated Stripe SaaS subscription billing from Square-hosted family payments.
+- Initially separated Stripe SaaS subscription billing from Square-hosted family payments; this was later superseded by Stripe-only billing.
 - Defined the first shippable milestone as a private-lesson scheduling and billing-link vertical slice.
 - Added an account and provider setup checklist.
 - Scaffolded a lean Next.js 16 App Router application with TypeScript, Tailwind CSS, and ESLint.
@@ -16,13 +16,14 @@ Use this file for short chronological notes about meaningful work.
 - Confirmed Google authentication is not yet enabled in the Supabase project.
 - Authenticated the Supabase CLI and linked the local repository to the `MusicSchool` project in the West US region.
 - Defined recurring teacher availability, dated exceptions, lesson enrollments, monthly service periods, materialized lesson occurrences, and immutable event-change history as the scheduling foundation.
-- Established school-specific, effective-dated cancellation and rescheduling policies and monthly aggregation of family billing items into Square invoices.
+- Established school-specific, effective-dated cancellation and rescheduling policies and monthly aggregation of family billing items into processor invoices.
 - Accepted both fixed monthly tuition and monthly usage billing, with a school default and optional service-agreement override.
 - Added a school macro calendar for terms, closures, holidays, performances, camps, registration windows, and other school-level events with explicit scheduling effects.
 - Deployed the identity and tenancy foundation to Supabase: profiles, schools, memberships, audit records, helper functions, RLS policies, and atomic owner onboarding.
 - Added column-level privilege restrictions and confirmed the deployed schema passes Supabase database linting.
 - Generated database types and implemented Google login, OAuth callback, sign-out, school setup, multi-school selection, and a protected school dashboard.
 - Verified TypeScript, ESLint, the production build, unauthenticated route redirects, and anonymous denial of the school-creation RPC.
+- Standardized payments on Stripe Billing and Stripe Connect, with direct school payments and a lightweight Square-to-Stripe cutoff plan for the first school.
 
 ## 2026-03-10
 

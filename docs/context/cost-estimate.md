@@ -9,7 +9,7 @@ This estimate is for a small multi-tenant SaaS beginning with one private music 
 - One owner using the system heavily
 - One teacher initially
 - Parents or guardians logging in occasionally, likely around once per month on average
-- Square handles invoices and payment collection on Square-hosted pages
+- Stripe handles invoices and payment collection on Stripe-hosted pages for connected school accounts
 - The app handles scheduling, account management, and business operations
 
 Additional schools share the application and database rather than receiving separate deployments.
@@ -20,8 +20,8 @@ Additional schools share the application and database rather than receiving sepa
 - Database, authentication, and file storage: Supabase
 - Data access: Supabase clients and generated TypeScript types
 - Authentication: Supabase Auth with Google OAuth
-- SaaS subscriptions: Stripe
-- Payments: Square-hosted invoices and payment pages
+- SaaS subscriptions: Stripe Billing
+- School payments: Stripe Connect direct invoices, subscriptions, Checkout, and customer portal
 - Email: optional transactional provider such as Resend
 - SMS: optional provider such as Twilio
 
@@ -32,7 +32,7 @@ Additional schools share the application and database rather than receiving sepa
 - Vercel Hobby: $0 for personal, non-commercial development only
 - Supabase Free: $0 for development
 - Google OAuth: no separate platform subscription expected for basic login
-- Square platform fee: $0 fixed monthly, plus transaction fees
+- Stripe: no fixed monthly fee on standard pay-as-you-go pricing, plus transaction and billing/invoicing fees
 
 ## Practical development estimate
 
@@ -45,7 +45,7 @@ That assumes:
 - low traffic
 - modest database size
 - no unusually heavy server-side jobs
-- externalized payment processing through Square
+- externalized payment processing through Stripe-hosted flows
 
 ## Practical production estimate
 
@@ -54,7 +54,7 @@ Do not budget a commercial production launch at $0:
 - Vercel requires Pro or Enterprise for commercial use; Pro currently starts at $20 per month and includes usage credit.
 - Supabase Free is useful during development, but free projects pause after one week of inactivity and do not include managed database backups. Supabase Pro currently starts at $25 per month for a production organization.
 - A sensible initial production infrastructure allowance is therefore roughly $45 per month before optional email, SMS, monitoring, domains, payment fees, taxes, or usage overages.
-- Stripe SaaS transaction fees and Square family-payment fees are separate variable costs.
+- Stripe software-subscription fees and connected-school family-payment fees are separate variable costs.
 
 ## Optional service costs
 
@@ -85,14 +85,16 @@ Twilio pricing currently starts at:
 
 For a small school, SMS cost is likely low in absolute dollars, but it adds compliance setup and recurring per-message charges.
 
-## Square costs
+## Stripe payment costs
 
-Square is expected to be the largest ongoing cost because it is usage-based on collected payments.
+Stripe payment processing is expected to be the largest usage-based cost for each school.
 
-Current Square U.S. fees for invoices and online payments on the free tier:
+Current standard U.S. planning assumptions:
 
-- card payments through online or invoice flows: 3.3% + 30 cents
-- ACH via invoice: 1% with a $1 minimum
+- domestic online card processing: 2.9% + 30 cents
+- Stripe Billing for recurring subscriptions: an additional 0.7% of Billing volume
+- Stripe Invoicing Starter for paid one-off invoices: an additional 0.4% per paid invoice
+- ACH Direct Debit processing: 0.8% with a $5 cap, plus the applicable Billing or Invoicing fee
 
 ## Example payment-fee scenarios
 
@@ -102,21 +104,24 @@ These are rough planning examples, not exact forecasts.
 
 - monthly volume: about $10,000
 - if paid mostly by card across 50 invoices:
-- estimated Square fees: about $345 per month
+- estimated recurring card payment and Billing fees: about $375 per month
+- estimated one-off card invoice and Invoicing fees: about $345 per month
 
 ### Example B: 50 students, average billed amount of $300 per month
 
 - monthly volume: about $15,000
 - if paid mostly by card across 50 invoices:
-- estimated Square fees: about $510 per month
+- estimated recurring card payment and Billing fees: about $555 per month
+- estimated one-off card invoice and Invoicing fees: about $510 per month
 
 ### Example C: 100 students, average billed amount of $250 per month
 
 - monthly volume: about $25,000
 - if paid mostly by card across 100 invoices:
-- estimated Square fees: about $855 per month
+- estimated recurring card payment and Billing fees: about $930 per month
+- estimated one-off card invoice and Invoicing fees: about $855 per month
 
-If a meaningful share of customers pays by ACH through Square invoices, fees can be materially lower.
+If a meaningful share of customers pays by ACH through Stripe, fees can be materially lower, especially for larger invoices because the ACH processing component is capped.
 
 ## Near-term recommendation
 
@@ -125,7 +130,7 @@ For development, plan around:
 - App infrastructure: $0 per month while non-commercial
 - Email: $0 per month to start
 - SMS: $0 until enabled
-- Square: transaction fees only
+- Stripe: transaction and Billing/Invoicing fees only
 
 ## Planning budget
 
@@ -133,15 +138,15 @@ If you want one simple budgeting number for the current school:
 
 - Fixed app cost during development: $0 to start
 - Initial commercial production allowance: about $45 per month, plus a domain and optional providers
-- Payment processing: Stripe fees for SaaS subscriptions and Square fees for family payments
+- Payment processing: separate Stripe fees for SaaS subscriptions and connected-school family payments
 
-The biggest financial variable is not hosting. It is how much tuition or other billables run through Square each month.
+The biggest financial variable is not hosting. It is how much tuition or other billables each school processes through Stripe and which payment methods families choose.
 
 ## Multi-tenant note
 
 - Additional schools initially share Vercel and Supabase infrastructure.
-- Each school should connect its own Square merchant account; its processing fees remain tied to its own payment volume.
-- Schools pay the software business through Stripe subscriptions.
+- Each school has its own Stripe connected merchant account; its processing fees remain tied to its own payment volume.
+- Schools separately pay the software business through Stripe Billing on the platform account.
 - Infrastructure cost grows by shared usage rather than by duplicating a deployment and database for every school.
 
 ## Sources
@@ -149,8 +154,9 @@ The biggest financial variable is not hosting. It is how much tuition or other b
 - Vercel pricing: https://vercel.com/pricing
 - Vercel Hobby plan: https://vercel.com/docs/plans/hobby
 - Supabase pricing: https://supabase.com/pricing
-- Square fees: https://my.squareup.com/help/us/en/article/5068-what-are-square-s-fees
-- Square invoices: https://squareup.com/help/us/en/article/6636-manage-your-invoices-with-square-invoices-app
+- Stripe pricing: https://stripe.com/pricing
+- Stripe Billing pricing: https://stripe.com/billing/pricing
+- Stripe Connect pricing: https://stripe.com/connect/pricing
 - Twilio SMS pricing: https://www.twilio.com/en-us/sms/pricing/usa
 - Twilio general pricing: https://www.twilio.com/en-us/pricing
 - Resend pricing: https://resend.com/pricing

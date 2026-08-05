@@ -10,8 +10,7 @@
 - Tenancy: shared application and database with school-scoped rows and Row Level Security
 - UI: Tailwind CSS with a reusable dashboard shell
 - CMS: Defer Sanity for v1 unless clear content-editing requirements appear
-- SaaS billing: Stripe Checkout, customer portal, and webhooks for subscriptions paid by schools
-- School billing: Square-hosted invoices and payment links for payments from families
+- Payments: Stripe Billing for software subscriptions and Stripe Connect direct payments for school-to-family billing
 - Messaging: Twilio SMS as the default starting option
 
 This foundation intentionally follows the proven patterns in the local Agency Brain repository while using a fresh, smaller music-school domain model.
@@ -69,7 +68,7 @@ This foundation intentionally follows the proven patterns in the local Agency Br
 - Recurring schedule
 - Room or rentable resource
 - Invoice or payment record
-- Billing profile with Square references
+- Billing profile with Stripe connected-account references
 - Theme and branding settings
 
 ## Service Catalog Direction
@@ -169,8 +168,8 @@ Billing consequences still come from the effective cancellation and service-agre
 - A monthly period materializes the expected lesson occurrences from active enrollments and provides the boundary for reschedule limits and billing aggregation.
 - Occurrence generation evaluates school macro events before teacher availability, ensuring closures and term boundaries are respected.
 - Billing items are generated from the applicable monthly agreement and/or completed, canceled, or adjusted events according to school policy.
-- One Square invoice can aggregate multiple billing items for the same billing account and month.
-- Square remains the payment processor and invoice delivery system; this application remains the source of truth for lesson entitlement, scheduling changes, and why an amount is owed.
+- One Stripe invoice can aggregate multiple billing items for the same billing account and month.
+- Stripe remains the payment processor and invoice delivery system; this application remains the source of truth for lesson entitlement, scheduling changes, and why an amount is owed.
 
 ## Family Billing Modes
 
@@ -302,15 +301,27 @@ This is an immutable event history rather than a second source of current schedu
 
 ## Payments
 
-- Keep two payment domains separate.
-- Stripe bills a school for its subscription to this software.
-- Square should fully own checkout, invoice payment, and payment-method management.
+- Keep the two payment domains logically separate even though both use Stripe.
+- Stripe Billing on the platform account bills a school for its subscription to this software.
+- Stripe Connect direct invoices and payments on a school's connected account handle family billing.
+- The school remains merchant of record and Stripe pays funds directly to the school's bank account.
+- Stripe should collect processing fees from the connected school and carry connected-account payment-loss responsibility where available.
 - The app should not collect card details or build an embedded checkout experience in v1.
 - The app-side integration should stay minimal:
-- store the Square customer reference for the relevant guardian or billing account
-- store external invoice or payment-link references when needed
-- link users out to Square-hosted pages for payment and invoice management
+- store the connected-account Stripe customer reference for the relevant guardian or billing account
+- store Stripe invoice, subscription, payment, refund, and dispute references when needed
+- link users to Stripe-hosted Checkout, invoices, and customer portal experiences
 - This is a strong initial path for private lesson billing because it keeps payment complexity and PCI scope outside the app.
+
+## First-School Payment Cutover
+
+- Customer, student, guardian, and agreement data can be entered directly or imported into MusicSchool without integrating the Square API.
+- Existing Square history remains in Square; MusicSchool does not recreate old settled transactions.
+- Open Square invoices and active Square billing continue through an explicit cutoff date, then new billing begins in Stripe.
+- Families do not need Stripe accounts. They can pay hosted invoices or Checkout as guests.
+- Families enter their card or bank method again once and may save it to the school's connected Stripe account with consent.
+- The school must stop or cancel overlapping Square recurring billing before Stripe billing begins to prevent duplicate charges.
+- A formal processor-to-processor payment-method migration can be evaluated later, but is not required for the initial school.
 
 ## Proposed V1 Milestone
 
@@ -322,7 +333,7 @@ The first shippable milestone is a single production-ready vertical slice runnin
 4. Staff configure a private-lesson service type and teacher availability.
 5. Staff or a guardian schedule, reschedule, or cancel a lesson under defined rules.
 6. The system shows a school calendar and a student/household schedule.
-7. A billing contact is associated with a Square customer and can follow a Square-hosted invoice or payment link.
+7. A billing contact is associated with a Stripe customer on the school's connected account and can follow a Stripe-hosted invoice or Checkout link.
 8. Tenant isolation, role permissions, audit fields, and core scheduling rules have automated tests.
 
 Rehearsals, group classes, and room rentals remain supported by the service model, but polished workflows for them can follow the private-lesson vertical slice.

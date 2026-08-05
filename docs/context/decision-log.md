@@ -36,7 +36,7 @@ Use one entry per meaningful technical or product decision.
 
 ### 2026-03-10: Use Square for payment processing integration
 
-- Status: accepted
+- Status: superseded
 - Context: The app needs payment processing without building custom card handling from scratch.
 - Decision: Keep all checkout and invoice payment experiences in Square-hosted flows and only maintain lightweight associations inside the app.
 - Consequences: Payment handling stays simpler, PCI scope remains lower, and the app can focus on scheduling and business operations instead of payment UI.
@@ -71,10 +71,10 @@ Use one entry per meaningful technical or product decision.
 
 ### 2026-08-04: Separate SaaS billing from school billing
 
-- Status: accepted
+- Status: superseded
 - Context: The software vendor may charge schools while schools separately collect lesson payments from families.
 - Decision: Use Stripe for school subscriptions to the software and Square-hosted flows for school-to-family invoices and payments.
-- Consequences: Stripe and Square identifiers, webhooks, records, and terminology must remain separate throughout the schema and interface.
+- Consequences: This two-provider decision was later superseded by the Stripe-only platform decision.
 
 ### 2026-08-04: Use Supabase Auth and direct Supabase data access
 
@@ -87,7 +87,7 @@ Use one entry per meaningful technical or product decision.
 
 - Status: accepted
 - Context: Teachers offer recurring windows by weekday, students need controlled self-service rescheduling, schools define cancellation rules, and lesson scheduling and collection operate monthly.
-- Decision: Separate recurring teacher availability, effective-dated lesson enrollments, monthly service periods, materialized scheduled events, and immutable event-change history. Aggregate billable items into monthly Square invoices.
+- Decision: Separate recurring teacher availability, effective-dated lesson enrollments, monthly service periods, materialized scheduled events, and immutable event-change history. Aggregate billable items into monthly processor invoices.
 - Consequences: Reschedules and cancellations remain traceable, policy enforcement can be reproduced, and monthly invoices can explain their underlying lessons and adjustments.
 
 ### 2026-08-04: Make cancellation policies school-specific and effective-dated
@@ -110,3 +110,10 @@ Use one entry per meaningful technical or product decision.
 - Context: Each school needs to organize terms, closures, holidays, performances, camps, registration windows, and other events that affect or inform lower-level scheduling.
 - Decision: Model named school calendar periods separately from dated calendar events. Give each event an explicit visibility and scheduling effect, and evaluate macro calendar restrictions before teacher availability when generating occurrences.
 - Consequences: School-wide schedule structure remains distinct from teacher hours and appointments. New closures surface conflicts for explicit resolution rather than silently changing existing lessons or billing.
+
+### 2026-08-04: Standardize payments on Stripe Billing and Connect
+
+- Status: accepted
+- Context: Supporting Stripe for SaaS subscriptions and Square for family payments would duplicate SDKs, webhooks, terminology, credentials, sandboxes, and reconciliation. Stripe Connect directly models a SaaS platform whose independent schools remain merchants of record.
+- Decision: Use Stripe Billing for schools paying MusicSchool and Stripe Connect direct payments for families paying connected schools. Use Stripe-hosted onboarding and payment surfaces, Stripe-collected processing fees, and Stripe-managed connected-account risk where available.
+- Consequences: The platform has one payment ecosystem while keeping software revenue and school revenue logically separate. Schools migrating from Square use an explicit cutoff and families re-enter payment methods without needing Stripe accounts.

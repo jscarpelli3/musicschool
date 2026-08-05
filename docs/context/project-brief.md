@@ -16,7 +16,7 @@ The product should support multiple schools in one application while keeping eac
 - [ ] Support Google login at minimum
 - [ ] Use a database with a free-friendly starting path
 - [ ] Allow light branding such as logo upload and color theme selection
-- [ ] Integrate Square for payment processing
+- [ ] Integrate Stripe Billing and Stripe Connect for payment processing
 - [ ] Allow students and guardians to log in and self-manage lesson scheduling
 - [ ] Support configurable billable service types with their own pricing and duration rules
 
@@ -43,7 +43,7 @@ The product should support multiple schools in one application while keeping eac
 - Student
 - Parent, guardian, or account administrator
 - Additional requirements identified:
-- Link out to Square for payment processing without building checkout inside the app
+- Use Stripe-hosted onboarding, invoices, Checkout, and customer portal rather than collecting payment details inside the app
 - Let students and guardians schedule or reschedule lessons
 - Consider SMS messaging for reminders and operational communication
 - Support more than one billable category, including rehearsal, group class, and space rental

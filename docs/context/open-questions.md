@@ -15,7 +15,7 @@ Capture unresolved questions here so they do not get lost between sessions.
 
 ## Technical
 
-- What is the minimal app-side association to Square: customer ID only, invoice links, or subscription references too?
+- Which Stripe Connect account configuration best preserves school merchant-of-record status, Stripe-collected fees, and Stripe-managed payment risk at launch?
 - Should SMS support be one-way notifications only, or should recipients be able to reply and interact?
 - How should configurable pricing work: per service type, per teacher, per room, or per customer?
 

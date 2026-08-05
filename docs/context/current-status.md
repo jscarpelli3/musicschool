@@ -16,7 +16,7 @@ Enable Google OAuth, exercise the owner onboarding flow, then design the people 
 4. Add the school macro calendar and teacher availability
 5. Add staff and portal invitations
 6. Build the private-lesson scheduling vertical slice
-7. Add Square customer/invoice associations, then Stripe SaaS subscriptions
+7. Add Stripe Connect family billing, then Stripe Billing software subscriptions
 8. Add transactional email; defer SMS until its consent and compliance workflow is designed
 
 ## Risks

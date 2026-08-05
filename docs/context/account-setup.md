@@ -34,18 +34,12 @@
 - Use `https://twhexxokrjwzsoxgzlme.supabase.co/auth/v1/callback` as the Google OAuth authorized redirect URI.
 - Enable Google under Supabase Authentication providers after creating the client, entering the client ID and client secret directly in Supabase.
 
-### 5. Square
-
-- Create or use the music school's Square merchant account.
-- Create a free Square Developer account and application for sandbox credentials and API testing.
-- Keep Sandbox and Production access tokens separate.
-- Activate and verify the Square merchant account before collecting real payments.
-- Decide whether each future school connects its own Square account through Square OAuth; that is the appropriate SaaS direction and should not be replaced with one shared merchant token.
-
-### 6. Stripe
+### 5. Stripe
 
 - Create a Stripe account owned by the software business, not by an individual developer account that cannot later be transferred cleanly.
 - Use Stripe test mode while building.
+- Configure the account as a Connect SaaS platform and use Stripe-hosted onboarding for schools.
+- Use direct payments on connected school accounts so schools remain merchants of record and receive funds directly.
 - Add the legal business, bank, tax, and identity information required to activate live payments before launch.
 - Create subscription products/prices later, after packaging is decided.
 - Configure a webhook endpoint separately for preview/testing and production.
@@ -81,11 +75,11 @@
 ## Ownership And Security Rules
 
 - Prefer business-owned accounts and a business-controlled password manager.
-- Enable multifactor authentication on GitHub, Vercel, Supabase, Google Cloud, Square, Stripe, domain/DNS, email, and Twilio.
+- Enable multifactor authentication on GitHub, Vercel, Supabase, Google Cloud, Stripe, domain/DNS, email, and Twilio.
 - Add at least one recovery administrator where the provider supports it.
 - Never reuse the Agency Brain project's credentials or OAuth clients.
 - Maintain separate local/development, staging, and production secrets.
-- Never expose Supabase service-role, Stripe secret, Square access-token, webhook-signing, or OAuth client-secret values to the browser.
+- Never expose Supabase service-role, Stripe secret, webhook-signing, or OAuth client-secret values to the browser.
 
 ## Recommended Creation Order
 
@@ -94,8 +88,7 @@
 3. Google Cloud project and OAuth client
 4. Vercel project connected to GitHub
 5. Product domain and DNS
-6. Square developer application and sandbox
-7. Stripe test account
-8. Resend when invitations/email are implemented
-9. Paid Vercel and production Supabase when commercial launch is near
-10. Twilio and monitoring before their production features launch
+6. Stripe test account and Connect platform configuration
+7. Resend when invitations/email are implemented
+8. Paid Vercel and production Supabase when commercial launch is near
+9. Twilio and monitoring before their production features launch
