@@ -52,15 +52,16 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 - Recovery requirements are documented in `docs/operations/data-recovery.md`; production still requires a paid backup plan and a tested Storage export/restore process.
 - Exit gate passed in commit `c5fff81`: build/type/lint clean, local and remote migrations aligned, silent dashboard/mutation failures closed, and source pushed to GitHub.
 
-### 2. Payment data foundation — IN PROGRESS
+### 2. Payment data foundation — COMPLETE
 
 - School Stripe connection state.
 - Billing periods and immutable line items.
 - Connected-account customer and payment-method references.
 - Payment attempts, refunds, disputes, and provider events.
 - Stable idempotency and reconciliation keys.
+- Exit gate passed on 2026-08-05: linked-schema migration and transactional invariant rehearsal succeeded; generated database types, lint, TypeScript, and database lint passed.
 
-### 3. Stripe platform configuration — PENDING
+### 3. Stripe platform configuration — IN PROGRESS
 
 - Test credentials and Connect configuration.
 - Connected-account responsibilities and capabilities.
@@ -122,4 +123,4 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 
 ## Current next action
 
-Design and migrate the payment ledger with immutable monetary snapshots, tenant-scoped provider references, and explicit attempt/event/reconciliation state before adding Stripe credentials or payment controls.
+Verify the MusicSchool Stripe account's test-mode and Connect configuration, choose connected-account responsibilities, and establish server-only environment handling. Do not paste secret or webhook keys into chat, source control, browser-exposed variables, or Supabase tables.

@@ -171,18 +171,468 @@ export type Database = {
           },
         ]
       }
+      billing_approval_events: {
+        Row: {
+          approval_request_id: string
+          channel: string
+          created_at: string
+          event_type: string
+          evidence: Json
+          id: string
+          school_id: string
+        }
+        Insert: {
+          approval_request_id: string
+          channel?: string
+          created_at?: string
+          event_type: string
+          evidence?: Json
+          id?: string
+          school_id: string
+        }
+        Update: {
+          approval_request_id?: string
+          channel?: string
+          created_at?: string
+          event_type?: string
+          evidence?: Json
+          id?: string
+          school_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_approval_events_school_id_approval_request_id_fkey"
+            columns: ["school_id", "approval_request_id"]
+            isOneToOne: false
+            referencedRelation: "billing_approval_requests"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "billing_approval_events_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_approval_requests: {
+        Row: {
+          amount_cents: number
+          approval_status: string
+          approved_at: string | null
+          billing_account_id: string
+          billing_period_id: string | null
+          collection_action: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          expires_at: string
+          id: string
+          line_items: Json
+          payment_status: string
+          period_label: string
+          school_id: string
+          stripe_payment_intent_id: string | null
+          token_hash: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          approval_status?: string
+          approved_at?: string | null
+          billing_account_id: string
+          billing_period_id?: string | null
+          collection_action?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          expires_at: string
+          id?: string
+          line_items: Json
+          payment_status?: string
+          period_label: string
+          school_id: string
+          stripe_payment_intent_id?: string | null
+          token_hash: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          approval_status?: string
+          approved_at?: string | null
+          billing_account_id?: string
+          billing_period_id?: string | null
+          collection_action?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          expires_at?: string
+          id?: string
+          line_items?: Json
+          payment_status?: string
+          period_label?: string
+          school_id?: string
+          stripe_payment_intent_id?: string | null
+          token_hash?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_approval_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_approval_requests_period_fkey"
+            columns: ["school_id", "billing_account_id", "billing_period_id"]
+            isOneToOne: false
+            referencedRelation: "billing_periods"
+            referencedColumns: ["school_id", "billing_account_id", "id"]
+          },
+          {
+            foreignKeyName: "billing_approval_requests_school_id_billing_account_id_fkey"
+            columns: ["school_id", "billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "billing_approval_requests_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_line_items: {
+        Row: {
+          amount_cents: number | null
+          billing_period_id: string
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          metadata: Json
+          quantity: number
+          school_id: string
+          service_date: string | null
+          source_id: string | null
+          source_type: string
+          unit_amount_cents: number
+          updated_at: string
+        }
+        Insert: {
+          amount_cents?: number | null
+          billing_period_id: string
+          created_at?: string
+          created_by: string
+          description: string
+          id?: string
+          metadata?: Json
+          quantity?: number
+          school_id: string
+          service_date?: string | null
+          source_id?: string | null
+          source_type: string
+          unit_amount_cents: number
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number | null
+          billing_period_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          metadata?: Json
+          quantity?: number
+          school_id?: string
+          service_date?: string | null
+          source_id?: string | null
+          source_type?: string
+          unit_amount_cents?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_line_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_line_items_school_id_billing_period_id_fkey"
+            columns: ["school_id", "billing_period_id"]
+            isOneToOne: false
+            referencedRelation: "billing_periods"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
+      billing_payment_methods: {
+        Row: {
+          billing_account_id: string
+          brand: string | null
+          created_at: string
+          display_label: string
+          exp_month: number | null
+          exp_year: number | null
+          id: string
+          is_default: boolean
+          last_four: string | null
+          method_type: string
+          provider_customer_id: string
+          provider_payment_method_id: string
+          school_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          billing_account_id: string
+          brand?: string | null
+          created_at?: string
+          display_label: string
+          exp_month?: number | null
+          exp_year?: number | null
+          id?: string
+          is_default?: boolean
+          last_four?: string | null
+          method_type: string
+          provider_customer_id: string
+          provider_payment_method_id: string
+          school_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          billing_account_id?: string
+          brand?: string | null
+          created_at?: string
+          display_label?: string
+          exp_month?: number | null
+          exp_year?: number | null
+          id?: string
+          is_default?: boolean
+          last_four?: string | null
+          method_type?: string
+          provider_customer_id?: string
+          provider_payment_method_id?: string
+          school_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_payment_methods_school_id_billing_account_id_fkey"
+            columns: ["school_id", "billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "billing_payment_methods_school_id_provider_customer_id_bil_fkey"
+            columns: ["school_id", "provider_customer_id", "billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_provider_customers"
+            referencedColumns: ["school_id", "id", "billing_account_id"]
+          },
+        ]
+      }
+      billing_periods: {
+        Row: {
+          amount_due_cents: number
+          approved_at: string | null
+          billing_account_id: string
+          created_at: string
+          created_by: string
+          currency: string
+          id: string
+          label: string
+          locked_at: string | null
+          paid_at: string | null
+          period_end: string
+          period_start: string
+          school_id: string
+          status: string
+          updated_at: string
+          voided_at: string | null
+        }
+        Insert: {
+          amount_due_cents?: number
+          approved_at?: string | null
+          billing_account_id: string
+          created_at?: string
+          created_by: string
+          currency: string
+          id?: string
+          label: string
+          locked_at?: string | null
+          paid_at?: string | null
+          period_end: string
+          period_start: string
+          school_id: string
+          status?: string
+          updated_at?: string
+          voided_at?: string | null
+        }
+        Update: {
+          amount_due_cents?: number
+          approved_at?: string | null
+          billing_account_id?: string
+          created_at?: string
+          created_by?: string
+          currency?: string
+          id?: string
+          label?: string
+          locked_at?: string | null
+          paid_at?: string | null
+          period_end?: string
+          period_start?: string
+          school_id?: string
+          status?: string
+          updated_at?: string
+          voided_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_periods_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_periods_school_id_billing_account_id_fkey"
+            columns: ["school_id", "billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
+      billing_provider_customers: {
+        Row: {
+          billing_account_id: string
+          created_at: string
+          email: string | null
+          id: string
+          last_synced_at: string | null
+          payment_connection_id: string
+          provider_customer_id: string
+          school_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          billing_account_id: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_synced_at?: string | null
+          payment_connection_id: string
+          provider_customer_id: string
+          school_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          billing_account_id?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_synced_at?: string | null
+          payment_connection_id?: string
+          provider_customer_id?: string
+          school_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_provider_customers_school_id_billing_account_id_fkey"
+            columns: ["school_id", "billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "billing_provider_customers_school_id_payment_connection_id_fkey"
+            columns: ["school_id", "payment_connection_id"]
+            isOneToOne: false
+            referencedRelation: "school_payment_connections"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
+      cancellation_policy_rules: {
+        Row: {
+          late_cancel_disposition: string
+          max_self_service_reschedules: number | null
+          must_keep_assigned_teacher: boolean
+          no_show_disposition: string
+          policy_version_id: string
+          replacement_window_days: number | null
+          student_cancel_cutoff_hours: number
+          student_reschedule_cutoff_hours: number
+          teacher_cancel_disposition: string
+        }
+        Insert: {
+          late_cancel_disposition?: string
+          max_self_service_reschedules?: number | null
+          must_keep_assigned_teacher?: boolean
+          no_show_disposition?: string
+          policy_version_id: string
+          replacement_window_days?: number | null
+          student_cancel_cutoff_hours?: number
+          student_reschedule_cutoff_hours?: number
+          teacher_cancel_disposition?: string
+        }
+        Update: {
+          late_cancel_disposition?: string
+          max_self_service_reschedules?: number | null
+          must_keep_assigned_teacher?: boolean
+          no_show_disposition?: string
+          policy_version_id?: string
+          replacement_window_days?: number | null
+          student_cancel_cutoff_hours?: number
+          student_reschedule_cutoff_hours?: number
+          teacher_cancel_disposition?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cancellation_policy_rules_policy_version_id_fkey"
+            columns: ["policy_version_id"]
+            isOneToOne: true
+            referencedRelation: "school_policy_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lesson_events: {
         Row: {
+          actual_ends_at: string | null
+          actual_place_id: string | null
+          actual_starts_at: string | null
           cancellation_timing: string | null
           created_at: string
           created_by: string
           ends_at: string
+          exception_reason: string | null
           id: string
+          is_series_exception: boolean
+          lesson_series_id: string | null
           notes: string | null
+          outcome: string | null
           place_id: string
           product_id: string
           rescheduled_to_event_id: string | null
           school_id: string
+          staff_notes: string | null
           starts_at: string
           status: string
           student_id: string
@@ -190,16 +640,24 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          actual_ends_at?: string | null
+          actual_place_id?: string | null
+          actual_starts_at?: string | null
           cancellation_timing?: string | null
           created_at?: string
           created_by: string
           ends_at: string
+          exception_reason?: string | null
           id?: string
+          is_series_exception?: boolean
+          lesson_series_id?: string | null
           notes?: string | null
+          outcome?: string | null
           place_id: string
           product_id: string
           rescheduled_to_event_id?: string | null
           school_id: string
+          staff_notes?: string | null
           starts_at: string
           status?: string
           student_id: string
@@ -207,16 +665,24 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          actual_ends_at?: string | null
+          actual_place_id?: string | null
+          actual_starts_at?: string | null
           cancellation_timing?: string | null
           created_at?: string
           created_by?: string
           ends_at?: string
+          exception_reason?: string | null
           id?: string
+          is_series_exception?: boolean
+          lesson_series_id?: string | null
           notes?: string | null
+          outcome?: string | null
           place_id?: string
           product_id?: string
           rescheduled_to_event_id?: string | null
           school_id?: string
+          staff_notes?: string | null
           starts_at?: string
           status?: string
           student_id?: string
@@ -230,6 +696,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_events_rescheduled_to_event_id_fkey"
+            columns: ["rescheduled_to_event_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_events_school_id_actual_place_id_fkey"
+            columns: ["school_id", "actual_place_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_places"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_events_school_id_lesson_series_id_fkey"
+            columns: ["school_id", "lesson_series_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_series"
+            referencedColumns: ["school_id", "id"]
           },
           {
             foreignKeyName: "lesson_events_school_id_product_id_fkey"
@@ -302,6 +789,560 @@ export type Database = {
           },
           {
             foreignKeyName: "lesson_places_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lesson_series: {
+        Row: {
+          created_at: string
+          created_by: string
+          default_place_id: string
+          ends_on: string | null
+          id: string
+          product_id: string
+          recurrence_rule: Json
+          school_id: string
+          starts_on: string
+          status: string
+          student_id: string
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          default_place_id: string
+          ends_on?: string | null
+          id?: string
+          product_id: string
+          recurrence_rule: Json
+          school_id: string
+          starts_on: string
+          status?: string
+          student_id: string
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          default_place_id?: string
+          ends_on?: string | null
+          id?: string
+          product_id?: string
+          recurrence_rule?: Json
+          school_id?: string
+          starts_on?: string
+          status?: string
+          student_id?: string
+          teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_series_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_series_school_id_default_place_id_fkey"
+            columns: ["school_id", "default_place_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_places"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_series_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_series_school_id_product_id_fkey"
+            columns: ["school_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "service_products"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_series_school_id_student_id_fkey"
+            columns: ["school_id", "student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["school_id", "person_id"]
+          },
+          {
+            foreignKeyName: "lesson_series_school_id_teacher_id_fkey"
+            columns: ["school_id", "teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["school_id", "person_id"]
+          },
+        ]
+      }
+      payment_attempts: {
+        Row: {
+          amount_cents: number
+          approval_request_id: string | null
+          billing_account_id: string
+          billing_period_id: string
+          created_at: string
+          created_by: string
+          currency: string
+          failed_at: string | null
+          failure_code: string | null
+          failure_message: string | null
+          id: string
+          idempotency_key: string
+          payment_connection_id: string
+          payment_method_id: string | null
+          provider_charge_id: string | null
+          provider_customer_id: string
+          provider_payment_intent_id: string | null
+          receipt_url: string | null
+          school_id: string
+          status: string
+          submitted_at: string | null
+          succeeded_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          approval_request_id?: string | null
+          billing_account_id: string
+          billing_period_id: string
+          created_at?: string
+          created_by: string
+          currency: string
+          failed_at?: string | null
+          failure_code?: string | null
+          failure_message?: string | null
+          id?: string
+          idempotency_key: string
+          payment_connection_id: string
+          payment_method_id?: string | null
+          provider_charge_id?: string | null
+          provider_customer_id: string
+          provider_payment_intent_id?: string | null
+          receipt_url?: string | null
+          school_id: string
+          status?: string
+          submitted_at?: string | null
+          succeeded_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          approval_request_id?: string | null
+          billing_account_id?: string
+          billing_period_id?: string
+          created_at?: string
+          created_by?: string
+          currency?: string
+          failed_at?: string | null
+          failure_code?: string | null
+          failure_message?: string | null
+          id?: string
+          idempotency_key?: string
+          payment_connection_id?: string
+          payment_method_id?: string | null
+          provider_charge_id?: string | null
+          provider_customer_id?: string
+          provider_payment_intent_id?: string | null
+          receipt_url?: string | null
+          school_id?: string
+          status?: string
+          submitted_at?: string | null
+          succeeded_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_attempts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_attempts_school_id_approval_request_id_fkey"
+            columns: ["school_id", "approval_request_id"]
+            isOneToOne: false
+            referencedRelation: "billing_approval_requests"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "payment_attempts_school_id_billing_account_id_billing_peri_fkey"
+            columns: ["school_id", "billing_account_id", "billing_period_id"]
+            isOneToOne: false
+            referencedRelation: "billing_periods"
+            referencedColumns: ["school_id", "billing_account_id", "id"]
+          },
+          {
+            foreignKeyName: "payment_attempts_school_id_payment_connection_id_fkey"
+            columns: ["school_id", "payment_connection_id"]
+            isOneToOne: false
+            referencedRelation: "school_payment_connections"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "payment_attempts_school_id_payment_method_id_billing_accou_fkey"
+            columns: ["school_id", "payment_method_id", "billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_payment_methods"
+            referencedColumns: ["school_id", "id", "billing_account_id"]
+          },
+          {
+            foreignKeyName: "payment_attempts_school_id_provider_customer_id_billing_ac_fkey"
+            columns: ["school_id", "provider_customer_id", "billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_provider_customers"
+            referencedColumns: ["school_id", "id", "billing_account_id"]
+          },
+          {
+            foreignKeyName: "payment_attempts_school_id_provider_customer_id_payment_co_fkey"
+            columns: [
+              "school_id",
+              "provider_customer_id",
+              "payment_connection_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "billing_provider_customers"
+            referencedColumns: ["school_id", "id", "payment_connection_id"]
+          },
+        ]
+      }
+      payment_disputes: {
+        Row: {
+          amount_cents: number
+          closed_at: string | null
+          created_at: string
+          currency: string
+          evidence_due_at: string | null
+          id: string
+          payment_attempt_id: string
+          provider_dispute_id: string
+          reason: string | null
+          school_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          closed_at?: string | null
+          created_at?: string
+          currency: string
+          evidence_due_at?: string | null
+          id?: string
+          payment_attempt_id: string
+          provider_dispute_id: string
+          reason?: string | null
+          school_id: string
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          closed_at?: string | null
+          created_at?: string
+          currency?: string
+          evidence_due_at?: string | null
+          id?: string
+          payment_attempt_id?: string
+          provider_dispute_id?: string
+          reason?: string | null
+          school_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_disputes_school_id_payment_attempt_id_fkey"
+            columns: ["school_id", "payment_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "payment_attempts"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
+      payment_method_consents: {
+        Row: {
+          accepted_at: string
+          billing_account_id: string
+          channel: string
+          created_at: string
+          evidence: Json
+          id: string
+          payment_method_id: string
+          provider_setup_intent_id: string | null
+          revoked_at: string | null
+          school_id: string
+          terms_sha256: string
+          terms_version: string
+          usage_scope: string
+        }
+        Insert: {
+          accepted_at: string
+          billing_account_id: string
+          channel: string
+          created_at?: string
+          evidence?: Json
+          id?: string
+          payment_method_id: string
+          provider_setup_intent_id?: string | null
+          revoked_at?: string | null
+          school_id: string
+          terms_sha256: string
+          terms_version: string
+          usage_scope: string
+        }
+        Update: {
+          accepted_at?: string
+          billing_account_id?: string
+          channel?: string
+          created_at?: string
+          evidence?: Json
+          id?: string
+          payment_method_id?: string
+          provider_setup_intent_id?: string | null
+          revoked_at?: string | null
+          school_id?: string
+          terms_sha256?: string
+          terms_version?: string
+          usage_scope?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_method_consents_school_id_billing_account_id_fkey"
+            columns: ["school_id", "billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "payment_method_consents_school_id_payment_method_id_billin_fkey"
+            columns: ["school_id", "payment_method_id", "billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_payment_methods"
+            referencedColumns: ["school_id", "id", "billing_account_id"]
+          },
+        ]
+      }
+      payment_policy_rules: {
+        Row: {
+          approval_requirement: string
+          collection_method: string
+          due_day_of_month: number | null
+          failed_payment_retry_count: number
+          grace_period_days: number
+          late_fee_cents: number
+          policy_version_id: string
+        }
+        Insert: {
+          approval_requirement?: string
+          collection_method?: string
+          due_day_of_month?: number | null
+          failed_payment_retry_count?: number
+          grace_period_days?: number
+          late_fee_cents?: number
+          policy_version_id: string
+        }
+        Update: {
+          approval_requirement?: string
+          collection_method?: string
+          due_day_of_month?: number | null
+          failed_payment_retry_count?: number
+          grace_period_days?: number
+          late_fee_cents?: number
+          policy_version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_policy_rules_policy_version_id_fkey"
+            columns: ["policy_version_id"]
+            isOneToOne: true
+            referencedRelation: "school_policy_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_provider_events: {
+        Row: {
+          api_version: string | null
+          event_type: string
+          id: string
+          last_error: string | null
+          livemode: boolean
+          payload: Json
+          processed_at: string | null
+          processing_attempts: number
+          processing_status: string
+          provider: string
+          provider_account_id: string | null
+          provider_created_at: string | null
+          provider_event_id: string
+          provider_object_id: string | null
+          received_at: string
+        }
+        Insert: {
+          api_version?: string | null
+          event_type: string
+          id?: string
+          last_error?: string | null
+          livemode: boolean
+          payload: Json
+          processed_at?: string | null
+          processing_attempts?: number
+          processing_status?: string
+          provider: string
+          provider_account_id?: string | null
+          provider_created_at?: string | null
+          provider_event_id: string
+          provider_object_id?: string | null
+          received_at?: string
+        }
+        Update: {
+          api_version?: string | null
+          event_type?: string
+          id?: string
+          last_error?: string | null
+          livemode?: boolean
+          payload?: Json
+          processed_at?: string | null
+          processing_attempts?: number
+          processing_status?: string
+          provider?: string
+          provider_account_id?: string | null
+          provider_created_at?: string | null
+          provider_event_id?: string
+          provider_object_id?: string | null
+          received_at?: string
+        }
+        Relationships: []
+      }
+      payment_refunds: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          created_by: string | null
+          currency: string
+          failure_code: string | null
+          failure_message: string | null
+          id: string
+          idempotency_key: string
+          payment_attempt_id: string
+          provider_refund_id: string | null
+          reason: string | null
+          school_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          created_by?: string | null
+          currency: string
+          failure_code?: string | null
+          failure_message?: string | null
+          id?: string
+          idempotency_key: string
+          payment_attempt_id: string
+          provider_refund_id?: string | null
+          reason?: string | null
+          school_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          failure_code?: string | null
+          failure_message?: string | null
+          id?: string
+          idempotency_key?: string
+          payment_attempt_id?: string
+          provider_refund_id?: string | null
+          reason?: string | null
+          school_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_refunds_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_refunds_school_id_payment_attempt_id_fkey"
+            columns: ["school_id", "payment_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "payment_attempts"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
+      payment_state_history: {
+        Row: {
+          actor_profile_id: string | null
+          created_at: string
+          entity_id: string
+          entity_type: string
+          from_status: string | null
+          id: number
+          metadata: Json
+          provider_event_id: string | null
+          school_id: string
+          source: string
+          to_status: string
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          from_status?: string | null
+          id?: never
+          metadata?: Json
+          provider_event_id?: string | null
+          school_id: string
+          source: string
+          to_status: string
+        }
+        Update: {
+          actor_profile_id?: string | null
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          from_status?: string | null
+          id?: never
+          metadata?: Json
+          provider_event_id?: string | null
+          school_id?: string
+          source?: string
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_state_history_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_state_history_school_id_fkey"
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "schools"
@@ -405,6 +1446,60 @@ export type Database = {
         }
         Relationships: []
       }
+      school_documents: {
+        Row: {
+          created_at: string
+          id: string
+          mime_type: string
+          name: string
+          school_id: string
+          size_bytes: number
+          status: string
+          storage_path: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mime_type: string
+          name: string
+          school_id: string
+          size_bytes: number
+          status?: string
+          storage_path: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mime_type?: string
+          name?: string
+          school_id?: string
+          size_bytes?: number
+          status?: string
+          storage_path?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_documents_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "school_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       school_members: {
         Row: {
           created_at: string
@@ -463,6 +1558,173 @@ export type Database = {
           },
         ]
       }
+      school_payment_connections: {
+        Row: {
+          charges_enabled: boolean
+          created_at: string
+          currently_due: Json
+          details_submitted: boolean
+          disabled_reason: string | null
+          eventually_due: Json
+          id: string
+          last_synced_at: string | null
+          livemode: boolean
+          payouts_enabled: boolean
+          provider: string
+          provider_account_id: string | null
+          school_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          charges_enabled?: boolean
+          created_at?: string
+          currently_due?: Json
+          details_submitted?: boolean
+          disabled_reason?: string | null
+          eventually_due?: Json
+          id?: string
+          last_synced_at?: string | null
+          livemode?: boolean
+          payouts_enabled?: boolean
+          provider?: string
+          provider_account_id?: string | null
+          school_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          charges_enabled?: boolean
+          created_at?: string
+          currently_due?: Json
+          details_submitted?: boolean
+          disabled_reason?: string | null
+          eventually_due?: Json
+          id?: string
+          last_synced_at?: string | null
+          livemode?: boolean
+          payouts_enabled?: boolean
+          provider?: string
+          provider_account_id?: string | null
+          school_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_payment_connections_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_policies: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          is_default: boolean
+          kind: string
+          name: string
+          school_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          is_default?: boolean
+          kind: string
+          name: string
+          school_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_default?: boolean
+          kind?: string
+          name?: string
+          school_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_policies_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "school_policies_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_policy_versions: {
+        Row: {
+          created_at: string
+          created_by: string
+          editor_content: Json
+          effective_from: string | null
+          id: string
+          plain_text: string
+          policy_id: string
+          published_at: string | null
+          school_id: string
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          editor_content?: Json
+          effective_from?: string | null
+          id?: string
+          plain_text?: string
+          policy_id: string
+          published_at?: string | null
+          school_id: string
+          version_number: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          editor_content?: Json
+          effective_from?: string | null
+          id?: string
+          plain_text?: string
+          policy_id?: string
+          published_at?: string | null
+          school_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_policy_versions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "school_policy_versions_school_id_policy_id_fkey"
+            columns: ["school_id", "policy_id"]
+            isOneToOne: false
+            referencedRelation: "school_policies"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
       schools: {
         Row: {
           address_line_1: string | null
@@ -475,9 +1737,9 @@ export type Database = {
           id: string
           logo_path: string | null
           name: string
-          primary_color: string | null
           phone: string | null
           postal_code: string | null
+          primary_color: string | null
           region: string | null
           slug: string
           timezone: string
@@ -494,9 +1756,9 @@ export type Database = {
           id?: string
           logo_path?: string | null
           name: string
-          primary_color?: string | null
           phone?: string | null
           postal_code?: string | null
+          primary_color?: string | null
           region?: string | null
           slug: string
           timezone: string
@@ -513,9 +1775,9 @@ export type Database = {
           id?: string
           logo_path?: string | null
           name?: string
-          primary_color?: string | null
           phone?: string | null
           postal_code?: string | null
+          primary_color?: string | null
           region?: string | null
           slug?: string
           timezone?: string
@@ -528,6 +1790,51 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_product_policy_selections: {
+        Row: {
+          created_at: string
+          policy_id: string | null
+          policy_kind: string
+          product_id: string
+          school_id: string
+          updated_at: string
+          use_school_default: boolean
+        }
+        Insert: {
+          created_at?: string
+          policy_id?: string | null
+          policy_kind: string
+          product_id: string
+          school_id: string
+          updated_at?: string
+          use_school_default?: boolean
+        }
+        Update: {
+          created_at?: string
+          policy_id?: string | null
+          policy_kind?: string
+          product_id?: string
+          school_id?: string
+          updated_at?: string
+          use_school_default?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_product_policy_select_school_id_policy_id_policy_k_fkey"
+            columns: ["school_id", "policy_id", "policy_kind"]
+            isOneToOne: false
+            referencedRelation: "school_policies"
+            referencedColumns: ["school_id", "id", "kind"]
+          },
+          {
+            foreignKeyName: "service_product_policy_selections_school_id_product_id_fkey"
+            columns: ["school_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "service_products"
+            referencedColumns: ["school_id", "id"]
           },
         ]
       }
@@ -564,7 +1871,7 @@ export type Database = {
           interval_unit?: string
           name: string
           price_cents: number
-          pricing_model: string
+          pricing_model?: string
           school_id: string
           sessions_per_interval?: number
           status?: string
@@ -746,41 +2053,6 @@ export type Database = {
           },
         ]
       }
-      user_view_preferences: {
-        Row: {
-          created_at: string
-          profile_id: string
-          school_id: string
-          settings: Json
-          updated_at: string
-          view_key: string
-        }
-        Insert: {
-          created_at?: string
-          profile_id: string
-          school_id: string
-          settings?: Json
-          updated_at?: string
-          view_key: string
-        }
-        Update: {
-          created_at?: string
-          profile_id?: string
-          school_id?: string
-          settings?: Json
-          updated_at?: string
-          view_key?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_view_preferences_school_id_profile_id_fkey"
-            columns: ["school_id", "profile_id"]
-            isOneToOne: false
-            referencedRelation: "school_members"
-            referencedColumns: ["school_id", "profile_id"]
-          },
-        ]
-      }
       teachers: {
         Row: {
           bio: string | null
@@ -816,14 +2088,66 @@ export type Database = {
           },
         ]
       }
+      user_view_preferences: {
+        Row: {
+          created_at: string
+          profile_id: string
+          school_id: string
+          settings: Json
+          updated_at: string
+          view_key: string
+        }
+        Insert: {
+          created_at?: string
+          profile_id: string
+          school_id: string
+          settings?: Json
+          updated_at?: string
+          view_key: string
+        }
+        Update: {
+          created_at?: string
+          profile_id?: string
+          school_id?: string
+          settings?: Json
+          updated_at?: string
+          view_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_view_preferences_school_id_profile_id_fkey"
+            columns: ["school_id", "profile_id"]
+            isOneToOne: false
+            referencedRelation: "school_members"
+            referencedColumns: ["school_id", "profile_id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      approve_billing_request: { Args: { raw_token: string }; Returns: string }
       create_school: {
         Args: { school_name: string; school_timezone?: string }
         Returns: string
+      }
+      get_billing_approval: {
+        Args: { raw_token: string }
+        Returns: {
+          amount_cents: number
+          approval_status: string
+          approved_at: string
+          billing_account_name: string
+          collection_action: string
+          currency: string
+          expires_at: string
+          line_items: Json
+          payment_status: string
+          period_label: string
+          school_name: string
+        }[]
       }
       has_school_role: {
         Args: { allowed_roles: string[]; target_school_id: string }

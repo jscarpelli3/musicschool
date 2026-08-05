@@ -83,8 +83,9 @@ Passed. Activate Step 2, Payment data foundation. The unresolved backup and auto
 
 ## Step 2 — Payment data foundation
 
-Status: In progress  
+Status: Complete
 Activated: 2026-08-05
+Completed: 2026-08-05
 
 ### Pre-step direction review
 
@@ -100,6 +101,49 @@ Activated: 2026-08-05
 - The user reports that the MusicSchool Stripe Billing account has been started.
 - This is recorded as platform-account progress only. Connect enablement, account configuration/responsibilities, test credentials, branding, and webhook endpoints are not yet verified.
 
-### Current decision
+### Systems of record and implemented model
 
-Proceed with provider-aware but locally enforceable payment-ledger schema design. Do not add live Stripe controls or secrets during this step.
+- Supabase is the system of record for billing periods, immutable line-item snapshots, approvals, payment attempts, refunds, disputes, safe provider references, and reconciliation history.
+- Stripe will remain the system of record for card credentials and provider settlement truth; no raw card or bank credentials were added to the application schema.
+- Added test/live-scoped school payment connections, connected-account customer and payment-method references, explicit off-session consent evidence, billing periods and line items, payment attempts, refunds, disputes, provider events, and automatic state history.
+- Linked approval requests to billing periods rather than creating a second approval concept.
+- Retained the legacy `billing_accounts.stripe_customer_id` column for compatibility but marked it deprecated in favor of account-scoped provider-customer records.
+
+### Failure, retry, duplication, and recovery review
+
+- Composite foreign keys prevent cross-school, cross-billing-account, and cross-connection provider-reference mixing.
+- Stable idempotency keys prevent duplicate payment attempts and refunds; provider event IDs are unique per provider account and environment.
+- Billing totals are derived from line items and cannot be directly changed; line items become immutable when a period is locked.
+- Period and attempt state transitions are constrained, and provider payload identifiers become immutable once recorded.
+- An approved billing period requires a matching approved request for the same school, billing account, period, amount, and currency.
+- Off-session attempts require active recorded consent for the selected payment method.
+- Refund totals cannot exceed a succeeded attempt, and provider event payloads are immutable.
+- State transitions are written automatically to payment history for later audit and reconciliation.
+
+### Security, tenancy, and provider boundary review
+
+- RLS is enabled on all new tenant tables. School admins can read the ledger and can edit billing periods/line items only while the period is still mutable.
+- Provider-originated records and provider status transitions remain service-role operations; browser roles cannot declare payment success, failure, settlement, refunds, disputes, or webhook truth.
+- Provider event payload tables expose no authenticated select/insert/update/delete policy or grant.
+- No Stripe credentials or raw payment credentials were introduced.
+
+### Verification evidence
+
+- Applied `20260805110000_payment_ledger_foundation.sql` to linked Supabase project `twhexxokrjwzsoxgzlme`.
+- Generated `src/types/database.ts` from the deployed linked schema.
+- Applied `20260805111000_verify_payment_ledger_invariants.sql`; its transaction proved total derivation, amount tamper prevention, locked-line immutability, transition enforcement, attempt idempotency, and refund ceilings, then deliberately rolled back all fixtures.
+- Supabase database lint at warning level: no schema errors found.
+- ESLint: passed.
+- TypeScript `tsc --noEmit`: passed.
+
+### Unresolved risks and deferred work
+
+- Browser-role RLS behavior needs automated positive and negative tests before production; schema policy inspection and database invariant tests are not a substitute for authenticated integration tests.
+- Webhook ordering, replay, signature verification, and reconciliation cannot be tested until the verified webhook foundation exists.
+- Refund and dispute ingestion is modeled but not implemented.
+- Full backup/restore rehearsal, Storage export, monitoring, and live-account cutover remain production blockers.
+- Currency is presently constrained within each ledger relationship, but the first live-school rehearsal must confirm the school's actual settlement currency and Stripe account country.
+
+### Exit decision
+
+Passed. Activate Step 3, Stripe platform configuration. The ledger now supplies durable prerequisites for provider integration without enabling any charge controls. Before writing Stripe code, verify Connect availability, test-mode credentials, connected-account responsibilities, and secret placement.
