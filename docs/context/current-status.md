@@ -85,3 +85,5 @@ Enable Google OAuth, exercise the owner onboarding flow, then design the people 
 - Step 1 passed its exit gate and was pushed in commit `c5fff81`.
 - Step 2, Payment data foundation, is active after confirming the ledger should precede provider configuration and user-facing payment controls.
 - Every step has a pre-implementation direction/risk review and a post-implementation persistence/security/test/operations gate.
+- Every audit result is retained in the append-only `docs/audits/payment-roadmap-audit-log.md`; Step 1 has been backfilled and Step 2's activation review is recorded.
+- The MusicSchool Stripe Billing/platform account has been started. Connect and test integration readiness have not yet been verified.

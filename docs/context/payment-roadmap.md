@@ -2,6 +2,8 @@
 
 This is the tracked implementation order for school-to-family payments. It is a living plan: steps may be split, reordered, or revised when a review gate exposes a safer or simpler path. A step is never marked complete merely because its UI renders.
 
+The append-only evidence trail for every pre-step and exit audit is `docs/audits/payment-roadmap-audit-log.md`.
+
 ## Permanent invariants
 
 - Each school is the merchant of record through its own Stripe connected account.
@@ -35,7 +37,8 @@ This is the tracked implementation order for school-to-family payments. It is a 
 5. Confirm local and remote migration history match when the schema changed.
 6. Review RLS and server authorization independently of hidden or disabled UI.
 7. Update architecture, decision, status, cost, and operational documentation.
-8. Commit a coherent checkpoint and reassess the next step before activating it.
+8. Append the audit results and evidence to `docs/audits/payment-roadmap-audit-log.md`.
+9. Commit a coherent checkpoint and reassess the next step before activating it.
 
 ## Tracked steps
 
