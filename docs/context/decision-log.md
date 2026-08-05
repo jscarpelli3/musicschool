@@ -117,3 +117,31 @@ Use one entry per meaningful technical or product decision.
 - Context: Supporting Stripe for SaaS subscriptions and Square for family payments would duplicate SDKs, webhooks, terminology, credentials, sandboxes, and reconciliation. Stripe Connect directly models a SaaS platform whose independent schools remain merchants of record.
 - Decision: Use Stripe Billing for schools paying MusicSchool and Stripe Connect direct payments for families paying connected schools. Use Stripe-hosted onboarding and payment surfaces, Stripe-collected processing fees, and Stripe-managed connected-account risk where available.
 - Consequences: The platform has one payment ecosystem while keeping software revenue and school revenue logically separate. Schools migrating from Square use an explicit cutoff and families re-enter payment methods without needing Stripe accounts.
+
+### 2026-08-04: Centralize UI tokens and keep uploaded branding private
+
+- Status: accepted
+- Context: The interface needs to evolve quickly without changing repeated color, radius, spacing, and shadow values in individual components. User avatars and school logos also need tenant-safe storage.
+- Decision: Define semantic UI tokens in the Tailwind config with CSS-variable values. Store profile avatars and school logos in separate private Supabase Storage buckets, use signed URLs for display, and enforce upload ownership through Storage RLS.
+- Consequences: Broad visual changes remain centralized. Users control their own avatar, only school owners and administrators control a school logo, and image access follows the existing tenant boundary.
+
+### 2026-08-04: Choose a dark, warm editorial visual direction
+
+- Status: accepted
+- Context: The first interface pass felt like a generic AI-generated SaaS dashboard because of cool dark colors, repeated rounded cards, decorative eyebrow text, and familiar startup typography.
+- Decision: Use Newsreader for display type and IBM Plex Sans for interface type. Build the palette from warm charcoal, parchment, aged wood, limestone, and restrained antique brass. Favor open sections, thin rules, near-square controls, and subtle material grain.
+- Consequences: The interface should feel cultivated and tactile without copying retail styling literally. School accent colors remain subordinate to legibility and the shared product structure.
+
+### 2026-08-04: Model the school catalog independently from Stripe
+
+- Status: accepted
+- Context: Owners need to define different private lessons and group classes, each with its own duration, frequency, price, and capacity. These operational definitions exist before payment processing.
+- Decision: Store offerings as school-scoped `service_products` with structured cadence and pricing fields. Stripe products and prices remain downstream payment references rather than the canonical school catalog.
+- Consequences: Scheduling can use the same product definitions as enrollment and billing. Enrollment terms must snapshot product defaults so catalog changes are prospective rather than retroactive.
+
+### 2026-08-05: Let schools define their own place vocabulary
+
+- Status: accepted
+- Context: Hard-coded categories such as in-school, room, student-home, and custom impose platform terminology and create unnecessary subcategories.
+- Decision: Maintain a school-scoped Places list with a name and optional details. Every lesson occurrence references one place. Owners/admins manage the list, while authenticated teachers may add places and maintain entries they created.
+- Consequences: Schools can use operational language that fits their facilities and teaching model. Places remain reusable, archivable records rather than repeated free text on lesson occurrences.

@@ -21,12 +21,10 @@ export default async function SetupPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-20">
-      <section className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-8">
-        <p className="text-sm font-medium uppercase tracking-[0.2em] text-emerald-400">
-          First step
-        </p>
-        <h1 className="mt-4 text-3xl font-semibold tracking-tight">Create your school</h1>
-        <p className="mt-2 text-sm leading-6 text-zinc-400">
+      <section className="w-full max-w-md border-t border-line pt-8">
+        <p className="text-sm text-muted">First step</p>
+        <h1 className="mt-10 font-display text-5xl font-normal tracking-[-0.035em]">Create your school.</h1>
+        <p className="mt-4 text-sm leading-6 text-muted">
           You will become the school owner. Staff and teachers can be invited later.
         </p>
         <SchoolForm />

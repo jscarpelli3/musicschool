@@ -17,6 +17,16 @@ Enable Google OAuth, exercise the owner onboarding flow, then design the people 
 5. Add staff and portal invitations
 6. Build the private-lesson scheduling vertical slice
 7. Add Stripe Connect family billing, then Stripe Billing software subscriptions
+
+## UI And Media Foundation
+
+- Semantic Tailwind design tokens are configured for colors, radii, spacing, typography, and shadows.
+- Profile avatar and school logo upload flows are deployed with private Storage policies.
+- The first school has a demo roster: the owner as a teacher, two additional teachers, 12 students, eight guardian payers, two self-paying students, and ten billing accounts.
+- School owners and administrators can define and archive private-lesson and group-class products with explicit duration, cadence, price, pricing model, and capacity.
+- The owner dashboard has day, week, and month planner views with teacher filtering, recurring availability windows, occupied lesson blocks, and monthly capacity indicators.
+- The demo school has ten weekly availability blocks and 84 lesson occurrences covering 12 students across seven weeks; one teacher demonstrates split Wednesday hours.
+- Lesson occurrences reference a flexible school-owned Places list; owners/admins manage it and teachers may add their own entries.
 8. Add transactional email; defer SMS until its consent and compliance workflow is designed
 
 ## Risks
@@ -43,4 +53,4 @@ Enable Google OAuth, exercise the owner onboarding flow, then design the people 
 
 ## Updated
 
-2026-08-04
+2026-08-05

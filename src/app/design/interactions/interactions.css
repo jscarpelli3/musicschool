@@ -1,0 +1,131 @@
+.line-action {
+  position: relative;
+  padding-block: 0.75rem;
+  text-align: left;
+}
+
+.line-action::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  content: "";
+  background: currentColor;
+  transform: scaleX(0.16);
+  transform-origin: left;
+  transition: transform 320ms cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+.line-action:hover::after,
+.line-action:focus-visible::after {
+  transform: scaleX(1);
+}
+
+.line-field {
+  position: relative;
+  border-bottom: 1px solid var(--ui-line);
+}
+
+.line-field::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 1px;
+  content: "";
+  background: var(--ui-brand);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 260ms cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+.line-field:focus-within::after {
+  transform: scaleX(1);
+}
+
+.line-field label {
+  transition: color 180ms ease;
+}
+
+.line-field:focus-within label {
+  color: var(--ui-brand-hover);
+}
+
+.selector-track {
+  position: relative;
+}
+
+.selector-track::after {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: calc(100% / 3);
+  height: 2px;
+  content: "";
+  background: var(--ui-brand);
+  transform: translateX(calc(var(--selected-index) * 100%));
+  transition: transform 300ms cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+.hold-button {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid var(--ui-line);
+}
+
+.hold-button::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  content: "";
+  background: var(--ui-brand);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+.hold-button::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  content: "";
+  background: var(--ui-ink);
+  opacity: 0;
+}
+
+.hold-button[data-holding="true"]::before {
+  animation: hold-fill 1400ms linear forwards;
+}
+
+.hold-button[data-holding="true"]::after {
+  animation: hold-line 1400ms linear forwards;
+  opacity: 0.85;
+}
+
+.hold-button[data-confirmed="true"]::before {
+  transform: scaleX(1);
+}
+
+@keyframes hold-fill {
+  to { transform: scaleX(1); }
+}
+
+@keyframes hold-line {
+  to { left: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .line-action::after,
+  .line-field::after,
+  .selector-track::after {
+    transition-duration: 1ms;
+  }
+
+  .hold-button[data-holding="true"]::before,
+  .hold-button[data-holding="true"]::after {
+    animation-duration: 1400ms;
+  }
+}

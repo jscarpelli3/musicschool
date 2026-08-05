@@ -38,16 +38,14 @@ function LoginForm() {
 
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-20">
-      <section className="w-full max-w-sm rounded-2xl border border-zinc-800 bg-zinc-950 p-8">
-        <p className="text-sm font-medium uppercase tracking-[0.2em] text-emerald-400">
-          Music School
-        </p>
-        <h1 className="mt-4 text-3xl font-semibold tracking-tight">Sign in</h1>
-        <p className="mt-2 text-sm leading-6 text-zinc-400">
+      <section className="w-full max-w-sm border-t border-line pt-8">
+        <p className="text-sm text-muted">MusicSchool</p>
+        <h1 className="mt-10 font-display text-5xl font-normal tracking-[-0.035em]">Welcome back.</h1>
+        <p className="mt-4 text-sm leading-6 text-muted">
           Use your Google account to continue.
         </p>
         {error ? (
-          <p className="mt-5 rounded-lg border border-red-900/60 bg-red-950/40 p-3 text-sm text-red-300">
+          <p className="mt-5 border-l-2 border-danger py-2 pl-4 text-sm text-danger">
             {error}
           </p>
         ) : null}
@@ -55,7 +53,7 @@ function LoginForm() {
           type="button"
           onClick={signIn}
           disabled={pending}
-          className="mt-7 w-full rounded-lg bg-zinc-100 px-4 py-3 text-sm font-medium text-zinc-950 transition hover:bg-white disabled:cursor-wait disabled:opacity-60"
+          className="mt-10 w-full rounded-control bg-ink px-4 py-3 text-sm font-medium text-canvas transition hover:bg-brand-hover disabled:cursor-wait disabled:opacity-60"
         >
           {pending ? "Redirecting…" : "Continue with Google"}
         </button>

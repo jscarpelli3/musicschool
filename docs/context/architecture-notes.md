@@ -80,6 +80,9 @@ This foundation intentionally follows the proven patterns in the local Agency Br
 - group classes
 - space rentals
 - Each scheduled item should point to a service type that defines default billing and scheduling parameters.
+- School owners and administrators manage these offerings as `service_products`; they are the school's catalog, not Stripe objects.
+- A product records private versus group format, duration, sessions per interval, interval length and unit, fixed-monthly versus per-session pricing, current price, capacity, and lifecycle status.
+- Enrollments snapshot the selected product terms so later catalog edits do not rewrite an existing student's agreement or historical billing.
 - Typical service-type parameters:
 - category
 - default duration
@@ -205,6 +208,10 @@ The resolved billing mode and price terms must be snapshotted for the applicable
 
 Rules describe recurring windows such as Mondays from 3:00 PM to 8:00 PM. They do not create lessons.
 
+A teacher may have any number of distinct blocks on the same weekday, such as 9:00 AM–12:00 PM and 2:00–7:00 PM. Overlapping blocks for the same teacher, weekday, and effective date range are rejected; gaps remain intentional off-hours.
+
+The owner planner renders these windows as its quiet background layer and scheduled occurrences as occupied foreground blocks. Open time is derived from availability minus occupied events; it is not stored as a second mutable source of truth.
+
 ### `teacher_availability_exceptions`
 
 - `school_id`
@@ -270,6 +277,10 @@ In addition to service, participant, location, and current-time fields, preserve
 - `status`
 - pricing and policy snapshots needed for historical accuracy
 
+The initial planner uses `lesson_events` for concrete private-lesson occurrences. This can converge with the broader scheduled-event model when group classes, school events, and enrollment generation are implemented.
+
+Lesson occurrences reference a school-owned `lesson_places` list. Location categories are not hard-coded: each school chooses its own vocabulary, such as “Studio A,” “Student home,” “The Annex,” or “Online.” A place has a name plus optional address, access, room, or video-link details. Owners and administrators manage the complete list; authenticated teachers may add a place and maintain entries they created.
+
 ### `event_changes`
 
 - `school_id`
@@ -333,6 +344,18 @@ The first shippable milestone is a single production-ready vertical slice runnin
 4. Staff configure a private-lesson service type and teacher availability.
 5. Staff or a guardian schedule, reschedule, or cancel a lesson under defined rules.
 6. The system shows a school calendar and a student/household schedule.
+
+## Design System And Media
+
+- Keep global visual decisions in `tailwind.config.ts`, backed by CSS custom properties in `globals.css`.
+- Follow the product-specific rules in `design-rules.md`; avoid generic dashboard conventions such as decorative eyebrows, excessive cards and rounding, gradients, glows, and pill-shaped controls.
+- Follow `code-rules.md`: pages compose feature modules, recurring UI and interaction patterns live in reusable components, and domain logic stays separate from generic primitives.
+- Use semantic tokens such as canvas, surface, ink, line, brand, control radius, card radius, and shared spacing rather than scattering palette-specific values through components.
+- Store uploaded images in private Supabase Storage buckets and render them through short-lived signed URLs.
+- A signed-in user owns their profile avatar. JPG, PNG, and WebP are accepted up to 2 MB.
+- School owners and administrators manage the school logo; all active school members may view it.
+- Keep the Google profile image as a fallback until a user uploads a custom avatar.
+- When the broader `people` model is added, give non-login students, guardians, and teachers their own school-scoped avatar path and management policy. Do not treat an auth profile as the canonical record for every person.
 7. A billing contact is associated with a Stripe customer on the school's connected account and can follow a Stripe-hosted invoice or Checkout link.
 8. Tenant isolation, role permissions, audit fields, and core scheduling rules have automated tests.
 

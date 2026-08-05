@@ -1,0 +1,35 @@
+.quick-view-trigger {
+  overflow: visible;
+}
+
+.quick-view {
+  position: absolute;
+  z-index: 1;
+  top: calc(100% + 0.5rem);
+  left: 50%;
+  width: max-content;
+  min-width: 9rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--ui-line);
+  background: var(--ui-ink);
+  color: var(--ui-canvas);
+  box-shadow: 0 12px 30px rgb(0 0 0 / 0.22);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -0.25rem);
+  transition: opacity 100ms ease, transform 100ms ease;
+}
+
+.quick-view-trigger:hover .quick-view,
+.quick-view-trigger:focus-visible .quick-view {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: var(--quick-view-delay, 1s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-view-trigger:hover .quick-view,
+  .quick-view-trigger:focus-visible .quick-view {
+    transition-duration: 1ms;
+  }
+}

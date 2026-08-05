@@ -1,12 +1,26 @@
+@config "../../tailwind.config.ts";
 @import "tailwindcss";
 
 :root {
   color-scheme: dark;
-  --background: #090b10;
-  --foreground: #f4f4f5;
-  --muted: #a1a1aa;
-  --border: #27272a;
-  --accent: #34d399;
+  --ui-canvas: #171613;
+  --ui-surface: #201e1a;
+  --ui-surface-raised: #2a2722;
+  --ui-ink: #e7e0d4;
+  --ui-muted: #a59d90;
+  --ui-line: #474139;
+  --ui-brand: #b9a078;
+  --ui-brand-hover: #d1b98f;
+  --ui-danger: #c78374;
+  --ui-radius-control: 0.125rem;
+  --ui-radius-card: 0.125rem;
+  --ui-radius-panel: 0;
+  --ui-space-control: 0.6875rem;
+  --ui-space-card: 1.5rem;
+  --ui-space-section: 3.5rem;
+  --ui-shadow-panel: none;
+  --ui-font-sans: var(--font-sans), Arial, sans-serif;
+  --ui-font-display: var(--font-display), Georgia, serif;
 }
 
 * {
@@ -14,15 +28,32 @@
 }
 
 html {
-  background: var(--background);
+  background: var(--ui-canvas);
 }
 
 body {
   min-height: 100vh;
   margin: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--ui-canvas);
+  color: var(--ui-ink);
+  font-family: var(--ui-font-sans);
+  position: relative;
+  isolation: isolate;
+}
+
+body::before {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");
+}
+
+::selection {
+  background: var(--ui-brand);
+  color: var(--ui-canvas);
 }
 
 button,

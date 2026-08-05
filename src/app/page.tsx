@@ -26,20 +26,18 @@ export default async function Home() {
   return (
     <main className="mx-auto min-h-screen max-w-3xl px-6 py-20">
       <section>
-        <p className="mb-4 text-sm font-medium uppercase tracking-[0.2em] text-emerald-400">
-          Music School
-        </p>
-        <h1 className="text-4xl font-semibold tracking-tight">Choose a school</h1>
-        <div className="mt-8 grid gap-3">
+        <p className="mb-8 text-sm text-muted">MusicSchool</p>
+        <h1 className="font-display text-5xl font-normal tracking-[-0.035em]">Choose a school.</h1>
+        <div className="mt-10 border-t border-line">
           {memberships.map(({ role, schools: school }) =>
             school ? (
               <Link
                 key={school.id}
                 href={`/schools/${school.id}`}
-                className="rounded-xl border border-zinc-800 bg-zinc-950 p-5 transition hover:border-emerald-500/60"
+                className="grid grid-cols-[1fr_auto] border-b border-line py-5 transition hover:text-brand"
               >
                 <span className="block text-lg font-medium">{school.name}</span>
-                <span className="mt-1 block text-sm capitalize text-zinc-500">{role}</span>
+                <span className="text-sm capitalize text-muted">{role}</span>
               </Link>
             ) : null,
           )}

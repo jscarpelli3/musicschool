@@ -2,7 +2,34 @@
 
 Use this file for short chronological notes about meaningful work.
 
+## 2026-08-05
+
+- Deployed teacher availability rules and scheduled lesson occurrences, then populated seven weeks of demo lessons for all 12 students.
+- Replaced the school foundation placeholder with an owner planner offering day, week, and month views, teacher filters, open-time fields, booked lessons, and occupancy lines.
+- Added expanding availability fields and steeply angled teacher labels to distinguish overlapping teacher windows without obscuring booked lessons.
+- Made planner expansion teacher-scoped: the active teacher's availability and lessons expand together while other teachers' lessons retain their width beneath the active layer; doubled the angled teacher-label size.
+- Made lesson occurrences clickable in every planner view and added an in-context detail sheet for lesson, teacher, student, guardian, and billing-payer information.
+- Pinned angled teacher labels entirely above availability fields and added one-second delayed lesson quick views for student name and time.
+- Raised hovered lessons above every planner layer, extracted delayed quick views into a reusable UI primitive, and formalized component/modularity requirements in `code-rules.md`.
+- Simplified lesson blocks to responsive student names, moved time and place into delayed quick views, and deployed structured school-room, student-home, and custom lesson locations.
+- Changed inactive teacher availability to compress into persistent hoverable rails with fading labels, allowing expansion to transfer fluidly across a calendar column.
+- Moved compressed teacher rails to their corresponding outer edges and sized the active availability and lesson fields to the space remaining between them.
+- Scoped teacher compression to the active day only, reduced inactive rails to exactly four pixels, and made lesson occurrences collapse and expand with their teacher's availability field.
+- Replaced hard-coded lesson location categories with a reusable school-owned Places list, migrated existing occurrences, and added owner/admin/teacher place management.
+- Added lesson duration to the delayed calendar quick view alongside the time range and place.
+- Enforced non-overlapping teacher availability while preserving multiple same-day blocks, and added split Wednesday hours to the demo owner schedule.
+
 ## 2026-08-04
+
+- Added a semantic Tailwind configuration for centralized colors, radii, spacing, typography, and shadows.
+- Added private profile-avatar and school-logo storage design, upload actions, signed image display, and tenant-aware Storage RLS policies.
+- Defined an anti-template design brief and added a temporary `/design` typography study comparing Newsreader, Bricolage Grotesque, and IBM Plex Sans.
+- Reworked the typography study into dark charcoal, aged-oak, and blackened-bronze material variations to match the selected visual atmosphere.
+- Added a live interaction study and reusable line-based grammar for hover, focus, selectors, connected data, progress, and accessible hold-to-confirm actions.
+- Replaced the typography study's one-off colors with the same semantic dark material tokens used by the production interface.
+- Deployed private media storage plus the school-scoped people, teacher, student, family-contact, and billing-account foundation.
+- Seeded the first school with three teachers including the owner, 12 students, eight guardian payers, two self-paying students, two multi-student families, and ten billing accounts.
+- Deployed the school service-product catalog and added an owner/admin setup screen for private lessons and group classes with duration, cadence, pricing, and capacity controls.
 
 - Reviewed the local Agency Brain repository as a read-only architecture reference.
 - Adopted Next.js, Vercel, Supabase Auth/Postgres/RLS, Google OAuth, and a shared multi-tenant database as the platform direction.

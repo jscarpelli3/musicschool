@@ -1,0 +1,216 @@
+.planner-timeline {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 59px,
+    var(--ui-line) 60px
+  );
+}
+
+.line-action {
+  position: relative;
+}
+
+.line-action::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  content: "";
+  background: currentColor;
+  transform: scaleX(0.18);
+  transform-origin: left;
+  transition: transform 260ms cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+.line-action:hover::after,
+.line-action:focus-visible::after {
+  transform: scaleX(1);
+}
+
+.availability-block {
+  position: absolute;
+  z-index: 1;
+  padding: 0;
+  border-left: 1px solid color-mix(in srgb, var(--ui-brand) 58%, transparent);
+  background: color-mix(in srgb, var(--ui-brand) 9%, transparent);
+  color: var(--ui-muted);
+  text-align: left;
+  transition:
+    left 280ms cubic-bezier(0.2, 0.75, 0.25, 1),
+    width 280ms cubic-bezier(0.2, 0.75, 0.25, 1),
+    background 180ms ease;
+}
+
+.availability-block[data-active="true"] {
+  z-index: 5;
+  left: var(--active-left, 6px) !important;
+  width: var(--active-width, calc(100% - 12px)) !important;
+  background: color-mix(in srgb, var(--ui-brand) 15%, var(--ui-canvas));
+}
+
+.availability-block[data-collapsed="true"] {
+  z-index: 8;
+  left: var(--collapsed-left) !important;
+  width: 4px !important;
+  border-left-width: 2px;
+  border-left-color: color-mix(in srgb, var(--ui-brand) 72%, transparent);
+  background: transparent;
+}
+
+.availability-block[data-collapsed="true"]:hover,
+.availability-block[data-collapsed="true"]:focus-visible {
+  border-left-color: var(--ui-brand-hover);
+}
+
+.availability-block:focus-visible {
+  outline: none;
+}
+
+.availability-label {
+  position: absolute;
+  bottom: calc(100% + 0.15rem);
+  left: 50%;
+  width: max-content;
+  font-size: 1.25rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  transform: rotate(-70deg);
+  transform-origin: left bottom;
+  transition: color 180ms ease, opacity 160ms ease;
+}
+
+.availability-block[data-collapsed="true"] .availability-label {
+  opacity: 0;
+}
+
+.availability-block[data-active="true"] .availability-label {
+  color: var(--ui-brand-hover);
+}
+
+.lesson-block {
+  position: absolute;
+  z-index: 4;
+  overflow: visible;
+  border-left: 2px solid var(--ui-brand);
+  background: var(--ui-surface-raised);
+  transition:
+    left 280ms cubic-bezier(0.2, 0.75, 0.25, 1),
+    width 280ms cubic-bezier(0.2, 0.75, 0.25, 1),
+    background 180ms ease,
+    color 180ms ease,
+    opacity 180ms ease;
+}
+
+.lesson-block-content {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  overflow: hidden;
+  padding: 0.3rem 0.4rem;
+  transition: opacity 140ms ease;
+}
+
+.lesson-student-name {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: font-size 180ms ease;
+}
+
+.lesson-block[data-active="true"] .lesson-student-name {
+  font-size: 0.875rem;
+}
+
+.lesson-block[data-active="true"] {
+  z-index: 6;
+  left: var(--active-lesson-left, 10px) !important;
+  width: var(--active-lesson-width, calc(100% - 20px)) !important;
+}
+
+.lesson-block[data-collapsed="true"] {
+  z-index: 9;
+  left: var(--collapsed-left) !important;
+  width: 4px !important;
+  border-left-width: 2px;
+  background: var(--ui-brand);
+}
+
+.lesson-block[data-collapsed="true"] .lesson-block-content {
+  opacity: 0;
+}
+
+.lesson-block:hover,
+.lesson-block:focus-visible {
+  z-index: 30;
+  background: var(--ui-brand);
+  color: var(--ui-canvas);
+  outline: none;
+}
+
+.occupancy-line {
+  position: relative;
+  height: 1px;
+  background: var(--ui-line);
+}
+
+.occupancy-line::after {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--occupancy);
+  content: "";
+  background: var(--ui-brand);
+  transition: width 300ms cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+.lesson-sheet-backdrop {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: rgb(8 7 6 / 0.68);
+  animation: planner-fade-in 160ms ease-out;
+}
+
+.lesson-sheet {
+  position: fixed;
+  z-index: 41;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(31rem, 100%);
+  overflow-y: auto;
+  border-left: 1px solid var(--ui-line);
+  background: color-mix(in srgb, var(--ui-surface) 96%, transparent);
+  box-shadow: -24px 0 80px rgb(0 0 0 / 0.28);
+  animation: planner-sheet-in 240ms cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+@keyframes planner-fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes planner-sheet-in {
+  from { transform: translateX(2rem); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lesson-block,
+  .availability-block,
+  .occupancy-line::after {
+    transition-duration: 1ms;
+  }
+
+  .lesson-sheet,
+  .lesson-sheet-backdrop {
+    animation-duration: 1ms;
+  }
+
+}
