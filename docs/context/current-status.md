@@ -82,5 +82,6 @@ Enable Google OAuth, exercise the owner onboarding flow, then design the people 
 # Payment implementation tracking
 
 - `payment-roadmap.md` is the canonical flexible plan.
-- Step 1, Checkpoint and safety audit, is active.
+- Step 1 passed its exit gate and was pushed in commit `c5fff81`.
+- Step 2, Payment data foundation, is active after confirming the ledger should precede provider configuration and user-facing payment controls.
 - Every step has a pre-implementation direction/risk review and a post-implementation persistence/security/test/operations gate.

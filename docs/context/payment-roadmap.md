@@ -39,7 +39,7 @@ This is the tracked implementation order for school-to-family payments. It is a 
 
 ## Tracked steps
 
-### 1. Checkpoint and safety audit — IN PROGRESS
+### 1. Checkpoint and safety audit — COMPLETE
 
 - Commit the current owner-dashboard and approval-link foundation.
 - Verify remote migration parity.
@@ -47,8 +47,9 @@ This is the tracked implementation order for school-to-family payments. It is a 
 - Inventory enabled mutations and eliminate silent failure paths.
 - Freeze payment invariants and acceptance criteria.
 - Recovery requirements are documented in `docs/operations/data-recovery.md`; production still requires a paid backup plan and a tested Storage export/restore process.
+- Exit gate passed in commit `c5fff81`: build/type/lint clean, local and remote migrations aligned, silent dashboard/mutation failures closed, and source pushed to GitHub.
 
-### 2. Payment data foundation — PENDING
+### 2. Payment data foundation — IN PROGRESS
 
 - School Stripe connection state.
 - Billing periods and immutable line items.
@@ -118,4 +119,4 @@ This is the tracked implementation order for school-to-family payments. It is a 
 
 ## Current next action
 
-Complete Step 1's checkpoint and safety audit, report any unresolved risks, and only then activate the payment data foundation.
+Design and migrate the payment ledger with immutable monetary snapshots, tenant-scoped provider references, and explicit attempt/event/reconciliation state before adding Stripe credentials or payment controls.
