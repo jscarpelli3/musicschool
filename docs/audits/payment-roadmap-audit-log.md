@@ -220,3 +220,4 @@ Activated: 2026-08-06
 - Duplicate deliveries are acknowledged without repeating reconciliation. Failed processing is stored with a bounded error and returns HTTP 500 for Stripe retry.
 - Production build and ESLint pass. Deployment, signing-secret configuration, real Stripe delivery, replay, concurrency, and out-of-order tests remain required before Step 4 can pass its exit gate.
 - Stripe's destination Ping revealed that the configured destination uses v2 thin-event notifications. The endpoint was expanded to verify both v2 notifications through `parseEventNotificationAsync` and classic snapshot events through `constructEventAsync`; signed ping events are durably classified as ignored health checks.
+- The first correctly signed test-mode Ping reached intake but Supabase rejected persistence before creating a row. Test-mode responses now expose only the safe PostgREST error code/message for diagnosis; secrets and payload contents remain suppressed.

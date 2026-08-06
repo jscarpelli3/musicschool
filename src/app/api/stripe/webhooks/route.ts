@@ -95,7 +95,10 @@ export async function POST(request: Request) {
   }, { onConflict: "provider_event_id", ignoreDuplicates: true });
   if (intakeError) {
     console.error("Stripe webhook intake failed", intakeError);
-    return NextResponse.json({ error: "Event intake failed." }, { status: 500 });
+    return NextResponse.json({
+      error: "Event intake failed.",
+      ...(process.env.STRIPE_MODE === "test" ? { code: intakeError.code, detail: intakeError.message } : {}),
+    }, { status: 500 });
   }
 
   const { data: claimed, error: claimError } = await admin.from("payment_provider_events")
