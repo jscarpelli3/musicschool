@@ -129,6 +129,7 @@ export default async function SchoolDashboard({
         const account = billingAccounts.get(link.billing_account_id);
         const payer = account ? people.get(account.billing_contact_person_id) : null;
         return account && payer ? [{
+          accountId: account.id,
           accountName: account.name,
           name: `${payer.preferred_name || payer.first_name} ${payer.last_name}`,
           email: payer.email,
@@ -206,6 +207,8 @@ export default async function SchoolDashboard({
     });
     return [{
       id: person_id,
+      billingAccountId: payer?.accountId ?? null,
+      schoolId,
       family: payer?.accountName ?? `${student.last_name} family`,
       student: details.name,
       studentFirst: student.preferred_name || student.first_name,

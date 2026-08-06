@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { DragHandle } from "@/components/ui/drag-handle";
 import { HorizontalScrollFrame } from "@/components/ui/horizontal-scroll-frame";
 
@@ -8,6 +9,8 @@ export type LessonOutcome = "completed" | "rescheduled" | "cancelled_timely" | "
 
 export type StudentRosterRow = {
   id: string;
+  billingAccountId: string | null;
+  schoolId: string;
   family: string;
   student: string;
   studentFirst: string;
@@ -162,6 +165,8 @@ export function StudentRosterTable({
   }
 
   function cell(row: StudentRosterRow, column: Column) {
+    if (column === "student") return <Link href={`/schools/${row.schoolId}/students/${row.id}`} className="border-b border-transparent pb-1 hover:border-brand hover:text-brand">{row.student}</Link>;
+    if (column === "family" && row.billingAccountId) return <Link href={`/schools/${row.schoolId}/families/${row.billingAccountId}`} className="border-b border-transparent pb-1 hover:border-brand hover:text-brand">{row.family}</Link>;
     if (column !== "month") return <span className={column === "teacher" || column === "place" ? "text-sm leading-5 text-muted" : ""}>{row[column]}</span>;
     const counts = row.lessons.reduce<Partial<Record<LessonOutcome, number>>>((total, lesson) => {
       total[lesson.outcome] = (total[lesson.outcome] ?? 0) + 1;
