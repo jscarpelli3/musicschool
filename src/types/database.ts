@@ -1569,9 +1569,13 @@ export type Database = {
           id: string
           last_synced_at: string | null
           livemode: boolean
+          past_due: Json
+          pending_verification: Json
           payouts_enabled: boolean
           provider: string
           provider_account_id: string | null
+          requirement_errors: Json
+          requirements_deadline: string | null
           school_id: string
           status: string
           updated_at: string
@@ -1586,9 +1590,13 @@ export type Database = {
           id?: string
           last_synced_at?: string | null
           livemode?: boolean
+          past_due?: Json
+          pending_verification?: Json
           payouts_enabled?: boolean
           provider?: string
           provider_account_id?: string | null
+          requirement_errors?: Json
+          requirements_deadline?: string | null
           school_id: string
           status?: string
           updated_at?: string
@@ -1603,9 +1611,13 @@ export type Database = {
           id?: string
           last_synced_at?: string | null
           livemode?: boolean
+          past_due?: Json
+          pending_verification?: Json
           payouts_enabled?: boolean
           provider?: string
           provider_account_id?: string | null
+          requirement_errors?: Json
+          requirements_deadline?: string | null
           school_id?: string
           status?: string
           updated_at?: string

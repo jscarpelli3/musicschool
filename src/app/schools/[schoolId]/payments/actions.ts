@@ -2,8 +2,8 @@
 
 import { redirect } from "next/navigation";
 import type Stripe from "stripe";
+import { synchronizeStripeConnection } from "@/lib/stripe/connections";
 import { getStripe, getStripeMode } from "@/lib/stripe/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 function paymentsPath(schoolId: string, status?: string) {
@@ -45,52 +45,6 @@ async function requireSchoolAdmin(schoolId: string) {
   return { profileId, school, supabase };
 }
 
-function connectionState(account: Stripe.Account) {
-  const requirements = account.requirements;
-  const status = account.charges_enabled && account.payouts_enabled
-    ? "enabled"
-    : account.details_submitted
-      ? "restricted"
-      : "onboarding";
-
-  return {
-    status,
-    details_submitted: account.details_submitted,
-    charges_enabled: account.charges_enabled,
-    payouts_enabled: account.payouts_enabled,
-    disabled_reason: requirements?.disabled_reason ?? null,
-    currently_due: requirements?.currently_due ?? [],
-    eventually_due: requirements?.eventually_due ?? [],
-    last_synced_at: new Date().toISOString(),
-  };
-}
-
-async function persistConnection(schoolId: string, account: Stripe.Account, actorProfileId: string) {
-  const admin = createAdminClient();
-  const livemode = getStripeMode() === "live";
-  const { data: connection, error } = await admin.from("school_payment_connections").upsert({
-    school_id: schoolId,
-    provider: "stripe",
-    livemode,
-    provider_account_id: account.id,
-    ...connectionState(account),
-  }, { onConflict: "school_id,provider,livemode" }).select("id").single();
-
-  if (error || !connection) throw error ?? new Error("Stripe connection was not persisted.");
-
-  const { error: auditError } = await admin.from("audit_log").insert({
-    school_id: schoolId,
-    actor_profile_id: actorProfileId,
-    action: "stripe.connection_synced",
-    entity_type: "school_payment_connection",
-    entity_id: connection.id,
-    metadata: { livemode, status: connectionState(account).status },
-  });
-  if (auditError) throw auditError;
-
-  return connection;
-}
-
 export async function startStripeOnboarding(schoolId: string) {
   const { profileId, school, supabase } = await requireSchoolAdmin(schoolId);
   const stripe = getStripe();
@@ -130,7 +84,7 @@ export async function startStripeOnboarding(schoolId: string) {
       account = await stripe.accounts.retrieve(created.id);
     }
 
-    await persistConnection(schoolId, account, profileId);
+    await synchronizeStripeConnection(schoolId, account.id, profileId);
 
     const baseUrl = applicationUrl();
     const link = await stripe.v2.core.accountLinks.create({
@@ -141,7 +95,7 @@ export async function startStripeOnboarding(schoolId: string) {
           configurations: ["merchant"],
           collection_options: { fields: "eventually_due", future_requirements: "include" },
           refresh_url: `${baseUrl}${paymentsPath(schoolId, "refresh")}`,
-          return_url: `${baseUrl}${paymentsPath(schoolId, "returned")}`,
+          return_url: `${baseUrl}/schools/${schoolId}/payments/return`,
         },
       },
     });
@@ -167,8 +121,7 @@ export async function syncStripeConnection(schoolId: string) {
       .maybeSingle();
     if (error || !connection?.provider_account_id) throw error ?? new Error("No Stripe connection exists.");
 
-    const account = await getStripe().accounts.retrieve(connection.provider_account_id);
-    await persistConnection(schoolId, account, profileId);
+    const { account } = await synchronizeStripeConnection(schoolId, connection.provider_account_id, profileId);
     status = account.charges_enabled && account.payouts_enabled ? "ready" : "synced";
   } catch (error) {
     console.error("Stripe connection synchronization failed", error);

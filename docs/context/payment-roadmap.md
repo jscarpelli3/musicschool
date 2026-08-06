@@ -61,14 +61,15 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 - Stable idempotency and reconciliation keys.
 - Exit gate passed on 2026-08-05: linked-schema migration and transactional invariant rehearsal succeeded; generated database types, lint, TypeScript, and database lint passed.
 
-### 3. Stripe platform configuration — IN PROGRESS
+### 3. Stripe platform configuration — COMPLETE
 
 - Test credentials and Connect configuration.
 - Connected-account responsibilities and capabilities.
 - Platform and connected-account branding.
 - Server-only environment-secret handling.
+- Exit gate passed on 2026-08-06: the test connected school account reached details-submitted, charges-enabled, and payouts-enabled with no outstanding requirements; return synchronization and human-readable requirement status are durable.
 
-### 4. Verified webhook foundation — PENDING
+### 4. Verified webhook foundation — IN PROGRESS
 
 - Signed Connect webhook endpoint.
 - Immutable event intake with unique provider event IDs.
