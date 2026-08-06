@@ -10,7 +10,7 @@
 - Tenancy: shared application and database with school-scoped rows and Row Level Security
 - UI: Tailwind CSS with a reusable dashboard shell
 - CMS: Defer Sanity for v1 unless clear content-editing requirements appear
-- Payments: Stripe Billing for software subscriptions and Stripe Connect direct payments for school-to-family billing
+- Payments: Stripe Billing for software subscriptions and Stripe Connect Accounts v2 direct payments for school-to-family billing; connected schools use Stripe's full Dashboard and Stripe collects fees, requirements, and unrecoverable account losses
 - Messaging: Twilio SMS as the default starting option
 
 This foundation intentionally follows the proven patterns in the local Agency Brain repository while using a fresh, smaller music-school domain model.

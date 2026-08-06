@@ -33,6 +33,7 @@
 - For v1, request basic identity scopes only. Do not request Gmail, Calendar, or Drive access unless a feature requires it.
 - Use `https://twhexxokrjwzsoxgzlme.supabase.co/auth/v1/callback` as the Google OAuth authorized redirect URI.
 - Enable Google under Supabase Authentication providers after creating the client, entering the client ID and client secret directly in Supabase.
+- Store the project's current `sb_secret_` key as server-only `SUPABASE_SECRET_KEY` when trusted provider callbacks and webhooks are introduced. Never expose it with a `NEXT_PUBLIC_` prefix.
 
 ### 5. Stripe
 
@@ -43,6 +44,8 @@
 - Add the legal business, bank, tax, and identity information required to activate live payments before launch.
 - Create subscription products/prices later, after packaging is decided.
 - Configure a webhook endpoint separately for preview/testing and production.
+- Connect configuration selected on 2026-08-05: sellers collect payments directly and use Stripe-hosted onboarding with the full Stripe Dashboard. Accounts v2 is used so Stripe remains responsible for fees, requirements, and unrecoverable connected-account losses; Express Dashboard is incompatible with that responsibility allocation.
+- Store `STRIPE_MODE=test` and the test secret key as server-only environment variables locally and in the appropriate Vercel environment. Never send the key through chat or prefix it with `NEXT_PUBLIC_`.
 
 ## Create Before Public Email
 

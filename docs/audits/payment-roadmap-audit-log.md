@@ -147,3 +147,37 @@ Completed: 2026-08-05
 ### Exit decision
 
 Passed. Activate Step 3, Stripe platform configuration. The ledger now supplies durable prerequisites for provider integration without enabling any charge controls. Before writing Stripe code, verify Connect availability, test-mode credentials, connected-account responsibilities, and secret placement.
+
+---
+
+## Step 3 — Stripe platform configuration
+
+Status: In progress
+Activated: 2026-08-05
+
+### Pre-step direction review
+
+- Confirmed Stripe Connect is enabled for the MusicSchool platform account.
+- Confirmed the platform model remains direct payments: each school is the seller and merchant of record, appears on receipts, and is responsible for its refunds and disputes.
+- Selected Stripe-hosted onboarding so Stripe owns identity, bank, tax, and compliance data collection.
+- Initially selected the Express Dashboard so schools could manage payout, identity, dispute, and provider-level settings in Stripe while MusicSchool owns lesson-aware billing workflows; provider validation later showed this was incompatible with the selected loss-responsibility model and the decision was corrected below.
+- Confirmed no client-side Stripe package or publishable key is needed for the initial hosted onboarding flow.
+- Confirmed charge controls remain disabled until connection state is reconciled through verified webhooks.
+
+### Current implementation decision
+
+- Add only Stripe's official server SDK and a server-only, lazily initialized client boundary.
+- Require an explicit `STRIPE_MODE` and reject a secret-key prefix that does not match it, reducing accidental test/live crossover.
+- Do not add secrets to source control, chat, browser environment variables, or Supabase application tables.
+- Verify the connected-account country and test credentials before building account creation or onboarding-link mutations.
+
+### Provider verification checkpoint
+
+- A read-only Stripe API request accepted the configured test secret and confirmed the platform account country is `US`.
+- The platform account itself is a standard Stripe account; future schools will be separate Express connected accounts.
+- The existing ledger correctly denies browser-role writes to provider connection state. Added a separate, server-only Supabase administrative boundary for trusted Stripe mutations; its secret is loaded lazily and is never required during static build.
+- The first onboarding attempt created no Stripe or Supabase record. An idempotent diagnostic replay identified a Stripe platform-profile gate requiring explicit confirmation of connected-account loss responsibility; Step 3 remains in progress until that provider requirement is completed.
+- Follow-up validation established that legacy Express accounts implicitly assign payment losses to MusicSchool, contradicting the chosen direct-seller model in which Stripe covers unrecoverable school negative balances. Accounts v2 rejected the same incompatible combination explicitly.
+- Corrected the integration to Accounts v2 with merchant configuration, full Stripe Dashboard, Stripe fee collection, Stripe requirement collection, and Stripe loss collection. Stripe accepted this configuration and created one idempotent test connected account; the app now reuses that account and Stripe's v2 hosted-onboarding links.
+- The first application retry used the original idempotency key without the original response `include` parameters, so Stripe rejected the parameter mismatch and created no duplicate. The account-creation request was corrected to preserve the exact original parameters across retries.
+- The corrected trace reused the existing account, persisted its onboarding state in Supabase, and generated a hosted onboarding link successfully. Completing the interactive onboarding is deferred while the owner's Stripe login recovery is pending; no account-ready state has been inferred or recorded.
