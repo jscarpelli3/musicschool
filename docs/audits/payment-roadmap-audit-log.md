@@ -152,8 +152,9 @@ Passed. Activate Step 3, Stripe platform configuration. The ledger now supplies 
 
 ## Step 3 — Stripe platform configuration
 
-Status: In progress
+Status: Complete
 Activated: 2026-08-05
+Completed: 2026-08-06
 
 ### Pre-step direction review
 
@@ -188,3 +189,9 @@ Activated: 2026-08-05
 ### Exit decision
 
 Passed on 2026-08-06. Activate Step 4, Verified webhook foundation. Test credentials, Accounts v2 responsibility allocation, hosted onboarding, durable server-only secret handling, and a fully enabled test connected account are verified. Platform branding may continue to evolve but is not a blocker for webhook correctness.
+
+### Roadmap reconciliation
+
+- Step 5, Owner connection flow, was completed ahead of the nominal sequence as part of Step 3 verification rather than left pending behind webhooks.
+- The earlier statement that future schools would be Express accounts is superseded: Accounts v2 with the full Stripe Dashboard is required for the selected allocation where Stripe collects fees, requirements, and unrecoverable account losses.
+- Parent delivery direction changed from email-first to SMS-first. Supabase phone OTP provides authentication when a persistent portal session is absent; Twilio delivers access, approval, and reminder messages.

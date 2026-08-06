@@ -76,12 +76,13 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 - Account and payment state reconciliation.
 - Retry, out-of-order delivery, and replay handling.
 
-### 5. Owner connection flow — PENDING
+### 5. Owner connection flow — COMPLETE
 
 - School Setup → Payments.
 - Stripe-hosted connected-account onboarding.
 - Requirements, charges-enabled, and payouts-enabled status.
 - Expired-link, return, reconnect, and remediation paths.
+- Implemented ahead of Step 4 while validating platform configuration; test onboarding reached charges-enabled and payouts-enabled, and the owner UI now explains actionable requirements and automatically reconciles on return.
 
 ### 6. Parent payment-method setup — PENDING
 
@@ -99,7 +100,8 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 ### 8. Parent approval delivery — PENDING
 
 - Bind approval requests to locked billing periods.
-- Email delivery first; SMS delivery second.
+- SMS delivery first through Twilio; email is deferred.
+- Portal links use Supabase phone OTP when a durable device session is absent; payment approval remains a separate expiring, single-purpose token.
 - Expiration, single use, idempotency, and consent evidence.
 
 ### 9. Owner charge queue — PENDING
@@ -124,4 +126,4 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 
 ## Current next action
 
-Verify the MusicSchool Stripe account's test-mode and Connect configuration, choose connected-account responsibilities, and establish server-only environment handling. Do not paste secret or webhook keys into chat, source control, browser-exposed variables, or Supabase tables.
+Implement and verify the signed Stripe webhook foundation: immutable event intake, account-state reconciliation, duplicate delivery, replay, out-of-order events, and safe retry behavior. Browser returns remain a convenience check; verified webhooks establish provider truth.
