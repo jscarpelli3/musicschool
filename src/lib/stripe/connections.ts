@@ -34,7 +34,7 @@ function connectionState(account: Stripe.Account) {
   };
 }
 
-export async function synchronizeStripeConnection(schoolId: string, providerAccountId: string, actorProfileId: string) {
+export async function synchronizeStripeConnection(schoolId: string, providerAccountId: string, actorProfileId: string | null) {
   const account = await getStripe().accounts.retrieve(providerAccountId);
   const state = connectionState(account);
   const admin = createAdminClient();

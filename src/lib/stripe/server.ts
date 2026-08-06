@@ -46,3 +46,11 @@ export function getStripe() {
 
   return stripeClient;
 }
+
+export function getStripeWebhookSecret() {
+  const secret = requiredServerEnvironment("STRIPE_WEBHOOK_SECRET");
+  if (!secret.startsWith("whsec_")) {
+    throw new Error("STRIPE_WEBHOOK_SECRET must be a Stripe webhook signing secret.");
+  }
+  return secret;
+}

@@ -195,3 +195,27 @@ Passed on 2026-08-06. Activate Step 4, Verified webhook foundation. Test credent
 - Step 5, Owner connection flow, was completed ahead of the nominal sequence as part of Step 3 verification rather than left pending behind webhooks.
 - The earlier statement that future schools would be Express accounts is superseded: Accounts v2 with the full Stripe Dashboard is required for the selected allocation where Stripe collects fees, requirements, and unrecoverable account losses.
 - Parent delivery direction changed from email-first to SMS-first. Supabase phone OTP provides authentication when a persistent portal session is absent; Twilio delivers access, approval, and reminder messages.
+
+---
+
+## Step 4 — Verified webhook foundation
+
+Status: In progress
+Activated: 2026-08-06
+
+### Pre-step direction review
+
+- Confirmed browser returns remain a convenience reconciliation path and cannot establish ongoing provider truth.
+- Confirmed the deployed endpoint is scoped to Stripe test mode first and must use a distinct signing secret from future live and preview destinations.
+- Confirmed raw request bytes must be verified before parsing or persistence.
+- Confirmed immutable intake precedes processing, provider event IDs are unique, and duplicate delivery must return success without repeating mutations.
+- Confirmed out-of-order account events will trigger retrieval of Stripe's latest account state rather than applying a stale event snapshot.
+- Confirmed processing failures must remain visible and return a retryable non-2xx response.
+
+### Initial implementation checkpoint
+
+- Added the Node-runtime route `/api/stripe/webhooks` with Stripe signature verification and server-only signing-secret validation.
+- Verified events are inserted once into the service-role-only immutable provider-event ledger and atomically claimed for processing.
+- `account.updated` reconciles the latest connected-account state; unsupported events are durably classified as ignored until their handlers are implemented.
+- Duplicate deliveries are acknowledged without repeating reconciliation. Failed processing is stored with a bounded error and returns HTTP 500 for Stripe retry.
+- Production build and ESLint pass. Deployment, signing-secret configuration, real Stripe delivery, replay, concurrency, and out-of-order tests remain required before Step 4 can pass its exit gate.
