@@ -19,31 +19,79 @@ function providerObjectId(event: Stripe.Event) {
   return object.id ?? null;
 }
 
+type VerifiedEvent = {
+  id: string;
+  type: string;
+  livemode: boolean;
+  accountId: string | null;
+  objectId: string | null;
+  apiVersion: string | null;
+  createdAt: string;
+  payload: Json;
+  accountEvent: boolean;
+};
+
+async function verifyEvent(rawBody: string, signature: string): Promise<VerifiedEvent> {
+  const stripe = getStripe();
+  const parsed = JSON.parse(rawBody) as { object?: string };
+  if (parsed.object === "v2.core.event") {
+    const notification = await stripe.parseEventNotificationAsync(rawBody, signature, getStripeWebhookSecret());
+    const related = "related_object" in notification ? notification.related_object : null;
+    const accountEvent = notification.type === "v2.core.account.created"
+      || notification.type === "v2.core.account.updated"
+      || notification.type.startsWith("v2.core.account[");
+    return {
+      id: notification.id,
+      type: notification.type,
+      livemode: notification.livemode,
+      accountId: accountEvent ? related?.id ?? null : null,
+      objectId: related?.id ?? null,
+      apiVersion: null,
+      createdAt: new Date(notification.created).toISOString(),
+      payload: JSON.parse(rawBody) as Json,
+      accountEvent,
+    };
+  }
+
+  const event = await stripe.webhooks.constructEventAsync(rawBody, signature, getStripeWebhookSecret());
+  return {
+    id: event.id,
+    type: event.type,
+    livemode: event.livemode,
+    accountId: providerAccountId(event),
+    objectId: providerObjectId(event),
+    apiVersion: event.api_version ?? null,
+    createdAt: new Date(event.created * 1000).toISOString(),
+    payload: event as unknown as Json,
+    accountEvent: event.type === "account.updated",
+  };
+}
+
 export async function POST(request: Request) {
   const signature = request.headers.get("stripe-signature");
   if (!signature) return NextResponse.json({ error: "Missing Stripe signature." }, { status: 400 });
 
   const rawBody = await request.text();
-  let event: Stripe.Event;
+  let event: VerifiedEvent;
   try {
-    event = await getStripe().webhooks.constructEventAsync(rawBody, signature, getStripeWebhookSecret());
+    event = await verifyEvent(rawBody, signature);
   } catch (error) {
     console.error("Stripe webhook signature verification failed", error);
     return NextResponse.json({ error: "Invalid Stripe signature." }, { status: 400 });
   }
 
   const admin = createAdminClient();
-  const accountId = providerAccountId(event);
+  const accountId = event.accountId;
   const { error: intakeError } = await admin.from("payment_provider_events").upsert({
     provider: "stripe",
     provider_event_id: event.id,
     livemode: event.livemode,
     provider_account_id: accountId,
     event_type: event.type,
-    provider_object_id: providerObjectId(event),
-    api_version: event.api_version ?? null,
-    payload: event as unknown as Json,
-    provider_created_at: new Date(event.created * 1000).toISOString(),
+    provider_object_id: event.objectId,
+    api_version: event.apiVersion,
+    payload: event.payload,
+    provider_created_at: event.createdAt,
   }, { onConflict: "provider_event_id", ignoreDuplicates: true });
   if (intakeError) {
     console.error("Stripe webhook intake failed", intakeError);
@@ -62,7 +110,7 @@ export async function POST(request: Request) {
   await admin.from("payment_provider_events").update({ processing_attempts: claimed.processing_attempts + 1 }).eq("id", claimed.id);
 
   try {
-    if (event.type === "account.updated" && accountId) {
+    if (event.accountEvent && accountId) {
       const { data: connection, error } = await admin.from("school_payment_connections")
         .select("school_id")
         .eq("provider", "stripe")
@@ -72,7 +120,7 @@ export async function POST(request: Request) {
       await synchronizeStripeConnection(connection.school_id, accountId, null);
     }
 
-    const supported = event.type === "account.updated";
+    const supported = event.accountEvent;
     const { error: completeError } = await admin.from("payment_provider_events").update({
       processing_status: supported ? "processed" : "ignored",
       processed_at: new Date().toISOString(),
