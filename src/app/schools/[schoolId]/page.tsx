@@ -280,6 +280,11 @@ export default async function SchoolDashboard({
       </header>
       <nav className="flex gap-8 py-6" aria-label="School management">
         {canManageSchool ? (
+          <Link href={`/schools/${schoolId}/lessons/new`} className="text-sm text-brand hover:text-brand-hover">
+            New lesson +
+          </Link>
+        ) : null}
+        {canManageSchool ? (
           <Link href={`/schools/${schoolId}/setup`} className="text-sm text-brand hover:text-brand-hover">
             School setup →
           </Link>

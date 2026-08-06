@@ -2129,6 +2129,20 @@ export type Database = {
     }
     Functions: {
       approve_billing_request: { Args: { raw_token: string }; Returns: string }
+      create_single_lesson: {
+        Args: {
+          p_allow_outside_availability?: boolean
+          p_local_start: string
+          p_notes?: string | null
+          p_override_reason?: string | null
+          p_place_id: string
+          p_product_id: string
+          p_school_id: string
+          p_student_id: string
+          p_teacher_id: string
+        }
+        Returns: string
+      }
       create_school: {
         Args: { school_name: string; school_timezone?: string }
         Returns: string

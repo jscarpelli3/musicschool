@@ -176,6 +176,14 @@ Billing consequences still come from the effective cancellation and service-agre
 
 ## Family Billing Modes
 
+### Manual tender
+
+- Schools may accept cash and later other manual tender such as checks.
+- A manual payment is not a Stripe payment attempt and must never be represented as provider settlement.
+- Record the billing account, billing period or allocated items, amount, currency, received date, tender type, recorder, note/reference, and reversal history.
+- Manual payments reduce the application balance only after an authorized staff member explicitly records them; corrections are reversals, not destructive edits.
+- The dedicated manual-payment ledger and owner entry flow will be added before monthly collection is enabled.
+
 The product supports both monthly billing approaches:
 
 ### Fixed monthly tuition
