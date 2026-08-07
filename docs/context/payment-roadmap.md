@@ -69,12 +69,13 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 - Server-only environment-secret handling.
 - Exit gate passed on 2026-08-06: the test connected school account reached details-submitted, charges-enabled, and payouts-enabled with no outstanding requirements; return synchronization and human-readable requirement status are durable.
 
-### 4. Verified webhook foundation — IN PROGRESS
+### 4. Verified webhook foundation — COMPLETE
 
 - Signed Connect webhook endpoint.
 - Immutable event intake with unique provider event IDs.
 - Account and payment state reconciliation.
 - Retry, out-of-order delivery, and replay handling.
+- Exit gate passed on 2026-08-07: both Accounts v2 event sources are signed and durable; real delivery, latest-state reconciliation, exact replay, concurrent delivery, stale ordering, visible failure, failed retry, and abandoned-lease recovery were verified against the deployed test integration.
 
 ### 5. Owner connection flow — COMPLETE
 
@@ -126,4 +127,4 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 
 ## Current next action
 
-Implement and verify the signed Stripe webhook foundation: immutable event intake, account-state reconciliation, duplicate delivery, replay, out-of-order events, and safe retry behavior. Browser returns remain a convenience check; verified webhooks establish provider truth.
+Activate Step 6, Parent payment-method setup. Before implementation, confirm the hosted Stripe surface, connected-account Customer ownership, off-session consent evidence, return/recovery paths, and phone-first parent identity boundary. Step 5 is already complete.

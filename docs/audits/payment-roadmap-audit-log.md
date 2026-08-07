@@ -200,8 +200,9 @@ Passed on 2026-08-06. Activate Step 4, Verified webhook foundation. Test credent
 
 ## Step 4 — Verified webhook foundation
 
-Status: In progress
+Status: Complete
 Activated: 2026-08-06
+Completed: 2026-08-07
 
 ### Pre-step direction review
 
@@ -260,3 +261,18 @@ Activated: 2026-08-06
 - Delivered a correctly signed account notification with a deliberately stale provider timestamp of 2025-01-01. The ledger retained that historical provider time while the handler retrieved Stripe's current account state.
 - After the stale event, the school remained enabled with submitted details, charges and payouts enabled, no disabled reason, and a fresh reconciliation timestamp.
 - Audit result: passed. Immutable deduplication, atomic claiming, concurrent delivery handling, and latest-state reconciliation prevent repeated or stale event application. Proceed to failed-event retry and recovery.
+
+### Part D — failure, retry, and abandoned-work recovery audit
+
+- Completed: 2026-08-07.
+- Pre-test review found that a worker crash after claim could leave an event permanently stuck in `processing`. Replaced the split status/attempt updates with one database claim operation and added a five-minute processing lease.
+- The claim function is executable only by the service role. It atomically claims new and failed events, increments attempts, and reclaims only expired processing leases.
+- A correctly signed synthetic event for an unmapped test account returned HTTP 500 and remained durably `failed` on attempt 1 with no processed timestamp and a bounded actionable error.
+- A valid synthetic audit event was staged as a transient failure. Redelivery reclaimed it, processed successfully on attempt 2, and cleared the prior error.
+- The same audit event was staged with an expired processing lease. Redelivery reclaimed it, processed successfully on attempt 3, and refreshed the lease timestamp.
+- After recovery, the real school connection remained enabled with submitted details, charges and payouts enabled, no disabled reason, and a fresh Stripe reconciliation timestamp.
+- Linked database lint, application lint, TypeScript, and the production build passed before deployment. Remote migration history includes `20260807193000_atomic_provider_event_claims.sql`.
+
+### Exit decision
+
+Passed on 2026-08-07. Step 4 is complete. Verified webhooks now provide signed immutable intake, account-to-school resolution, latest-state reconciliation, duplicate and concurrency safety, stale-event safety, visible retryable failure, and abandoned-work recovery across both connected-account and platform-account Accounts v2 destinations. Activate Step 6 because Step 5 was completed early during Stripe platform setup.
