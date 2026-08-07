@@ -111,16 +111,13 @@ export async function POST(request: Request) {
     }, { status: 500 });
   }
 
-  const { data: claimed, error: claimError } = await admin.from("payment_provider_events")
-    .update({ processing_status: "processing", last_error: null })
-    .eq("provider_event_id", event.id)
-    .in("processing_status", ["received", "failed"])
-    .select("id, processing_attempts")
+  const { data: claimed, error: claimError } = await admin.rpc("claim_payment_provider_event", {
+    p_provider_event_id: event.id,
+    p_stale_after_seconds: 300,
+  })
     .maybeSingle();
   if (claimError) return NextResponse.json({ error: "Event claim failed." }, { status: 500 });
   if (!claimed) return NextResponse.json({ received: true, duplicate: true });
-
-  await admin.from("payment_provider_events").update({ processing_attempts: claimed.processing_attempts + 1 }).eq("id", claimed.id);
 
   try {
     if (event.accountEvent && accountId) {

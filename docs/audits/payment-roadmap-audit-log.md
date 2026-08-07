@@ -250,3 +250,13 @@ Activated: 2026-08-06
 - Restoring the original `ScarpsSchool` display name produced `evt_test_65VBH9nM2cRzu5xRzZ216TWt6q7JSQv0fPSrbryXWYyBom`; it also processed exactly once without error.
 - Latest-state reconciliation resolved the event's account to school `74d60cb7-1217-4fef-bb74-2c659a83722b` and durably confirmed test mode, submitted details, enabled charges, enabled payouts, and no disabled reason.
 - Audit result: passed. Real Accounts v2 delivery, account-to-school resolution, and latest-state reconciliation are verified. Proceed to duplicate, concurrency, replay, and out-of-order tests.
+
+### Part C — replay, concurrency, and ordering audit
+
+- Completed: 2026-08-07.
+- Manually resent the already processed restoration event from Stripe. The endpoint returned HTTP 200 with `duplicate: true`; its single immutable row retained `processing_attempts = 1` and its original timestamps.
+- Sent eight simultaneous, correctly signed test-mode notifications with one unique audit event ID. All returned HTTP 200: one request processed the event and seven were acknowledged as duplicates.
+- The concurrency event was retained as one row, processed once, and completed without error.
+- Delivered a correctly signed account notification with a deliberately stale provider timestamp of 2025-01-01. The ledger retained that historical provider time while the handler retrieved Stripe's current account state.
+- After the stale event, the school remained enabled with submitted details, charges and payouts enabled, no disabled reason, and a fresh reconciliation timestamp.
+- Audit result: passed. Immutable deduplication, atomic claiming, concurrent delivery handling, and latest-state reconciliation prevent repeated or stale event application. Proceed to failed-event retry and recovery.

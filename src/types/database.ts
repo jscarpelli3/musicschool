@@ -1183,6 +1183,7 @@ export type Database = {
           payload: Json
           processed_at: string | null
           processing_attempts: number
+          processing_started_at: string | null
           processing_status: string
           provider: string
           provider_account_id: string | null
@@ -1200,6 +1201,7 @@ export type Database = {
           payload: Json
           processed_at?: string | null
           processing_attempts?: number
+          processing_started_at?: string | null
           processing_status?: string
           provider: string
           provider_account_id?: string | null
@@ -1217,6 +1219,7 @@ export type Database = {
           payload?: Json
           processed_at?: string | null
           processing_attempts?: number
+          processing_started_at?: string | null
           processing_status?: string
           provider?: string
           provider_account_id?: string | null
@@ -2141,6 +2144,16 @@ export type Database = {
     }
     Functions: {
       approve_billing_request: { Args: { raw_token: string }; Returns: string }
+      claim_payment_provider_event: {
+        Args: {
+          p_provider_event_id: string
+          p_stale_after_seconds?: number
+        }
+        Returns: {
+          id: string
+          processing_attempts: number
+        }[]
+      }
       create_single_lesson: {
         Args: {
           p_allow_outside_availability?: boolean
