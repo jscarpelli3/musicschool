@@ -128,4 +128,4 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 
 ## Current next action
 
-Step 7 Part A is complete. Build Part B: deterministic, policy-aware occurrence dispositions that explicitly classify each lesson as charge, waive, credit, or owner review before any monthly draft is calculated. SMS delivery remains Step 8.
+Step 7 Parts A and B are complete. Build Part C: transactional family billing-period draft generation using versioned terms and policy-aware occurrence dispositions. Any missing account, missing terms, mixed currency, or owner-review outcome must abort visibly. SMS delivery remains Step 8.

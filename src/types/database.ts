@@ -590,6 +590,7 @@ export type Database = {
           student_cancel_cutoff_hours: number
           student_reschedule_cutoff_hours: number
           teacher_cancel_disposition: string
+          timely_cancel_disposition: string
         }
         Insert: {
           late_cancel_disposition?: string
@@ -601,6 +602,7 @@ export type Database = {
           student_cancel_cutoff_hours?: number
           student_reschedule_cutoff_hours?: number
           teacher_cancel_disposition?: string
+          timely_cancel_disposition?: string
         }
         Update: {
           late_cancel_disposition?: string
@@ -612,6 +614,7 @@ export type Database = {
           student_cancel_cutoff_hours?: number
           student_reschedule_cutoff_hours?: number
           teacher_cancel_disposition?: string
+          timely_cancel_disposition?: string
         }
         Relationships: [
           {
@@ -2329,6 +2332,14 @@ export type Database = {
         }
         Returns: string
       }
+      compute_lesson_event_billing_disposition: {
+        Args: {
+          p_as_of?: string
+          p_lesson_event_id: string
+          p_school_id: string
+        }
+        Returns: Json
+      }
       create_school: {
         Args: { school_name: string; school_timezone?: string }
         Returns: string
@@ -2368,6 +2379,14 @@ export type Database = {
         Returns: boolean
       }
       is_school_member: { Args: { target_school_id: string }; Returns: boolean }
+      preview_lesson_event_billing_disposition: {
+        Args: {
+          p_as_of?: string
+          p_lesson_event_id: string
+          p_school_id: string
+        }
+        Returns: Json
+      }
       shares_school_with: {
         Args: { target_profile_id: string }
         Returns: boolean

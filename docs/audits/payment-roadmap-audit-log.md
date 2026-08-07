@@ -367,3 +367,25 @@ Passed on 2026-08-07.
 - Generated TypeScript types now come directly from the deployed schema. Their stricter nullability exposed and fixed optional lesson-RPC arguments and required Stripe card-display fields.
 - Linked database lint, ESLint, TypeScript, and the production webpack build pass. The initial sandboxed build could not resolve Google Fonts; the identical network-enabled build compiled and prerendered successfully.
 - Step 7 remains in progress. Part B will model deterministic policy-aware occurrence dispositions before draft generation; no amount approval or charge has been activated.
+
+### Part B — policy-aware occurrence dispositions
+
+- Started: 2026-08-07.
+- Added the previously missing structured timely-cancellation disposition, defaulting to waive for new and existing draft rules.
+- Published policy versions and their structured cancellation/payment rules become immutable; policy changes require a new version instead of rewriting historical behavior.
+- Added an owner/admin-only, read-only disposition preview. It classifies serviced, partial, rescheduled, cancelled, and no-show occurrences from structured facts and the effective published cancellation policy.
+- Future scheduled lessons return `not_ready`; past scheduled lessons with no outcome, missing effective policies, manual-review policy results, and ambiguous facts return `owner_review`. No draft generator may silently skip those blockers.
+- Teacher-policy `refund` maps to a pre-collection credit, while `makeup` maps to waiver of the original occurrence; the original structured policy result remains in the preview for explanation and later entitlement work.
+- Deployment and scenario verification remain required before Part B passes.
+- The live no-policy matrix passed: completed lessons resolve to charge, rescheduled originals to waive, future scheduled lessons to not ready, and cancellations/no-shows to owner review because no effective published school policy exists yet.
+- Anonymous callers receive HTTP 401 from the preview RPC. A self-rolling-back published-policy rehearsal remains before the Part B exit gate.
+
+### Part B exit decision
+
+Passed on 2026-08-07.
+
+- A self-rolling-back published-policy rehearsal proved timely cancellation waiver, late-cancellation charge, manual-review no-show handling, teacher-cancellation credit, exact policy-version attribution, and published-rule immutability.
+- The live no-policy matrix and synthetic published-policy matrix both passed, covering every resolver branch without creating billing periods, line items, approvals, or Stripe operations.
+- Both rehearsal residue checks returned zero rows. Anonymous preview access is denied with HTTP 401, while the internal computation helper remains service-role-only.
+- Remote migration history is aligned through `20260807233000`. Linked database lint, generated types, ESLint, TypeScript, and the production webpack build pass.
+- Step 7 remains in progress. Part C will transactionally generate reviewable family drafts and must abort on unresolved facts instead of silently omitting them.
