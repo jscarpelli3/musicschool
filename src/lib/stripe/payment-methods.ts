@@ -111,7 +111,6 @@ export async function createFamilyCardSetup(schoolId: string, billingAccountId: 
     const familyPath = `/schools/${schoolId}/families/${billingAccountId}`;
     const session = await stripe.checkout.sessions.create({
       mode: "setup",
-      ui_mode: "hosted",
       currency: school.currency.toLowerCase(),
       customer: providerCustomerId,
       payment_method_types: ["card"],
