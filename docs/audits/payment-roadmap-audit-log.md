@@ -404,3 +404,29 @@ Passed on 2026-08-07.
 - Remote migrations align through `20260807235000`; linked database lint, regenerated types, ESLint, TypeScript, and the production webpack build pass.
 - Mid-step direction review clarified that a monthly amount is normally prepared from materialized scheduled occurrences before every lesson is serviced. The generator should treat a future scheduled occurrence as an expected charge, while a past scheduled occurrence with no recorded outcome remains an owner-review blocker. This supersedes using `not_ready` as the final generator behavior; the resolver will be adjusted transactionally with the draft implementation.
 - Price-snapshot prerequisite passed. Part C remains in progress because no billing period or line-item generator has been activated yet.
+- Live preflight confirmed 12 student-to-family mappings with zero ambiguity. Added a unique school/student mapping invariant so a future student cannot silently belong to two billing accounts.
+- Implemented an owner/admin-only atomic family/month draft preparer. It serializes concurrent refreshes, preserves manual adjustments, rebuilds only generated lesson lines, and reuses the existing period uniqueness and amount-recalculation guards.
+- Upcoming scheduled occurrences become expected per-session charges; past unresolved occurrences and missing policies abort. Waived/pre-collection credited per-session occurrences remain visible at zero dollars. Fixed-monthly series receive one base charge, while partial months, mid-month term changes, and credits requiring an unspecified amount abort for owner review.
+- Deployment and transactional scenario verification remain required.
+- The generator deployed cleanly. A self-rolling-back database rehearsal will now verify expected future charges, exact refresh idempotency, manual-adjustment preservation, review-to-draft refresh behavior, unresolved-past blocking, and absence of partial periods after failure.
+- The draft rehearsal passed and left zero residue for both its successful and blocked months. Added an owner/admin-only idempotent lock transaction that advances draft/review periods through the existing guarded state machine and records the lock in the audit log.
+- A rollback-only lock rehearsal will verify positive-line enforcement, locked timestamps, post-lock line immutability, and refresh rejection before the control is enabled in the owner UI.
+- The lock rehearsal passed. The owner review surface now exposes month preparation, durable success/blocker feedback, expandable line explanations, paid-versus-draft truth, and a reusable hold-to-lock control. Phone rows stack while tablet/desktop rows align descriptions and amounts; no action depends on hover.
+- Added an explicit rollback-only three-/four-/five-lesson acceptance test before the Step 7 exit gate.
+- The per-session acceptance test passed: three, four, and five materialized occurrences generated exactly three, four, and five lines and their corresponding price multiples, with zero residue afterward.
+- Added the final fixed-monthly acceptance test: one series tuition line plus visible zero-dollar occurrence explanations, without multiplying tuition by the number of lessons.
+- The fixed-monthly acceptance test passed: one tuition line, four visible zero-dollar occurrence explanations, and a total equal to one monthly tuition amount. All rehearsal periods, series, lessons, terms, snapshots, lines, history, and audit entries rolled back.
+
+### Step 7 exit decision
+
+Passed on 2026-08-08.
+
+- Versioned series terms and immutable occurrence price snapshots prevent catalog edits from rewriting a historical or pending month.
+- Policy resolution is structured, effective-dated, and attributable to an immutable published version. Missing policy and ambiguous outcome paths stop at owner review.
+- Family draft preparation is atomic, refresh-idempotent, serialized per family/month, preserves manual adjustments, and leaves no partial period after a blocker.
+- Per-session three-, four-, and five-lesson months and one-charge fixed-monthly tuition were verified with rollback-only database acceptance tests.
+- The owner can prepare or refresh a month, expand its explained line items, distinguish paid provider truth from draft totals, and hold to lock the exact reviewed amount. Locked lines and scope reject mutation and refresh.
+- Anonymous preparation and lock RPCs are not exposed. Tenant mappings enforce one billing account per student. Remote migrations align, database lint reports no errors, generated types, ESLint, TypeScript, and the production build pass.
+- Phone controls and line items stack; tablet and desktop layouts align descriptions and amounts. Keyboard users can operate the hold control, and no billing action depends on hover.
+- The real school currently has no published cancellation policy. This is a deliberate visible blocker for months containing cancellations or no-shows, not a failed or partial invoice.
+- Activate Step 8: create an expiring approval request bound to a locked period and deliver the link by Twilio SMS. No charge is authorized by merely preparing or locking a draft.

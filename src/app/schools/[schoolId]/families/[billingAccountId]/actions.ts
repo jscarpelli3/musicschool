@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createFamilyCardSetup } from "@/lib/stripe/payment-methods";
 import { getStripe } from "@/lib/stripe/server";
@@ -7,6 +8,55 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export type CardSetupLinkState = { url: string | null; error: string | null };
+
+export async function prepareFamilyBillingDraft(schoolId: string, billingAccountId: string, formData: FormData) {
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const month = String(formData.get("month") ?? "");
+  if (!/^\d{4}-\d{2}$/.test(month)) redirect(`${path}?billing=invalid_month`);
+
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) redirect(`/login?next=${path}`);
+
+  const { data: periodId, error } = await supabase.rpc("prepare_family_billing_draft", {
+    p_school_id: schoolId,
+    p_billing_account_id: billingAccountId,
+    p_month: `${month}-01`,
+  });
+
+  if (error || !periodId) {
+    const detail = error?.message ?? "";
+    const status = detail.includes("lesson_requires_owner_review")
+      || detail.includes("requires_owner_review")
+      || detail.includes("missing_effective_cancellation_policy")
+      ? "needs_review"
+      : detail.includes("billing_period_is_not_refreshable") ? "not_refreshable" : "error";
+    redirect(`${path}?billing=${status}`);
+  }
+
+  revalidatePath(path);
+  redirect(`${path}?billing=prepared&period=${periodId}`);
+}
+
+export async function lockFamilyBillingPeriod(schoolId: string, billingAccountId: string, billingPeriodId: string) {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) return { ok: false, message: "Sign in again before locking this draft." };
+
+  const { data, error } = await supabase.rpc("lock_family_billing_period", {
+    p_school_id: schoolId,
+    p_billing_period_id: billingPeriodId,
+  });
+  if (error || !data) {
+    const message = error?.message.includes("positive line items")
+      ? "Add at least one positive charge before locking."
+      : "This draft could not be locked. Its prior state is unchanged.";
+    return { ok: false, message };
+  }
+
+  revalidatePath(`/schools/${schoolId}/families/${billingAccountId}`);
+  return { ok: true, message: "Amount locked. Lesson lines can no longer change." };
+}
 
 export async function generateFamilyCardSetupLink(
   schoolId: string,

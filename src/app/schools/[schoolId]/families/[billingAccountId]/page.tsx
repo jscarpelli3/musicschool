@@ -3,6 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { DetailHeader, DetailSection, EmptyDetail } from "@/components/people/detail-shell";
 import { createClient } from "@/lib/supabase/server";
 import { CardSetupControls } from "./card-setup-controls";
+import { BillingDraftForm } from "./billing-draft-form";
+import { BillingPeriodLock } from "./billing-period-lock";
 import { PaymentMethodRemove } from "./payment-method-remove";
 
 export const dynamic = "force-dynamic";
@@ -13,17 +15,17 @@ function name(person: { first_name: string; last_name: string; preferred_name: s
 
 export default async function FamilyDetailPage({ params, searchParams }: {
   params: Promise<{ schoolId: string; billingAccountId: string }>;
-  searchParams: Promise<{ card?: string }>;
+  searchParams: Promise<{ card?: string; billing?: string; period?: string }>;
 }) {
   const { schoolId, billingAccountId } = await params;
-  const { card } = await searchParams;
+  const { card, billing, period: selectedPeriodId } = await searchParams;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/families/${billingAccountId}`);
 
   const initial = await Promise.all([
-    supabase.from("schools").select("id, name, currency").eq("id", schoolId).maybeSingle(),
+    supabase.from("schools").select("id, name, currency, timezone").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("billing_accounts").select("id, name, status, billing_contact_person_id").eq("school_id", schoolId).eq("id", billingAccountId).maybeSingle(),
   ]);
@@ -44,6 +46,14 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   const failedRelated = related.find((result) => result.error);
   if (failedRelated?.error) throw new Error(`Family detail could not load: ${failedRelated.error.message}`);
   const [peopleResult, studentsResult, periodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult] = related;
+  const periodIds = (periodsResult.data ?? []).map((period) => period.id);
+  const { data: lineItems, error: lineItemsError } = periodIds.length
+    ? await supabase.from("billing_line_items")
+      .select("id, billing_period_id, description, service_date, amount_cents, metadata, source_type")
+      .eq("school_id", schoolId).in("billing_period_id", periodIds)
+      .order("service_date", { ascending: true, nullsFirst: false }).order("created_at")
+    : { data: [], error: null };
+  if (lineItemsError) throw new Error(`Billing detail could not load: ${lineItemsError.message}`);
   const people = new Map((peopleResult.data ?? []).map((person) => [person.id, person]));
   const contact = people.get(account.billing_contact_person_id);
   const students = (studentsResult.data ?? []).flatMap((link) => {
@@ -57,6 +67,20 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   }, {});
   const canManagePayments = ["owner", "admin"].includes(membership.role);
   const stripeReady = connectionResult.data?.status === "enabled" && connectionResult.data.charges_enabled;
+  const currentMonth = new Intl.DateTimeFormat("en-CA", { timeZone: school.timezone, year: "numeric", month: "2-digit" }).format(new Date());
+  const billingMessages: Record<string, string> = {
+    prepared: "Draft prepared from the current schedule and saved to the billing ledger.",
+    needs_review: "Draft stopped without changing the ledger. At least one lesson needs an outcome or an effective cancellation policy.",
+    not_refreshable: "That period has already moved beyond review and cannot be refreshed.",
+    invalid_month: "Choose a valid service month.",
+    error: "The draft could not be prepared. The prior ledger state was left intact.",
+  };
+  const billingLines = lineItems ?? [];
+  type BillingLine = (typeof billingLines)[number];
+  const linesByPeriod = billingLines.reduce<Record<string, BillingLine[]>>((groups, line) => {
+    (groups[line.billing_period_id] ??= []).push(line);
+    return groups;
+  }, {});
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
@@ -74,9 +98,32 @@ export default async function FamilyDetailPage({ params, searchParams }: {
       </DetailSection>
 
       <DetailSection title="Billing history" description="Durable monthly billing periods. Draft amounts remain visibly distinct from paid provider truth.">
-        <div className="space-y-1">
-          {(periodsResult.data ?? []).map((period) => <div key={period.id} className="grid grid-cols-[1fr_auto] gap-4 border-b border-line py-5 first:pt-0"><div><p>{period.label}</p><p className="mt-2 text-xs text-muted">{period.period_start}–{period.period_end} · <span className="uppercase">{period.status}</span></p></div><div className="text-right"><p>{money(period.amount_due_cents, period.currency)}</p><p className="mt-2 text-xs text-muted">{money(paidByPeriod[period.id] ?? 0, period.currency)} paid</p></div></div>)}
+        <div className="space-y-7">
+          {canManagePayments ? <BillingDraftForm schoolId={schoolId} billingAccountId={billingAccountId} defaultMonth={currentMonth} /> : null}
+          {billing && billingMessages[billing] ? <p role="status" className={`border-l-2 pl-4 text-sm leading-6 ${billing === "prepared" ? "border-brand text-ink" : "border-danger text-danger"}`}>{billingMessages[billing]}</p> : null}
+          <div className="space-y-1">
+          {(periodsResult.data ?? []).map((billingPeriod) => {
+            const periodLines = linesByPeriod[billingPeriod.id] ?? [];
+            return (
+              <details key={billingPeriod.id} open={billingPeriod.id === selectedPeriodId} className="border-b border-line py-5 first:pt-0">
+                <summary className="grid cursor-pointer list-none grid-cols-[1fr_auto] gap-4 marker:hidden">
+                  <div><p>{billingPeriod.label}</p><p className="mt-2 text-xs text-muted">{billingPeriod.period_start}–{billingPeriod.period_end} · <span className="uppercase">{billingPeriod.status}</span> · {periodLines.length} lines</p></div>
+                  <div className="text-right"><p>{money(billingPeriod.amount_due_cents, billingPeriod.currency)}</p><p className="mt-2 text-xs text-muted">{money(paidByPeriod[billingPeriod.id] ?? 0, billingPeriod.currency)} paid</p></div>
+                </summary>
+                <div className="mt-5 border-l border-line pl-4 sm:pl-5">
+                  {periodLines.map((line) => {
+                    const metadata = line.metadata && typeof line.metadata === "object" && !Array.isArray(line.metadata) ? line.metadata : {};
+                    const disposition = "disposition" in metadata && typeof metadata.disposition === "string" ? metadata.disposition : line.source_type.replaceAll("_", " ");
+                    return <div key={line.id} className="grid gap-2 border-t border-line py-4 first:border-t-0 sm:grid-cols-[1fr_auto] sm:gap-6"><div><p className="text-sm">{line.description}</p><p className="mt-1 text-xs text-muted">{line.service_date ?? "Period adjustment"} · <span className="uppercase">{disposition}</span></p></div><p className="text-sm sm:text-right">{money(line.amount_cents ?? 0, billingPeriod.currency)}</p></div>;
+                  })}
+                  {!periodLines.length ? <EmptyDetail>No line items are recorded.</EmptyDetail> : null}
+                  {canManagePayments && ["draft", "review"].includes(billingPeriod.status) && billingPeriod.amount_due_cents > 0 ? <div className="border-t border-line pt-5"><p className="max-w-lg text-xs leading-5 text-muted">Lock only after reviewing every line. Locking freezes this exact amount for the separate payer-approval step.</p><BillingPeriodLock schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /></div> : null}
+                </div>
+              </details>
+            );
+          })}
           {!(periodsResult.data ?? []).length ? <EmptyDetail>No billing periods have been prepared.</EmptyDetail> : null}
+          </div>
         </div>
       </DetailSection>
 

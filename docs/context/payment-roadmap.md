@@ -93,11 +93,12 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 - Safe card brand, last-four, expiry, and default-method display.
 - Exit gate passed on 2026-08-07: hosted connected-account setup, webhook truth, consent evidence, expiration, replacement/default selection, revocation, late replay safety, and browser-role denial were verified in test mode.
 
-### 7. Monthly billing preparation — IN PROGRESS
+### 7. Monthly billing preparation — COMPLETE
 
 - Actual occurrence-based calculation for three-, four-, and five-lesson months.
 - Owner review, explained adjustments, and policy application.
 - Immutable line-item snapshot and period locking.
+- Exit gate passed on 2026-08-08: versioned series and occurrence prices, structured policy dispositions, atomic/idempotent family draft refresh, manual-adjustment preservation, explicit blockers, per-session three/four/five-month totals, fixed-monthly single-charge behavior, responsive owner review, and hold-to-lock immutability were verified.
 
 ### 8. Parent approval delivery — PENDING
 
@@ -128,4 +129,4 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 
 ## Current next action
 
-Step 7 Parts A and B are complete. Build Part C: transactional family billing-period draft generation using versioned terms and policy-aware occurrence dispositions. Any missing account, missing terms, mixed currency, or owner-review outcome must abort visibly. SMS delivery remains Step 8.
+Activate Step 8, Parent approval delivery. Bind a single-purpose expiring approval request to an immutable locked period, then deliver its URL by SMS through Twilio. The first live school must publish an effective cancellation policy before current-month drafts containing cancellations or no-shows can be prepared.

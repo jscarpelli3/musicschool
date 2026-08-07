@@ -2450,6 +2450,18 @@ export type Database = {
         Returns: boolean
       }
       is_school_member: { Args: { target_school_id: string }; Returns: boolean }
+      lock_family_billing_period: {
+        Args: { p_billing_period_id: string; p_school_id: string }
+        Returns: string
+      }
+      prepare_family_billing_draft: {
+        Args: {
+          p_billing_account_id: string
+          p_month: string
+          p_school_id: string
+        }
+        Returns: string
+      }
       preview_lesson_event_billing_disposition: {
         Args: {
           p_as_of?: string
