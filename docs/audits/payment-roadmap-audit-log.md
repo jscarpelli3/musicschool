@@ -389,3 +389,18 @@ Passed on 2026-08-07.
 - Both rehearsal residue checks returned zero rows. Anonymous preview access is denied with HTTP 401, while the internal computation helper remains service-role-only.
 - Remote migration history is aligned through `20260807233000`. Linked database lint, generated types, ESLint, TypeScript, and the production webpack build pass.
 - Step 7 remains in progress. Part C will transactionally generate reviewable family drafts and must abort on unresolved facts instead of silently omitting them.
+
+### Part C — transactional monthly draft generation
+
+- Started: 2026-08-07.
+- Preflight found that the current lesson-entry flow creates standalone occurrences, while Part A only preserved recurring-series terms. Reading a mutable catalog price during draft generation would therefore be unsafe.
+- Added an immutable per-occurrence price snapshot captured automatically by a database trigger in the same transaction as every lesson event. Series occurrences must resolve an effective versioned series term; standalone lessons must use an explicit per-session offering.
+- Existing occurrences are known seeded/demo standalone lessons and are backfilled from their current explicit per-session catalog values before any billing draft feature is activated.
+- Billing line items can identify both the exact occurrence snapshot and, for recurring lessons, the originating series-term version.
+- Deployment, automatic-capture rehearsal, backfill parity, and authorization checks remain required before draft generation itself begins.
+- The first deployment attempt safely rolled back because `lesson_events` lacked a tenant-composite unique key required by the new foreign key. Added `(school_id, id)` as an explicit unique invariant and the corrected migration deployed atomically.
+- The live backfill has exact parity: 84 lesson events and 84 immutable price snapshots. A self-rolling-back insert rehearsal remains to prove automatic capture and mutation denial.
+- The automatic-capture rehearsal passed and rolled back both its temporary lesson and snapshot. Snapshot mutation was rejected; anonymous reads return zero rows and anonymous inserts receive HTTP 401.
+- Remote migrations align through `20260807235000`; linked database lint, regenerated types, ESLint, TypeScript, and the production webpack build pass.
+- Mid-step direction review clarified that a monthly amount is normally prepared from materialized scheduled occurrences before every lesson is serviced. The generator should treat a future scheduled occurrence as an expected charge, while a past scheduled occurrence with no recorded outcome remains an owner-review blocker. This supersedes using `not_ready` as the final generator behavior; the resolver will be adjusted transactionally with the draft implementation.
+- Price-snapshot prerequisite passed. Part C remains in progress because no billing period or line-item generator has been activated yet.

@@ -317,6 +317,7 @@ export type Database = {
           created_by: string
           description: string
           id: string
+          lesson_event_price_snapshot_id: string | null
           metadata: Json
           quantity: number
           school_id: string
@@ -334,6 +335,7 @@ export type Database = {
           created_by: string
           description: string
           id?: string
+          lesson_event_price_snapshot_id?: string | null
           metadata?: Json
           quantity?: number
           school_id: string
@@ -351,6 +353,7 @@ export type Database = {
           created_by?: string
           description?: string
           id?: string
+          lesson_event_price_snapshot_id?: string | null
           metadata?: Json
           quantity?: number
           school_id?: string
@@ -380,6 +383,13 @@ export type Database = {
             columns: ["school_id", "billing_terms_id"]
             isOneToOne: false
             referencedRelation: "lesson_series_billing_terms"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "billing_line_items_school_id_lesson_event_price_snapshot_i_fkey"
+            columns: ["school_id", "lesson_event_price_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_event_price_snapshots"
             referencedColumns: ["school_id", "id"]
           },
         ]
@@ -623,6 +633,67 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "school_policy_versions"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      lesson_event_price_snapshots: {
+        Row: {
+          amount_cents: number
+          billing_mode: string
+          captured_at: string
+          currency: string
+          id: string
+          lesson_event_id: string
+          offering_name: string
+          school_id: string
+          series_billing_terms_id: string | null
+          source_product_id: string
+        }
+        Insert: {
+          amount_cents: number
+          billing_mode: string
+          captured_at?: string
+          currency: string
+          id?: string
+          lesson_event_id: string
+          offering_name: string
+          school_id: string
+          series_billing_terms_id?: string | null
+          source_product_id: string
+        }
+        Update: {
+          amount_cents?: number
+          billing_mode?: string
+          captured_at?: string
+          currency?: string
+          id?: string
+          lesson_event_id?: string
+          offering_name?: string
+          school_id?: string
+          series_billing_terms_id?: string | null
+          source_product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_event_price_snapshots_school_id_lesson_event_id_fkey"
+            columns: ["school_id", "lesson_event_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_events"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_event_price_snapshots_school_id_series_billing_term_fkey"
+            columns: ["school_id", "series_billing_terms_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_series_billing_terms"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_event_price_snapshots_school_id_source_product_id_fkey"
+            columns: ["school_id", "source_product_id"]
+            isOneToOne: false
+            referencedRelation: "service_products"
+            referencedColumns: ["school_id", "id"]
           },
         ]
       }
