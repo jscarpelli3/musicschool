@@ -1,7 +1,7 @@
 import type Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { synchronizeStripeConnection } from "@/lib/stripe/connections";
-import { getStripe, getStripeWebhookSecret } from "@/lib/stripe/server";
+import { getStripe, getStripeWebhookSecrets } from "@/lib/stripe/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/types/database";
 
@@ -34,37 +34,47 @@ type VerifiedEvent = {
 async function verifyEvent(rawBody: string, signature: string): Promise<VerifiedEvent> {
   const stripe = getStripe();
   const parsed = JSON.parse(rawBody) as { object?: string };
-  if (parsed.object === "v2.core.event") {
-    const notification = await stripe.parseEventNotificationAsync(rawBody, signature, getStripeWebhookSecret());
-    const related = "related_object" in notification ? notification.related_object : null;
-    const accountEvent = notification.type === "v2.core.account.created"
-      || notification.type === "v2.core.account.updated"
-      || notification.type.startsWith("v2.core.account[");
-    return {
-      id: notification.id,
-      type: notification.type,
-      livemode: notification.livemode,
-      accountId: accountEvent ? related?.id ?? null : null,
-      objectId: related?.id ?? null,
-      apiVersion: null,
-      createdAt: new Date(notification.created).toISOString(),
-      payload: JSON.parse(rawBody) as Json,
-      accountEvent,
-    };
+  let lastVerificationError: unknown;
+
+  for (const secret of getStripeWebhookSecrets()) {
+    try {
+      if (parsed.object === "v2.core.event") {
+        const notification = await stripe.parseEventNotificationAsync(rawBody, signature, secret);
+        const related = "related_object" in notification ? notification.related_object : null;
+        const accountEvent = notification.type === "v2.core.account.created"
+          || notification.type === "v2.core.account.updated"
+          || notification.type.startsWith("v2.core.account[");
+        return {
+          id: notification.id,
+          type: notification.type,
+          livemode: notification.livemode,
+          accountId: accountEvent ? related?.id ?? null : null,
+          objectId: related?.id ?? null,
+          apiVersion: null,
+          createdAt: new Date(notification.created).toISOString(),
+          payload: parsed as Json,
+          accountEvent,
+        };
+      }
+
+      const event = await stripe.webhooks.constructEventAsync(rawBody, signature, secret);
+      return {
+        id: event.id,
+        type: event.type,
+        livemode: event.livemode,
+        accountId: providerAccountId(event),
+        objectId: providerObjectId(event),
+        apiVersion: event.api_version ?? null,
+        createdAt: new Date(event.created * 1000).toISOString(),
+        payload: event as unknown as Json,
+        accountEvent: event.type === "account.updated",
+      };
+    } catch (error) {
+      lastVerificationError = error;
+    }
   }
 
-  const event = await stripe.webhooks.constructEventAsync(rawBody, signature, getStripeWebhookSecret());
-  return {
-    id: event.id,
-    type: event.type,
-    livemode: event.livemode,
-    accountId: providerAccountId(event),
-    objectId: providerObjectId(event),
-    apiVersion: event.api_version ?? null,
-    createdAt: new Date(event.created * 1000).toISOString(),
-    payload: event as unknown as Json,
-    accountEvent: event.type === "account.updated",
-  };
+  throw lastVerificationError ?? new Error("No Stripe webhook signing secrets are configured.");
 }
 
 export async function POST(request: Request) {

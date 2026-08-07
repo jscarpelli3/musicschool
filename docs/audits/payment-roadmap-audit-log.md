@@ -221,3 +221,21 @@ Activated: 2026-08-06
 - Production build and ESLint pass. Deployment, signing-secret configuration, real Stripe delivery, replay, concurrency, and out-of-order tests remain required before Step 4 can pass its exit gate.
 - Stripe's destination Ping revealed that the configured destination uses v2 thin-event notifications. The endpoint was expanded to verify both v2 notifications through `parseEventNotificationAsync` and classic snapshot events through `constructEventAsync`; signed ping events are durably classified as ignored health checks.
 - The first correctly signed test-mode Ping reached intake but Supabase rejected persistence before creating a row. Test-mode responses now expose only the safe PostgREST error code/message for diagnosis; secrets and payload contents remain suppressed.
+
+### Part A — destination subscription and intake audit
+
+- Completed: 2026-08-07.
+- The Stripe test destination was subscribed to the required Accounts v2 lifecycle, merchant-configuration, capability-status, requirements, future-requirements, identity, and defaults events.
+- A post-configuration test Ping returned HTTP 200 from the deployed Vercel endpoint.
+- Supabase contains the exact event `evt_test_65VBDDabor94xajrjFd16TWt6q7JSQv0fPSrbryXWYyIBc` as a test-mode `v2.core.event_destination.ping` record.
+- The event was claimed once, intentionally classified as `ignored`, completed without an error, and retained in the immutable provider-event ledger.
+- Audit result: passed. Signature verification, delivery, durable intake, single processing attempt, and safe no-op handling are operating together. Proceed to a real Accounts v2 event; Step 4 as a whole remains in progress.
+
+### Part B — first real account-event attempt
+
+- Started: 2026-08-07.
+- A metadata-only update was accepted by Stripe but produced no destination delivery; metadata is not used as the definitive event trigger.
+- A reversible top-level `display_name` update generated `v2.core.account.updated` in Stripe, and Stripe also generated an identity update during the same test window.
+- Neither real account event reached the Vercel endpoint or Supabase ledger, while destination Pings continued to succeed. This isolates the current gap to Stripe event routing rather than signature verification or application intake.
+- The connected account's original display name, `ScarpsSchool`, was restored immediately after the test.
+- Audit result: incomplete. Before another mutation, verify that the destination's event source is configured for connected accounts and inspect the generated event's delivery-attempt view.
