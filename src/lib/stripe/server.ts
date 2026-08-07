@@ -51,6 +51,7 @@ export function getStripeWebhookSecrets() {
   const secrets = [
     requiredServerEnvironment("STRIPE_WEBHOOK_SECRET"),
     process.env.STRIPE_PLATFORM_WEBHOOK_SECRET?.trim(),
+    process.env.STRIPE_PAYMENTS_WEBHOOK_SECRET?.trim(),
   ].filter((secret): secret is string => Boolean(secret));
 
   for (const secret of secrets) {
