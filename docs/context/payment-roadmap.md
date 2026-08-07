@@ -85,12 +85,13 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 - Expired-link, return, reconnect, and remediation paths.
 - Implemented ahead of Step 4 while validating platform configuration; test onboarding reached charges-enabled and payouts-enabled, and the owner UI now explains actionable requirements and automatically reconciles on return.
 
-### 6. Parent payment-method setup — PENDING
+### 6. Parent payment-method setup — COMPLETE
 
 - Connected-account Customer creation.
 - Stripe-hosted SetupIntent or Checkout setup flow.
 - Explicit future off-session consent evidence.
 - Safe card brand, last-four, expiry, and default-method display.
+- Exit gate passed on 2026-08-07: hosted connected-account setup, webhook truth, consent evidence, expiration, replacement/default selection, revocation, late replay safety, and browser-role denial were verified in test mode.
 
 ### 7. Monthly billing preparation — PENDING
 
@@ -127,4 +128,4 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 
 ## Current next action
 
-Activate Step 6, Parent payment-method setup. Before implementation, confirm the hosted Stripe surface, connected-account Customer ownership, off-session consent evidence, return/recovery paths, and phone-first parent identity boundary. Step 5 is already complete.
+Activate Step 7, Monthly billing preparation. Build occurrence-based three-, four-, and five-lesson calculations, owner review and explained adjustments, policy application, and an immutable locked billing snapshot. SMS delivery remains Step 8.

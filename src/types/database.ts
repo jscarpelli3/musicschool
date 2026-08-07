@@ -1188,7 +1188,6 @@ export type Database = {
           terms_sha256: string
           terms_text: string
           terms_version: string
-          token_hash: string
           updated_at: string
         }
         Insert: {
@@ -1205,7 +1204,6 @@ export type Database = {
           terms_sha256: string
           terms_text: string
           terms_version: string
-          token_hash: string
           updated_at?: string
         }
         Update: {
@@ -1222,7 +1220,6 @@ export type Database = {
           terms_sha256?: string
           terms_text?: string
           terms_version?: string
-          token_hash?: string
           updated_at?: string
         }
         Relationships: [

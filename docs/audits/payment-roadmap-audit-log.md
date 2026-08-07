@@ -281,8 +281,9 @@ Passed on 2026-08-07. Step 4 is complete. Verified webhooks now provide signed i
 
 ## Step 6 — Parent payment-method setup
 
-Status: In progress
+Status: Complete
 Activated: 2026-08-07
+Completed: 2026-08-07
 
 ### Pre-step direction review
 
@@ -315,3 +316,16 @@ Activated: 2026-08-07
 - Added a two-phase revocation design: consent is revoked and the method becomes non-chargeable `detaching` before the Stripe API call; provider success then finalizes `detached`. A retryable provider failure therefore fails closed rather than leaving charge permission active.
 - Reused the hold-to-confirm interaction for removal. The control stacks on phone and aligns beside method details at wider breakpoints.
 - Checkpoint result: expiration and replacement passed. Revocation implementation is deployed to the database but requires an end-to-end provider test before its audit can pass.
+
+### Revocation, replay, and authorization checkpoint
+
+- Removed the current default Mastercard through the owner hold-to-confirm control. Consent was revoked before provider detachment, Stripe confirmed the method no longer has a Customer, and the method finalized as detached.
+- The remaining active Visa automatically became the sole default. Revocation-started and revocation-completed audit entries identify the acting owner.
+- Replayed the old Mastercard `checkout.session.completed` event after revocation by staging it as retryable and resending from Stripe. It processed on attempt 2 without reactivating the card, restoring consent, changing the default, or inserting duplicate consent.
+- Removed an unused hashed setup-token column. Stripe's hosted Session URL is the actual payer bearer link; retaining an unrelated unused token would add ambiguity without protection.
+- Anonymous credentials can read no setup-request rows. Both the revocation and setup-completion RPCs return HTTP 401 permission denied when called with the public key.
+- Final application lint, TypeScript, production build, linked database lint, remote migration parity, mobile stacking, and desktop/tablet alignment passed.
+
+### Exit decision
+
+Passed on 2026-08-07. Step 6 is complete. Parent card setup is hosted by Stripe on the school's connected account; MusicSchool stores only safe references and versioned consent evidence. Expiration, replacement, default fallback, revocation, replay, partial-failure safety, and browser authorization are verified. Activate Step 7, Monthly billing preparation; SMS delivery of payer setup and approval links remains Step 8.

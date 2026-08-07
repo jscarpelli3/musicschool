@@ -79,14 +79,12 @@ export async function createFamilyCardSetup(schoolId: string, billingAccountId: 
   if (customerPersistError) throw customerPersistError;
 
   const termsText = `I authorize ${school.name} to save this payment method with Stripe and charge it off-session only for lesson or class amounts I have separately approved. I can revoke this authorization for future charges.`;
-  const rawToken = crypto.randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
   const { data: setupRequest, error: requestError } = await admin.from("payment_method_setup_requests").insert({
     school_id: schoolId,
     billing_account_id: billingAccountId,
     provider_customer_id: providerCustomer.id,
     initiated_by: actorProfileId,
-    token_hash: sha256(rawToken),
     terms_version: PAYMENT_METHOD_TERMS_VERSION,
     terms_text: termsText,
     terms_sha256: sha256(termsText),
