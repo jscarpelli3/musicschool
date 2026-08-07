@@ -2220,6 +2220,13 @@ export type Database = {
     }
     Functions: {
       approve_billing_request: { Args: { raw_token: string }; Returns: string }
+      begin_payment_method_revocation: {
+        Args: { p_payment_method_id: string }
+        Returns: {
+          provider_account_id: string
+          provider_payment_method_id: string
+        }[]
+      }
       claim_payment_provider_event: {
         Args: {
           p_provider_event_id: string
@@ -2246,6 +2253,10 @@ export type Database = {
           p_setup_request_id: string
         }
         Returns: string
+      }
+      complete_payment_method_revocation: {
+        Args: { p_payment_method_id: string }
+        Returns: undefined
       }
       create_single_lesson: {
         Args: {

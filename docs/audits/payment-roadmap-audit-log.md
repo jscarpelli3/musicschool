@@ -305,3 +305,13 @@ Activated: 2026-08-07
 - The return page remained informational until webhook reconciliation. The failed attempt remains visible in recent setup activity rather than being erased.
 - Usability review clarified that the owner normally sends the hosted link to the payer. Replaced the direct owner redirect with a copyable 24-hour payer link and a separately labeled assisted-setup option; also removed duplicated card labeling.
 - Checkpoint result: passed. Core hosted setup and verified persistence work end to end in test mode. Step 6 remains in progress for link expiration/replay tests, replacement/default behavior, consent revocation, and the later SMS delivery integration.
+
+### Expiration and replacement checkpoint
+
+- Created an unused payer setup link and expired its exact Checkout Session through Stripe. `checkout.session.expired` was signed, stored, and processed once; only that setup request became expired, with no completion timestamp.
+- Expiration left the existing Visa ending in 4242 active and default, proving an abandoned link cannot disturb a saved method.
+- Completed a second hosted setup using Stripe test Mastercard ending in 4444. Its event processed once and produced a distinct consent tied to its own SetupIntent.
+- The completion transaction retained Visa as active history, removed its default flag, and made Mastercard the sole default. Neither prior consent nor setup history was overwritten.
+- Added a two-phase revocation design: consent is revoked and the method becomes non-chargeable `detaching` before the Stripe API call; provider success then finalizes `detached`. A retryable provider failure therefore fails closed rather than leaving charge permission active.
+- Reused the hold-to-confirm interaction for removal. The control stacks on phone and aligns beside method details at wider breakpoints.
+- Checkpoint result: expiration and replacement passed. Revocation implementation is deployed to the database but requires an end-to-end provider test before its audit can pass.

@@ -8,6 +8,7 @@ type HoldToConfirmProps = {
   idleLabel: string;
   holdingLabel?: string;
   duration?: number;
+  onSuccess?: () => void;
 };
 
 export function HoldToConfirm({
@@ -15,6 +16,7 @@ export function HoldToConfirm({
   idleLabel,
   holdingLabel = "Keep holding…",
   duration = 1400,
+  onSuccess,
 }: HoldToConfirmProps) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [state, setState] = useState<"idle" | "holding" | "submitting" | "success" | "error">("idle");
@@ -37,6 +39,7 @@ export function HoldToConfirm({
         const result = await action();
         setMessage(result.message);
         setState(result.ok ? "success" : "error");
+        if (result.ok) onSuccess?.();
       } catch {
         setMessage("We could not record this approval. Please try again.");
         setState("error");

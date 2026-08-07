@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { DetailHeader, DetailSection, EmptyDetail } from "@/components/people/detail-shell";
 import { createClient } from "@/lib/supabase/server";
 import { CardSetupControls } from "./card-setup-controls";
+import { PaymentMethodRemove } from "./payment-method-remove";
 
 export const dynamic = "force-dynamic";
 
@@ -84,7 +85,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
           {card === "complete" ? <p className="border-l-2 border-brand pl-4 text-sm text-ink">Stripe received the setup. The saved method will appear here after verified webhook reconciliation.</p> : null}
           {card === "canceled" ? <p className="border-l-2 border-line pl-4 text-sm text-muted">Card setup was canceled. Nothing was saved.</p> : null}
           {card === "error" ? <p className="border-l-2 border-danger pl-4 text-sm text-danger">Secure card setup could not start. No card information was collected.</p> : null}
-          {(methodsResult.data ?? []).map((method) => <div key={method.id} className="flex flex-wrap items-baseline justify-between gap-3 border-b border-line pb-5 last:border-0"><div><p className="capitalize">{method.brand ?? "Payment method"}{method.last_four ? ` ending in ${method.last_four}` : ""}</p>{method.exp_month && method.exp_year ? <p className="mt-2 text-xs text-muted">Expires {method.exp_month}/{method.exp_year}</p> : null}</div><span className="text-xs uppercase tracking-[0.14em] text-brand">{method.is_default ? "Default" : method.status}</span></div>)}
+          {(methodsResult.data ?? []).map((method) => <div key={method.id} className="grid gap-4 border-b border-line pb-5 last:border-0 sm:grid-cols-[1fr_auto]"><div><p className="capitalize">{method.brand ?? "Payment method"}{method.last_four ? ` ending in ${method.last_four}` : ""}</p>{method.exp_month && method.exp_year ? <p className="mt-2 text-xs text-muted">Expires {method.exp_month}/{method.exp_year}</p> : null}<span className="mt-3 block text-xs uppercase tracking-[0.14em] text-brand">{method.is_default ? "Default" : method.status}</span></div>{canManagePayments && method.status !== "detached" ? <div className="w-full sm:w-48"><PaymentMethodRemove schoolId={schoolId} billingAccountId={billingAccountId} paymentMethodId={method.id} /></div> : null}</div>)}
           {!(methodsResult.data ?? []).length ? <EmptyDetail>No payment method has been set up.</EmptyDetail> : null}
           {canManagePayments ? <CardSetupControls schoolId={schoolId} billingAccountId={billingAccountId} disabled={!stripeReady} /> : null}
           {canManagePayments && (setupRequestsResult.data ?? []).length ? <div className="border-t border-line pt-5"><p className="text-xs uppercase tracking-[0.14em] text-muted">Recent setup activity</p><div className="mt-3 space-y-2">{(setupRequestsResult.data ?? []).map((request) => <p key={request.id} className="flex justify-between gap-4 text-xs text-muted"><span>{new Date(request.created_at).toLocaleString()}</span><span className="uppercase text-brand">{request.status}</span></p>)}</div></div> : null}

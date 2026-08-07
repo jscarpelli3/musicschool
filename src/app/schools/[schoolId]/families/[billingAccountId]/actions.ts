@@ -2,6 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { createFamilyCardSetup } from "@/lib/stripe/payment-methods";
+import { getStripe } from "@/lib/stripe/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export type CardSetupLinkState = { url: string | null; error: string | null };
@@ -31,4 +33,58 @@ export async function generateFamilyCardSetupLink(
     console.error("Family card setup could not start", setupError);
     return { url: null, error: "Secure card setup could not start. No card information was collected." };
   }
+}
+
+export async function removeFamilyPaymentMethod(schoolId: string, billingAccountId: string, paymentMethodId: string) {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId) return { ok: false, message: "Sign in again before removing this card." };
+
+  const [{ data: membership }, { data: method }] = await Promise.all([
+    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
+    supabase.from("billing_payment_methods").select("id, status").eq("id", paymentMethodId).eq("school_id", schoolId).eq("billing_account_id", billingAccountId).maybeSingle(),
+  ]);
+  if (!membership || !["owner", "admin"].includes(membership.role) || !method || method.status === "detached") {
+    return { ok: false, message: "This payment method cannot be removed." };
+  }
+
+  const admin = createAdminClient();
+  const { error: auditStartError } = await admin.from("audit_log").insert({
+    school_id: schoolId,
+    actor_profile_id: profileId,
+    action: "payment_method.revocation_started",
+    entity_type: "billing_payment_method",
+    entity_id: paymentMethodId,
+    metadata: { billing_account_id: billingAccountId },
+  });
+  if (auditStartError) return { ok: false, message: "Removal could not be recorded. Nothing changed." };
+
+  const { data: revocation, error: beginError } = await admin.rpc("begin_payment_method_revocation", {
+    p_payment_method_id: paymentMethodId,
+  }).maybeSingle();
+  if (beginError || !revocation?.provider_account_id) {
+    return { ok: false, message: "Removal could not start. The card will not be charged." };
+  }
+
+  try {
+    await getStripe().paymentMethods.detach(revocation.provider_payment_method_id, {}, { stripeAccount: revocation.provider_account_id });
+  } catch (error) {
+    const missing = error instanceof Error && error.message.includes("No such PaymentMethod");
+    if (!missing) return { ok: false, message: "Consent was revoked. Stripe removal is pending and can be retried." };
+  }
+
+  const { error: finishError } = await admin.rpc("complete_payment_method_revocation", { p_payment_method_id: paymentMethodId });
+  if (finishError) return { ok: false, message: "Consent was revoked. Stripe removal completed; local reconciliation is pending." };
+
+  const { error: auditCompleteError } = await admin.from("audit_log").insert({
+    school_id: schoolId,
+    actor_profile_id: profileId,
+    action: "payment_method.revocation_completed",
+    entity_type: "billing_payment_method",
+    entity_id: paymentMethodId,
+    metadata: { billing_account_id: billingAccountId },
+  });
+  if (auditCompleteError) return { ok: false, message: "The card was removed, but its audit entry needs reconciliation." };
+  return { ok: true, message: "Future charge consent revoked and card removed from Stripe." };
 }
