@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { synchronizeStripeConnection } from "@/lib/stripe/connections";
+import { expireCardSetup, reconcileCompletedCardSetup } from "@/lib/stripe/payment-method-reconciliation";
 import { getStripe, getStripeWebhookSecrets } from "@/lib/stripe/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/types/database";
@@ -29,6 +30,7 @@ type VerifiedEvent = {
   createdAt: string;
   payload: Json;
   accountEvent: boolean;
+  checkoutSetupEvent: "completed" | "expired" | null;
 };
 
 async function verifyEvent(rawBody: string, signature: string): Promise<VerifiedEvent> {
@@ -54,6 +56,7 @@ async function verifyEvent(rawBody: string, signature: string): Promise<Verified
           createdAt: new Date(notification.created).toISOString(),
           payload: parsed as Json,
           accountEvent,
+          checkoutSetupEvent: null,
         };
       }
 
@@ -68,6 +71,9 @@ async function verifyEvent(rawBody: string, signature: string): Promise<Verified
         createdAt: new Date(event.created * 1000).toISOString(),
         payload: event as unknown as Json,
         accountEvent: event.type === "account.updated",
+        checkoutSetupEvent: event.type === "checkout.session.completed"
+          ? "completed"
+          : event.type === "checkout.session.expired" ? "expired" : null,
       };
     } catch (error) {
       lastVerificationError = error;
@@ -130,7 +136,13 @@ export async function POST(request: Request) {
       await synchronizeStripeConnection(connection.school_id, accountId, null);
     }
 
-    const supported = event.accountEvent;
+    if (event.checkoutSetupEvent === "completed" && accountId && event.objectId) {
+      await reconcileCompletedCardSetup(event.objectId, accountId, event.createdAt);
+    } else if (event.checkoutSetupEvent === "expired" && event.objectId) {
+      await expireCardSetup(event.objectId);
+    }
+
+    const supported = event.accountEvent || Boolean(event.checkoutSetupEvent);
     const { error: completeError } = await admin.from("payment_provider_events").update({
       processing_status: supported ? "processed" : "ignored",
       processed_at: new Date().toISOString(),

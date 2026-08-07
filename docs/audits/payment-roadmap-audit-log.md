@@ -276,3 +276,21 @@ Completed: 2026-08-07
 ### Exit decision
 
 Passed on 2026-08-07. Step 4 is complete. Verified webhooks now provide signed immutable intake, account-to-school resolution, latest-state reconciliation, duplicate and concurrency safety, stale-event safety, visible retryable failure, and abandoned-work recovery across both connected-account and platform-account Accounts v2 destinations. Activate Step 6 because Step 5 was completed early during Stripe platform setup.
+
+---
+
+## Step 6 — Parent payment-method setup
+
+Status: In progress
+Activated: 2026-08-07
+
+### Pre-step direction review
+
+- Confirmed parents do not need Stripe accounts and MusicSchool must never receive raw card or bank credentials.
+- Selected Stripe-hosted Checkout in setup mode rather than embedded Elements or a custom form. No client-side Stripe package is required.
+- Customers and reusable payment methods belong to each school's connected Stripe account so later direct charges preserve the school as merchant of record.
+- A setup request must be durable before redirect and bind school, family billing account, connected-account Customer, Checkout Session, expiration, initiator, and an exact versioned authorization statement.
+- The authorization is limited to future off-session lesson or class amounts the payer separately approves; setup does not itself approve a monthly amount.
+- Browser success returns remain informational. Verified connected-account Checkout webhooks retrieve current Stripe state and atomically persist safe method details plus consent evidence.
+- Checkout and SetupIntent are API v1 resources. Because thin v1 events remain preview-only, add a separate connected-account snapshot destination rather than weakening or replacing the verified Accounts v2 destinations.
+- The owner-facing launch control must work on desktop, tablet, and phone; Stripe owns the responsive hosted card-entry surface.

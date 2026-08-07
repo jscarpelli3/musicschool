@@ -1173,6 +1173,82 @@ export type Database = {
           },
         ]
       }
+      payment_method_setup_requests: {
+        Row: {
+          billing_account_id: string
+          completed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          initiated_by: string
+          provider_checkout_session_id: string | null
+          provider_customer_id: string
+          school_id: string
+          status: string
+          terms_sha256: string
+          terms_text: string
+          terms_version: string
+          token_hash: string
+          updated_at: string
+        }
+        Insert: {
+          billing_account_id: string
+          completed_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          initiated_by: string
+          provider_checkout_session_id?: string | null
+          provider_customer_id: string
+          school_id: string
+          status?: string
+          terms_sha256: string
+          terms_text: string
+          terms_version: string
+          token_hash: string
+          updated_at?: string
+        }
+        Update: {
+          billing_account_id?: string
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          initiated_by?: string
+          provider_checkout_session_id?: string | null
+          provider_customer_id?: string
+          school_id?: string
+          status?: string
+          terms_sha256?: string
+          terms_text?: string
+          terms_version?: string
+          token_hash?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_method_setup_requests_initiated_by_fkey"
+            columns: ["initiated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_method_setup_requests_school_id_billing_account_id_fkey"
+            columns: ["school_id", "billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "payment_method_setup_requests_school_id_provider_customer_id_fkey"
+            columns: ["school_id", "provider_customer_id", "billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_provider_customers"
+            referencedColumns: ["school_id", "id", "billing_account_id"]
+          },
+        ]
+      }
       payment_provider_events: {
         Row: {
           api_version: string | null
@@ -2153,6 +2229,23 @@ export type Database = {
           id: string
           processing_attempts: number
         }[]
+      }
+      complete_payment_method_setup: {
+        Args: {
+          p_accepted_at: string
+          p_brand: string | null
+          p_display_label: string
+          p_evidence: Json
+          p_exp_month: number | null
+          p_exp_year: number | null
+          p_last_four: string | null
+          p_method_type: string
+          p_provider_checkout_session_id: string
+          p_provider_payment_method_id: string
+          p_provider_setup_intent_id: string
+          p_setup_request_id: string
+        }
+        Returns: string
       }
       create_single_lesson: {
         Args: {
