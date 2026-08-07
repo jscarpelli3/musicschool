@@ -312,6 +312,7 @@ export type Database = {
         Row: {
           amount_cents: number | null
           billing_period_id: string
+          billing_terms_id: string | null
           created_at: string
           created_by: string
           description: string
@@ -328,6 +329,7 @@ export type Database = {
         Insert: {
           amount_cents?: number | null
           billing_period_id: string
+          billing_terms_id?: string | null
           created_at?: string
           created_by: string
           description: string
@@ -344,6 +346,7 @@ export type Database = {
         Update: {
           amount_cents?: number | null
           billing_period_id?: string
+          billing_terms_id?: string | null
           created_at?: string
           created_by?: string
           description?: string
@@ -370,6 +373,13 @@ export type Database = {
             columns: ["school_id", "billing_period_id"]
             isOneToOne: false
             referencedRelation: "billing_periods"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "billing_line_items_school_id_billing_terms_id_fkey"
+            columns: ["school_id", "billing_terms_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_series_billing_terms"
             referencedColumns: ["school_id", "id"]
           },
         ]
@@ -887,6 +897,73 @@ export type Database = {
           },
         ]
       }
+      lesson_series_billing_terms: {
+        Row: {
+          amount_cents: number
+          billing_mode: string
+          created_at: string
+          created_by: string
+          currency: string
+          effective_from: string
+          effective_until: string | null
+          id: string
+          lesson_series_id: string
+          offering_name: string
+          school_id: string
+          source_product_id: string
+        }
+        Insert: {
+          amount_cents: number
+          billing_mode: string
+          created_at?: string
+          created_by: string
+          currency: string
+          effective_from: string
+          effective_until?: string | null
+          id?: string
+          lesson_series_id: string
+          offering_name: string
+          school_id: string
+          source_product_id: string
+        }
+        Update: {
+          amount_cents?: number
+          billing_mode?: string
+          created_at?: string
+          created_by?: string
+          currency?: string
+          effective_from?: string
+          effective_until?: string | null
+          id?: string
+          lesson_series_id?: string
+          offering_name?: string
+          school_id?: string
+          source_product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_series_billing_terms_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_series_billing_terms_school_id_lesson_series_id_fkey"
+            columns: ["school_id", "lesson_series_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_series"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_series_billing_terms_school_id_source_product_id_fkey"
+            columns: ["school_id", "source_product_id"]
+            isOneToOne: false
+            referencedRelation: "service_products"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
       payment_attempts: {
         Row: {
           amount_cents: number
@@ -1135,44 +1212,6 @@ export type Database = {
           },
         ]
       }
-      payment_policy_rules: {
-        Row: {
-          approval_requirement: string
-          collection_method: string
-          due_day_of_month: number | null
-          failed_payment_retry_count: number
-          grace_period_days: number
-          late_fee_cents: number
-          policy_version_id: string
-        }
-        Insert: {
-          approval_requirement?: string
-          collection_method?: string
-          due_day_of_month?: number | null
-          failed_payment_retry_count?: number
-          grace_period_days?: number
-          late_fee_cents?: number
-          policy_version_id: string
-        }
-        Update: {
-          approval_requirement?: string
-          collection_method?: string
-          due_day_of_month?: number | null
-          failed_payment_retry_count?: number
-          grace_period_days?: number
-          late_fee_cents?: number
-          policy_version_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_policy_rules_policy_version_id_fkey"
-            columns: ["policy_version_id"]
-            isOneToOne: true
-            referencedRelation: "school_policy_versions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       payment_method_setup_requests: {
         Row: {
           billing_account_id: string
@@ -1238,11 +1277,49 @@ export type Database = {
             referencedColumns: ["school_id", "id"]
           },
           {
-            foreignKeyName: "payment_method_setup_requests_school_id_provider_customer_id_fkey"
+            foreignKeyName: "payment_method_setup_requests_school_id_provider_customer__fkey"
             columns: ["school_id", "provider_customer_id", "billing_account_id"]
             isOneToOne: false
             referencedRelation: "billing_provider_customers"
             referencedColumns: ["school_id", "id", "billing_account_id"]
+          },
+        ]
+      }
+      payment_policy_rules: {
+        Row: {
+          approval_requirement: string
+          collection_method: string
+          due_day_of_month: number | null
+          failed_payment_retry_count: number
+          grace_period_days: number
+          late_fee_cents: number
+          policy_version_id: string
+        }
+        Insert: {
+          approval_requirement?: string
+          collection_method?: string
+          due_day_of_month?: number | null
+          failed_payment_retry_count?: number
+          grace_period_days?: number
+          late_fee_cents?: number
+          policy_version_id: string
+        }
+        Update: {
+          approval_requirement?: string
+          collection_method?: string
+          due_day_of_month?: number | null
+          failed_payment_retry_count?: number
+          grace_period_days?: number
+          late_fee_cents?: number
+          policy_version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_policy_rules_policy_version_id_fkey"
+            columns: ["policy_version_id"]
+            isOneToOne: true
+            referencedRelation: "school_policy_versions"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1646,8 +1723,8 @@ export type Database = {
           last_synced_at: string | null
           livemode: boolean
           past_due: Json
-          pending_verification: Json
           payouts_enabled: boolean
+          pending_verification: Json
           provider: string
           provider_account_id: string | null
           requirement_errors: Json
@@ -1667,8 +1744,8 @@ export type Database = {
           last_synced_at?: string | null
           livemode?: boolean
           past_due?: Json
-          pending_verification?: Json
           payouts_enabled?: boolean
+          pending_verification?: Json
           provider?: string
           provider_account_id?: string | null
           requirement_errors?: Json
@@ -1688,8 +1765,8 @@ export type Database = {
           last_synced_at?: string | null
           livemode?: boolean
           past_due?: Json
-          pending_verification?: Json
           payouts_enabled?: boolean
+          pending_verification?: Json
           provider?: string
           provider_account_id?: string | null
           requirement_errors?: Json
@@ -2225,24 +2302,25 @@ export type Database = {
         }[]
       }
       claim_payment_provider_event: {
-        Args: {
-          p_provider_event_id: string
-          p_stale_after_seconds?: number
-        }
+        Args: { p_provider_event_id: string; p_stale_after_seconds?: number }
         Returns: {
           id: string
           processing_attempts: number
         }[]
       }
+      complete_payment_method_revocation: {
+        Args: { p_payment_method_id: string }
+        Returns: undefined
+      }
       complete_payment_method_setup: {
         Args: {
           p_accepted_at: string
-          p_brand: string | null
+          p_brand: string
           p_display_label: string
           p_evidence: Json
-          p_exp_month: number | null
-          p_exp_year: number | null
-          p_last_four: string | null
+          p_exp_month: number
+          p_exp_year: number
+          p_last_four: string
           p_method_type: string
           p_provider_checkout_session_id: string
           p_provider_payment_method_id: string
@@ -2251,26 +2329,22 @@ export type Database = {
         }
         Returns: string
       }
-      complete_payment_method_revocation: {
-        Args: { p_payment_method_id: string }
-        Returns: undefined
+      create_school: {
+        Args: { school_name: string; school_timezone?: string }
+        Returns: string
       }
       create_single_lesson: {
         Args: {
           p_allow_outside_availability?: boolean
           p_local_start: string
-          p_notes?: string | null
-          p_override_reason?: string | null
+          p_notes?: string
+          p_override_reason?: string
           p_place_id: string
           p_product_id: string
           p_school_id: string
           p_student_id: string
           p_teacher_id: string
         }
-        Returns: string
-      }
-      create_school: {
-        Args: { school_name: string; school_timezone?: string }
         Returns: string
       }
       get_billing_approval: {

@@ -329,3 +329,41 @@ Completed: 2026-08-07
 ### Exit decision
 
 Passed on 2026-08-07. Step 6 is complete. Parent card setup is hosted by Stripe on the school's connected account; MusicSchool stores only safe references and versioned consent evidence. Expiration, replacement, default fallback, revocation, replay, partial-failure safety, and browser authorization are verified. Activate Step 7, Monthly billing preparation; SMS delivery of payer setup and approval links remains Step 8.
+
+---
+
+## Step 7 — Monthly billing preparation
+
+Status: In progress
+Activated: 2026-08-07
+
+### Pre-step direction review
+
+- Confirmed monthly billing must support three-, four-, and five-occurrence months and must not assume four weekly lessons.
+- Confirmed the current catalog explicitly prices offerings per session, while the school-level default still says fixed monthly. Existing amounts therefore cannot safely be reinterpreted as monthly tuition.
+- Found that lesson series referenced a mutable catalog offering without preserving agreed billing terms. A later catalog edit could otherwise change a historical draft before it was locked.
+- Split Step 7 into a versioned-terms foundation, deterministic occurrence and policy resolution, transactional draft generation, and owner review/locking.
+- Fixed-monthly terms will produce one series charge per covered calendar month. Per-session terms will produce one charge per billable occurrence. Credits and exceptions remain explicit line items rather than hidden arithmetic.
+- Draft generation must stop visibly when a student has no billing account, ambiguous billing-account ownership, missing terms, unresolved outcomes, or mixed currencies.
+- No parent delivery or Stripe charge occurs in this step. Those remain separate approval and collection states in Steps 8 and 9.
+- The review UI will use a stacked phone layout and a denser table at tablet/desktop widths; no billing action will depend on hover.
+
+### Part A — versioned billing terms checkpoint
+
+- Added a tenant-scoped, non-overlapping lesson-series billing-term history with immutable mode, amount, currency, offering name, source product, and effective date snapshots.
+- Existing series inherit the catalog's explicit pricing model and amount. This deliberately avoids inventing fixed-monthly tuition from the stale school default.
+- Billing line items can identify the exact term version used and can distinguish a monthly lesson-series charge from an occurrence charge.
+- Database deployment, backfill validation, RLS denial, generated types, lint, and build remain required before Part A passes.
+- The migration deployed cleanly and linked database lint reports no schema errors. The live project currently has zero lesson-series rows; its seeded calendar entries are standalone lesson occurrences, so the historical backfill correctly inserted zero term rows.
+- Anonymous reads return an empty result under RLS. A transactional database rehearsal will create temporary linked records, prove overlap and mutation guards, and intentionally roll all rehearsal data back before Part A is marked complete.
+
+### Part A exit decision
+
+Passed on 2026-08-07.
+
+- Remote migrations `20260807230000` and `20260807231000` are applied and local/remote history matches exactly.
+- The self-rolling-back rehearsal proved overlapping effective periods are rejected, price snapshots cannot be edited, and an open term can be closed exactly once. No rehearsal business rows remain.
+- The public publishable key can read no term rows and an anonymous insert is rejected with HTTP 401. Member and owner/admin access remains tenant-scoped through RLS.
+- Generated TypeScript types now come directly from the deployed schema. Their stricter nullability exposed and fixed optional lesson-RPC arguments and required Stripe card-display fields.
+- Linked database lint, ESLint, TypeScript, and the production webpack build pass. The initial sandboxed build could not resolve Google Fonts; the identical network-enabled build compiled and prerendered successfully.
+- Step 7 remains in progress. Part B will model deterministic policy-aware occurrence dispositions before draft generation; no amount approval or charge has been activated.

@@ -93,7 +93,7 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 - Safe card brand, last-four, expiry, and default-method display.
 - Exit gate passed on 2026-08-07: hosted connected-account setup, webhook truth, consent evidence, expiration, replacement/default selection, revocation, late replay safety, and browser-role denial were verified in test mode.
 
-### 7. Monthly billing preparation — PENDING
+### 7. Monthly billing preparation — IN PROGRESS
 
 - Actual occurrence-based calculation for three-, four-, and five-lesson months.
 - Owner review, explained adjustments, and policy application.
@@ -128,4 +128,4 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 
 ## Current next action
 
-Activate Step 7, Monthly billing preparation. Build occurrence-based three-, four-, and five-lesson calculations, owner review and explained adjustments, policy application, and an immutable locked billing snapshot. SMS delivery remains Step 8.
+Step 7 Part A is complete. Build Part B: deterministic, policy-aware occurrence dispositions that explicitly classify each lesson as charge, waive, credit, or owner review before any monthly draft is calculated. SMS delivery remains Step 8.

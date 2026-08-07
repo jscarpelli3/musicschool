@@ -40,7 +40,8 @@ export async function reconcileCompletedCardSetup(checkoutSessionId: string, str
   if (providerCustomer.provider_customer_id !== customerId) throw new Error("Stripe Customer does not match the family setup request.");
 
   const card = paymentMethod.card;
-  const displayLabel = card ? `${card.brand.replaceAll("_", " ")} •••• ${card.last4}` : "Saved payment method";
+  if (!card) throw new Error("Stripe setup did not return the required card details.");
+  const displayLabel = `${card.brand.replaceAll("_", " ")} •••• ${card.last4}`;
   const { data: paymentMethodRecordId, error: completionError } = await admin.rpc("complete_payment_method_setup", {
     p_setup_request_id: request.id,
     p_provider_checkout_session_id: checkoutSessionId,
@@ -48,10 +49,10 @@ export async function reconcileCompletedCardSetup(checkoutSessionId: string, str
     p_provider_payment_method_id: paymentMethod.id,
     p_method_type: paymentMethod.type === "card" ? "card" : "other",
     p_display_label: displayLabel,
-    p_brand: card?.brand ?? null,
-    p_last_four: card?.last4 ?? null,
-    p_exp_month: card?.exp_month ?? null,
-    p_exp_year: card?.exp_year ?? null,
+    p_brand: card.brand,
+    p_last_four: card.last4,
+    p_exp_month: card.exp_month,
+    p_exp_year: card.exp_year,
     p_accepted_at: acceptedAt,
     p_evidence: {
       checkout_session_id: checkoutSessionId,

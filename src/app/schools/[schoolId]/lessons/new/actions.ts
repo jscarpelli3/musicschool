@@ -17,9 +17,9 @@ export async function createSingleLesson(schoolId: string, formData: FormData) {
   const placeId = String(formData.get("place_id") ?? "");
   const date = String(formData.get("date") ?? "");
   const time = String(formData.get("time") ?? "");
-  const notes = String(formData.get("notes") ?? "").trim() || null;
+  const notes = String(formData.get("notes") ?? "").trim() || undefined;
   const allowOutside = formData.get("allow_outside_availability") === "on";
-  const overrideReason = String(formData.get("override_reason") ?? "").trim() || null;
+  const overrideReason = String(formData.get("override_reason") ?? "").trim() || undefined;
   const returnPath = `/schools/${schoolId}/lessons/new`;
 
   if (![productId, teacherId, studentId, placeId].every((value) => /^[0-9a-f-]{36}$/i.test(value))
