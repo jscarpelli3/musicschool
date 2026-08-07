@@ -294,3 +294,14 @@ Activated: 2026-08-07
 - Browser success returns remain informational. Verified connected-account Checkout webhooks retrieve current Stripe state and atomically persist safe method details plus consent evidence.
 - Checkout and SetupIntent are API v1 resources. Because thin v1 events remain preview-only, add a separate connected-account snapshot destination rather than weakening or replacing the verified Accounts v2 destinations.
 - The owner-facing launch control must work on desktop, tablet, and phone; Stripe owns the responsive hosted card-entry surface.
+
+### First connected-account setup checkpoint
+
+- Added a durable, expiring setup-request record and a service-role-only completion transaction. Browser roles cannot create provider customers, payment methods, or consent records directly.
+- Added Stripe-hosted Checkout setup creation on the school's connected account with a stable Customer idempotency key and no client-side Stripe dependency.
+- The first launch safely failed because Stripe API `2026-07-29.dahlia` no longer accepts the formerly documented `ui_mode=hosted` value. The request remained auditable as failed and stored no Checkout Session or card data; removing the redundant parameter uses Stripe's hosted default.
+- The second launch completed with Stripe test card 4242. Snapshot event `checkout.session.completed` was signed, stored once, processed once, and reconciled from the connected account without error.
+- Supabase durably contains the completed setup request, one active default Visa ending in 4242, and an off-session consent record tied to the exact Checkout Session and SetupIntent. Only brand, last four, expiration, and provider references are stored.
+- The return page remained informational until webhook reconciliation. The failed attempt remains visible in recent setup activity rather than being erased.
+- Usability review clarified that the owner normally sends the hosted link to the payer. Replaced the direct owner redirect with a copyable 24-hour payer link and a separately labeled assisted-setup option; also removed duplicated card labeling.
+- Checkpoint result: passed. Core hosted setup and verified persistence work end to end in test mode. Step 6 remains in progress for link expiration/replay tests, replacement/default behavior, consent revocation, and the later SMS delivery integration.

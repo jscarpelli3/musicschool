@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { DetailHeader, DetailSection, EmptyDetail } from "@/components/people/detail-shell";
 import { createClient } from "@/lib/supabase/server";
-import { startFamilyCardSetup } from "./actions";
+import { CardSetupControls } from "./card-setup-controls";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +56,6 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   }, {});
   const canManagePayments = ["owner", "admin"].includes(membership.role);
   const stripeReady = connectionResult.data?.status === "enabled" && connectionResult.data.charges_enabled;
-  const setupAction = startFamilyCardSetup.bind(null, schoolId, billingAccountId);
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
@@ -85,9 +84,9 @@ export default async function FamilyDetailPage({ params, searchParams }: {
           {card === "complete" ? <p className="border-l-2 border-brand pl-4 text-sm text-ink">Stripe received the setup. The saved method will appear here after verified webhook reconciliation.</p> : null}
           {card === "canceled" ? <p className="border-l-2 border-line pl-4 text-sm text-muted">Card setup was canceled. Nothing was saved.</p> : null}
           {card === "error" ? <p className="border-l-2 border-danger pl-4 text-sm text-danger">Secure card setup could not start. No card information was collected.</p> : null}
-          {(methodsResult.data ?? []).map((method) => <div key={method.id} className="flex flex-wrap items-baseline justify-between gap-3 border-b border-line pb-5 last:border-0"><div><p>{method.display_label}</p><p className="mt-2 text-xs text-muted">{method.brand ?? "Payment method"}{method.last_four ? ` · •••• ${method.last_four}` : ""}{method.exp_month && method.exp_year ? ` · expires ${method.exp_month}/${method.exp_year}` : ""}</p></div><span className="text-xs uppercase tracking-[0.14em] text-brand">{method.is_default ? "Default" : method.status}</span></div>)}
+          {(methodsResult.data ?? []).map((method) => <div key={method.id} className="flex flex-wrap items-baseline justify-between gap-3 border-b border-line pb-5 last:border-0"><div><p className="capitalize">{method.brand ?? "Payment method"}{method.last_four ? ` ending in ${method.last_four}` : ""}</p>{method.exp_month && method.exp_year ? <p className="mt-2 text-xs text-muted">Expires {method.exp_month}/{method.exp_year}</p> : null}</div><span className="text-xs uppercase tracking-[0.14em] text-brand">{method.is_default ? "Default" : method.status}</span></div>)}
           {!(methodsResult.data ?? []).length ? <EmptyDetail>No payment method has been set up.</EmptyDetail> : null}
-          {canManagePayments ? <div className="border-t border-line pt-5"><form action={setupAction}><button type="submit" disabled={!stripeReady} className="border border-brand px-5 py-3 text-sm text-ink transition-colors hover:bg-brand hover:text-canvas disabled:cursor-not-allowed disabled:border-line disabled:text-muted disabled:hover:bg-transparent">Open secure Stripe setup</button></form><p className="mt-3 max-w-xl text-xs leading-5 text-muted">Stripe collects the card directly. The payer authorizes future off-session charges only for lesson or class amounts they separately approve.</p>{!stripeReady ? <p className="mt-2 text-xs text-danger">The school’s Stripe connection must be enabled first.</p> : null}</div> : null}
+          {canManagePayments ? <CardSetupControls schoolId={schoolId} billingAccountId={billingAccountId} disabled={!stripeReady} /> : null}
           {canManagePayments && (setupRequestsResult.data ?? []).length ? <div className="border-t border-line pt-5"><p className="text-xs uppercase tracking-[0.14em] text-muted">Recent setup activity</p><div className="mt-3 space-y-2">{(setupRequestsResult.data ?? []).map((request) => <p key={request.id} className="flex justify-between gap-4 text-xs text-muted"><span>{new Date(request.created_at).toLocaleString()}</span><span className="uppercase text-brand">{request.status}</span></p>)}</div></div> : null}
         </div>
       </DetailSection>
