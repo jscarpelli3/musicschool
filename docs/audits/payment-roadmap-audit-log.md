@@ -239,3 +239,14 @@ Activated: 2026-08-06
 - Neither real account event reached the Vercel endpoint or Supabase ledger, while destination Pings continued to succeed. This isolates the current gap to Stripe event routing rather than signature verification or application intake.
 - The connected account's original display name, `ScarpsSchool`, was restored immediately after the test.
 - Audit result: incomplete. Before another mutation, verify that the destination's event source is configured for connected accounts and inspect the generated event's delivery-attempt view.
+
+### Part B — platform routing correction and successful real event
+
+- Completed: 2026-08-07.
+- Stripe generated platform-initiated Accounts v2 updates without connected-account context, so they did not match the connected-accounts-only destination. Stripe does not allow changing a destination's event source after creation.
+- Added an optional, separately named platform-destination signing secret. The endpoint now verifies each request against the configured destination secrets while retaining one immutable intake and processing path.
+- Created a second thin-event destination for events from the platform account. Its first Ping returned HTTP 200 and was stored once as intentionally ignored with no processing error.
+- A reversible display-name update produced `evt_test_65VBH9PyIQYFR4PVQZ216TWt6q7JSQv0fPSrbryXWYyK2C`; the event was delivered, stored, claimed once, and processed without error.
+- Restoring the original `ScarpsSchool` display name produced `evt_test_65VBH9nM2cRzu5xRzZ216TWt6q7JSQv0fPSrbryXWYyBom`; it also processed exactly once without error.
+- Latest-state reconciliation resolved the event's account to school `74d60cb7-1217-4fef-bb74-2c659a83722b` and durably confirmed test mode, submitted details, enabled charges, enabled payouts, and no disabled reason.
+- Audit result: passed. Real Accounts v2 delivery, account-to-school resolution, and latest-state reconciliation are verified. Proceed to duplicate, concurrency, replay, and out-of-order tests.
