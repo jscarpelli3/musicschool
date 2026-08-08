@@ -154,16 +154,102 @@
   outline: none;
 }
 
+.lesson-block[data-can-reschedule="true"] {
+  cursor: grab;
+}
+
+.lesson-reschedule-icon {
+  position: absolute;
+  z-index: 2;
+  top: 0.18rem;
+  right: 0.28rem;
+  display: inline-flex;
+  gap: 0.08rem;
+  align-items: center;
+  color: var(--ui-muted);
+  font-size: 0.72rem;
+  line-height: 1;
+  opacity: 1;
+}
+
+.lesson-reschedule-icon[data-allowed="true"] {
+  color: var(--ui-brand-hover);
+  opacity: 1;
+  text-shadow: 0 0 0.7rem color-mix(in srgb, var(--ui-brand) 72%, transparent);
+  cursor: grab;
+}
+
+.lesson-reschedule-icon::after {
+  position: absolute;
+  z-index: 50;
+  right: 0;
+  bottom: calc(100% + 0.45rem);
+  width: max-content;
+  max-width: 12rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--ui-line);
+  background: var(--ui-ink);
+  color: var(--ui-canvas);
+  box-shadow: 0 10px 25px rgb(0 0 0 / 0.24);
+  content: attr(data-tooltip);
+  font-size: 0.65rem;
+  font-weight: 400;
+  line-height: 1.35;
+  text-shadow: none;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-0.2rem);
+  transition: opacity 100ms ease, transform 100ms ease;
+}
+
+.lesson-reschedule-icon:hover::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.lesson-block[data-reschedule-origin="true"] .lesson-reschedule-icon,
+.lesson-block[data-dragging="true"] .lesson-reschedule-icon {
+  opacity: 1;
+}
+
+.lesson-block[data-collapsed="true"] .lesson-reschedule-icon {
+  display: none;
+}
+
+.reschedule-drag-badge {
+  position: fixed;
+  z-index: 80;
+  top: 1rem;
+  right: 1rem;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--ui-brand-hover);
+  background: color-mix(in srgb, var(--ui-brand) 88%, var(--ui-canvas));
+  box-shadow: 0 0 2rem color-mix(in srgb, var(--ui-brand) 62%, transparent);
+  color: var(--ui-canvas);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  pointer-events: none;
+  animation: reschedule-badge-pulse 900ms ease-in-out infinite alternate;
+}
+
+@keyframes reschedule-badge-pulse {
+  from { opacity: 0.68; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 .lesson-block[data-reschedule-origin="true"] {
   z-index: 31;
-  border-color: var(--ui-brand-hover);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ui-brand) 52%, transparent);
+  opacity: 0.48;
+  border: 1px dashed color-mix(in srgb, var(--ui-brand-hover) 78%, transparent);
+  background: color-mix(in srgb, var(--ui-surface-raised) 52%, transparent);
+  box-shadow: none;
   cursor: grab;
   touch-action: none;
 }
 
 .lesson-block[data-dragging="true"] {
-  opacity: 0.28;
+  opacity: 0.18;
   pointer-events: none;
   cursor: grabbing;
 }
@@ -180,14 +266,20 @@
   background: color-mix(in srgb, var(--ui-brand) 82%, var(--ui-canvas));
   color: var(--ui-canvas);
   pointer-events: none;
+  opacity: 1;
+  box-shadow: 0 0 0 1px var(--ui-brand-hover), 0 0 2rem color-mix(in srgb, var(--ui-brand) 28%, transparent);
+  transition: opacity 120ms ease, background 120ms ease, box-shadow 120ms ease;
 }
 
 .lesson-drop-ghost[data-valid="false"] {
   border-color: var(--ui-danger);
   background: color-mix(in srgb, var(--ui-danger) 72%, var(--ui-canvas));
+  opacity: 0.22;
+  box-shadow: none;
 }
 
 .lesson-drop-ghost span,
+.lesson-drop-ghost strong,
 .lesson-drop-ghost small {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -195,10 +287,16 @@
 }
 
 .lesson-drop-ghost span { font-size: 0.75rem; }
+.lesson-drop-ghost strong { font-size: 0.78rem; line-height: 1.1; }
 .lesson-drop-ghost small { margin-top: 0.15rem; font-size: 0.625rem; opacity: 0.78; }
 
 .reschedule-mode {
-  background: linear-gradient(90deg, color-mix(in srgb, var(--ui-brand) 8%, transparent), transparent 68%);
+  background:
+    linear-gradient(115deg, color-mix(in srgb, var(--ui-brand) 13%, var(--ui-surface)) 0%, color-mix(in srgb, var(--ui-brand) 5%, var(--ui-surface)) 72%),
+    var(--ui-surface);
+  box-shadow:
+    0 1.25rem 3.5rem rgb(0 0 0 / 0.16),
+    inset 0 0 0 1px color-mix(in srgb, var(--ui-brand) 10%, transparent);
 }
 
 .reschedule-confirm-layer {

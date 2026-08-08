@@ -650,6 +650,7 @@ export type Database = {
           policy_version_id: string | null
           previous_values: Json
           reason: string
+          reason_code: string | null
           school_id: string
           source: string
         }
@@ -666,6 +667,7 @@ export type Database = {
           policy_version_id?: string | null
           previous_values: Json
           reason: string
+          reason_code?: string | null
           school_id: string
           source: string
         }
@@ -682,6 +684,7 @@ export type Database = {
           policy_version_id?: string | null
           previous_values?: Json
           reason?: string
+          reason_code?: string | null
           school_id?: string
           source?: string
         }
@@ -790,6 +793,10 @@ export type Database = {
           outcome: string | null
           place_id: string
           product_id: string
+          reschedule_allowed: boolean
+          reschedule_blocked_reason: string | null
+          reschedule_reason_code: string | null
+          reschedule_reason_detail: string | null
           rescheduled_to_event_id: string | null
           school_id: string
           staff_notes: string | null
@@ -815,6 +822,10 @@ export type Database = {
           outcome?: string | null
           place_id: string
           product_id: string
+          reschedule_allowed?: boolean
+          reschedule_blocked_reason?: string | null
+          reschedule_reason_code?: string | null
+          reschedule_reason_detail?: string | null
           rescheduled_to_event_id?: string | null
           school_id: string
           staff_notes?: string | null
@@ -840,6 +851,10 @@ export type Database = {
           outcome?: string | null
           place_id?: string
           product_id?: string
+          reschedule_allowed?: boolean
+          reschedule_blocked_reason?: string | null
+          reschedule_reason_code?: string | null
+          reschedule_reason_detail?: string | null
           rescheduled_to_event_id?: string | null
           school_id?: string
           staff_notes?: string | null
@@ -2558,6 +2573,15 @@ export type Database = {
           p_teacher_id: string
         }
         Returns: Json
+      }
+      set_lesson_reschedule_permission: {
+        Args: {
+          p_allowed: boolean
+          p_blocked_reason?: string | null
+          p_lesson_event_id: string
+          p_school_id: string
+        }
+        Returns: undefined
       }
       shares_school_with: {
         Args: { target_profile_id: string }

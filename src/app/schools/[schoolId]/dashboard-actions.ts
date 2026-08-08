@@ -49,10 +49,30 @@ export type OwnerRescheduleInput = {
   allowOutsideAvailability: boolean;
 };
 
+export async function setLessonReschedulePermission(schoolId: string, lessonId: string, allowed: boolean, blockedReason: string) {
+  if (![schoolId, lessonId].every((value) => /^[0-9a-f-]{36}$/i.test(value))
+    || (!allowed && (!blockedReason.trim() || blockedReason.trim().length > 300))) {
+    return { ok: false, message: "Give a short reason for blocking rescheduling." };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_lesson_reschedule_permission", {
+    p_school_id: schoolId,
+    p_lesson_event_id: lessonId,
+    p_allowed: allowed,
+    p_blocked_reason: allowed ? null : blockedReason.trim(),
+  });
+  if (error) return { ok: false, message: "The rescheduling permission could not be changed." };
+  revalidatePath(`/schools/${schoolId}`);
+  return { ok: true, message: allowed ? "Rescheduling enabled." : "Rescheduling blocked." };
+}
+
 export async function rescheduleOwnerLesson(schoolId: string, input: OwnerRescheduleInput) {
+  const [reasonCode, reasonDetail = ""] = input.reason.split("::", 2);
+  const allowedReasons = new Set(["family_request", "teacher_request", "school_closure", "illness", "schedule_conflict", "other"]);
   if (![input.lessonId, input.teacherId, input.placeId].every((value) => /^[0-9a-f-]{36}$/i.test(value))
     || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(input.localStart)
-    || input.reason.trim().length < 1 || input.reason.trim().length > 500) {
+    || !allowedReasons.has(reasonCode) || (reasonCode === "other" && !reasonDetail.trim())
+    || input.reason.trim().length > 500) {
     return { ok: false, message: "Check the proposed lesson details and record a reason." };
   }
 
@@ -80,6 +100,7 @@ export async function rescheduleOwnerLesson(schoolId: string, input: OwnerResche
       ["past_lesson_is_not_reschedulable", "Past lessons require an administrative correction instead."],
       ["new_lesson_time_must_be_future", "Choose a future lesson time."],
       ["lesson_time_is_unchanged", "Choose a different time, teacher, or place."],
+      ["lesson_reschedule_blocked", "This lesson has been marked as non-reschedulable."],
     ];
     return { ok: false, message: messages.find(([code]) => error.message.includes(code))?.[1] ?? "The lesson could not be moved. Nothing changed." };
   }

@@ -22,6 +22,15 @@ type LessonSummary = {
 type TeacherOption = { id: string; name: string };
 type PlaceOption = Record<string, { name: string }>;
 
+export const rescheduleReasons = [
+  ["family_request", "Family requested another time"],
+  ["teacher_request", "Teacher requested another time"],
+  ["school_closure", "School closure or holiday"],
+  ["illness", "Illness"],
+  ["schedule_conflict", "Schedule conflict"],
+  ["other", "Other"],
+] as const;
+
 function clock(minutes: number) {
   const hour = Math.floor(minutes / 60);
   const minute = minutes % 60;
@@ -78,22 +87,22 @@ export function RescheduleModeBar({
   }
 
   return (
-    <div className="reschedule-mode border-b border-brand py-5">
-      <div className="flex flex-wrap items-start justify-between gap-5">
+    <div className="reschedule-mode my-7 border border-brand px-5 py-6 md:px-7 md:py-7">
+      <div className="flex flex-wrap items-start justify-between gap-5 pl-5 md:max-w-3xl">
         <div>
           <p className="text-xs uppercase tracking-[0.14em] text-brand">Reschedule mode</p>
           <p className="mt-2 text-sm"><span className="hidden md:inline">Drag the highlighted lesson to an available calendar time. </span>Dropping proposes the move; it does not save.</p>
         </div>
         <button type="button" onClick={onCancel} className="line-action pb-2 text-sm text-muted hover:text-ink">Cancel</button>
       </div>
-      <details open={manualOpen} onToggle={(event) => setManualOpen(event.currentTarget.open)} className="mt-5 border-l border-line pl-5 md:max-w-3xl">
+      <details open={manualOpen} onToggle={(event) => setManualOpen(event.currentTarget.open)} className="mt-5 pl-5 md:max-w-3xl">
         <summary className="cursor-pointer text-sm text-brand">Choose a time instead</summary>
         <form onSubmit={proposeManual} className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <label><span className="block text-xs text-muted">Date</span><input required type="date" value={manualDate} onChange={(event) => setManualDate(event.target.value)} className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand" /></label>
           <label><span className="block text-xs text-muted">Time</span><input required type="time" step="300" value={manualTime} onChange={(event) => setManualTime(event.target.value)} className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand" /></label>
           <label><span className="block text-xs text-muted">Teacher</span><select value={manualTeacher} onChange={(event) => setManualTeacher(event.target.value)} className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand">{teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}</select></label>
           <label><span className="block text-xs text-muted">Place</span><select value={placeId} onChange={(event) => onPlace(event.target.value)} className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand">{Object.entries(places).map(([id, place]) => <option key={id} value={id}>{place.name}</option>)}</select></label>
-          <label className="sm:col-span-2 lg:col-span-3"><span className="block text-xs text-muted">Reason</span><input required maxLength={500} value={reason} onChange={(event) => onReason(event.target.value)} placeholder="Family requested another time" className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand" /></label>
+          <ReasonField value={reason} onChange={onReason} className="sm:col-span-2 lg:col-span-3" />
           <button className="border border-brand px-5 py-3 text-sm text-brand transition hover:bg-brand hover:text-canvas">Review this move →</button>
           <label className="flex items-start gap-3 text-xs text-muted sm:col-span-2 lg:col-span-4"><input type="checkbox" checked={allowOutsideAvailability} onChange={(event) => onAllowOutside(event.target.checked)} className="mt-0.5 accent-[var(--color-brand)]" /><span>Owner override: permit a time outside recurring availability. A reason is required. Conflicts remain blocked.</span></label>
           {manualError ? <p role="alert" className="text-sm text-danger sm:col-span-2 lg:col-span-4">{manualError}</p> : null}
@@ -127,6 +136,8 @@ export function RescheduleConfirmation({
   onSuccess: () => void;
 }) {
   const duration = lesson.end.minutes - lesson.start.minutes;
+  const [reasonCode = "", reasonDetail = ""] = reason.split("::", 2);
+  const reasonComplete = Boolean(reasonCode && (reasonCode !== "other" || reasonDetail.trim()));
   return (
     <div className="reschedule-confirm-layer" role="dialog" aria-modal="true" aria-labelledby="reschedule-confirm-title">
       <button type="button" aria-label="Return to calendar" className="lesson-sheet-backdrop" onClick={onClose} />
@@ -142,9 +153,25 @@ export function RescheduleConfirmation({
         </div>
         <dl className="divide-y divide-line border-b border-line"><Detail label="Teacher" value={teacherName} /><Detail label="Place" value={placeName} /><Detail label="Billing" value={`Remains anchored to ${lesson.billingServiceDate.slice(0, 7)}`} /></dl>
         {!proposal.valid ? <p className="mt-6 border-l-2 border-danger pl-4 text-sm text-danger">{proposal.issue}{allowOutsideAvailability && proposal.issue === "Outside this teacher’s availability." ? " Owner override selected." : ""}</p> : null}
-        <label className="mt-6 block"><span className="text-xs text-muted">Reason recorded in lesson history</span><input autoFocus required maxLength={500} value={reason} onChange={(event) => onReason(event.target.value)} placeholder="Family requested another time" className="mt-2 w-full border-b border-line bg-transparent py-3 outline-none focus:border-brand" /></label>
-        <div className="mt-7"><HoldToConfirm action={action} idleLabel="Hold to reschedule" holdingLabel="Keep holding to move the lesson…" duration={1400} onSuccess={onSuccess} /></div>
+        <div className="mt-6 border border-brand px-4 py-3 text-sm text-brand"><span aria-hidden="true" className="mr-2">!</span>A reason is required before this lesson can be rescheduled.</div>
+        <ReasonField value={reason} onChange={onReason} className="mt-5" autoFocus />
+        <div className="mt-7"><HoldToConfirm action={action} idleLabel="Hold to reschedule" holdingLabel="Keep holding to move the lesson…" duration={1400} disabled={!reasonComplete} disabledMessage="Select a rescheduling reason to continue." onSuccess={onSuccess} /></div>
       </section>
+    </div>
+  );
+}
+
+function ReasonField({ value, onChange, className = "", autoFocus = false }: { value: string; onChange: (value: string) => void; className?: string; autoFocus?: boolean }) {
+  const [code = "", detail = ""] = value.split("::", 2);
+  return (
+    <div className={className}>
+      <label><span className="block text-xs text-muted">Reason recorded on this lesson <span className="text-brand">· required</span></span>
+        <select autoFocus={autoFocus} required value={code} onChange={(event) => onChange(`${event.target.value}::`)} className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand">
+          <option value="">Select a reason</option>
+          {rescheduleReasons.map(([reasonCode, label]) => <option key={reasonCode} value={reasonCode}>{label}</option>)}
+        </select>
+      </label>
+      {code === "other" ? <label><span className="sr-only">Other reason</span><input required maxLength={400} value={detail} onChange={(event) => onChange(`${code}::${event.target.value}`)} placeholder="Enter the reason" className="mt-3 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand" /></label> : null}
     </div>
   );
 }

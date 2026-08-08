@@ -50,7 +50,7 @@ export default async function SchoolDashboard({
       .eq("school_id", schoolId),
     supabase
       .from("lesson_events")
-      .select("id, product_id, teacher_id, student_id, starts_at, ends_at, status, cancellation_timing, notes, place_id")
+      .select("id, product_id, teacher_id, student_id, starts_at, ends_at, status, cancellation_timing, notes, place_id, reschedule_allowed, reschedule_blocked_reason, reschedule_reason_code, reschedule_reason_detail")
       .eq("school_id", schoolId)
       .order("starts_at"),
     supabase.from("service_products").select("id, name, sessions_per_interval, interval_count, interval_unit").eq("school_id", schoolId),
@@ -241,6 +241,9 @@ export default async function SchoolDashboard({
   ]);
   const avatarUrl = avatar?.signedUrl ?? profile?.avatar_url;
   const canManageSchool = membership.role === "owner" || membership.role === "admin";
+  const currentTeacherId = membership.role === "teacher"
+    ? (peopleRows ?? []).find((person) => person.profile_id === profileId)?.id ?? null
+    : null;
 
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-6 py-section">
@@ -310,7 +313,12 @@ export default async function SchoolDashboard({
         productNames={productNames}
         placeDetails={placeDetails}
         availability={availabilityRows ?? []}
-        lessons={(lessonRows ?? []).map((lesson) => ({ ...lesson, billing_service_date: billingDates.get(lesson.id) ?? lesson.starts_at.slice(0, 10), can_reschedule: lesson.status === "scheduled" && new Date(lesson.starts_at).getTime() > now }))}
+        lessons={(lessonRows ?? []).map((lesson) => ({
+          ...lesson,
+          billing_service_date: billingDates.get(lesson.id) ?? lesson.starts_at.slice(0, 10),
+          can_reschedule: lesson.reschedule_allowed && lesson.status === "scheduled" && new Date(lesson.starts_at).getTime() > now,
+          can_mark_reschedule: canManageSchool || currentTeacherId === lesson.teacher_id,
+        }))}
       />
     </main>
   );

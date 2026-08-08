@@ -37,3 +37,25 @@ Activated: 2026-08-08
 - A shared focused picker covers phone, keyboard, and non-drag use. It is open by default and exposes date, time, teacher, place, reason, and the explicit owner availability override.
 - Reschedule controls and confirmation were extracted from the planner into a reusable scheduling component for later teacher and client flows.
 - ESLint, TypeScript, and the production build pass. An authenticated visual/pointer walkthrough remains required before the owner interaction exit gate passes.
+
+### Owner interaction refinement checkpoint
+
+Recorded: 2026-08-08
+
+- Direct calendar dragging now starts the same proposal workflow without requiring the lesson-detail sheet; an ordinary click still opens details.
+- Reschedule mode has one shared exit state. Cancel, successful confirmation, invalid drop, and pointer cancellation clear the context workspace, dotted origin, destination proposal, and fixed viewport badge together.
+- Hold confirmation no longer relies on a post-success timer. The database success response exits immediately; failed actions remain visible and retryable.
+- Teacher/student overlaps are rejected in the client and remain non-overridable in the database transaction. Invalid drops write nothing and exit move mode.
+- Structured reasons are required and stored on both the lesson occurrence and immutable change history. Standard reason codes are available, while Other requires custom detail.
+- Every occurrence now has an explicit reschedule-allowed flag and optional block reason. Time/status eligibility is evaluated separately, so past or completed lessons remain ineligible even when the flag is allowed.
+- Owners/admins may change this flag for any lesson; an assigned teacher may change it only for their own lesson. Permission changes are audited, and a database trigger prevents scheduling changes to blocked lessons.
+- Calendar blocks display a standard clock-history indicator with an allowed/blocked tooltip. Eligible blocks use a grab cursor; blocked or otherwise ineligible blocks retain a grey indicator.
+- During the entire move mode, a fixed pulsing badge remains visible. Valid destinations show the exact proposed time in both the viewport badge and illuminated drop ghost.
+- Successful changes stack detailed, dismissible session notices containing student, lesson, original time, destination time, and reason.
+- Rollback-only database rehearsals passed for structured reason persistence, permission audit evidence, blocked-update rejection, and clean permission restoration. TypeScript, ESLint, and production builds pass.
+
+### Deferred scheduling sequence
+
+1. Rehearse and adapt this flow for a single assigned teacher, including authorization and teacher-specific calendar scope.
+2. Design the client/guardian self-service version against school policy, notice cutoff, monthly limits, and teacher constraints.
+3. Resume payment roadmap Step 8 and Twilio SMS delivery after those scheduling passes or when product priority returns to billing.

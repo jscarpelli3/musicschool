@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import "./hold-to-confirm.css";
 
 type HoldToConfirmProps = {
@@ -8,6 +8,8 @@ type HoldToConfirmProps = {
   idleLabel: string;
   holdingLabel?: string;
   duration?: number;
+  disabled?: boolean;
+  disabledMessage?: string;
   onSuccess?: () => void;
 };
 
@@ -16,24 +18,27 @@ export function HoldToConfirm({
   idleLabel,
   holdingLabel = "Keep holding…",
   duration = 1400,
+  disabled = false,
+  disabledMessage = "Complete the required information first.",
   onSuccess,
 }: HoldToConfirmProps) {
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [state, setState] = useState<"idle" | "holding" | "submitting" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
 
   function cancel() {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = null;
+    if (holdTimer.current) clearTimeout(holdTimer.current);
+    holdTimer.current = null;
     setState((current) => (current === "holding" ? "idle" : current));
   }
 
   function begin() {
-    if (state !== "idle" || timer.current) return;
+    if (disabled) return;
+    if ((state !== "idle" && state !== "error") || holdTimer.current) return;
     setMessage("");
     setState("holding");
-    timer.current = setTimeout(async () => {
-      timer.current = null;
+    holdTimer.current = setTimeout(async () => {
+      holdTimer.current = null;
       setState("submitting");
       try {
         const result = await action();
@@ -47,9 +52,21 @@ export function HoldToConfirm({
     }, duration);
   }
 
-  useEffect(() => cancel, []);
+  function beginPointer(event: PointerEvent<HTMLButtonElement>) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    begin();
+  }
 
-  const disabled = state === "submitting" || state === "success";
+  function endPointer(event: PointerEvent<HTMLButtonElement>) {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    cancel();
+  }
+
+  useEffect(() => () => {
+    if (holdTimer.current) clearTimeout(holdTimer.current);
+  }, []);
+
+  const buttonDisabled = disabled || state === "submitting" || state === "success";
   const label = state === "holding"
     ? holdingLabel
     : state === "submitting"
@@ -65,11 +82,10 @@ export function HoldToConfirm({
         className="hold-confirm w-full px-5 py-5 text-left text-sm"
         style={{ "--hold-duration": `${duration}ms` } as CSSProperties}
         data-state={state}
-        disabled={disabled}
-        onPointerDown={begin}
-        onPointerUp={cancel}
+        disabled={buttonDisabled}
+        onPointerDown={beginPointer}
+        onPointerUp={endPointer}
         onPointerCancel={cancel}
-        onPointerLeave={cancel}
         onKeyDown={(event) => {
           if ((event.key === " " || event.key === "Enter") && !event.repeat) {
             event.preventDefault();
@@ -83,7 +99,7 @@ export function HoldToConfirm({
         <span className="relative z-10">{label}</span>
       </button>
       <p className={`mt-3 min-h-5 text-sm ${state === "error" ? "text-danger" : "text-muted"}`} aria-live="polite">
-        {message}
+        {disabled ? disabledMessage : state === "holding" ? "Keep holding until the line reaches the end." : message}
       </p>
     </div>
   );

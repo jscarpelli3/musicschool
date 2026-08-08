@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { QuickView } from "@/components/ui/quick-view";
-import { rescheduleOwnerLesson } from "@/app/schools/[schoolId]/dashboard-actions";
+import { MdHistory } from "react-icons/md";
+import { rescheduleOwnerLesson, setLessonReschedulePermission } from "@/app/schools/[schoolId]/dashboard-actions";
 import { RescheduleConfirmation, RescheduleModeBar, type RescheduleProposal } from "./lesson-reschedule-controls";
 import "./owner-planner.css";
 
@@ -29,6 +30,11 @@ type Lesson = {
   place_id: string;
   billing_service_date: string;
   can_reschedule: boolean;
+  can_mark_reschedule: boolean;
+  reschedule_allowed: boolean;
+  reschedule_blocked_reason: string | null;
+  reschedule_reason_code: string | null;
+  reschedule_reason_detail: string | null;
 };
 
 type StudentDetail = {
@@ -68,6 +74,7 @@ type Props = {
 };
 
 type LessonWithParts = Lesson & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> };
+type RescheduleNotice = { id: string; message: string };
 
 const views = ["day", "week", "month"] as const;
 type View = (typeof views)[number];
@@ -153,6 +160,8 @@ export function OwnerPlanner({
   const [rescheduleLessonId, setRescheduleLessonId] = useState<string | null>(null);
   const [dragCandidate, setDragCandidate] = useState<RescheduleProposal | null>(null);
   const [proposal, setProposal] = useState<RescheduleProposal | null>(null);
+  const [dropError, setDropError] = useState<string | null>(null);
+  const [rescheduleNotices, setRescheduleNotices] = useState<RescheduleNotice[]>([]);
   const [rescheduleReason, setRescheduleReason] = useState("");
   const [proposedPlaceId, setProposedPlaceId] = useState("");
   const [allowOutsideAvailability, setAllowOutsideAvailability] = useState(false);
@@ -194,23 +203,27 @@ export function OwnerPlanner({
     setAnchorKey(key(next));
   }
 
-  function beginReschedule(lesson: LessonWithParts) {
+  function beginReschedule(lesson: LessonWithParts, keepCalendarPosition = false) {
     setSelectedLessonId(null);
     setRescheduleLessonId(lesson.id);
     setProposal(null);
     setDragCandidate(null);
+    setDropError(null);
     setRescheduleReason("");
     setProposedPlaceId(lesson.place_id);
     setAllowOutsideAvailability(false);
-    setAnchorKey(lesson.start.dateKey);
-    setTeacherId("all");
-    if (view === "month") setView("week");
+    if (!keepCalendarPosition) {
+      setAnchorKey(lesson.start.dateKey);
+      setTeacherId("all");
+      if (view === "month") setView("week");
+    }
   }
 
   function cancelReschedule() {
     setRescheduleLessonId(null);
     setProposal(null);
     setDragCandidate(null);
+    setDropError(null);
     setRescheduleReason("");
     setAllowOutsideAvailability(false);
   }
@@ -219,6 +232,10 @@ export function OwnerPlanner({
     if (!rescheduleLesson || !proposal) return Promise.resolve({ ok: false, message: "Choose a destination first." });
     if (!proposal.valid && !(allowOutsideAvailability && proposal.issue === "Outside this teacher’s availability.")) {
       return Promise.resolve({ ok: false, message: proposal.issue ?? "Choose an available time." });
+    }
+    const [reasonCode, reasonDetail = ""] = rescheduleReason.split("::", 2);
+    if (!reasonCode || (reasonCode === "other" && !reasonDetail.trim())) {
+      return Promise.resolve({ ok: false, message: "Select a reason for the change." });
     }
     return rescheduleOwnerLesson(schoolId, {
       lessonId: rescheduleLesson.id,
@@ -267,9 +284,32 @@ export function OwnerPlanner({
 
       <div className="flex items-center justify-between border-b border-line py-3">
         <button type="button" onClick={() => move(-1)} className="line-action text-sm text-muted hover:text-ink">← Previous</button>
-        <button type="button" onClick={() => setAnchorKey(initialDate)} className="text-sm text-brand hover:text-brand-hover">Today</button>
+        <button type="button" onClick={() => setAnchorKey(initialDate)} className="text-sm text-brand hover:text-brand-hover">
+          {view === "day" ? "Go to today" : view === "week" ? "Go to this week" : "Go to this month"}
+        </button>
         <button type="button" onClick={() => move(1)} className="line-action text-sm text-muted hover:text-ink">Next →</button>
       </div>
+
+      {rescheduleNotices.length ? (
+        <div role="status" className="border-b border-brand bg-[color-mix(in_srgb,var(--ui-brand)_8%,transparent)]">
+          <div className="flex items-center justify-between gap-5 border-b border-line px-4 py-3">
+            <span className="text-xs uppercase tracking-[0.14em] text-brand">Recent calendar changes</span>
+            <button type="button" onClick={() => setRescheduleNotices([])} className="line-action pb-1 text-xs text-muted hover:text-ink">Dismiss all</button>
+          </div>
+          {rescheduleNotices.map((notice) => (
+            <div key={notice.id} className="flex items-start justify-between gap-5 border-b border-line px-4 py-4 text-sm text-brand last:border-b-0">
+              <span>{notice.message}</span>
+              <button type="button" aria-label="Dismiss this calendar change" onClick={() => setRescheduleNotices((current) => current.filter((item) => item.id !== notice.id))} className="line-action shrink-0 pb-1 text-xs text-muted hover:text-ink">Dismiss</button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {rescheduleLesson ? (
+        <div className="reschedule-drag-badge" role="status">
+          Rescheduling{dragCandidate?.valid ? ` · ${clock(dragCandidate.minutes)}–${clock(dragCandidate.minutes + rescheduleLesson.end.minutes - rescheduleLesson.start.minutes)}` : ""}
+        </div>
+      ) : null}
 
       {rescheduleLesson ? (
         <RescheduleModeBar
@@ -308,9 +348,14 @@ export function OwnerPlanner({
           placeDetails={placeDetails}
           onSelectLesson={setSelectedLessonId}
           rescheduleLesson={rescheduleLesson}
+          canReschedule={canReschedule}
           candidate={dragCandidate}
           onCandidate={setDragCandidate}
+          onBeginReschedule={(lesson) => beginReschedule(lesson, true)}
           onDropProposal={(next) => { setProposal(next); setDragCandidate(null); }}
+          dropError={dropError}
+          onDropError={setDropError}
+          onExitReschedule={cancelReschedule}
         />
       )}
       {selectedLesson ? (
@@ -321,7 +366,13 @@ export function OwnerPlanner({
           productName={productNames[selectedLesson.product_id] ?? "Lesson"}
           place={placeDetails[selectedLesson.place_id] ?? { name: "Place not set", details: null }}
           canReschedule={canReschedule}
+          canMarkReschedule={selectedLesson.can_mark_reschedule}
           onReschedule={() => beginReschedule(selectedLesson)}
+          onPermissionChange={async (allowed, reason) => {
+            const result = await setLessonReschedulePermission(schoolId, selectedLesson.id, allowed, reason);
+            if (result.ok) router.refresh();
+            return result;
+          }}
           onClose={() => setSelectedLessonId(null)}
         />
       ) : null}
@@ -336,7 +387,15 @@ export function OwnerPlanner({
           allowOutsideAvailability={allowOutsideAvailability}
           action={submitReschedule}
           onClose={() => setProposal(null)}
-          onSuccess={() => { cancelReschedule(); router.refresh(); }}
+          onSuccess={() => {
+            const reason = rescheduleReasonLabel(...rescheduleReason.split("::", 2) as [string, string]);
+            const oldDate = formatCalendarDate(rescheduleLesson.start.dateKey);
+            const newDate = formatCalendarDate(proposal.dateKey);
+            const message = `${studentNames[rescheduleLesson.student_id] ?? "Student"} rescheduled ${productNames[rescheduleLesson.product_id] ?? "lesson"} from ${oldDate} at ${clock(rescheduleLesson.start.minutes)} to ${newDate} at ${clock(proposal.minutes)} due to ${reason}.`;
+            cancelReschedule();
+            setRescheduleNotices((current) => [{ id: `${rescheduleLesson.id}-${Date.now()}`, message }, ...current]);
+            router.refresh();
+          }}
         />
       ) : null}
     </section>
@@ -389,9 +448,14 @@ function TimelineView({
   placeDetails,
   onSelectLesson,
   rescheduleLesson,
+  canReschedule,
   candidate,
   onCandidate,
+  onBeginReschedule,
   onDropProposal,
+  dropError,
+  onDropError,
+  onExitReschedule,
 }: {
   view: "day" | "week";
   anchor: Date;
@@ -402,14 +466,22 @@ function TimelineView({
   placeDetails: Record<string, { name: string; details: string | null }>;
   onSelectLesson: (lessonId: string) => void;
   rescheduleLesson: LessonWithParts | null;
+  canReschedule: boolean;
   candidate: RescheduleProposal | null;
   onCandidate: (proposal: RescheduleProposal | null) => void;
+  onBeginReschedule: (lesson: LessonWithParts) => void;
   onDropProposal: (proposal: RescheduleProposal) => void;
+  dropError: string | null;
+  onDropError: (message: string | null) => void;
+  onExitReschedule: () => void;
 }) {
   const [activeTrack, setActiveTrack] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const scrollFrame = useRef<HTMLDivElement | null>(null);
   const pointerStart = useRef<{ x: number; y: number; offset: number } | null>(null);
+  const pendingLesson = useRef<LessonWithParts | null>(null);
+  const dragStarted = useRef(false);
+  const suppressClick = useRef(false);
   const latestCandidate = useRef<RescheduleProposal | null>(null);
   const dates = view === "day" ? [anchor] : weekDates(anchor);
   const columns = view === "day"
@@ -417,8 +489,7 @@ function TimelineView({
     : dates.map((date) => ({ date, teachers, label: new Intl.DateTimeFormat("en-US", { weekday: "short", day: "numeric" }).format(date) }));
   const hourCount = (timelineEnd - timelineStart) / 60;
 
-  function candidateFromPointer(clientX: number, clientY: number) {
-    if (!rescheduleLesson) return null;
+  function candidateFromPointer(clientX: number, clientY: number, movingLesson: LessonWithParts) {
     const column = document.elementsFromPoint(clientX, clientY)
       .find((element): element is HTMLElement => element instanceof HTMLElement && Boolean(element.dataset.plannerDate));
     if (!column?.dataset.plannerDate) return null;
@@ -443,26 +514,36 @@ function TimelineView({
     const teacher = columnTeachers[Math.max(0, teacherIndex)];
     const offset = pointerStart.current?.offset ?? 0;
     const rawMinutes = timelineStart + clientY - rect.top - offset;
-    const duration = rescheduleLesson.end.minutes - rescheduleLesson.start.minutes;
+    const duration = movingLesson.end.minutes - movingLesson.start.minutes;
     const minutes = Math.max(timelineStart, Math.min(timelineEnd - duration, Math.round(rawMinutes / 5) * 5));
-    setActiveTrack(`${column.dataset.plannerDate}:${teacher.id}`);
-    return evaluateProposal(column.dataset.plannerDate, teacher.id, minutes, rescheduleLesson, availability, lessons);
+    return evaluateProposal(column.dataset.plannerDate, teacher.id, minutes, movingLesson, availability, lessons);
   }
 
   function beginPointerDrag(event: ReactPointerEvent<HTMLButtonElement>) {
-    if (!rescheduleLesson || event.currentTarget.dataset.lessonId !== rescheduleLesson.id) return;
+    const lesson = lessons.find((candidate) => candidate.id === event.currentTarget.dataset.lessonId);
+    if (!lesson || (rescheduleLesson && lesson.id !== rescheduleLesson.id)) return;
+    if (!rescheduleLesson && (!canReschedule || !lesson.can_reschedule)) return;
     const rect = event.currentTarget.getBoundingClientRect();
     pointerStart.current = { x: event.clientX, y: event.clientY, offset: event.clientY - rect.top };
+    pendingLesson.current = lesson;
+    dragStarted.current = false;
     latestCandidate.current = null;
-    setDragging(true);
+    onDropError(null);
     event.currentTarget.setPointerCapture(event.pointerId);
     event.preventDefault();
   }
 
   function movePointerDrag(event: ReactPointerEvent<HTMLButtonElement>) {
-    if (!pointerStart.current || !rescheduleLesson) return;
+    const movingLesson = rescheduleLesson ?? pendingLesson.current;
+    if (!pointerStart.current || !movingLesson) return;
     if (Math.hypot(event.clientX - pointerStart.current.x, event.clientY - pointerStart.current.y) < 4) return;
-    const next = candidateFromPointer(event.clientX, event.clientY);
+    if (!dragStarted.current) {
+      dragStarted.current = true;
+      suppressClick.current = true;
+      setDragging(true);
+      if (!rescheduleLesson) onBeginReschedule(movingLesson);
+    }
+    const next = candidateFromPointer(event.clientX, event.clientY, movingLesson);
     const frame = scrollFrame.current;
     if (frame) {
       const rect = frame.getBoundingClientRect();
@@ -479,23 +560,38 @@ function TimelineView({
     if (!pointerStart.current) return;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     pointerStart.current = null;
+    pendingLesson.current = null;
     setDragging(false);
+    if (!dragStarted.current) return;
+    dragStarted.current = false;
     const dropped = latestCandidate.current;
     latestCandidate.current = null;
     if (dropped?.valid) onDropProposal(dropped);
-    else onCandidate(dropped);
+    else {
+      onCandidate(null);
+      onExitReschedule();
+      onDropError(dropped?.issue ?? "Drop the lesson inside a calendar day.");
+    }
   }
 
   function cancelPointerDrag(event: ReactPointerEvent<HTMLButtonElement>) {
+    const wasDragging = dragStarted.current;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     pointerStart.current = null;
+    pendingLesson.current = null;
+    dragStarted.current = false;
     latestCandidate.current = null;
     setDragging(false);
     onCandidate(null);
+    if (wasDragging) {
+      onExitReschedule();
+      onDropError("The drag was cancelled. Nothing changed.");
+    }
   }
 
   return (
     <div ref={scrollFrame} className="overflow-x-auto">
+      {dropError ? <div role="alert" className="sticky left-0 z-40 border-b border-danger px-4 py-3 text-sm text-danger">Move blocked: {dropError}</div> : null}
       <div style={{ minWidth: `${Math.max(760, columns.length * 150)}px` }}>
         <div className="grid border-b border-line" style={{ gridTemplateColumns: `4.5rem repeat(${columns.length}, minmax(0, 1fr))` }}>
           <div />
@@ -510,7 +606,7 @@ function TimelineView({
           {columns.map((column) => {
             const dateKey = key(column.date);
             const teacherCount = column.teachers.length;
-            const activeTeacherIndex = column.teachers.findIndex(
+            const activeTeacherIndex = dragging ? -1 : column.teachers.findIndex(
               (teacher) => activeTrack === `${dateKey}:${teacher.id}`,
             );
             return (
@@ -557,6 +653,7 @@ function TimelineView({
                         type="button"
                         className="lesson-block quick-view-trigger text-left text-xs"
                         data-lesson-id={lesson.id}
+                        data-can-reschedule={canReschedule && lesson.can_reschedule}
                         data-active={activeTrack === trackKey}
                         data-collapsed={activeTeacherIndex >= 0 && teacherIndex !== activeTeacherIndex}
                         data-reschedule-origin={rescheduleLesson?.id === lesson.id}
@@ -570,8 +667,23 @@ function TimelineView({
                         onPointerMove={movePointerDrag}
                         onPointerUp={endPointerDrag}
                         onPointerCancel={cancelPointerDrag}
-                        onClick={() => { if (!rescheduleLesson) onSelectLesson(lesson.id); }}
+                        onClick={() => {
+                          if (suppressClick.current) {
+                            suppressClick.current = false;
+                            return;
+                          }
+                          if (!rescheduleLesson) onSelectLesson(lesson.id);
+                        }}
                       >
+                        <span
+                          className="lesson-reschedule-icon"
+                          data-allowed={lesson.can_reschedule}
+                          data-tooltip={lesson.can_reschedule ? "This lesson can be rescheduled." : "This lesson cannot be rescheduled."}
+                          role="img"
+                          aria-label={lesson.can_reschedule ? "This lesson can be rescheduled" : "This lesson cannot be rescheduled"}
+                        >
+                          <MdHistory aria-hidden="true" />
+                        </span>
                         <span className="lesson-block-content">
                           <span className="lesson-student-name">{studentNames[lesson.student_id]}</span>
                         </span>
@@ -586,7 +698,8 @@ function TimelineView({
                   })}
                 {candidate && rescheduleLesson && candidate.dateKey === dateKey && column.teachers.some((teacher) => teacher.id === candidate.teacherId) ? (() => {
                   const targetIndex = Math.max(0, column.teachers.findIndex((teacher) => teacher.id === candidate.teacherId));
-                  return <div className="lesson-drop-ghost" data-valid={candidate.valid} style={lessonTrackStyle(candidate.minutes, candidate.minutes + rescheduleLesson.end.minutes - rescheduleLesson.start.minutes, targetIndex, teacherCount, activeTeacherIndex)}><span>{studentNames[rescheduleLesson.student_id]}</span><small>{candidate.issue ?? `${clock(candidate.minutes)}–${clock(candidate.minutes + rescheduleLesson.end.minutes - rescheduleLesson.start.minutes)}`}</small></div>;
+                  const destinationTime = `${clock(candidate.minutes)}–${clock(candidate.minutes + rescheduleLesson.end.minutes - rescheduleLesson.start.minutes)}`;
+                  return <div className="lesson-drop-ghost" data-valid={candidate.valid} style={lessonTrackStyle(candidate.minutes, candidate.minutes + rescheduleLesson.end.minutes - rescheduleLesson.start.minutes, targetIndex, teacherCount, activeTeacherIndex)}><strong>{destinationTime}</strong><span>{studentNames[rescheduleLesson.student_id]}</span><small>{candidate.issue ?? "Valid time · release to review"}</small></div>;
                 })() : null}
               </div>
             );
@@ -743,7 +856,9 @@ function LessonSheet({
   productName,
   place,
   canReschedule,
+  canMarkReschedule,
   onReschedule,
+  onPermissionChange,
   onClose,
 }: {
   lesson: Lesson & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> };
@@ -752,7 +867,9 @@ function LessonSheet({
   productName: string;
   place: { name: string; details: string | null };
   canReschedule: boolean;
+  canMarkReschedule: boolean;
   onReschedule: () => void;
+  onPermissionChange: (allowed: boolean, reason: string) => Promise<{ ok: boolean; message: string }>;
   onClose: () => void;
 }) {
   const duration = lesson.end.minutes - lesson.start.minutes;
@@ -776,6 +893,7 @@ function LessonSheet({
           <Detail label="Date" value={new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(fromKey(lesson.start.dateKey))} />
           <Detail label="Time" value={`${clock(lesson.start.minutes)}–${clock(lesson.end.minutes)} · ${duration} minutes`} />
           <Detail label="Place" value={place.details ? `${place.name} · ${place.details}` : place.name} />
+          {lesson.reschedule_reason_code ? <Detail label="Last moved" value={rescheduleReasonLabel(lesson.reschedule_reason_code, lesson.reschedule_reason_detail)} /> : null}
         </dl>
 
         {canReschedule && lesson.can_reschedule ? (
@@ -784,6 +902,13 @@ function LessonSheet({
             <p className="mt-3 text-xs leading-5 text-muted">The calendar will enter move mode. Dropping proposes a destination; nothing changes until you hold to confirm.</p>
           </section>
         ) : null}
+
+        <ReschedulePermission
+          allowed={lesson.reschedule_allowed}
+          blockedReason={lesson.reschedule_blocked_reason}
+          canManage={canMarkReschedule}
+          onChange={onPermissionChange}
+        />
 
         <section className="border-b border-line py-8">
           <h3 className="font-display text-2xl font-normal">Student</h3>
@@ -820,6 +945,59 @@ function LessonSheet({
       </aside>
     </>
   );
+}
+
+function ReschedulePermission({ allowed, blockedReason, canManage, onChange }: {
+  allowed: boolean;
+  blockedReason: string | null;
+  canManage: boolean;
+  onChange: (allowed: boolean, reason: string) => Promise<{ ok: boolean; message: string }>;
+}) {
+  const [reason, setReason] = useState("");
+  const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function save(nextAllowed: boolean) {
+    setSaving(true);
+    setMessage("");
+    const result = await onChange(nextAllowed, reason);
+    setMessage(result.message);
+    if (result.ok) setReason("");
+    setSaving(false);
+  }
+
+  return (
+    <section className="border-b border-line py-8">
+      <h3 className="font-display text-2xl font-normal">Rescheduling</h3>
+      <p className="mt-3 text-sm">{allowed ? "Allowed for this lesson" : "Blocked for this lesson"}</p>
+      {!allowed && blockedReason ? <p className="mt-2 text-xs leading-5 text-muted">{blockedReason}</p> : null}
+      {canManage && allowed ? (
+        <details className="mt-5">
+          <summary className="cursor-pointer text-sm text-muted hover:text-ink">Block rescheduling</summary>
+          <label className="mt-4 block"><span className="text-xs text-muted">Policy or scheduling reason</span><input value={reason} onChange={(event) => setReason(event.target.value)} maxLength={300} className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand" /></label>
+          <button type="button" disabled={saving || !reason.trim()} onClick={() => save(false)} className="mt-5 border border-line px-4 py-3 text-sm text-muted disabled:opacity-40">{saving ? "Saving…" : "Mark non-reschedulable"}</button>
+        </details>
+      ) : null}
+      {canManage && !allowed ? <button type="button" disabled={saving} onClick={() => save(true)} className="line-action mt-5 pb-2 text-sm text-brand">{saving ? "Saving…" : "Allow rescheduling again"}</button> : null}
+      {message ? <p className="mt-3 text-xs text-muted" aria-live="polite">{message}</p> : null}
+      <p className="mt-4 text-xs leading-5 text-muted">Past or completed lessons remain ineligible even when this setting is allowed.</p>
+    </section>
+  );
+}
+
+function rescheduleReasonLabel(code: string, detail: string | null) {
+  if (code === "other") return detail || "Other";
+  return ({
+    family_request: "Family requested another time",
+    teacher_request: "Teacher requested another time",
+    school_closure: "School closure or holiday",
+    illness: "Illness",
+    schedule_conflict: "Schedule conflict",
+  } as Record<string, string>)[code] ?? code;
+}
+
+function formatCalendarDate(dateKey: string) {
+  return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }).format(fromKey(dateKey));
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
