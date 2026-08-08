@@ -636,10 +636,84 @@ export type Database = {
           },
         ]
       }
+      lesson_event_changes: {
+        Row: {
+          actor_profile_id: string | null
+          actor_role: string
+          change_type: string
+          counted_toward_self_service_limit: boolean
+          created_at: string
+          id: string
+          lesson_event_id: string
+          new_values: Json
+          policy_result: string
+          policy_version_id: string | null
+          previous_values: Json
+          reason: string
+          school_id: string
+          source: string
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          actor_role: string
+          change_type: string
+          counted_toward_self_service_limit?: boolean
+          created_at?: string
+          id?: string
+          lesson_event_id: string
+          new_values: Json
+          policy_result: string
+          policy_version_id?: string | null
+          previous_values: Json
+          reason: string
+          school_id: string
+          source: string
+        }
+        Update: {
+          actor_profile_id?: string | null
+          actor_role?: string
+          change_type?: string
+          counted_toward_self_service_limit?: boolean
+          created_at?: string
+          id?: string
+          lesson_event_id?: string
+          new_values?: Json
+          policy_result?: string
+          policy_version_id?: string | null
+          previous_values?: Json
+          reason?: string
+          school_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_event_changes_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_event_changes_policy_version_id_fkey"
+            columns: ["policy_version_id"]
+            isOneToOne: false
+            referencedRelation: "school_policy_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_event_changes_school_id_lesson_event_id_fkey"
+            columns: ["school_id", "lesson_event_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_events"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
       lesson_event_price_snapshots: {
         Row: {
           amount_cents: number
           billing_mode: string
+          billing_service_date: string
           captured_at: string
           currency: string
           id: string
@@ -652,6 +726,7 @@ export type Database = {
         Insert: {
           amount_cents: number
           billing_mode: string
+          billing_service_date: string
           captured_at?: string
           currency: string
           id?: string
@@ -664,6 +739,7 @@ export type Database = {
         Update: {
           amount_cents?: number
           billing_mode?: string
+          billing_service_date?: string
           captured_at?: string
           currency?: string
           id?: string
@@ -2467,6 +2543,19 @@ export type Database = {
           p_as_of?: string
           p_lesson_event_id: string
           p_school_id: string
+        }
+        Returns: Json
+      }
+      reschedule_lesson_as_owner: {
+        Args: {
+          p_allow_outside_availability?: boolean
+          p_lesson_event_id: string
+          p_local_start: string
+          p_place_id: string
+          p_reason: string
+          p_school_id: string
+          p_source: string
+          p_teacher_id: string
         }
         Returns: Json
       }

@@ -38,6 +38,10 @@ The product should feel like a well-run independent music school: cultivated, hu
 
 - Desktop: hover or focus expands teacher tracks; all teachers can be compared simultaneously.
 - Tablet: tapping an availability rail selects and expands it; tapping a lesson opens details. Hover quick views are optional enhancement only.
+- Rescheduling is an explicit calendar mode. The selected lesson may be dragged with mouse, pen, or touch while teacher tracks retain their normal expand/compress behavior. A drop only proposes a destination; a separate hold confirms it.
+- Invalid collision or availability destinations use a visible rejected ghost and cannot advance to confirmation. Owners may explicitly override recurring availability with a recorded reason, but never teacher or student conflicts.
+- On phones, the focused date/time/teacher/place form is open by default so rescheduling never depends on manipulating the horizontally scrollable planner. It uses the same proposal and confirmation transaction as drag-and-drop.
+- Reschedule confirmation always compares old and new time, names teacher and place, and shows the immutable billing month before the hold action.
 - Phone: default to one selected teacher in day view. Week view should favor an agenda or horizontally paged days. Month view should show compact counts/capacity and open a day rather than squeeze full lesson details into seven narrow columns.
 - The current planner still uses desktop-first horizontal overflow for some narrow views. It must receive the phone/tablet adaptations above before being considered production-complete.
 

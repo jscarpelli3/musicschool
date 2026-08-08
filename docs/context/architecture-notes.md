@@ -103,6 +103,7 @@ This foundation intentionally follows the proven patterns in the local Agency Br
 - Private-lesson commitments are represented by effective-dated enrollments that connect a student, teacher, service type, billing account, and preferred recurring slot.
 - Actual lesson occurrences are materialized as scheduled events in monthly schedule periods; recurring rules are never treated as completed appointments by themselves.
 - Student or guardian reschedules move an existing occurrence rather than creating an unrelated new lesson. Every change preserves its original time, actor, reason, and policy result.
+- A rescheduled occurrence keeps the same event identity and immutable billing-service date even when its operational date crosses into another month. The destination month must not bill it a second time.
 - Cancellations never delete an event. They record who canceled, when, why, whether the cancellation was timely, and the resulting billing disposition.
 - Teacher, student, and room conflicts must be prevented transactionally in Postgres rather than checked only in the interface.
 

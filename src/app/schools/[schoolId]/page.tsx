@@ -68,6 +68,7 @@ export default async function SchoolDashboard({
       .eq("school_id", schoolId),
     supabase.from("lesson_places").select("id, name, details").eq("school_id", schoolId),
     supabase.from("user_view_preferences").select("settings").eq("school_id", schoolId).eq("profile_id", profileId).eq("view_key", "student_roster").maybeSingle(),
+    supabase.from("lesson_event_price_snapshots").select("lesson_event_id, billing_service_date").eq("school_id", schoolId),
   ]);
 
   const failedDashboardQuery = dashboardQueries.find((result) => result.error);
@@ -85,6 +86,7 @@ export default async function SchoolDashboard({
     { data: billingAccountRows },
     { data: placeRows },
     { data: rosterPreference },
+    { data: lessonPriceSnapshots },
   ] = dashboardQueries;
 
   const people = new Map((peopleRows ?? []).map((person) => [person.id, person]));
@@ -153,6 +155,7 @@ export default async function SchoolDashboard({
   const monthKey = initialDate.slice(0, 7);
   const monthLabel = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: school.timezone }).format(new Date());
   const teacherNames = new Map(teachers.map((teacher) => [teacher.id, teacher.name]));
+  const billingDates = new Map((lessonPriceSnapshots ?? []).map((snapshot) => [snapshot.lesson_event_id, snapshot.billing_service_date]));
   const occurrenceParts = (iso: string) => {
     const parts = new Intl.DateTimeFormat("en-US", {
       timeZone: school.timezone,
@@ -297,6 +300,8 @@ export default async function SchoolDashboard({
         saveView={saveStudentRosterView.bind(null, schoolId)}
       />
       <OwnerPlanner
+        schoolId={schoolId}
+        canReschedule={canManageSchool}
         initialDate={initialDate}
         timezone={school.timezone}
         teachers={teachers}
@@ -305,7 +310,7 @@ export default async function SchoolDashboard({
         productNames={productNames}
         placeDetails={placeDetails}
         availability={availabilityRows ?? []}
-        lessons={lessonRows ?? []}
+        lessons={(lessonRows ?? []).map((lesson) => ({ ...lesson, billing_service_date: billingDates.get(lesson.id) ?? lesson.starts_at.slice(0, 10), can_reschedule: lesson.status === "scheduled" && new Date(lesson.starts_at).getTime() > now }))}
       />
     </main>
   );

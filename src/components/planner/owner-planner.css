@@ -154,6 +154,78 @@
   outline: none;
 }
 
+.lesson-block[data-reschedule-origin="true"] {
+  z-index: 31;
+  border-color: var(--ui-brand-hover);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ui-brand) 52%, transparent);
+  cursor: grab;
+  touch-action: none;
+}
+
+.lesson-block[data-dragging="true"] {
+  opacity: 0.28;
+  pointer-events: none;
+  cursor: grabbing;
+}
+
+.lesson-drop-ghost {
+  position: absolute;
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0.3rem 0.45rem;
+  border-left: 2px solid var(--ui-brand-hover);
+  background: color-mix(in srgb, var(--ui-brand) 82%, var(--ui-canvas));
+  color: var(--ui-canvas);
+  pointer-events: none;
+}
+
+.lesson-drop-ghost[data-valid="false"] {
+  border-color: var(--ui-danger);
+  background: color-mix(in srgb, var(--ui-danger) 72%, var(--ui-canvas));
+}
+
+.lesson-drop-ghost span,
+.lesson-drop-ghost small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lesson-drop-ghost span { font-size: 0.75rem; }
+.lesson-drop-ghost small { margin-top: 0.15rem; font-size: 0.625rem; opacity: 0.78; }
+
+.reschedule-mode {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ui-brand) 8%, transparent), transparent 68%);
+}
+
+.reschedule-confirm-layer {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+}
+
+.reschedule-confirm-layer .lesson-sheet-backdrop {
+  z-index: 60;
+}
+
+.reschedule-confirm-panel {
+  position: fixed;
+  z-index: 61;
+  top: 50%;
+  left: 50%;
+  width: min(42rem, calc(100% - 2rem));
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  border: 1px solid var(--ui-line);
+  background: var(--ui-surface);
+  box-shadow: 0 2rem 7rem rgb(0 0 0 / 0.42);
+  transform: translate(-50%, -50%);
+}
+
 .occupancy-line {
   position: relative;
   height: 1px;
@@ -209,7 +281,8 @@
   }
 
   .lesson-sheet,
-  .lesson-sheet-backdrop {
+  .lesson-sheet-backdrop,
+  .reschedule-confirm-panel {
     animation-duration: 1ms;
   }
 
