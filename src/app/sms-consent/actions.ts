@@ -1,0 +1,33 @@
+"use server";
+
+import { createPublicClient } from "@/lib/supabase/public";
+
+export type SmsConsentState = { ok: boolean; message: string };
+
+function e164(value: string) {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  if (value.trim().startsWith("+") && digits.length >= 8 && digits.length <= 15) return `+${digits}`;
+  return null;
+}
+
+export async function recordSmsConsent(_state: SmsConsentState, formData: FormData): Promise<SmsConsentState> {
+  if (String(formData.get("website") ?? "")) return { ok: true, message: "Consent recorded." };
+  const fullName = String(formData.get("fullName") ?? "").trim();
+  const schoolName = String(formData.get("schoolName") ?? "").trim();
+  const phone = e164(String(formData.get("phone") ?? ""));
+  const consented = formData.get("smsConsent") === "yes";
+  if (!fullName || fullName.length > 160 || !schoolName || schoolName.length > 160 || !phone || !consented) {
+    return { ok: false, message: "Complete every field and check the optional SMS consent box to enroll." };
+  }
+
+  const supabase = createPublicClient();
+  const { error } = await supabase.rpc("record_public_sms_opt_in", {
+    p_full_name: fullName,
+    p_phone_e164: phone,
+    p_school_name: schoolName,
+  });
+  if (error) return { ok: false, message: "We could not record your SMS enrollment. Please try again." };
+  return { ok: true, message: "You’re enrolled in MusicSchool transactional messages. Messaging will begin after program activation." };
+}

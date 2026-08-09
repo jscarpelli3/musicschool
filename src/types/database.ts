@@ -2243,6 +2243,45 @@ export type Database = {
           },
         ]
       }
+      sms_opt_in_events: {
+        Row: {
+          consent_text: string | null
+          consent_version: string | null
+          event_type: string
+          full_name: string
+          id: string
+          metadata: Json
+          occurred_at: string
+          phone_e164: string
+          school_name: string
+          source: string
+        }
+        Insert: {
+          consent_text?: string | null
+          consent_version?: string | null
+          event_type: string
+          full_name: string
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          phone_e164: string
+          school_name: string
+          source: string
+        }
+        Update: {
+          consent_text?: string | null
+          consent_version?: string | null
+          event_type?: string
+          full_name?: string
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          phone_e164?: string
+          school_name?: string
+          source?: string
+        }
+        Relationships: []
+      }
       student_contacts: {
         Row: {
           contact_person_id: string
@@ -2561,6 +2600,14 @@ export type Database = {
         }
         Returns: Json
       }
+      record_public_sms_opt_in: {
+        Args: {
+          p_full_name: string
+          p_phone_e164: string
+          p_school_name: string
+        }
+        Returns: string
+      }
       reschedule_lesson_as_owner: {
         Args: {
           p_allow_outside_availability?: boolean
@@ -2577,7 +2624,7 @@ export type Database = {
       set_lesson_reschedule_permission: {
         Args: {
           p_allowed: boolean
-          p_blocked_reason?: string | null
+          p_blocked_reason?: string
           p_lesson_event_id: string
           p_school_id: string
         }

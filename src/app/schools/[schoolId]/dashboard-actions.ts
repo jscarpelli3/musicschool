@@ -59,7 +59,7 @@ export async function setLessonReschedulePermission(schoolId: string, lessonId: 
     p_school_id: schoolId,
     p_lesson_event_id: lessonId,
     p_allowed: allowed,
-    p_blocked_reason: allowed ? null : blockedReason.trim(),
+    p_blocked_reason: allowed ? undefined : blockedReason.trim(),
   });
   if (error) return { ok: false, message: "The rescheduling permission could not be changed." };
   revalidatePath(`/schools/${schoolId}`);
