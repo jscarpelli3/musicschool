@@ -444,3 +444,26 @@ Activated on 2026-08-09.
 - A rollback-only rehearsal proved canonical evidence storage and rapid-submit idempotency without leaving test data.
 - Supabase types, TypeScript, ESLint, and the production build passed. Commit `03f6394` is live, and the consent, privacy, terms, and support routes return HTTP 200.
 - Toll-free approval, provider credentials, delivery records, signed callbacks, owner send/resend UI, opt-out synchronization, and end-to-end SMS delivery remain pending.
+
+### Step 8 checkpoint — durable approval delivery foundation
+
+Completed on 2026-08-09 while toll-free verification remained in review.
+
+- Added a durable `sms_deliveries` ledger. A delivery row is created before any provider request and stores the recipient, provider identifiers, lifecycle state, error state, and a SHA-256 body fingerprint—never the approval URL or raw message body.
+- Added a single transaction that snapshots an exact locked billing period into a versioned approval request, cancels any superseded pending request, records immutable approval/audit events, and prepares the pending SMS attempt.
+- A rollback-only database rehearsal proved locked-to-pending transition, exact amount and line-item snapshots, request replacement, cancellation history, version increments, and pre-provider durability without leaving test billing data.
+- Added a server-only Twilio REST adapter using the scoped API key and Messaging Service. No Twilio SDK dependency was necessary.
+- Regenerated database types; TypeScript and ESLint passed.
+- Toll-free sender approval is still the only external blocker to a real handset delivery. Signed delivery callbacks, owner send UI, STOP/HELP webhook handling, and live end-to-end testing remain pending.
+
+### Step 8 checkpoint — signed callbacks and owner approval send
+
+Completed on 2026-08-09 while toll-free verification remained in review.
+
+- Added a signed `POST /api/twilio/status` callback. It accepts only form-encoded requests, validates `X-Twilio-Signature` against the exact configured callback URL with Twilio's maintained validator, and rejects callbacks for another account.
+- Added append-only, fingerprinted provider status events. Duplicate callbacks are idempotent, callbacks that race the initial API response wait for reconciliation, and late lower-rank events cannot regress a delivered message.
+- Added owner/admin approval-link sending to locked family billing periods. The action requires a valid payer phone and matching recorded opt-in, snapshots and versions the exact charge, creates durable local records before calling Twilio, and records provider rejection.
+- The family billing UI now shows the latest delivery state and supports a new link; generating one cancels the superseded pending approval rather than leaving two usable links.
+- Added Twilio's official server library solely for maintained webhook signature validation. Outbound submission remains a small server-only REST adapter.
+- Database rehearsals for replay, out-of-order delivery, and the callback/API-response race passed without persistent fixture data. TypeScript, ESLint, and the production build passed. The earlier local build stall was isolated to sandboxed build-time font access.
+- Live deployment, real SMS delivery, inbound STOP/HELP synchronization, and owner-facing phone/consent editing remain pending. Toll-free sender approval still blocks only the real handset test.

@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.15"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       audit_log: {
@@ -223,6 +198,7 @@ export type Database = {
           approved_at: string | null
           billing_account_id: string
           billing_period_id: string | null
+          cancelled_at: string | null
           collection_action: string
           created_at: string
           created_by: string | null
@@ -232,6 +208,7 @@ export type Database = {
           line_items: Json
           payment_status: string
           period_label: string
+          request_version: number
           school_id: string
           stripe_payment_intent_id: string | null
           token_hash: string
@@ -243,6 +220,7 @@ export type Database = {
           approved_at?: string | null
           billing_account_id: string
           billing_period_id?: string | null
+          cancelled_at?: string | null
           collection_action?: string
           created_at?: string
           created_by?: string | null
@@ -252,6 +230,7 @@ export type Database = {
           line_items: Json
           payment_status?: string
           period_label: string
+          request_version?: number
           school_id: string
           stripe_payment_intent_id?: string | null
           token_hash: string
@@ -263,6 +242,7 @@ export type Database = {
           approved_at?: string | null
           billing_account_id?: string
           billing_period_id?: string | null
+          cancelled_at?: string | null
           collection_action?: string
           created_at?: string
           created_by?: string | null
@@ -272,6 +252,7 @@ export type Database = {
           line_items?: Json
           payment_status?: string
           period_label?: string
+          request_version?: number
           school_id?: string
           stripe_payment_intent_id?: string | null
           token_hash?: string
@@ -2243,6 +2224,141 @@ export type Database = {
           },
         ]
       }
+      sms_deliveries: {
+        Row: {
+          accepted_at: string | null
+          approval_request_id: string
+          attempt_number: number
+          billing_account_id: string
+          body_sha256: string
+          created_at: string
+          created_by: string | null
+          delivered_at: string | null
+          failed_at: string | null
+          id: string
+          message_kind: string
+          messaging_service_sid: string | null
+          provider: string
+          provider_error_code: string | null
+          provider_error_message: string | null
+          provider_message_sid: string | null
+          recipient_phone_e164: string
+          school_id: string
+          sent_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          approval_request_id: string
+          attempt_number?: number
+          billing_account_id: string
+          body_sha256: string
+          created_at?: string
+          created_by?: string | null
+          delivered_at?: string | null
+          failed_at?: string | null
+          id?: string
+          message_kind: string
+          messaging_service_sid?: string | null
+          provider?: string
+          provider_error_code?: string | null
+          provider_error_message?: string | null
+          provider_message_sid?: string | null
+          recipient_phone_e164: string
+          school_id: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          approval_request_id?: string
+          attempt_number?: number
+          billing_account_id?: string
+          body_sha256?: string
+          created_at?: string
+          created_by?: string | null
+          delivered_at?: string | null
+          failed_at?: string | null
+          id?: string
+          message_kind?: string
+          messaging_service_sid?: string | null
+          provider?: string
+          provider_error_code?: string | null
+          provider_error_message?: string | null
+          provider_message_sid?: string | null
+          recipient_phone_e164?: string
+          school_id?: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_deliveries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_deliveries_school_id_approval_request_id_fkey"
+            columns: ["school_id", "approval_request_id"]
+            isOneToOne: false
+            referencedRelation: "billing_approval_requests"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "sms_deliveries_school_id_billing_account_id_fkey"
+            columns: ["school_id", "billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
+      sms_delivery_status_events: {
+        Row: {
+          delivery_id: string | null
+          event_fingerprint: string
+          id: number
+          provider: string
+          provider_error_code: string | null
+          provider_message_sid: string
+          provider_status: string
+          received_at: string
+        }
+        Insert: {
+          delivery_id?: string | null
+          event_fingerprint: string
+          id?: never
+          provider?: string
+          provider_error_code?: string | null
+          provider_message_sid: string
+          provider_status: string
+          received_at?: string
+        }
+        Update: {
+          delivery_id?: string | null
+          event_fingerprint?: string
+          id?: never
+          provider?: string
+          provider_error_code?: string | null
+          provider_message_sid?: string
+          provider_status?: string
+          received_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_delivery_status_events_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "sms_deliveries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sms_opt_in_events: {
         Row: {
           consent_text: string | null
@@ -2497,6 +2613,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_sms_delivery_status: {
+        Args: {
+          p_delivery_id: string
+          p_provider_error_code?: string
+          p_provider_status: string
+        }
+        Returns: undefined
+      }
       approve_billing_request: { Args: { raw_token: string }; Returns: string }
       begin_payment_method_revocation: {
         Args: { p_payment_method_id: string }
@@ -2533,6 +2657,16 @@ export type Database = {
         }
         Returns: string
       }
+      complete_sms_provider_submission: {
+        Args: {
+          p_delivery_id: string
+          p_provider_error_code?: string
+          p_provider_error_message?: string
+          p_provider_message_sid: string
+          p_provider_status: string
+        }
+        Returns: undefined
+      }
       compute_lesson_event_billing_disposition: {
         Args: {
           p_as_of?: string
@@ -2540,6 +2674,21 @@ export type Database = {
           p_school_id: string
         }
         Returns: Json
+      }
+      create_billing_approval_sms_delivery: {
+        Args: {
+          p_billing_period_id: string
+          p_body_sha256: string
+          p_expires_at: string
+          p_messaging_service_sid: string
+          p_recipient_phone_e164: string
+          p_school_id: string
+          p_token_hash: string
+        }
+        Returns: {
+          approval_request_id: string
+          sms_delivery_id: string
+        }[]
       }
       create_school: {
         Args: { school_name: string; school_timezone?: string }
@@ -2558,6 +2707,14 @@ export type Database = {
           p_teacher_id: string
         }
         Returns: string
+      }
+      fail_sms_provider_submission: {
+        Args: {
+          p_delivery_id: string
+          p_provider_error_code?: string
+          p_provider_error_message?: string
+        }
+        Returns: undefined
       }
       get_billing_approval: {
         Args: { raw_token: string }
@@ -2605,6 +2762,15 @@ export type Database = {
           p_full_name: string
           p_phone_e164: string
           p_school_name: string
+        }
+        Returns: string
+      }
+      record_twilio_delivery_status: {
+        Args: {
+          p_event_fingerprint: string
+          p_provider_error_code: string
+          p_provider_message_sid: string
+          p_provider_status: string
         }
         Returns: string
       }
@@ -2762,9 +2928,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

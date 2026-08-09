@@ -1,13 +1,30 @@
 "use server";
 
+import { createHash, randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createFamilyCardSetup } from "@/lib/stripe/payment-methods";
 import { getStripe } from "@/lib/stripe/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { getTwilioMessagingServiceSid, sendTwilioMessage, TwilioRequestError } from "@/lib/twilio/server";
 
 export type CardSetupLinkState = { url: string | null; error: string | null };
+export type BillingApprovalSmsState = { ok: boolean; message: string };
+
+function normalizePhone(value: string) {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  if (value.trim().startsWith("+") && digits.length >= 8 && digits.length <= 15) return `+${digits}`;
+  return null;
+}
+
+function appOrigin() {
+  const value = process.env.APP_URL?.trim();
+  if (!value) throw new Error("Missing required server environment variable: APP_URL");
+  return new URL(value).origin;
+}
 
 export async function prepareFamilyBillingDraft(schoolId: string, billingAccountId: string, formData: FormData) {
   const path = `/schools/${schoolId}/families/${billingAccountId}`;
@@ -56,6 +73,93 @@ export async function lockFamilyBillingPeriod(schoolId: string, billingAccountId
 
   revalidatePath(`/schools/${schoolId}/families/${billingAccountId}`);
   return { ok: true, message: "Amount locked. Lesson lines can no longer change." };
+}
+
+export async function sendBillingApprovalSms(
+  schoolId: string,
+  billingAccountId: string,
+  billingPeriodId: string,
+  _previous: BillingApprovalSmsState,
+): Promise<BillingApprovalSmsState> {
+  void _previous;
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId) redirect(`/login?next=${path}`);
+
+  const [{ data: membership }, { data: school }, { data: account }, { data: period }] = await Promise.all([
+    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
+    supabase.from("schools").select("name").eq("id", schoolId).maybeSingle(),
+    supabase.from("billing_accounts").select("billing_contact_person_id").eq("school_id", schoolId).eq("id", billingAccountId).maybeSingle(),
+    supabase.from("billing_periods").select("label, amount_due_cents, currency, status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", billingPeriodId).maybeSingle(),
+  ]);
+  if (!membership || !["owner", "admin"].includes(membership.role) || !school || !account || !period) {
+    return { ok: false, message: "You do not have permission to send this approval request." };
+  }
+  if (!["locked", "approval_pending"].includes(period.status) || period.amount_due_cents <= 0) {
+    return { ok: false, message: "Lock a positive billing amount before requesting approval." };
+  }
+
+  const { data: contact } = await supabase.from("people").select("phone")
+    .eq("school_id", schoolId).eq("id", account.billing_contact_person_id).maybeSingle();
+  const phone = normalizePhone(contact?.phone ?? "");
+  if (!phone) return { ok: false, message: "Add a valid mobile number to the primary payer first." };
+
+  const admin = createAdminClient();
+  const { data: consent } = await admin.from("sms_opt_in_events").select("id")
+    .eq("phone_e164", phone).ilike("school_name", school.name).eq("event_type", "opt_in")
+    .order("occurred_at", { ascending: false }).limit(1).maybeSingle();
+  if (!consent) {
+    return { ok: false, message: "This payer has not completed the SMS consent form for this school." };
+  }
+
+  const rawToken = randomBytes(32).toString("base64url");
+  const approvalUrl = `${appOrigin()}/approve/${rawToken}`;
+  const amount = new Intl.NumberFormat("en-US", { style: "currency", currency: period.currency }).format(period.amount_due_cents / 100);
+  const body = `${school.name}: Review and approve ${period.label} lesson charges (${amount}): ${approvalUrl} Approval does not charge your card. Reply STOP to opt out, HELP for help.`;
+  const hash = (value: string) => createHash("sha256").update(value).digest("hex");
+  const messagingServiceSid = getTwilioMessagingServiceSid();
+  const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+
+  const { data: prepared, error: prepareError } = await supabase.rpc("create_billing_approval_sms_delivery", {
+    p_body_sha256: hash(body),
+    p_billing_period_id: billingPeriodId,
+    p_expires_at: expiresAt,
+    p_messaging_service_sid: messagingServiceSid,
+    p_recipient_phone_e164: phone,
+    p_school_id: schoolId,
+    p_token_hash: hash(rawToken),
+  }).maybeSingle();
+  if (prepareError || !prepared) {
+    return { ok: false, message: "The approval request could not be prepared. No text was sent." };
+  }
+
+  try {
+    const message = await sendTwilioMessage({ to: phone, body });
+    const { error: completionError } = await admin.rpc("complete_sms_provider_submission", {
+      p_delivery_id: prepared.sms_delivery_id,
+      p_provider_error_code: message.errorCode ?? undefined,
+      p_provider_error_message: message.errorMessage ?? undefined,
+      p_provider_message_sid: message.sid,
+      p_provider_status: message.status,
+    });
+    if (completionError) {
+      console.error("Twilio accepted a message but local reconciliation failed", { deliveryId: prepared.sms_delivery_id, code: completionError.code });
+      return { ok: false, message: "Twilio accepted the text, but its local status needs reconciliation. Do not resend yet." };
+    }
+  } catch (error) {
+    const providerError = error instanceof TwilioRequestError ? error : null;
+    await admin.rpc("fail_sms_provider_submission", {
+      p_delivery_id: prepared.sms_delivery_id,
+      p_provider_error_code: providerError?.code ?? undefined,
+      p_provider_error_message: providerError?.message ?? "Provider request failed.",
+    });
+    return { ok: false, message: "Twilio did not accept the text. The failed attempt was recorded and can be retried." };
+  }
+
+  revalidatePath(path);
+  return { ok: true, message: `Approval request sent to the payer’s phone ending in ${phone.slice(-4)}.` };
 }
 
 export async function generateFamilyCardSetupLink(
