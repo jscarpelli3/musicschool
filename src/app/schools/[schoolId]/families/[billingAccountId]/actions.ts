@@ -5,20 +5,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createFamilyCardSetup } from "@/lib/stripe/payment-methods";
 import { getStripe } from "@/lib/stripe/server";
+import { normalizeE164 } from "@/lib/phone";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getTwilioMessagingServiceSid, sendTwilioMessage, TwilioRequestError } from "@/lib/twilio/server";
 
 export type CardSetupLinkState = { url: string | null; error: string | null };
 export type BillingApprovalSmsState = { ok: boolean; message: string };
-
-function normalizePhone(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (digits.length === 10) return `+1${digits}`;
-  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
-  if (value.trim().startsWith("+") && digits.length >= 8 && digits.length <= 15) return `+${digits}`;
-  return null;
-}
+export type BillingContactPhoneState = { ok: boolean; message: string };
 
 function appOrigin() {
   const value = process.env.APP_URL?.trim();
@@ -103,15 +97,19 @@ export async function sendBillingApprovalSms(
 
   const { data: contact } = await supabase.from("people").select("phone")
     .eq("school_id", schoolId).eq("id", account.billing_contact_person_id).maybeSingle();
-  const phone = normalizePhone(contact?.phone ?? "");
+  const phone = normalizeE164(contact?.phone ?? "");
   if (!phone) return { ok: false, message: "Add a valid mobile number to the primary payer first." };
 
   const admin = createAdminClient();
-  const { data: consent } = await admin.from("sms_opt_in_events").select("id")
-    .eq("phone_e164", phone).ilike("school_name", school.name).eq("event_type", "opt_in")
-    .order("occurred_at", { ascending: false }).limit(1).maybeSingle();
-  if (!consent) {
-    return { ok: false, message: "This payer has not completed the SMS consent form for this school." };
+  const { data: consentState, error: consentError } = await admin.rpc("get_sms_consent_state", {
+    p_phone_e164: phone,
+    p_school_name: school.name,
+  });
+  if (consentError || consentState !== "opted_in") {
+    const message = consentState === "opted_out"
+      ? "This payer opted out. They must text START before another message can be sent."
+      : "This payer has not completed the SMS consent form for this school.";
+    return { ok: false, message };
   }
 
   const rawToken = randomBytes(32).toString("base64url");
@@ -160,6 +158,36 @@ export async function sendBillingApprovalSms(
 
   revalidatePath(path);
   return { ok: true, message: `Approval request sent to the payer’s phone ending in ${phone.slice(-4)}.` };
+}
+
+export async function updateBillingContactPhone(
+  schoolId: string,
+  billingAccountId: string,
+  _previous: BillingContactPhoneState,
+  formData: FormData,
+): Promise<BillingContactPhoneState> {
+  void _previous;
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const phone = normalizeE164(String(formData.get("phone") ?? ""));
+  if (!phone) return { ok: false, message: "Enter a valid mobile number, including country code when outside the US." };
+
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId) redirect(`/login?next=${path}`);
+  const [{ data: membership }, { data: account }] = await Promise.all([
+    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
+    supabase.from("billing_accounts").select("billing_contact_person_id").eq("school_id", schoolId).eq("id", billingAccountId).maybeSingle(),
+  ]);
+  if (!membership || !["owner", "admin"].includes(membership.role) || !account) {
+    return { ok: false, message: "You do not have permission to update this payer." };
+  }
+
+  const { error } = await supabase.from("people").update({ phone })
+    .eq("school_id", schoolId).eq("id", account.billing_contact_person_id);
+  if (error) return { ok: false, message: "The phone number could not be saved. Nothing changed." };
+  revalidatePath(path);
+  return { ok: true, message: `Mobile number saved ending in ${phone.slice(-4)}.` };
 }
 
 export async function generateFamilyCardSetupLink(

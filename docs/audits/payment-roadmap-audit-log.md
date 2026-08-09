@@ -467,3 +467,15 @@ Completed on 2026-08-09 while toll-free verification remained in review.
 - Added Twilio's official server library solely for maintained webhook signature validation. Outbound submission remains a small server-only REST adapter.
 - Database rehearsals for replay, out-of-order delivery, and the callback/API-response race passed without persistent fixture data. TypeScript, ESLint, and the production build passed. The earlier local build stall was isolated to sandboxed build-time font access.
 - Live deployment, real SMS delivery, inbound STOP/HELP synchronization, and owner-facing phone/consent editing remain pending. Toll-free sender approval still blocks only the real handset test.
+
+### Step 8 checkpoint — inbound consent synchronization
+
+Completed on 2026-08-09 while toll-free verification remained in review.
+
+- Added a signed `POST /api/twilio/incoming` webhook scoped to the configured Twilio account and Messaging Service. Unknown message content receives empty TwiML and is not retained.
+- STOP-family, START/UNSTOP, and HELP/INFO keywords are recorded append-only and replay-safe. Twilio Advanced Opt-Out remains responsible for the compliant customer reply, avoiding duplicate responses from MusicSchool.
+- Consent state now has explicit monotonic ordering. The first rollback rehearsal exposed identical transaction timestamps making STOP/START order ambiguous; an identity sequence fixed the defect, and the repeated audit passed.
+- A STOP applies globally across the shared MusicSchool Messaging Service. A later web form cannot override it; the payer must text START or UNSTOP. HELP is recorded without changing consent.
+- Replaced the incorrect outbound `opt_in` string check with one database consent-state function using the ledger's real `opted_in`/`opted_out` values.
+- Added owner/admin payer-phone editing backed by the `people` table, live consent status, and a school-prefilled public consent-form link. No UI-only phone or consent state exists.
+- TypeScript and ESLint passed. Production build and deployment validation follow in this checkpoint.

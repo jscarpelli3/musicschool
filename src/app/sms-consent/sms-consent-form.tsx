@@ -7,14 +7,14 @@ import { recordSmsConsent, type SmsConsentState } from "./actions";
 const initialState: SmsConsentState = { ok: false, message: "" };
 const field = "mt-2 w-full border-b border-line bg-transparent py-3 outline-none transition focus:border-brand";
 
-export function SmsConsentForm() {
+export function SmsConsentForm({ defaultSchool = "" }: { defaultSchool?: string }) {
   const [state, action, pending] = useActionState(recordSmsConsent, initialState);
   return (
     <form action={action} className="mt-10 border border-line bg-surface px-5 py-7 sm:px-8 sm:py-9">
       <div className="grid gap-7 sm:grid-cols-2">
         <label><span className="text-xs text-muted">Your name</span><input name="fullName" required maxLength={160} autoComplete="name" className={field} /></label>
         <label><span className="text-xs text-muted">Mobile phone</span><input name="phone" required type="tel" autoComplete="tel" placeholder="(555) 555-5555" className={field} /></label>
-        <label className="sm:col-span-2"><span className="text-xs text-muted">Your music school</span><input name="schoolName" required maxLength={160} autoComplete="organization" className={field} /></label>
+        <label className="sm:col-span-2"><span className="text-xs text-muted">Your music school</span><input name="schoolName" required maxLength={160} autoComplete="organization" defaultValue={defaultSchool} className={field} /></label>
         <label className="absolute -left-[10000px]" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
       </div>
 

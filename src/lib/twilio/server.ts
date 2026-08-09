@@ -40,6 +40,14 @@ export function getTwilioStatusCallbackUrl() {
   return new URL("/api/twilio/status", origin).toString();
 }
 
+export function getTwilioIncomingWebhookUrl() {
+  const origin = new URL(requiredEnvironment("APP_URL"));
+  if (origin.protocol !== "https:" && origin.hostname !== "localhost") {
+    throw new Error("APP_URL must use HTTPS outside local development.");
+  }
+  return new URL("/api/twilio/incoming", origin).toString();
+}
+
 export function validateTwilioFormRequest(input: {
   signature: string;
   url: string;

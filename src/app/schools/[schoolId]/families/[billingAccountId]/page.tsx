@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { DetailHeader, DetailSection, EmptyDetail } from "@/components/people/detail-shell";
+import { normalizeE164 } from "@/lib/phone";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { CardSetupControls } from "./card-setup-controls";
 import { BillingDraftForm } from "./billing-draft-form";
 import { BillingApprovalSms } from "./billing-approval-sms";
+import { BillingContactPhone } from "./billing-contact-phone";
 import { BillingPeriodLock } from "./billing-period-lock";
 import { PaymentMethodRemove } from "./payment-method-remove";
 
@@ -59,6 +62,10 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   if (lineItemsError) throw new Error(`Billing detail could not load: ${lineItemsError.message}`);
   const people = new Map((peopleResult.data ?? []).map((person) => [person.id, person]));
   const contact = people.get(account.billing_contact_person_id);
+  const contactPhone = normalizeE164(contact?.phone ?? "");
+  const { data: smsConsentState } = contactPhone
+    ? await createAdminClient().rpc("get_sms_consent_state", { p_phone_e164: contactPhone, p_school_name: school.name })
+    : { data: "not_enrolled" };
   const students = (studentsResult.data ?? []).flatMap((link) => {
     const person = people.get(link.student_id);
     return person ? [{ id: link.student_id, person }] : [];
@@ -96,7 +103,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
       <DetailHeader backHref={`/schools/${schoolId}`} backLabel="Dashboard" eyebrow={`${school.name} · Family account`} title={account.name} meta={`${account.status} billing relationship · ${students.length} ${students.length === 1 ? "student" : "students"}`} />
 
       <DetailSection title="Primary payer" description="The person currently responsible for this billing account.">
-        {contact ? <div><p className="font-display text-3xl">{name(contact)}</p><p className="mt-3 text-sm text-muted">{[contact.email, contact.phone].filter(Boolean).join(" · ") || "No contact details recorded"}</p><p className="mt-3 text-xs uppercase tracking-[0.14em] text-brand">{contact.status}</p></div> : <EmptyDetail>The billing contact record is unavailable.</EmptyDetail>}
+        {contact ? <div><p className="font-display text-3xl">{name(contact)}</p><p className="mt-3 text-sm text-muted">{contact.email || "No email recorded"}</p><p className="mt-3 text-xs uppercase tracking-[0.14em] text-brand">{contact.status}</p>{canManagePayments ? <BillingContactPhone schoolId={schoolId} schoolName={school.name} billingAccountId={billingAccountId} phone={contact.phone ?? ""} consentState={smsConsentState ?? "not_enrolled"} /> : <p className="mt-3 text-sm text-muted">{contact.phone || "No mobile number recorded"}</p>}</div> : <EmptyDetail>The billing contact record is unavailable.</EmptyDetail>}
       </DetailSection>
 
       <DetailSection title="Students" description="Students whose charges roll into this family billing account.">

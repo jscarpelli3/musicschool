@@ -1,22 +1,15 @@
 "use server";
 
 import { createPublicClient } from "@/lib/supabase/public";
+import { normalizeE164 } from "@/lib/phone";
 
 export type SmsConsentState = { ok: boolean; message: string };
-
-function e164(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (digits.length === 10) return `+1${digits}`;
-  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
-  if (value.trim().startsWith("+") && digits.length >= 8 && digits.length <= 15) return `+${digits}`;
-  return null;
-}
 
 export async function recordSmsConsent(_state: SmsConsentState, formData: FormData): Promise<SmsConsentState> {
   if (String(formData.get("website") ?? "")) return { ok: true, message: "Consent recorded." };
   const fullName = String(formData.get("fullName") ?? "").trim();
   const schoolName = String(formData.get("schoolName") ?? "").trim();
-  const phone = e164(String(formData.get("phone") ?? ""));
+  const phone = normalizeE164(String(formData.get("phone") ?? ""));
   const consented = formData.get("smsConsent") === "yes";
   if (!fullName || fullName.length > 160 || !schoolName || schoolName.length > 160 || !phone || !consented) {
     return { ok: false, message: "Complete every field and check the optional SMS consent box to enroll." };

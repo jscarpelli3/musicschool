@@ -2363,36 +2363,48 @@ export type Database = {
         Row: {
           consent_text: string | null
           consent_version: string | null
+          event_fingerprint: string | null
+          event_sequence: number
           event_type: string
           full_name: string
           id: string
+          messaging_service_sid: string | null
           metadata: Json
           occurred_at: string
           phone_e164: string
+          provider_message_sid: string | null
           school_name: string
           source: string
         }
         Insert: {
           consent_text?: string | null
           consent_version?: string | null
+          event_fingerprint?: string | null
+          event_sequence?: never
           event_type: string
           full_name: string
           id?: string
+          messaging_service_sid?: string | null
           metadata?: Json
           occurred_at?: string
           phone_e164: string
+          provider_message_sid?: string | null
           school_name: string
           source: string
         }
         Update: {
           consent_text?: string | null
           consent_version?: string | null
+          event_fingerprint?: string | null
+          event_sequence?: never
           event_type?: string
           full_name?: string
           id?: string
+          messaging_service_sid?: string | null
           metadata?: Json
           occurred_at?: string
           phone_e164?: string
+          provider_message_sid?: string | null
           school_name?: string
           source?: string
         }
@@ -2732,6 +2744,10 @@ export type Database = {
           school_name: string
         }[]
       }
+      get_sms_consent_state: {
+        Args: { p_phone_e164: string; p_school_name: string }
+        Returns: string
+      }
       has_school_role: {
         Args: { allowed_roles: string[]; target_school_id: string }
         Returns: boolean
@@ -2771,6 +2787,16 @@ export type Database = {
           p_provider_error_code: string
           p_provider_message_sid: string
           p_provider_status: string
+        }
+        Returns: string
+      }
+      record_twilio_sms_consent_event: {
+        Args: {
+          p_event_fingerprint: string
+          p_event_type: string
+          p_messaging_service_sid: string
+          p_phone_e164: string
+          p_provider_message_sid: string
         }
         Returns: string
       }
