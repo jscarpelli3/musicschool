@@ -430,3 +430,17 @@ Passed on 2026-08-08.
 - Phone controls and line items stack; tablet and desktop layouts align descriptions and amounts. Keyboard users can operate the hold control, and no billing action depends on hover.
 - The real school currently has no published cancellation policy. This is a deliberate visible blocker for months containing cancellations or no-shows, not a failed or partial invoice.
 - Activate Step 8: create an expiring approval request bound to a locked period and deliver the link by Twilio SMS. No charge is authorized by merely preparing or locking a draft.
+
+### Step 8 activation — SMS consent foundation
+
+Activated on 2026-08-09.
+
+- Created and funded the MusicSchool Twilio account, created the first Messaging Service, and began toll-free sender verification.
+- Added a public, optional web-form enrollment flow at `/sms-consent`. Its checkbox is blank by default and separates transactional SMS consent from payment authorization and email preferences.
+- The CTA identifies MusicSchool and the named school, lists the transactional message purposes, states variable frequency and possible message/data rates, provides HELP/STOP instructions, and states that consent is not a condition of purchase.
+- Added publicly accessible SMS Terms, Privacy, and Support routes linked directly beside the CTA.
+- Added append-only SMS opt-in evidence with normalized E.164 phone, person and school labels, source, canonical disclosure version/text, timestamp, and program metadata. Public callers cannot choose or rewrite the stored legal wording.
+- The constrained public function records only opt-in events and deduplicates rapid repeats. The underlying table has RLS enabled with no direct anonymous access.
+- A rollback-only rehearsal proved canonical evidence storage and rapid-submit idempotency without leaving test data.
+- Supabase types, TypeScript, ESLint, and the production build passed. Commit `03f6394` is live, and the consent, privacy, terms, and support routes return HTTP 200.
+- Toll-free approval, provider credentials, delivery records, signed callbacks, owner send/resend UI, opt-out synchronization, and end-to-end SMS delivery remain pending.
