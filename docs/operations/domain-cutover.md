@@ -47,6 +47,14 @@ Also review and update every public URL supplied during toll-free verification:
 - Terms: `https://<real-app-domain>/terms`
 - Support/help: `https://<real-app-domain>/support`
 
+Review the Messaging Service's **Opt-Out Management** copy even though these messages are stored in Twilio rather than this repository. Replace both the temporary product name and temporary hostname with the final public brand/domain:
+
+- Opt-out confirmation currently begins `MusicSchool:`.
+- Opt-in confirmation currently begins `MusicSchool:`.
+- Help confirmation currently begins `MusicSchool help:` and contains `musicschool-alpha.vercel.app/support`.
+- Confirm the final product name is also correct in the Messaging Service friendly name, toll-free verification submission, consent disclosure, privacy policy, terms, support page, and outbound SMS templates.
+- Recheck that every message still identifies the sender, explains STOP/HELP behavior where appropriate, and fits the intended SMS segment count after the copy changes.
+
 If Twilio does not permit editing an approved or pending toll-free submission, open a support request before retiring the temporary domain. Do not delete the temporary Vercel alias while Twilio may still review or visit those URLs.
 
 No Twilio SID, auth token, API key, Messaging Service SID, or phone number changes merely because the app domain changes.
