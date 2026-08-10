@@ -66,3 +66,17 @@ button,
 a {
   -webkit-tap-highlight-color: transparent;
 }
+
+@media (pointer: coarse) {
+  button:not(.lesson-block, .availability-block, .lesson-sheet-backdrop),
+  select,
+  summary {
+    min-height: 2.75rem;
+  }
+
+  button,
+  summary,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+}

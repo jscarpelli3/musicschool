@@ -165,6 +165,7 @@ export function OwnerPlanner({
   const [rescheduleReason, setRescheduleReason] = useState("");
   const [proposedPlaceId, setProposedPlaceId] = useState("");
   const [allowOutsideAvailability, setAllowOutsideAvailability] = useState(false);
+  const compactInitialized = useRef(false);
   const anchor = fromKey(anchorKey);
 
   const lessonDetails = useMemo(
@@ -192,6 +193,25 @@ export function OwnerPlanner({
     return () => window.removeEventListener("keydown", cancelOnEscape);
   }, [rescheduleLessonId]);
 
+  useEffect(() => {
+    const compact = window.matchMedia("(max-width: 639px)");
+    let frame: number | null = null;
+    function initializeCompactPlanner(event: MediaQueryListEvent | MediaQueryList) {
+      if (!event.matches || compactInitialized.current) return;
+      compactInitialized.current = true;
+      frame = requestAnimationFrame(() => {
+        setView("day");
+        if (teachers[0]) setTeacherId(teachers[0].id);
+      });
+    }
+    initializeCompactPlanner(compact);
+    compact.addEventListener("change", initializeCompactPlanner);
+    return () => {
+      compact.removeEventListener("change", initializeCompactPlanner);
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
+  }, [teachers]);
+
   const visibleTeachers = teacherId === "all" ? teachers : teachers.filter((teacher) => teacher.id === teacherId);
   const activeTeacherIds = new Set(visibleTeachers.map((teacher) => teacher.id));
 
@@ -214,8 +234,9 @@ export function OwnerPlanner({
     setAllowOutsideAvailability(false);
     if (!keepCalendarPosition) {
       setAnchorKey(lesson.start.dateKey);
-      setTeacherId("all");
-      if (view === "month") setView("week");
+      const compact = window.matchMedia("(max-width: 639px)").matches;
+      setTeacherId(compact ? lesson.teacher_id : "all");
+      if (view === "month") setView(compact ? "day" : "week");
     }
   }
 
@@ -336,6 +357,11 @@ export function OwnerPlanner({
           lessons={lessonDetails}
           studentNames={studentNames}
           onSelectLesson={setSelectedLessonId}
+          onOpenDay={(dateKey) => {
+            setAnchorKey(dateKey);
+            setView("day");
+            if (window.matchMedia("(max-width: 639px)").matches && teacherId === "all" && teachers[0]) setTeacherId(teachers[0].id);
+          }}
         />
       ) : (
         <TimelineView
@@ -523,6 +549,8 @@ function TimelineView({
     const lesson = lessons.find((candidate) => candidate.id === event.currentTarget.dataset.lessonId);
     if (!lesson || (rescheduleLesson && lesson.id !== rescheduleLesson.id)) return;
     if (!rescheduleLesson && (!canReschedule || !lesson.can_reschedule)) return;
+    const handle = event.target instanceof Element && Boolean(event.target.closest("[data-reschedule-handle]"));
+    if (event.pointerType === "touch" && !rescheduleLesson && !handle) return;
     const rect = event.currentTarget.getBoundingClientRect();
     pointerStart.current = { x: event.clientX, y: event.clientY, offset: event.clientY - rect.top };
     pendingLesson.current = lesson;
@@ -590,9 +618,9 @@ function TimelineView({
   }
 
   return (
-    <div ref={scrollFrame} className="overflow-x-auto">
+    <div ref={scrollFrame} className="planner-scroll overflow-x-auto">
       {dropError ? <div role="alert" className="sticky left-0 z-40 border-b border-danger px-4 py-3 text-sm text-danger">Move blocked: {dropError}</div> : null}
-      <div style={{ minWidth: `${Math.max(760, columns.length * 150)}px` }}>
+      <div style={{ minWidth: `${Math.max(view === "day" && columns.length === 1 ? 360 : 760, columns.length * 150)}px` }}>
         <div className="grid border-b border-line" style={{ gridTemplateColumns: `4.5rem repeat(${columns.length}, minmax(0, 1fr))` }}>
           <div />
           {columns.map((column) => <div key={`${key(column.date)}-${column.label}`} className="border-l border-line px-3 py-3 text-sm">{column.label}</div>)}
@@ -615,7 +643,7 @@ function TimelineView({
                 className="planner-timeline relative border-l border-line"
                 data-planner-date={dateKey}
                 style={{ height: `${hourCount * 60}px` }}
-                onPointerLeave={() => setActiveTrack(null)}
+                onPointerLeave={(event) => { if (event.pointerType !== "touch") setActiveTrack(null); }}
               >
                 {column.teachers.flatMap((teacher, teacherIndex) => availability
                   .filter((rule) => rule.teacher_id === teacher.id && rule.weekday === column.date.getDay() && rule.effective_from <= dateKey && (!rule.effective_until || rule.effective_until >= dateKey))
@@ -630,9 +658,16 @@ function TimelineView({
                         className="availability-block"
                         data-active={activeTrack === trackKey}
                         data-collapsed={activeTeacherIndex >= 0 && activeTrack !== trackKey}
+                        aria-pressed={activeTrack === trackKey}
                         title={`${teacher.name} available ${clock(start)}–${clock(end)}`}
                         style={availabilityTrackStyle(start, end, teacherIndex, teacherCount, activeTeacherIndex)}
-                        onPointerEnter={() => setActiveTrack(trackKey)}
+                        onPointerEnter={(event) => { if (event.pointerType !== "touch") setActiveTrack(trackKey); }}
+                        onPointerUp={(event) => {
+                          if (event.pointerType === "touch") setActiveTrack((current) => current === trackKey ? null : trackKey);
+                        }}
+                        onClick={(event) => {
+                          if (event.detail === 0) setActiveTrack((current) => current === trackKey ? null : trackKey);
+                        }}
                         onFocus={() => setActiveTrack(trackKey)}
                         onBlur={() => setActiveTrack(null)}
                       >
@@ -660,16 +695,20 @@ function TimelineView({
                         data-dragging={dragging && rescheduleLesson?.id === lesson.id}
                         style={lessonTrackStyle(lesson.start.minutes, lesson.end.minutes, teacherIndex, teacherCount, activeTeacherIndex)}
                         aria-label={`${studentNames[lesson.student_id]} with ${teacher?.name}, ${clock(lesson.start.minutes)}, ${placeDetails[lesson.place_id]?.name ?? "place not set"}. ${rescheduleLesson?.id === lesson.id ? "Drag to propose another time." : "Open lesson details."}`}
-                        onPointerEnter={() => setActiveTrack(trackKey)}
+                        onPointerEnter={(event) => { if (event.pointerType !== "touch") setActiveTrack(trackKey); }}
                         onFocus={() => setActiveTrack(trackKey)}
                         onBlur={() => setActiveTrack(null)}
                         onPointerDown={beginPointerDrag}
                         onPointerMove={movePointerDrag}
                         onPointerUp={endPointerDrag}
                         onPointerCancel={cancelPointerDrag}
-                        onClick={() => {
+                        onClick={(event) => {
                           if (suppressClick.current) {
                             suppressClick.current = false;
+                            return;
+                          }
+                          if (event.target instanceof Element && event.target.closest("[data-reschedule-handle]") && canReschedule && lesson.can_reschedule) {
+                            onBeginReschedule(lesson);
                             return;
                           }
                           if (!rescheduleLesson) onSelectLesson(lesson.id);
@@ -677,6 +716,7 @@ function TimelineView({
                       >
                         <span
                           className="lesson-reschedule-icon"
+                          data-reschedule-handle
                           data-allowed={lesson.can_reschedule}
                           data-tooltip={lesson.can_reschedule ? "This lesson can be rescheduled." : "This lesson cannot be rescheduled."}
                           role="img"
@@ -793,6 +833,7 @@ function MonthView({
   lessons,
   studentNames,
   onSelectLesson,
+  onOpenDay,
 }: {
   anchor: Date;
   activeTeacherIds: Set<string>;
@@ -800,12 +841,13 @@ function MonthView({
   lessons: Array<Lesson & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> }>;
   studentNames: Record<string, string>;
   onSelectLesson: (lessonId: string) => void;
+  onOpenDay: (dateKey: string) => void;
 }) {
   const dates = monthDates(anchor);
   return (
     <div>
-      <div className="grid grid-cols-7 border-b border-line">
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => <div key={day} className="border-l border-line px-3 py-2 text-xs text-muted first:border-l-0">{day}</div>)}
+      <div className="month-weekdays grid grid-cols-7 border-b border-line">
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => <div key={day} className="border-l border-line px-3 py-2 text-xs text-muted first:border-l-0"><span className="month-weekday-long">{day}</span><span className="month-weekday-short" aria-hidden="true">{day[0]}</span></div>)}
       </div>
       <div className="grid grid-cols-7">
         {dates.map((date) => {
@@ -817,12 +859,12 @@ function MonthView({
           const occupancy = availableMinutes ? Math.min(100, Math.round((bookedMinutes / availableMinutes) * 100)) : 0;
           const inMonth = date.getMonth() === anchor.getMonth();
           return (
-            <div key={dateKey} className={`min-h-36 border-b border-l border-line p-3 first:border-l-0 ${inMonth ? "" : "opacity-30"}`}>
+            <div key={dateKey} className={`month-day min-h-36 border-b border-l border-line p-3 first:border-l-0 ${inMonth ? "" : "opacity-30"}`}>
               <div className="flex items-baseline justify-between">
-                <span className="text-sm">{date.getDate()}</span>
-                {availableMinutes ? <span className="text-[10px] text-muted">{Math.round(availableMinutes / 60)}h open</span> : null}
+                <button type="button" onClick={() => onOpenDay(dateKey)} className="month-date text-sm" aria-label={`Open ${dateKey} day view, ${dayLessons.length} lessons`}>{date.getDate()}</button>
+                {availableMinutes ? <span className="month-open text-[10px] text-muted">{Math.round(availableMinutes / 60)}h open</span> : null}
               </div>
-              <div className="mt-5 space-y-1">
+              <div className="month-lesson-list mt-5 space-y-1">
                 {dayLessons.slice(0, 2).map((lesson) => (
                   <button
                     key={lesson.id}
@@ -835,8 +877,9 @@ function MonthView({
                 ))}
                 {dayLessons.length > 2 ? <p className="text-[10px] text-brand">+{dayLessons.length - 2} more</p> : null}
               </div>
+              <button type="button" onClick={() => onOpenDay(dateKey)} className="month-touch-count mt-3 w-full text-left text-[10px] text-brand">{dayLessons.length} {dayLessons.length === 1 ? "lesson" : "lessons"}</button>
               {availableMinutes ? (
-                <div className="mt-5">
+                <div className="month-capacity mt-5">
                   <div className="occupancy-line" style={{ "--occupancy": `${occupancy}%` } as CSSProperties} />
                   <p className="mt-2 text-[10px] text-muted">{dayLessons.length} booked · {occupancy}%</p>
                 </div>

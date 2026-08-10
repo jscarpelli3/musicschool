@@ -2,6 +2,17 @@
 
 Use this file for short chronological notes about meaningful work.
 
+## 2026-08-09
+
+- Completed the Stripe Connect test foundation through hosted school onboarding, human-readable account synchronization, signed/idempotent webhook intake, payer card setup, saved-method reconciliation, and detach handling.
+- Completed monthly billing draft generation and locking with immutable price/policy attribution, visible blockers, refresh idempotency, manual adjustments, three/four/five-occurrence coverage, and fixed-monthly tuition coverage.
+- Added public transactional-SMS enrollment with canonical append-only evidence, durable approval-link delivery records, signed delivery callbacks, and owner/admin sending from locked family periods.
+- Added signed Twilio inbound and fallback routes. Advanced Opt-Out owns customer replies while STOP/START/UNSTOP/HELP events synchronize application consent state without retaining unrelated message content.
+- Configured the temporary-domain Twilio incoming, fallback, and delivery callback URLs and saved custom Advanced Opt-Out messaging. Toll-free verification remains in review.
+- Added a production-domain cutover runbook covering Vercel, Twilio, Stripe test/live destinations and secrets, Supabase, Google OAuth, DNS, public copy, monitoring, acceptance tests, and rollback order.
+- Audited touch-only phone/tablet planner behavior. Phone now initializes one-teacher day view, month cells become day-opening summaries, touch rails toggle explicitly, and lesson drag begins only from its reschedule handle so ordinary scrolling/tapping remains safe.
+- Made phone lesson/confirmation sheets viewport-sized with reachable sticky headers and added coarse-pointer target sizing without making hover a required interaction.
+
 ## 2026-08-05
 
 - Deployed teacher availability rules and scheduled lesson occurrences, then populated seven weeks of demo lessons for all 12 students.

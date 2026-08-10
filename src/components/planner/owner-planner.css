@@ -170,6 +170,10 @@
   font-size: 0.72rem;
   line-height: 1;
   opacity: 1;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  justify-content: flex-end;
+  touch-action: none;
 }
 
 .lesson-reschedule-icon[data-allowed="true"] {
@@ -361,6 +365,89 @@
   background: color-mix(in srgb, var(--ui-surface) 96%, transparent);
   box-shadow: -24px 0 80px rgb(0 0 0 / 0.28);
   animation: planner-sheet-in 240ms cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+.month-weekday-short,
+.month-touch-count {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .availability-block[data-collapsed="true"]::before {
+    position: absolute;
+    inset: 0 -10px;
+    content: "";
+  }
+
+  .lesson-reschedule-icon::after {
+    display: none;
+  }
+
+  .lesson-block:hover {
+    background: var(--ui-surface-raised);
+    color: inherit;
+  }
+}
+
+@media (max-width: 639px) {
+  .planner-scroll {
+    margin-inline: -1.25rem;
+    padding-inline: 1.25rem;
+    scroll-padding-inline: 1.25rem;
+  }
+
+  .month-day {
+    min-height: 5.5rem;
+    padding: 0.5rem 0.35rem;
+  }
+
+  .month-weekdays > div {
+    padding-inline: 0.35rem;
+    text-align: center;
+  }
+
+  .month-weekday-long,
+  .month-lesson-list,
+  .month-open,
+  .month-capacity p {
+    display: none;
+  }
+
+  .month-weekday-short,
+  .month-touch-count {
+    display: block;
+  }
+
+  .month-date {
+    min-width: 2rem;
+    min-height: 2rem;
+    text-align: left;
+  }
+
+  .month-capacity {
+    margin-top: 0.75rem;
+  }
+
+  .lesson-sheet {
+    border-left: 0;
+  }
+
+  .lesson-sheet > div:first-child,
+  .reschedule-confirm-panel > div:first-child {
+    position: sticky;
+    z-index: 2;
+    top: 0;
+    background: var(--ui-surface);
+  }
+
+  .reschedule-confirm-panel {
+    inset: 0;
+    width: 100%;
+    max-height: 100dvh;
+    padding: 1.25rem;
+    border: 0;
+    transform: none;
+  }
 }
 
 @keyframes planner-fade-in {

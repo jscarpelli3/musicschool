@@ -100,12 +100,14 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 - Immutable line-item snapshot and period locking.
 - Exit gate passed on 2026-08-08: versioned series and occurrence prices, structured policy dispositions, atomic/idempotent family draft refresh, manual-adjustment preservation, explicit blockers, per-session three/four/five-month totals, fixed-monthly single-charge behavior, responsive owner review, and hold-to-lock immutability were verified.
 
-### 8. Parent approval delivery — PENDING
+### 8. Parent approval delivery — IN PROGRESS
 
 - Bind approval requests to locked billing periods.
 - SMS delivery first through Twilio; email is deferred.
 - Portal links use Supabase phone OTP when a durable device session is absent; payment approval remains a separate expiring, single-purpose token.
 - Expiration, single use, idempotency, and consent evidence.
+- Implemented: locked-period approval snapshots, public SMS enrollment, owner send action, durable delivery/status records, signed Twilio callbacks, and inbound STOP/START/HELP synchronization.
+- Exit blocker: Twilio toll-free approval followed by a real-handset send/status/STOP/START acceptance sequence. Charge execution remains Step 9 and cannot be inferred from approval.
 
 ### 9. Owner charge queue — PENDING
 
@@ -129,4 +131,4 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 
 ## Current next action
 
-Activate Step 8, Parent approval delivery. Bind a single-purpose expiring approval request to an immutable locked period, then deliver its URL by SMS through Twilio. The first live school must publish an effective cancellation policy before current-month drafts containing cancellations or no-shows can be prepared.
+Finish Step 8 with a real-handset Twilio acceptance sequence after toll-free approval: recorded web consent, owner send, receipt/status reconciliation, STOP enforcement, START restoration, replay safety, and visible failure recovery. The first live school must publish an effective cancellation policy before current-month drafts containing cancellations or no-shows can be prepared. Do not begin charge execution until this exit gate passes.

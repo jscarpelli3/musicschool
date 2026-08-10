@@ -479,3 +479,24 @@ Completed on 2026-08-09 while toll-free verification remained in review.
 - Replaced the incorrect outbound `opt_in` string check with one database consent-state function using the ledger's real `opted_in`/`opted_out` values.
 - Added owner/admin payer-phone editing backed by the `people` table, live consent status, and a school-prefilled public consent-form link. No UI-only phone or consent state exists.
 - TypeScript and ESLint passed. Production build and deployment validation follow in this checkpoint.
+
+### Step 8 operations checkpoint — Messaging Service configuration
+
+Recorded on 2026-08-09.
+
+- The temporary deployed origin is configured for Messaging Service inbound POST, fallback POST, and outbound delivery status callbacks. The fallback route exists and intentionally returns valid empty TwiML after recording no business mutation.
+- Twilio Advanced Opt-Out is enabled. Custom opt-out, opt-in, and HELP keyword responses were saved; Twilio remains the sole sender of reserved-keyword confirmations so the application cannot double reply.
+- The live application endpoints and Vercel variables are present, but disappearance of the Twilio save button was not treated as end-to-end evidence. Provider logs confirmed the configured URLs; a real handset acceptance sequence remains required.
+- Toll-free verification remains in review. This blocks real delivery validation, not further local data-model or UI work.
+- The Messaging Service validity period was observed as 36,000 seconds. No final change was confirmed, so production readiness requires an explicit retry-window decision and dashboard recheck.
+- The final brand and custom domain are not selected. Every known URL, provider dashboard value, customer-facing message, secret-rotation check, acceptance test, and rollback step is inventoried in `docs/operations/domain-cutover.md`.
+
+### Step 8 responsive/touch audit
+
+Recorded on 2026-08-09.
+
+- Public login, SMS consent, privacy, terms, support, and approval-link routes were exercised at a true 375px emulated touch viewport; no document-level horizontal overflow was found. The approval surface was also reviewed at tablet width.
+- Owner planner inspection found four touch risks: lesson pointer-down could compete with page scrolling, compressed four-pixel teacher rails lacked a practical hit area, track expansion depended on hover, and phone day/month views retained desktop-density assumptions.
+- The planner now starts in one-teacher day view on phones, preserves compact scope when rescheduling, uses expanded invisible touch hit areas for rails, toggles tracks on tap/keyboard, and limits initial touch dragging to the explicit reschedule handle.
+- Phone month cells expose lesson counts and open a focused day; sheets use the viewport with reachable headers. Hover quick views remain optional enhancements only.
+- Week view remains a deliberate horizontal schedule on narrow screens and is recorded as a future agenda/paged-day refinement, not hidden as an accidental overflow.

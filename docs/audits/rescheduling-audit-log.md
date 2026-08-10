@@ -59,3 +59,14 @@ Recorded: 2026-08-08
 1. Rehearse and adapt this flow for a single assigned teacher, including authorization and teacher-specific calendar scope.
 2. Design the client/guardian self-service version against school policy, notice cutoff, monthly limits, and teacher constraints.
 3. Resume payment roadmap Step 8 and Twilio SMS delivery after those scheduling passes or when product priority returns to billing.
+
+### Touch-only responsive checkpoint
+
+Recorded: 2026-08-09
+
+- A touch-only audit found that ordinary lesson pointer-down could initiate drag detection and compete with scrolling. Outside an existing reschedule mode, touch drag now starts only on the visible reschedule icon; tapping the lesson body continues to open details.
+- Compressed four-pixel teacher rails retain their visual width but receive a larger invisible coarse-pointer hit area. Tap or keyboard activation explicitly selects/releases a rail; touch pointer-leave no longer erases the selected track.
+- Phone entry and tablet-to-phone resize initialize a single-teacher day view. Entering reschedule from details keeps the affected teacher selected and month-to-reschedule transitions use day view instead of restoring the wide desktop calendar.
+- Phone month view replaces unreadable lesson labels with day-opening counts and capacity marks. Day remains the detailed touch view; week remains intentionally horizontally scrollable until an agenda or paged-day treatment is implemented.
+- Phone lesson and confirmation sheets fill the viewport and keep their top controls reachable. Tooltips are suppressed as interaction requirements on coarse pointers; full lesson detail remains available by tap.
+- The reusable responsive capture script exercises true device metrics, touch emulation, coarse pointer, and no-hover media state for future public-route regression checks.

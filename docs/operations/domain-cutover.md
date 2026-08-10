@@ -34,6 +34,8 @@ Use an origin only: scheme plus hostname, with no path and no trailing slash. Pr
 
 ### Twilio Messaging Service
 
+Current temporary-domain configuration was manually confirmed on 2026-08-09: incoming, fallback, and status callbacks use the three routes below; Advanced Opt-Out is enabled and its custom opt-out, opt-in, and HELP copy is saved. Toll-free verification is still in review.
+
 Change all three integrations to the production origin and keep HTTP `POST`:
 
 - Incoming message URL: `https://<real-app-domain>/api/twilio/incoming`
@@ -58,6 +60,8 @@ Review the Messaging Service's **Opt-Out Management** copy even though these mes
 If Twilio does not permit editing an approved or pending toll-free submission, open a support request before retiring the temporary domain. Do not delete the temporary Vercel alias while Twilio may still review or visit those URLs.
 
 No Twilio SID, auth token, API key, Messaging Service SID, or phone number changes merely because the app domain changes.
+
+Before launch, recheck the Messaging Service validity period. It was observed at `36000` seconds (10 hours), but a final change was not confirmed; choose and record the intended retry window rather than inheriting the dashboard default accidentally.
 
 ### Stripe
 

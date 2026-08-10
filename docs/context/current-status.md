@@ -4,88 +4,51 @@ Production-domain URL, environment, provider-callback, verification, testing, an
 
 ## Phase
 
-Tenant foundation deployed; Google OAuth configuration next
+Owner scheduling and family billing foundation are live in test mode. Payment roadmap Step 8—payer consent and approval-link delivery by SMS—is active while Twilio toll-free verification remains in review.
 
 ## Active Focus
 
-Enable Google OAuth, exercise the owner onboarding flow, then design the people and customer-account domain.
+1. Complete the real-handset Twilio consent/send/status/STOP/START test after the toll-free sender is approved.
+2. Keep the owner planner and payment surfaces reliable on phone, touch-only tablet, keyboard, and desktop.
+3. Finish approval delivery and reconciliation before implementing any Stripe charge execution.
+
+## Provider State
+
+- **Supabase:** linked and migrated; tenant, people, scheduling, billing, policy, approval, SMS-consent, and provider-event foundations are deployed with RLS and server authorization.
+- **Vercel:** production deployments run at `https://musicschool-alpha.vercel.app`; the custom-domain cutover has not started.
+- **Google:** Google OAuth through Supabase is working locally and on the deployed app after correcting provider redirect configuration.
+- **Stripe:** Connect is configured in test mode. The first school completed hosted onboarding; test card setup, attachment, detachment, Connect synchronization, and signed webhook intake have been exercised.
+- **Twilio:** account, Messaging Service, scoped credentials, inbound/fallback/status URLs, and Advanced Opt-Out copy are configured. Toll-free verification remains in review, so live handset delivery is not yet an acceptance-tested capability.
+
+## Implemented Product Foundation
+
+- Lean Next.js App Router application with Supabase SSR, Google OAuth, school-scoped tenancy, role-aware authorization, and private avatar/logo storage.
+- Owner School Setup for information, lessons/classes, spaces, versioned policies/documents, and staff.
+- Demo school data with three teachers, 12 students, family/payer relationships, availability, recurring schedules, and varied lesson outcomes.
+- Owner day/week/month planner, split availability, lesson details, structured places, single-lesson rescheduling, immutable change history, collision protection, and explicit reschedule permissions.
+- Family billing accounts, immutable occurrence pricing, monthly draft generation, review blockers, three/four/five-week handling, fixed-monthly handling, and hold-to-lock review.
+- Stripe Connect account state, hosted payer card setup, saved-method reconciliation, signed/idempotent provider-event intake, and disconnect handling.
+- Expiring single-use approval requests bound to exact locked periods; public hold-to-approve flow remains separate from collection.
+- Public SMS enrollment, append-only consent evidence, durable delivery/status ledgers, owner approval-link send action, signed callbacks, inbound STOP/START/HELP synchronization, and provider-safe retry behavior.
+
+## Current Gates And Known Gaps
+
+- Toll-free approval and one complete real-phone Twilio test are still required. The configured Messaging Service validity period should be rechecked before launch; it was observed as 36,000 seconds and no final change was confirmed.
+- No production or test charge-execution workflow is active yet. Approval, saved-card authorization, and collection remain deliberately separate.
+- The first real school needs published cancellation/payment policies before months containing cancellations or no-shows can produce complete drafts.
+- Teacher-only and guardian/student rescheduling flows are deferred. Their authorization and policy limits must not be inferred from the owner flow.
+- Macro calendar closures and dated teacher exceptions are modeled but still need enforcement before client self-service rescheduling launches.
+- Phone day view defaults to one teacher and phone month view summarizes counts. Week view remains deliberately horizontally scrollable; an agenda or paged-day treatment is a future refinement.
+- A paid Supabase backup plan and tested Storage export/restore procedure remain production-readiness requirements.
 
 ## Next Steps
 
-1. Enable and configure Google OAuth in Google Cloud and Supabase Auth
-2. Test Google login, profile creation, atomic school creation, owner membership, and protected dashboard access
-3. Add people, customer accounts, students, guardians, teachers, and their RLS policies
-4. Add the school macro calendar and teacher availability
-5. Add staff and portal invitations
-6. Build the private-lesson scheduling vertical slice
-7. Add Stripe Connect family billing, then Stripe Billing software subscriptions
-
-## UI And Media Foundation
-
-- Semantic Tailwind design tokens are configured for colors, radii, spacing, typography, and shadows.
-- Profile avatar and school logo upload flows are deployed with private Storage policies.
-- The first school has a demo roster: the owner as a teacher, two additional teachers, 12 students, eight guardian payers, two self-paying students, and ten billing accounts.
-- School owners and administrators can define and archive private-lesson and group-class products with explicit duration, cadence, price, pricing model, and capacity.
-- The owner dashboard has day, week, and month planner views with teacher filtering, recurring availability windows, occupied lesson blocks, and monthly capacity indicators.
-- The demo school has ten weekly availability blocks and 84 lesson occurrences covering 12 students across seven weeks; one teacher demonstrates split Wednesday hours.
-- Lesson occurrences reference a flexible school-owned Places list; owners/admins manage it and teachers may add their own entries.
-- Billing planning now explicitly supports owner-initiated charges against authorized saved payment methods alongside automatic charges, invoices, and manual collection.
-- Billing approvals are planned as channel-independent, expiring records; single-use approval links come first, with unique-code SMS replies as a compatible later channel.
-- Responsive phone/tablet/desktop behavior is now a required design and code rule; the planner's dedicated touch/narrow-screen adaptation remains pending.
-8. Add transactional email; defer SMS until its consent and compliance workflow is designed
-
-## Risks
-
-- A complete selected-school context must replace the reference app's first-membership behavior
-- RLS policies must be tested to prevent cross-school access
-- Guardian/student access increases authorization complexity
-- Billing and scheduling rules are not yet specified
-- Service pricing and duration rules are not yet specified
-- Calendar, cancellation, and reminder rules are not yet specified
-
-## Completed Foundation
-
-- Next.js application and Supabase SSR clients
-- Linked Supabase project and generated database types
-- Profiles synchronized from Supabase Auth
-- Schools and active school memberships
-- Owner/admin/teacher/staff role vocabulary
-- Atomic `create_school` database function
-- Row-scoped membership and role helpers
-- RLS on profiles, schools, memberships, and audit records
-- Immutable-column grant restrictions
-- Google login UI, OAuth callback, sign-out, onboarding, school chooser, and protected dashboard routes
+1. When Twilio approval arrives, run the payer phone → web consent → owner send → handset receipt → delivery callback → STOP block → START restore acceptance sequence and append the evidence.
+2. Close Payment Step 8 only after retries, failure visibility, consent enforcement, and duplicate prevention pass that live sequence.
+3. Implement Stripe charge execution against an approved, locked, current request with idempotency, receipts, refunds/disputes, and reconciliation.
+4. Rehearse the planner/reschedule flow under a teacher-only account, then design policy-bound guardian/student access and magic-link delivery.
+5. Choose the final brand/domain, then execute [`../operations/domain-cutover.md`](../operations/domain-cutover.md) without removing the Vercel alias until the rollback window closes.
 
 ## Updated
 
-2026-08-05
-# Current implementation note — billing approval links
-
-- Added the database foundation for hashed, expiring, idempotent billing approval links and immutable approval events.
-- Added a responsive public cost-breakdown route at `/approve/[token]` and a reusable pointer/keyboard hold-to-confirm component.
-- Approval is deliberately separate from collection. Stripe Connect charging, Stripe receipt delivery, and SMS sending remain unconnected until provider accounts and credentials are configured.
-- The approval-link migration is deployed to the linked Supabase project and the public read RPC has been verified against the seeded preview request.
-
-# Current implementation note — School Setup
-
-- The dashboard now has one School Setup entry and no owner-facing school switcher.
-- Shared responsive setup navigation covers School Info, Lessons & Classes, Lesson Spaces, Policies & Documents, and Staff.
-- School Info owns logo, phone, and address; Staff presents the current teacher roster; the existing offering and place tools now live in the shared setup shell.
-- Added local migrations for versioned hybrid policies, structured cancellation/payment rules, private document metadata, offering policy selection, lesson series, occurrence exceptions, and actual delivery facts.
-- The School Setup and lesson-series migrations are deployed to the linked Supabase project. Local and remote migration histories match through `20260805102000`.
-- Removed school-logo and avatar upload forms from the owner dashboard. School logos now live only in School Info; personal avatar/contact editing lives at the global `/profile` settings route linked from the dashboard header.
-- Added a dashboard student roster with a persistent reorderable column layout, family/student/payer context, recurring lesson synopsis, and an occurrence-by-occurrence monthly outcome line. Its mobile layout remains a horizontally scrollable semantic table with touch-accessible column-order controls.
-- Changed owner-facing offering prices to per-lesson amounts with a non-binding four-week schedule estimate. Actual month totals follow the calendar's three, four, or five occurrences.
-- The demo roster has a complete current-month schedule plus deliberately varied serviced/rescheduled/timely-cancelled/late-cancelled/no-show states and varied payer relationships for display work.
-- Column arrangement is visually attached to the table headers: direct header drag-and-drop with insertion lines on pointer devices, plus in-header arrow controls for touch and keyboard use.
-- Student roster headers also carry independent sort controls. Student and payer columns cycle name/relationship modes; recurring day, local lesson time, teacher, and space are separate structured columns; monthly sorting cycles serviced, no-show, reschedule, cancellation, and total-occurrence counts.
-- Wide data tables keep readable column widths. The reusable horizontal scroll frame supports direct touch swiping, a permanently visible synchronized rail above long tables, paging arrows, native bottom scrolling, and line-based edge cues.
-- Student roster column order and active sort mode now load from and save to a per-user, per-school database preference rather than browser-local storage. Client saves are serialized to preserve interaction order.
-# Payment implementation tracking
-
-- `payment-roadmap.md` is the canonical flexible plan.
-- Step 1 passed its exit gate and was pushed in commit `c5fff81`.
-- Step 2, Payment data foundation, is active after confirming the ledger should precede provider configuration and user-facing payment controls.
-- Every step has a pre-implementation direction/risk review and a post-implementation persistence/security/test/operations gate.
-- Every audit result is retained in the append-only `docs/audits/payment-roadmap-audit-log.md`; Step 1 has been backfilled and Step 2's activation review is recorded.
-- The MusicSchool Stripe Billing/platform account has been started. Connect and test integration readiness have not yet been verified.
+2026-08-09

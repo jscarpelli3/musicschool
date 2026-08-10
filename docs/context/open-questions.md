@@ -16,8 +16,12 @@ Capture unresolved questions here so they do not get lost between sessions.
 ## Technical
 
 - Which Stripe Connect account configuration best preserves school merchant-of-record status, Stripe-collected fees, and Stripe-managed payment risk at launch?
-- Should SMS support be one-way notifications only, or should recipients be able to reply and interact?
 - How should configurable pricing work: per service type, per teacher, per room, or per customer?
+
+## Resolved Direction
+
+- SMS is transactional and two-way only where interaction is useful. Approval begins with a secure URL; Twilio handles reserved STOP/START/HELP replies, and inbound consent state is synchronized into the application. Free-form conversational texting is out of scope.
+- Schools do not need individual Twilio accounts for the first release. MusicSchool uses one platform Messaging Service while preserving school identity and consent evidence in each message/workflow.
 
 ## Deferred
 

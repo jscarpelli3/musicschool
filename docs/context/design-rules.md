@@ -43,7 +43,10 @@ The product should feel like a well-run independent music school: cultivated, hu
 - On phones, the focused date/time/teacher/place form is open by default so rescheduling never depends on manipulating the horizontally scrollable planner. It uses the same proposal and confirmation transaction as drag-and-drop.
 - Reschedule confirmation always compares old and new time, names teacher and place, and shows the immutable billing month before the hold action.
 - Phone: default to one selected teacher in day view. Week view should favor an agenda or horizontally paged days. Month view should show compact counts/capacity and open a day rather than squeeze full lesson details into seven narrow columns.
-- The current planner still uses desktop-first horizontal overflow for some narrow views. It must receive the phone/tablet adaptations above before being considered production-complete.
+- Phone entry initializes the planner in one-teacher day view, including after a tablet-to-phone resize. Starting a reschedule from lesson details retains that compact teacher scope instead of reopening the all-teacher canvas.
+- On touch, lesson dragging begins only from the reschedule icon so vertical scrolling and ordinary lesson taps remain predictable. The icon is a real touch target; tapping a compressed teacher rail expands it and tapping again releases it.
+- Phone month cells show lesson counts and capacity marks, and their date/count controls open the focused day. Full lesson labels remain available in day view rather than being squeezed into seven columns.
+- Phone lesson and confirmation sheets occupy the viewport and keep their headings/actions reachable. Week view remains deliberately horizontally scrollable pending a later agenda or paged-day treatment.
 
 ## Interaction Grammar
 
