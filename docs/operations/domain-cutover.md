@@ -72,6 +72,16 @@ After editing or replacing a destination:
 
 The Stripe API keys, connected-account IDs, customers, saved payment-method references, and Connect accounts do not change with the app domain.
 
+Review these Stripe dashboard surfaces even though they are not read from application environment variables:
+
+- Platform/Connect business profile website and support URL.
+- Public business information, branding, statement/support information, and customer-facing contact details.
+- Connect onboarding or account-management branding links.
+- Customer Portal configuration and portal return URLs if Stripe Billing/Portal has been enabled by cutover time.
+- Payment Links, Checkout configurations, or hosted pages created manually in Stripe that contain an after-completion redirect.
+- Apple Pay/payment-method domain registration if those methods are enabled later.
+- Test-mode and live-mode settings separately; Stripe does not automatically copy every setting between them.
+
 ### Supabase Authentication
 
 In Authentication → URL Configuration:
@@ -89,6 +99,16 @@ The Supabase project URL and JWKS URL remain unchanged:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `https://<supabase-project-ref>.supabase.co/auth/v1/.well-known/jwks.json`
 
+Also review:
+
+- Auth email templates for hardcoded temporary links or branding URLs.
+- Custom SMTP sender/domain configuration when transactional auth email is enabled.
+- CAPTCHA allowed domains if CAPTCHA is enabled later.
+- WebAuthn relying-party ID/origins if passkeys are enabled later.
+- Any Edge Function secrets, scheduled jobs, database webhooks, or Storage transform URLs added after this runbook was written.
+
+The checked-in `supabase/config.toml` currently contains local-development URLs. Those are local CLI settings, not the hosted project's production Site URL; do not replace them merely for a production-domain cutover.
+
 ### Google Cloud OAuth
 
 The Google OAuth **Authorized redirect URI** normally remains the Supabase callback, not the app callback:
@@ -105,6 +125,32 @@ Review the OAuth web client and consent/branding configuration for references to
 - Reverify the OAuth consent screen/domain if Google requests it.
 
 No Google client ID or client secret rotation is required solely for a domain change.
+
+If Gmail, Calendar, Drive, Maps, reCAPTCHA, or another Google API is added later, separately review that API's allowed origins, redirect URIs, referrer restrictions, webhook channels, and OAuth verification submission.
+
+### Domain Registrar And DNS
+
+- Confirm the domain is owned by the product/business account, not only a developer's personal account.
+- Record registrar access, nameservers, DNS host, renewal date, auto-renew status, recovery contacts, and MFA ownership.
+- Add only the DNS records Vercel requests; preserve unrelated mail and verification records.
+- Review CAA records so Vercel can issue the TLS certificate.
+- Review DNSSEC compatibility before changing nameservers; do not strand a stale DS record at the registrar.
+- After propagation, verify both the intended hostname and any apex/`www` redirect behavior.
+- Decide which hostname is canonical and ensure other public hostnames redirect to it rather than serving duplicate applications.
+
+### Browser Security, Metadata, And Installable App Settings
+
+These are not currently configured with a hardcoded production hostname, but must be reviewed whenever they are added:
+
+- Content Security Policy `connect-src`, `form-action`, `frame-ancestors`, and report endpoints.
+- CORS and CSRF trusted-origin lists.
+- Cookie `Domain` attributes. Current Supabase SSR cookies are host-scoped and do not hardcode the Vercel hostname.
+- `metadataBase`, canonical URLs, Open Graph/Twitter image URLs, sitemap, robots, and structured data.
+- Web app manifest `start_url`, `scope`, shortcuts, share targets, and app-association files.
+- iOS Universal Links and Android App Links (`apple-app-site-association` and `assetlinks.json`) if native apps are added.
+- Service worker caches containing absolute URLs.
+
+The current login, OAuth callback, sign-out, and Stripe return-route redirects are built from `window.location.origin` or the incoming request URL, so they follow the active hostname automatically. Provider allowlists still need the changes listed above.
 
 ### GitHub And Vercel Git Integration
 
@@ -129,6 +175,40 @@ Update any occurrences in:
 - Password-manager notes and provider account descriptions.
 - Monitoring checks, uptime probes, error-reporting allowed origins, and analytics configuration when those services are added.
 - Future transactional-email links, sending-domain records, and email-provider webhook URLs.
+
+### Email And Support Infrastructure
+
+When email is present, inventory all of the following in addition to changing links:
+
+- Sending domain/subdomain in Resend or the selected email provider.
+- SPF, DKIM, DMARC, MX, return-path, and provider-verification DNS records.
+- Email webhook URLs and their signing secrets.
+- Template links, logo/image URLs, unsubscribe/preferences URLs, and support addresses.
+- Supabase Auth custom SMTP and templates separately from application transactional email.
+- `admin@`, `billing@`, `privacy@`, and `support@` forwarding/mailboxes.
+
+### Monitoring, Analytics, And Operations
+
+Review every service present at cutover time:
+
+- Sentry allowed origins, release/deploy environment, tunnel URL, and CSP report target.
+- PostHog or other analytics authorized domains, reverse proxy, and recording exclusions.
+- Uptime checks, synthetic tests, status page, log drains, and alert links.
+- Vercel deployment protection, firewall rules, bot controls, redirects, and cron targets.
+- Password-manager entries, incident runbooks, customer-support macros, internal bookmarks, and QR codes.
+- API clients, Postman collections, CLI scripts, fixtures, seed data, and third-party Zapier/Make-style automations.
+
+### Items Confirmed Unchanged In The Current Code Audit
+
+As of 2026-08-09, a repository-wide scan confirmed:
+
+- No application source file hardcodes `musicschool-alpha.vercel.app`.
+- `APP_URL` is the only implemented environment variable whose value changes for a domain-only cutover.
+- Supabase URL/keys, Stripe keys, and Twilio credentials remain provider/project identifiers rather than app-domain values.
+- Google login constructs the app callback from the browser origin.
+- Auth callback, sign-out, and Stripe payment-return routes construct redirects from the incoming request origin.
+- No custom cookie domain, CSP, CORS allowlist, canonical metadata URL, sitemap, manifest, service worker, analytics, monitoring, or transactional-email provider is currently configured.
+- No GitHub Action or repository configuration currently references the temporary application hostname.
 
 ## Safe Cutover Order
 
