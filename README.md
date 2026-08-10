@@ -24,5 +24,6 @@ Operational tracking lives in:
 - [`docs/context/architecture-notes.md`](docs/context/architecture-notes.md)
 - [`docs/context/cost-estimate.md`](docs/context/cost-estimate.md)
 - [`docs/context/account-setup.md`](docs/context/account-setup.md)
+- [`docs/operations/domain-cutover.md`](docs/operations/domain-cutover.md)
 
 When new work starts, update `current-status.md` first. When a significant choice is made, record it in `decision-log.md`.

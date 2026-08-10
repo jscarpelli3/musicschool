@@ -1,5 +1,7 @@
 # Current Status
 
+Production-domain URL, environment, provider-callback, verification, testing, and rollback changes are tracked in [`../operations/domain-cutover.md`](../operations/domain-cutover.md).
+
 ## Phase
 
 Tenant foundation deployed; Google OAuth configuration next
