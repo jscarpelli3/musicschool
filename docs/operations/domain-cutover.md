@@ -36,6 +36,8 @@ Use an origin only: scheme plus hostname, with no path and no trailing slash. Pr
 
 Current temporary-domain configuration was manually confirmed on 2026-08-09: incoming, fallback, and status callbacks use the three routes below; Advanced Opt-Out is enabled and its custom opt-out, opt-in, and HELP copy is saved. Toll-free verification is still in review.
 
+Direction changed on 2026-08-11 after that generic submission was rejected. Treat the configuration below as the legacy/development Messaging Service until it is assigned exclusively to the first school. Production SMS uses one subaccount, number, Messaging Service, verification, and school-specific public consent URL per add-on school. At domain cutover, inventory and update every active school Messaging Service rather than only the original service.
+
 Change all three integrations to the production origin and keep HTTP `POST`:
 
 - Incoming message URL: `https://<real-app-domain>/api/twilio/incoming`

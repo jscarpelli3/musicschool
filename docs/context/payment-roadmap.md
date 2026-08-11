@@ -103,11 +103,24 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 ### 8. Parent approval delivery — IN PROGRESS
 
 - Bind approval requests to locked billing periods.
-- SMS delivery first through Twilio; email is deferred.
+- Transactional email is the included/default delivery channel. Start with Resend and one authenticated Common Time sending domain; preserve school identity through the visible sender name and school reply-to address.
 - Portal links use Supabase phone OTP when a durable device session is absent; payment approval remains a separate expiring, single-purpose token.
 - Expiration, single use, idempotency, and consent evidence.
-- Implemented: locked-period approval snapshots, public SMS enrollment, owner send action, durable delivery/status records, signed Twilio callbacks, and inbound STOP/START/HELP synchronization.
-- Exit blocker: Twilio toll-free approval followed by a real-handset send/status/STOP/START acceptance sequence. Charge execution remains Step 9 and cannot be inferred from approval.
+- Implemented foundation: locked-period approval snapshots plus the earlier shared-sender SMS delivery/status, webhook, and consent work. The channel-independent approval records remain valid.
+- Required email work: payer email management, durable delivery attempts, verified provider webhooks, bounce/complaint suppression, owner send/resend controls, and responsive templates for approval and schedule access.
+- Exit gate: complete an email approval-link send, provider reconciliation, replay, bounce/failure, supersession, and approval acceptance sequence. Charge execution remains Step 9 and cannot be inferred from delivery or approval.
+
+### 8A. Per-school SMS add-on — DEFERRED / OPTIONAL
+
+- SMS is a separately priced school add-on, not a prerequisite for billing, scheduling, or portal access.
+- Common Time operates one Twilio parent account with an approved ISV Primary Customer Profile. Each participating school receives its own Twilio subaccount, dedicated toll-free number, Messaging Service, end-business verification, fixed public consent program, and school-scoped STOP/START/HELP state.
+- Common Time pays the provider bill and may include a message allowance plus metered overage in the school add-on price. Schools do not need Twilio credentials or a Twilio billing relationship.
+- Collect exact school legal/DBA, registration, address, website, and representative details before provisioning or submitting verification. SMS remains disabled until that school's number is approved.
+- Consent is scoped to school + program version + recipient phone. It cannot authorize another school, and a generic form may not allow the recipient to type or substitute the sending school.
+- Initial SMS content is transactional only: approval links, schedule access, lesson reminders, reschedules/cancellations, school closures, and payment status. Marketing and arbitrary bulk messaging remain out of scope.
+- Store school Twilio connection and verification references, encrypted credential references, dedicated sender, consent events, and delivery records at the tenant boundary. Never place per-school secrets in ordinary database text.
+- Cancellation disables sends immediately, preserves compliance evidence, retains the number for a defined grace period, and releases/transfers it only through an explicit offboarding operation.
+- The currently rejected toll-free number may become the first school's dedicated test/production sender after a school-specific public consent page and corrected end-business resubmission. It may not be used as a shared multi-school sender.
 
 ### 9. Owner charge queue — PENDING
 
@@ -131,4 +144,4 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 
 ## Current next action
 
-Finish Step 8 with a real-handset Twilio acceptance sequence after toll-free approval: recorded web consent, owner send, receipt/status reconciliation, STOP enforcement, START restoration, replay safety, and visible failure recovery. The first live school must publish an effective cancellation policy before current-month drafts containing cancellations or no-shows can be prepared. Do not begin charge execution until this exit gate passes.
+Finish Step 8 through email first: configure the authenticated Common Time sending domain, implement durable Resend delivery and verified webhook reconciliation, then pass send/replay/bounce/supersession/approval acceptance tests. In parallel, correct the first school's business and consent materials only if it purchases the SMS add-on; Twilio approval is no longer a payment-roadmap blocker. The first live school must publish an effective cancellation policy before current-month drafts containing cancellations or no-shows can be prepared. Do not begin charge execution until the email delivery exit gate passes.

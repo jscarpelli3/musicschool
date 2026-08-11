@@ -73,17 +73,18 @@ Resend pricing currently starts at:
 
 For one 50-student school, free email limits are likely enough at first.
 
-### SMS
+### SMS add-on
 
-SMS is optional, but useful for reminders and schedule changes.
+SMS is optional and separately priced per school. Email remains the included communication channel.
 
 Twilio pricing currently starts at:
 
 - outbound U.S. SMS from about $0.0083 per message
+- one dedicated U.S. toll-free number at about $2.15 per school per month
 - additional carrier fees apply
-- A2P registration is also required for standard U.S. business texting
+- end-business verification and a separate compliant consent program are required for every participating school
 
-For a small school, SMS cost is likely low in absolute dollars, but it adds compliance setup and recurring per-message charges.
+For a small school, raw usage is low in absolute dollars, but the add-on price must also cover per-school provisioning, verification, support, compliance changes, and offboarding—not only Twilio usage.
 
 For monthly charge approvals, one outbound request plus one inbound reply currently has a base Twilio message cost of roughly 1.66 cents per family before carrier fees, number rental, registration, taxes, and any confirmation reply. At 50 families, the base two-message traffic is under $1 per monthly approval cycle. Compliance setup and reliable webhook handling are more material than message volume at this scale.
 
@@ -131,7 +132,7 @@ For development, plan around:
 
 - App infrastructure: $0 per month while non-commercial
 - Email: $0 per month to start
-- SMS: $0 until enabled
+- SMS: $0 until a school purchases the add-on; plan roughly $2.15 per active school number plus segments/carrier fees before the Common Time add-on margin
 - Stripe: transaction and Billing/Invoicing fees only
 
 ## Planning budget

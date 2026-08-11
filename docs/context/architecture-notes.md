@@ -11,7 +11,7 @@
 - UI: Tailwind CSS with a reusable dashboard shell
 - CMS: Defer Sanity for v1 unless clear content-editing requirements appear
 - Payments: Stripe Billing for software subscriptions and Stripe Connect Accounts v2 direct payments for school-to-family billing; connected schools use Stripe's full Dashboard and Stripe collects fees, requirements, and unrecoverable account losses
-- Messaging: Twilio SMS as the default starting option
+- Messaging: Resend transactional email as the included default; Twilio SMS as a separately priced, isolated per-school add-on
 
 This foundation intentionally follows the proven patterns in the local Agency Brain repository while using a fresh, smaller music-school domain model.
 
@@ -410,13 +410,11 @@ Rehearsals, group classes, and room rentals remain supported by the service mode
 
 ## Messaging
 
-- SMS is feasible.
-- Twilio is the safest default recommendation for transactional messaging, reminders, and future two-way communication.
-- Typical early use cases:
-- lesson reminders
-- reschedule notifications
-- payment reminders
-- phone verification or login-related verification later if needed
+- Transactional email is the required baseline for approval links, schedule access, lesson changes, and payment status. Common Time uses one authenticated sending domain, a school-specific visible sender name, and the school's reply-to address.
+- SMS is an optional paid add-on. Common Time is the Twilio ISV and provider-billing customer; each participating school is the registered end business.
+- Provision one Twilio subaccount, dedicated toll-free number, Messaging Service, verification, and fixed public consent program per school. Never share one sender or consent grant across schools.
+- SMS remains transactional only in the first release: lesson reminders, reschedule/cancellation or closure notices, billing approval links, payment status, and secure schedule access. Marketing and arbitrary bulk sending are outside the program.
+- A rejected or pending number can support local/provider-contract testing but cannot prove real US/Canada handset delivery. The first live handset acceptance test requires one approved school-specific sender.
 
 ## UI Direction
 

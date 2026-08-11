@@ -190,3 +190,10 @@ Use one entry per meaningful technical or product decision.
 - First user-facing payment work is the owner’s Stripe connection/onboarding status. Before enabling live charges, implement the local payment ledger, idempotency, immutable provider-event log, and verified Connect webhook.
 - The first-school monthly flow is owner-controlled: calculate and lock the exact period, send the MusicSchool approval URL, record approval, let the owner initiate the approved charge, and accept the final result only from Stripe webhooks.
 - Stripe sends the payment receipt after a successful connected-account charge. MusicSchool records and communicates workflow status but does not issue a competing receipt.
+
+# 2026-08-11 — Make email standard and SMS a per-school add-on
+
+- Status: accepted
+- Context: Twilio rejected the generic platform toll-free submission because it identified the software provider instead of one end business, linked reviewers to an authenticated application, and made consent appear reusable across school programs. Twilio requires a dedicated sender and end-business registration for each school.
+- Decision: Use Resend transactional email as the included approval and notification channel. Offer SMS separately: Common Time owns the Twilio parent/ISV relationship, and each add-on school gets an isolated subaccount, number, Messaging Service, verification, public consent program, and opt-out state.
+- Consequences: Twilio approval no longer blocks Payment Step 8 or charge execution. SMS gains per-school recurring costs and onboarding work that must be covered by add-on pricing. The existing shared-sender code is reusable plumbing but cannot be treated as a production multi-tenant configuration.

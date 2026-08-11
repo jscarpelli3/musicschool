@@ -500,3 +500,15 @@ Recorded on 2026-08-09.
 - The planner now starts in one-teacher day view on phones, preserves compact scope when rescheduling, uses expanded invisible touch hit areas for rails, toggles tracks on tap/keyboard, and limits initial touch dragging to the explicit reschedule handle.
 - Phone month cells expose lesson counts and open a focused day; sheets use the viewport with reachable headers. Hover quick views remain optional enhancements only.
 - Week view remains a deliberate horizontal schedule on narrow screens and is recorded as a future agenda/paged-day refinement, not hidden as an accidental overflow.
+
+### Step 8 direction correction — email baseline and school-specific SMS
+
+Recorded on 2026-08-11.
+
+- Twilio rejected the initial toll-free verification with codes 30474, 30491, and 30477: missing/incorrect end-business identity, a login-protected website, and messaging consent that appeared transferable across businesses or programs.
+- Audit conclusion: the earlier single MusicSchool Messaging Service assumption is not a valid production multi-tenant architecture. Twilio documents that an ISV should register the customer engaging with the recipient and that one toll-free sender cannot be shared across businesses.
+- Product direction changed to included transactional email through Resend. Step 8 now exits on durable email delivery, verified provider reconciliation, replay safety, bounce/complaint suppression, request supersession, and successful approval acceptance.
+- SMS moved to deferred Step 8A as a paid school add-on. Common Time will operate an approved parent ISV profile; each participating school requires an isolated subaccount, dedicated number, Messaging Service, end-business verification, immutable school-specific consent program, and scoped STOP/START/HELP state.
+- Existing approval snapshots remain channel-independent. Existing SMS delivery, signature, callback, and consent code remains useful infrastructure but must be refactored away from global environment-only sender configuration before production school onboarding.
+- Software tests do not require purchasing another number. A real US/Canada handset acceptance test does require one approved sender. The current rejected number can be assigned exclusively to the first school and resubmitted after its public compliance page and exact legal/business information are ready.
+- Charge execution remains blocked by the revised email Step 8 exit gate, not by Twilio verification.

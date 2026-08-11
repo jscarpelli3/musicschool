@@ -21,7 +21,7 @@ Capture unresolved questions here so they do not get lost between sessions.
 ## Resolved Direction
 
 - SMS is transactional and two-way only where interaction is useful. Approval begins with a secure URL; Twilio handles reserved STOP/START/HELP replies, and inbound consent state is synchronized into the application. Free-form conversational texting is out of scope.
-- Schools do not need individual Twilio accounts for the first release. MusicSchool uses one platform Messaging Service while preserving school identity and consent evidence in each message/workflow.
+- Email is the included delivery channel. SMS is a paid add-on operated by Common Time: schools do not need their own Twilio login, but each add-on school receives an isolated Twilio subaccount, dedicated number, end-business verification, and non-transferable school-specific consent program.
 
 ## Deferred
 
