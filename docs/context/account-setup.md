@@ -51,14 +51,14 @@
 
 ### 7. Domain And DNS
 
-- Register a product domain, or choose a subdomain of a domain already controlled by the business.
+- `commontime.studio` is registered. Use `www.commontime.studio` for marketing/public content and `app.commontime.studio` for the production application.
 - Ensure the business controls DNS so Vercel, transactional email, and Google OAuth records can be configured.
 - Prefer role-based ownership addresses such as `admin@`, `billing@`, and `support@` rather than tying services only to one person's mailbox.
 
 ### 8. Transactional Email
 
 - Create a Resend account when invitations, schedule changes, and reminders are implemented.
-- Verify a sending subdomain through DNS, for example `notifications.example.com`.
+- Verify `notifications.commontime.studio` through Resend DNS records.
 - Keep authentication email configuration and operational email templates deliberately separated.
 
 ## Defer Until The Feature Is Scheduled

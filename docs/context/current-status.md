@@ -15,7 +15,7 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 ## Provider State
 
 - **Supabase:** linked and migrated; tenant, people, scheduling, billing, policy, approval, SMS-consent, and provider-event foundations are deployed with RLS and server authorization.
-- **Vercel:** production deployments run at `https://musicschool-alpha.vercel.app`; the custom-domain cutover has not started.
+- **Vercel/domain:** `commontime.studio` is owned and has been connected to the Vercel application project. The intended final split is `www.commontime.studio` for marketing/public content, `app.commontime.studio` for the application and callbacks, and `notifications.commontime.studio` for Resend. The controlled provider cutover has not started.
 - **Google:** Google OAuth through Supabase is working locally and on the deployed app after correcting provider redirect configuration.
 - **Stripe:** Connect is configured in test mode. The first school completed hosted onboarding; test card setup, attachment, detachment, Connect synchronization, and signed webhook intake have been exercised.
 - **Transactional email:** Resend is the selected first provider but is not configured or implemented yet. Common Time will send from one authenticated platform domain while displaying the school identity and reply-to address.
@@ -50,7 +50,8 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 3. Implement Stripe charge execution against an approved, locked, current request with idempotency, receipts, refunds/disputes, and reconciliation.
 4. Rehearse the planner/reschedule flow under a teacher-only account, then design policy-bound guardian/student access and magic-link delivery.
 5. If the first school purchases SMS, create its fixed public consent/business page, assign the current toll-free number exclusively to it, and resubmit with exact end-business information.
-6. Choose the final brand/domain, then execute [`../operations/domain-cutover.md`](../operations/domain-cutover.md) without removing the Vercel alias until the rollback window closes.
+6. Add and validate `app.commontime.studio`, establish the Resend sending subdomain, then execute [`../operations/domain-cutover.md`](../operations/domain-cutover.md) without removing the Vercel alias until the rollback window closes.
+7. Build `www.commontime.studio` as the marketing/public-policy surface and redirect the apex there before public launch.
 
 ## Updated
 

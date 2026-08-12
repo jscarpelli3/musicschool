@@ -5,21 +5,26 @@ This is the canonical checklist for replacing the temporary Vercel address with 
 ## Values To Record
 
 - Temporary origin: `https://musicschool-alpha.vercel.app`
-- Production origin: `https://<real-app-domain>`
-- Production hostname: `<real-app-domain>`
+- Owned domain: `commontime.studio`
+- Canonical production application origin: `https://app.commontime.studio`
+- Public marketing origin: `https://www.commontime.studio`
+- Transactional email sending domain: `notifications.commontime.studio`
 - Cutover date:
 - Operator:
 - Rollback decision deadline:
 
-Use an origin only: scheme plus hostname, with no path and no trailing slash. Prefer a stable application subdomain such as `https://app.example.com` so the marketing website can change independently.
+Use an origin only: scheme plus hostname, with no path and no trailing slash. `APP_URL`, approval links, authentication returns, and provider callbacks use `https://app.commontime.studio`. Public marketing, pricing, and product content use `https://www.commontime.studio`. Resend authenticates `notifications.commontime.studio`; it is not a browsable application hostname.
+
+The apex `https://commontime.studio` may temporarily serve the application because it is already connected to Vercel. Before public launch, choose an explicit redirect—preferably apex → `https://www.commontime.studio`—and avoid serving duplicate canonical content from apex, `www`, and `app`.
 
 ## URL Inventory
 
 ### Vercel
 
-- Add the production hostname under Project → Settings → Domains.
+- Add `app.commontime.studio` under the application Project → Settings → Domains.
+- Keep the already connected `commontime.studio` hostname active during the transition. Add `www.commontime.studio` when the marketing deployment exists; it may be a separate Vercel project.
 - Add the Vercel DNS records at the domain registrar and wait for Vercel to show the domain as valid.
-- Change `APP_URL` in the **Production** environment from the temporary origin to the production origin.
+- Change `APP_URL` in the **Production** environment from the temporary origin to `https://app.commontime.studio`.
 - Review Preview and Development separately; do not overwrite them accidentally.
 - Redeploy after changing `APP_URL`. Environment changes do not alter an already-built deployment.
 - Keep `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, Stripe keys, and Twilio credentials unchanged unless a provider/project is also being replaced.
@@ -40,16 +45,18 @@ Direction changed on 2026-08-11 after that generic submission was rejected. Trea
 
 Change all three integrations to the production origin and keep HTTP `POST`:
 
-- Incoming message URL: `https://<real-app-domain>/api/twilio/incoming`
-- Fallback URL: `https://<real-app-domain>/api/twilio/incoming/fallback`
-- Delivery Status Callback: `https://<real-app-domain>/api/twilio/status`
+- Incoming message URL: `https://app.commontime.studio/api/twilio/incoming`
+- Fallback URL: `https://app.commontime.studio/api/twilio/incoming/fallback`
+- Delivery Status Callback: `https://app.commontime.studio/api/twilio/status`
 
 Also review and update every public URL supplied during toll-free verification:
 
-- Opt-in form: `https://<real-app-domain>/sms-consent`
-- Privacy policy: `https://<real-app-domain>/privacy`
-- Terms: `https://<real-app-domain>/terms`
-- Support/help: `https://<real-app-domain>/support`
+- School-specific opt-in form: `https://www.commontime.studio/sms/<school-public-slug>` once the marketing/public compliance site exists
+- Privacy policy: `https://www.commontime.studio/privacy`
+- Terms: `https://www.commontime.studio/terms`
+- Support/help: `https://www.commontime.studio/support`
+
+Until those public routes move to the marketing site, their `https://app.commontime.studio` equivalents may be used only if they remain publicly reachable without login. Never submit the authenticated application root as the end-business website.
 
 Review the Messaging Service's **Opt-Out Management** copy even though these messages are stored in Twilio rather than this repository. Replace both the temporary product name and temporary hostname with the final public brand/domain:
 
@@ -69,7 +76,7 @@ Before launch, recheck the Messaging Service validity period. It was observed at
 
 Review each webhook destination in both test and live mode. The current application endpoint is:
 
-- `https://<real-app-domain>/api/stripe/webhooks`
+- `https://app.commontime.studio/api/stripe/webhooks`
 
 There may be separate destinations for platform/Accounts events and connected-account payment events even when they share the same URL. Inventory each destination and its event scope before changing anything.
 
@@ -102,7 +109,7 @@ In Authentication → URL Configuration:
 
 - Change **Site URL** to the production origin.
 - Add the production callback to **Redirect URLs**:
-  - `https://<real-app-domain>/auth/callback`
+  - `https://app.commontime.studio/auth/callback`
 - Temporarily retain the local and Vercel callbacks during testing:
   - `http://localhost:3001/auth/callback`
   - `https://musicschool-alpha.vercel.app/auth/callback`
@@ -133,7 +140,8 @@ Do not replace that URI merely because the application domain changed.
 
 Review the OAuth web client and consent/branding configuration for references to the temporary domain:
 
-- Add `https://<real-app-domain>` to Authorized JavaScript origins if origins are configured.
+- Add `https://app.commontime.studio` to Authorized JavaScript origins if origins are configured.
+- Use `https://www.commontime.studio` for the OAuth consent screen home page/privacy/terms links once the marketing site exists.
 - Replace temporary home page, privacy policy, terms, and authorized-domain entries with the real domain where applicable.
 - Keep the Supabase redirect URI.
 - Reverify the OAuth consent screen/domain if Google requests it.

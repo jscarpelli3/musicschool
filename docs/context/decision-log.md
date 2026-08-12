@@ -197,3 +197,10 @@ Use one entry per meaningful technical or product decision.
 - Context: Twilio rejected the generic platform toll-free submission because it identified the software provider instead of one end business, linked reviewers to an authenticated application, and made consent appear reusable across school programs. Twilio requires a dedicated sender and end-business registration for each school.
 - Decision: Use Resend transactional email as the included approval and notification channel. Offer SMS separately: Common Time owns the Twilio parent/ISV relationship, and each add-on school gets an isolated subaccount, number, Messaging Service, verification, public consent program, and opt-out state.
 - Consequences: Twilio approval no longer blocks Payment Step 8 or charge execution. SMS gains per-school recurring costs and onboarding work that must be covered by add-on pricing. The existing shared-sender code is reusable plumbing but cannot be treated as a production multi-tenant configuration.
+
+# 2026-08-12 — Separate marketing, application, and email hostnames
+
+- Status: accepted
+- Context: Common Time now owns `commontime.studio`. A stable application origin avoids another provider-callback migration when a proper public website replaces the current signed-out experience.
+- Decision: Use `www.commontime.studio` for marketing and public product/legal content, `app.commontime.studio` for the authenticated application, approval links, and provider callbacks, and `notifications.commontime.studio` as the Resend sending domain. The apex will ultimately redirect to `www`.
+- Consequences: Vercel may temporarily serve the application on both the apex and `app`, but `APP_URL` and provider configuration will canonicalize on `app`. Public school SMS compliance pages should ultimately live on `www` and must remain accessible without authentication.

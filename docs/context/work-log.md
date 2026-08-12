@@ -9,6 +9,11 @@ Use this file for short chronological notes about meaningful work.
 - Reframed SMS as a separately priced school add-on. Common Time operates the parent ISV account, while each add-on school receives an isolated subaccount, dedicated number, verification, fixed public consent program, and school-scoped opt-out state.
 - Preserved the existing Twilio work as implementation foundation, not production authorization. The current rejected number may be reassigned exclusively to the first school for a corrected verification and real-handset test; it cannot serve multiple schools.
 
+## 2026-08-12
+
+- Recorded ownership of `commontime.studio` and the accepted hostname plan: `www` for marketing/public policies, `app` for application routes and provider callbacks, and `notifications` for Resend authentication.
+- Updated the production cutover runbook with the concrete hostnames and preserved the apex/temporary Vercel aliases as rollback paths until provider acceptance tests pass.
+
 ## 2026-08-09
 
 - Completed the Stripe Connect test foundation through hosted school onboarding, human-readable account synchronization, signed/idempotent webhook intake, payer card setup, saved-method reconciliation, and detach handling.
