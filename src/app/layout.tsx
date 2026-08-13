@@ -18,8 +18,8 @@ const display = Newsreader({
 });
 
 export const metadata: Metadata = {
-  title: "Music School",
-  description: "Scheduling and operations for modern music schools.",
+  title: "Common Time",
+  description: "Scheduling, billing, and communication for independent music schools.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

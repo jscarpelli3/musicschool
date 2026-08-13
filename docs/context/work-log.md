@@ -14,6 +14,11 @@ Use this file for short chronological notes about meaningful work.
 - Recorded ownership of `commontime.studio` and the accepted hostname plan: `www` for marketing/public policies, `app` for application routes and provider callbacks, and `notifications` for Resend authentication.
 - Updated the production cutover runbook with the concrete hostnames and preserved the apex/temporary Vercel aliases as rollback paths until provider acceptance tests pass.
 
+## 2026-08-13
+
+- Added hostname-aware deployment behavior: the apex permanently redirects to `www`, `www` renders a lightweight indexable Common Time Coming Soon page, and application/legacy hostnames emit an HTTP-level noindex/noarchive directive.
+- Added a one-page public sitemap and robots response for `www`; unknown public paths return to the Coming Soon root rather than exposing application routes on the marketing hostname.
+
 ## 2026-08-09
 
 - Completed the Stripe Connect test foundation through hosted school onboarding, human-readable account synchronization, signed/idempotent webhook intake, payer card setup, saved-method reconciliation, and detach handling.

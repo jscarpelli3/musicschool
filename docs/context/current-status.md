@@ -15,7 +15,7 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 ## Provider State
 
 - **Supabase:** linked and migrated; tenant, people, scheduling, billing, policy, approval, SMS-consent, and provider-event foundations are deployed with RLS and server authorization.
-- **Vercel/domain:** `commontime.studio` is owned and has been connected to the Vercel application project. The intended final split is `www.commontime.studio` for marketing/public content, `app.commontime.studio` for the application and callbacks, and `notifications.commontime.studio` for Resend. The controlled provider cutover has not started.
+- **Vercel/domain:** `commontime.studio` is owned and connected. Host-aware routing is implemented: apex redirects to `www`, `www` serves a public Coming Soon page, and `app`/legacy application hosts are explicitly noindex. `app.commontime.studio` and `www.commontime.studio` still need to be attached and validated in Vercel before the controlled provider cutover.
 - **Google:** Google OAuth through Supabase is working locally and on the deployed app after correcting provider redirect configuration.
 - **Stripe:** Connect is configured in test mode. The first school completed hosted onboarding; test card setup, attachment, detachment, Connect synchronization, and signed webhook intake have been exercised.
 - **Transactional email:** Resend is the selected first provider but is not configured or implemented yet. Common Time will send from one authenticated platform domain while displaying the school identity and reply-to address.

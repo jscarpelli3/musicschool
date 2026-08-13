@@ -15,18 +15,20 @@ This is the canonical checklist for replacing the temporary Vercel address with 
 
 Use an origin only: scheme plus hostname, with no path and no trailing slash. `APP_URL`, approval links, authentication returns, and provider callbacks use `https://app.commontime.studio`. Public marketing, pricing, and product content use `https://www.commontime.studio`. Resend authenticates `notifications.commontime.studio`; it is not a browsable application hostname.
 
-The apex `https://commontime.studio` may temporarily serve the application because it is already connected to Vercel. Before public launch, choose an explicit redirect—preferably apex → `https://www.commontime.studio`—and avoid serving duplicate canonical content from apex, `www`, and `app`.
+The application now enforces the hostname split: the apex permanently redirects to `https://www.commontime.studio`; `www` serves only the public Coming Soon page; all other hostnames receive an `X-Robots-Tag: noindex, nofollow, noarchive` response header. Both `www` and `app` must be attached to the Vercel project before relying on this behavior.
 
 ## URL Inventory
 
 ### Vercel
 
 - Add `app.commontime.studio` under the application Project → Settings → Domains.
-- Keep the already connected `commontime.studio` hostname active during the transition. Add `www.commontime.studio` when the marketing deployment exists; it may be a separate Vercel project.
+- Keep the already connected `commontime.studio` hostname active; it redirects to `www.commontime.studio`.
+- Add `www.commontime.studio` to the current application project for the hostname-aware Coming Soon page. A future dedicated marketing project can replace that assignment without changing the application origin.
 - Add the Vercel DNS records at the domain registrar and wait for Vercel to show the domain as valid.
 - Change `APP_URL` in the **Production** environment from the temporary origin to `https://app.commontime.studio`.
 - Review Preview and Development separately; do not overwrite them accidentally.
 - Redeploy after changing `APP_URL`. Environment changes do not alter an already-built deployment.
+- Before changing `APP_URL`, verify all three hostname responses: apex returns a permanent redirect to `www`, `www` renders Coming Soon, and `app` renders the login/application with an `X-Robots-Tag` noindex header.
 - Keep `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, Stripe keys, and Twilio credentials unchanged unless a provider/project is also being replaced.
 
 `APP_URL` currently controls:
