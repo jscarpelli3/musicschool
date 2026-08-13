@@ -617,6 +617,180 @@ export type Database = {
           },
         ]
       }
+      email_deliveries: {
+        Row: {
+          accepted_at: string | null
+          approval_request_id: string
+          attempt_number: number
+          billing_account_id: string
+          body_sha256: string
+          created_at: string
+          created_by: string | null
+          delivered_at: string | null
+          failed_at: string | null
+          from_address: string
+          id: string
+          idempotency_key: string
+          message_kind: string
+          provider: string
+          provider_email_id: string | null
+          provider_error_code: string | null
+          provider_error_message: string | null
+          recipient_email: string
+          school_id: string
+          sent_at: string | null
+          status: string
+          subject: string
+          template_version: number
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          approval_request_id: string
+          attempt_number?: number
+          billing_account_id: string
+          body_sha256: string
+          created_at?: string
+          created_by?: string | null
+          delivered_at?: string | null
+          failed_at?: string | null
+          from_address: string
+          id?: string
+          idempotency_key: string
+          message_kind: string
+          provider?: string
+          provider_email_id?: string | null
+          provider_error_code?: string | null
+          provider_error_message?: string | null
+          recipient_email: string
+          school_id: string
+          sent_at?: string | null
+          status?: string
+          subject: string
+          template_version?: number
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          approval_request_id?: string
+          attempt_number?: number
+          billing_account_id?: string
+          body_sha256?: string
+          created_at?: string
+          created_by?: string | null
+          delivered_at?: string | null
+          failed_at?: string | null
+          from_address?: string
+          id?: string
+          idempotency_key?: string
+          message_kind?: string
+          provider?: string
+          provider_email_id?: string | null
+          provider_error_code?: string | null
+          provider_error_message?: string | null
+          recipient_email?: string
+          school_id?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          template_version?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_deliveries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_deliveries_school_id_approval_request_id_fkey"
+            columns: ["school_id", "approval_request_id"]
+            isOneToOne: false
+            referencedRelation: "billing_approval_requests"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "email_deliveries_school_id_billing_account_id_fkey"
+            columns: ["school_id", "billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
+      email_delivery_events: {
+        Row: {
+          delivery_id: string | null
+          event_type: string
+          id: number
+          occurred_at: string
+          provider: string
+          provider_email_id: string
+          provider_event_id: string
+          received_at: string
+          recipient_email: string | null
+        }
+        Insert: {
+          delivery_id?: string | null
+          event_type: string
+          id?: never
+          occurred_at: string
+          provider?: string
+          provider_email_id: string
+          provider_event_id: string
+          received_at?: string
+          recipient_email?: string | null
+        }
+        Update: {
+          delivery_id?: string | null
+          event_type?: string
+          id?: never
+          occurred_at?: string
+          provider?: string
+          provider_email_id?: string
+          provider_event_id?: string
+          received_at?: string
+          recipient_email?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_delivery_events_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "email_deliveries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_suppressions: {
+        Row: {
+          created_at: string
+          provider: string
+          provider_event_id: string
+          reason: string
+          recipient_email: string
+          suppressed_at: string
+        }
+        Insert: {
+          created_at?: string
+          provider?: string
+          provider_event_id: string
+          reason: string
+          recipient_email: string
+          suppressed_at: string
+        }
+        Update: {
+          created_at?: string
+          provider?: string
+          provider_event_id?: string
+          reason?: string
+          recipient_email?: string
+          suppressed_at?: string
+        }
+        Relationships: []
+      }
       lesson_event_changes: {
         Row: {
           actor_profile_id: string | null
@@ -2625,6 +2799,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_email_delivery_status: {
+        Args: {
+          p_delivery_id: string
+          p_event_type: string
+          p_occurred_at: string
+        }
+        Returns: undefined
+      }
       apply_sms_delivery_status: {
         Args: {
           p_delivery_id: string
@@ -2647,6 +2829,10 @@ export type Database = {
           id: string
           processing_attempts: number
         }[]
+      }
+      complete_email_provider_submission: {
+        Args: { p_delivery_id: string; p_provider_email_id: string }
+        Returns: undefined
       }
       complete_payment_method_revocation: {
         Args: { p_payment_method_id: string }
@@ -2687,6 +2873,23 @@ export type Database = {
         }
         Returns: Json
       }
+      create_billing_approval_email_delivery: {
+        Args: {
+          p_billing_period_id: string
+          p_body_sha256: string
+          p_expires_at: string
+          p_from_address: string
+          p_recipient_email: string
+          p_school_id: string
+          p_subject: string
+          p_token_hash: string
+        }
+        Returns: {
+          approval_request_id: string
+          email_delivery_id: string
+          idempotency_key: string
+        }[]
+      }
       create_billing_approval_sms_delivery: {
         Args: {
           p_billing_period_id: string
@@ -2719,6 +2922,14 @@ export type Database = {
           p_teacher_id: string
         }
         Returns: string
+      }
+      fail_email_provider_submission: {
+        Args: {
+          p_delivery_id: string
+          p_provider_error_code?: string
+          p_provider_error_message?: string
+        }
+        Returns: undefined
       }
       fail_sms_provider_submission: {
         Args: {
@@ -2778,6 +2989,16 @@ export type Database = {
           p_full_name: string
           p_phone_e164: string
           p_school_name: string
+        }
+        Returns: string
+      }
+      record_resend_delivery_event: {
+        Args: {
+          p_event_type: string
+          p_occurred_at: string
+          p_provider_email_id: string
+          p_provider_event_id: string
+          p_recipient_email?: string
         }
         Returns: string
       }

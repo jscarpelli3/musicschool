@@ -209,6 +209,8 @@ When email is present, inventory all of the following in addition to changing li
 - Sending domain/subdomain in Resend or the selected email provider.
 - SPF, DKIM, DMARC, MX, return-path, and provider-verification DNS records.
 - Email webhook URLs and their signing secrets.
+- Current Resend webhook endpoint: `https://app.commontime.studio/api/resend/webhooks`.
+- `RESEND_API_KEY` is a send-only credential; `RESEND_WEBHOOK_SECRET` is the separate endpoint signing secret and must be rotated if the endpoint is recreated.
 - Template links, logo/image URLs, unsubscribe/preferences URLs, and support addresses.
 - Supabase Auth custom SMTP and templates separately from application transactional email.
 - `admin@`, `billing@`, `privacy@`, and `support@` forwarding/mailboxes.

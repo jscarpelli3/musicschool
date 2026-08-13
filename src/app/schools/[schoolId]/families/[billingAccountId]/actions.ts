@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { createFamilyCardSetup } from "@/lib/stripe/payment-methods";
 import { getStripe } from "@/lib/stripe/server";
 import { normalizeE164 } from "@/lib/phone";
+import { billingApprovalEmail } from "@/lib/resend/billing-approval-email";
+import { ResendRequestError, sendResendEmail } from "@/lib/resend/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getTwilioMessagingServiceSid, sendTwilioMessage, TwilioRequestError } from "@/lib/twilio/server";
@@ -13,11 +15,17 @@ import { getTwilioMessagingServiceSid, sendTwilioMessage, TwilioRequestError } f
 export type CardSetupLinkState = { url: string | null; error: string | null };
 export type BillingApprovalSmsState = { ok: boolean; message: string };
 export type BillingContactPhoneState = { ok: boolean; message: string };
+export type BillingApprovalEmailState = { ok: boolean; message: string };
+export type BillingContactEmailState = { ok: boolean; message: string };
 
 function appOrigin() {
   const value = process.env.APP_URL?.trim();
   if (!value) throw new Error("Missing required server environment variable: APP_URL");
   return new URL(value).origin;
+}
+
+function emailDisplayName(value: string) {
+  return value.replace(/[\r\n<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, 100) || "Common Time school";
 }
 
 export async function prepareFamilyBillingDraft(schoolId: string, billingAccountId: string, formData: FormData) {
@@ -160,6 +168,88 @@ export async function sendBillingApprovalSms(
   return { ok: true, message: `Approval request sent to the payer’s phone ending in ${phone.slice(-4)}.` };
 }
 
+export async function sendBillingApprovalEmail(
+  schoolId: string,
+  billingAccountId: string,
+  billingPeriodId: string,
+  _previous: BillingApprovalEmailState,
+): Promise<BillingApprovalEmailState> {
+  void _previous;
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId) redirect(`/login?next=${path}`);
+
+  const [{ data: membership }, { data: school }, { data: account }, { data: period }] = await Promise.all([
+    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
+    supabase.from("schools").select("name").eq("id", schoolId).maybeSingle(),
+    supabase.from("billing_accounts").select("billing_contact_person_id").eq("school_id", schoolId).eq("id", billingAccountId).maybeSingle(),
+    supabase.from("billing_periods").select("label, amount_due_cents, currency, status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", billingPeriodId).maybeSingle(),
+  ]);
+  if (!membership || !["owner", "admin"].includes(membership.role) || !school || !account || !period) {
+    return { ok: false, message: "You do not have permission to send this approval request." };
+  }
+  if (!["locked", "approval_pending"].includes(period.status) || period.amount_due_cents <= 0) {
+    return { ok: false, message: "Lock a positive billing amount before requesting approval." };
+  }
+  const { data: contact } = await supabase.from("people").select("first_name, last_name, preferred_name, email")
+    .eq("school_id", schoolId).eq("id", account.billing_contact_person_id).maybeSingle();
+  const email = contact?.email?.trim().toLowerCase() ?? "";
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 320) {
+    return { ok: false, message: "Add a valid email address to the primary payer first." };
+  }
+
+  const rawToken = randomBytes(32).toString("base64url");
+  const approvalUrl = `${appOrigin()}/approve/${rawToken}`;
+  const amount = new Intl.NumberFormat("en-US", { style: "currency", currency: period.currency }).format(period.amount_due_cents / 100);
+  const payerName = `${contact?.preferred_name || contact?.first_name || "there"}${contact?.last_name ? ` ${contact.last_name}` : ""}`;
+  const message = billingApprovalEmail({ schoolName: school.name, payerName, periodLabel: period.label, amount, approvalUrl });
+  const from = `${emailDisplayName(school.name)} via Common Time <notifications@notifications.commontime.studio>`;
+  const hash = (value: string) => createHash("sha256").update(value).digest("hex");
+  const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+  const { data: prepared, error: prepareError } = await supabase.rpc("create_billing_approval_email_delivery", {
+    p_body_sha256: hash(`${message.text}\n${message.html}`),
+    p_billing_period_id: billingPeriodId,
+    p_expires_at: expiresAt,
+    p_from_address: from,
+    p_recipient_email: email,
+    p_school_id: schoolId,
+    p_subject: message.subject,
+    p_token_hash: hash(rawToken),
+  }).maybeSingle();
+  if (prepareError || !prepared) {
+    const suppressed = prepareError?.message.includes("recipient_suppressed");
+    return { ok: false, message: suppressed
+      ? "Email is paused for this payer after a permanent delivery problem or complaint. Confirm a different address before sending."
+      : "The approval request could not be prepared. No email was sent." };
+  }
+
+  const admin = createAdminClient();
+  try {
+    const sent = await sendResendEmail({ from, to: email, subject: message.subject, html: message.html, text: message.text, idempotencyKey: prepared.idempotency_key });
+    const { error: completionError } = await admin.rpc("complete_email_provider_submission", {
+      p_delivery_id: prepared.email_delivery_id,
+      p_provider_email_id: sent.id,
+    });
+    if (completionError) {
+      console.error("Resend accepted an email but local reconciliation failed", { deliveryId: prepared.email_delivery_id, code: completionError.code });
+      return { ok: false, message: "Resend accepted the email, but its local status needs reconciliation. Do not resend yet." };
+    }
+  } catch (error) {
+    const providerError = error instanceof ResendRequestError ? error : null;
+    await admin.rpc("fail_email_provider_submission", {
+      p_delivery_id: prepared.email_delivery_id,
+      p_provider_error_code: providerError?.code ?? (providerError?.status ? String(providerError.status) : undefined),
+      p_provider_error_message: providerError?.message ?? "Provider request failed.",
+    });
+    return { ok: false, message: "Resend did not accept the email. The failed attempt was recorded and can be retried." };
+  }
+
+  revalidatePath(path);
+  return { ok: true, message: `Approval request sent to ${email}.` };
+}
+
 export async function updateBillingContactPhone(
   schoolId: string,
   billingAccountId: string,
@@ -188,6 +278,31 @@ export async function updateBillingContactPhone(
   if (error) return { ok: false, message: "The phone number could not be saved. Nothing changed." };
   revalidatePath(path);
   return { ok: true, message: `Mobile number saved ending in ${phone.slice(-4)}.` };
+}
+
+export async function updateBillingContactEmail(
+  schoolId: string,
+  billingAccountId: string,
+  _previous: BillingContactEmailState,
+  formData: FormData,
+): Promise<BillingContactEmailState> {
+  void _previous;
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 320) return { ok: false, message: "Enter a valid payer email address." };
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId) redirect(`/login?next=${path}`);
+  const [{ data: membership }, { data: account }] = await Promise.all([
+    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
+    supabase.from("billing_accounts").select("billing_contact_person_id").eq("school_id", schoolId).eq("id", billingAccountId).maybeSingle(),
+  ]);
+  if (!membership || !["owner", "admin"].includes(membership.role) || !account) return { ok: false, message: "You do not have permission to update this payer." };
+  const { error } = await supabase.from("people").update({ email }).eq("school_id", schoolId).eq("id", account.billing_contact_person_id);
+  if (error) return { ok: false, message: "The email address could not be saved. Nothing changed." };
+  revalidatePath(path);
+  return { ok: true, message: `Payer email saved as ${email}.` };
 }
 
 export async function generateFamilyCardSetupLink(

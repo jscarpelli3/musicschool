@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 import { CardSetupControls } from "./card-setup-controls";
 import { BillingDraftForm } from "./billing-draft-form";
 import { BillingApprovalSms } from "./billing-approval-sms";
+import { BillingApprovalEmail } from "./billing-approval-email";
+import { BillingContactEmail } from "./billing-contact-email";
 import { BillingContactPhone } from "./billing-contact-phone";
 import { BillingPeriodLock } from "./billing-period-lock";
 import { PaymentMethodRemove } from "./payment-method-remove";
@@ -48,10 +50,11 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     supabase.from("school_payment_connections").select("status, charges_enabled").eq("school_id", schoolId).eq("provider", "stripe").maybeSingle(),
     supabase.from("billing_approval_requests").select("id, billing_period_id").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
     supabase.from("sms_deliveries").select("approval_request_id, status, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
+    supabase.from("email_deliveries").select("approval_request_id, status, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
   ]);
   const failedRelated = related.find((result) => result.error);
   if (failedRelated?.error) throw new Error(`Family detail could not load: ${failedRelated.error.message}`);
-  const [peopleResult, studentsResult, periodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, smsDeliveriesResult] = related;
+  const [peopleResult, studentsResult, periodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, smsDeliveriesResult, emailDeliveriesResult] = related;
   const periodIds = (periodsResult.data ?? []).map((period) => period.id);
   const { data: lineItems, error: lineItemsError } = periodIds.length
     ? await supabase.from("billing_line_items")
@@ -97,13 +100,18 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     const billingPeriodId = periodByApprovalRequest.get(delivery.approval_request_id);
     if (billingPeriodId && !latestSmsStatusByPeriod.has(billingPeriodId)) latestSmsStatusByPeriod.set(billingPeriodId, delivery.status);
   }
+  const latestEmailStatusByPeriod = new Map<string, string>();
+  for (const delivery of emailDeliveriesResult.data ?? []) {
+    const billingPeriodId = periodByApprovalRequest.get(delivery.approval_request_id);
+    if (billingPeriodId && !latestEmailStatusByPeriod.has(billingPeriodId)) latestEmailStatusByPeriod.set(billingPeriodId, delivery.status);
+  }
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
       <DetailHeader backHref={`/schools/${schoolId}`} backLabel="Dashboard" eyebrow={`${school.name} · Family account`} title={account.name} meta={`${account.status} billing relationship · ${students.length} ${students.length === 1 ? "student" : "students"}`} />
 
       <DetailSection title="Primary payer" description="The person currently responsible for this billing account.">
-        {contact ? <div><p className="font-display text-3xl">{name(contact)}</p><p className="mt-3 text-sm text-muted">{contact.email || "No email recorded"}</p><p className="mt-3 text-xs uppercase tracking-[0.14em] text-brand">{contact.status}</p>{canManagePayments ? <BillingContactPhone schoolId={schoolId} schoolName={school.name} billingAccountId={billingAccountId} phone={contact.phone ?? ""} consentState={smsConsentState ?? "not_enrolled"} /> : <p className="mt-3 text-sm text-muted">{contact.phone || "No mobile number recorded"}</p>}</div> : <EmptyDetail>The billing contact record is unavailable.</EmptyDetail>}
+        {contact ? <div><p className="font-display text-3xl">{name(contact)}</p><p className="mt-3 text-xs uppercase tracking-[0.14em] text-brand">{contact.status}</p>{canManagePayments ? <><BillingContactEmail schoolId={schoolId} billingAccountId={billingAccountId} email={contact.email ?? ""} /><BillingContactPhone schoolId={schoolId} schoolName={school.name} billingAccountId={billingAccountId} phone={contact.phone ?? ""} consentState={smsConsentState ?? "not_enrolled"} /></> : <><p className="mt-3 text-sm text-muted">{contact.email || "No email recorded"}</p><p className="mt-3 text-sm text-muted">{contact.phone || "No mobile number recorded"}</p></>}</div> : <EmptyDetail>The billing contact record is unavailable.</EmptyDetail>}
       </DetailSection>
 
       <DetailSection title="Students" description="Students whose charges roll into this family billing account.">
@@ -134,7 +142,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
                   })}
                   {!periodLines.length ? <EmptyDetail>No line items are recorded.</EmptyDetail> : null}
                   {canManagePayments && ["draft", "review"].includes(billingPeriod.status) && billingPeriod.amount_due_cents > 0 ? <div className="border-t border-line pt-5"><p className="max-w-lg text-xs leading-5 text-muted">Lock only after reviewing every line. Locking freezes this exact amount for the separate payer-approval step.</p><BillingPeriodLock schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /></div> : null}
-                  {canManagePayments && ["locked", "approval_pending"].includes(billingPeriod.status) && billingPeriod.amount_due_cents > 0 ? <BillingApprovalSms schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} latestStatus={latestSmsStatusByPeriod.get(billingPeriod.id)} /> : null}
+                  {canManagePayments && ["locked", "approval_pending"].includes(billingPeriod.status) && billingPeriod.amount_due_cents > 0 ? <><BillingApprovalEmail schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} latestStatus={latestEmailStatusByPeriod.get(billingPeriod.id)} /><div className="mt-5 border-t border-line pt-5"><p className="text-xs uppercase tracking-[0.14em] text-muted">Optional SMS add-on</p><BillingApprovalSms schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} latestStatus={latestSmsStatusByPeriod.get(billingPeriod.id)} /></div></> : null}
                 </div>
               </details>
             );

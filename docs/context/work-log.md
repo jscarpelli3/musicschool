@@ -20,6 +20,9 @@ Use this file for short chronological notes about meaningful work.
 - Added a one-page public sitemap and robots response for `www`; unknown public paths return to the Coming Soon root rather than exposing application routes on the marketing hostname.
 - Completed the custom application-origin checkpoint: Supabase/Google login, production `APP_URL`, all Stripe test webhook destinations, and the legacy Twilio callbacks now use `app.commontime.studio` and passed provider/durable-intake checks.
 - Confirmed the legacy Twilio Messaging Service validity period is 3,600 seconds and verified signed inbound/fallback health checks without recording a consent event.
+- Deployed the Resend email-delivery foundation: durable pre-provider attempts, append-only replay-safe events, global permanent-bounce/complaint suppression, provider-response reconciliation, and service-role-only mutation functions.
+- Added editable payer email, email-first approval controls, responsive HTML/plain-text approval mail, direct send-only Resend API integration with stable idempotency keys, and a raw-body Svix-verified webhook endpoint.
+- Regenerated linked database types and passed TypeScript, ESLint, and linked Supabase database lint. Resend webhook registration, its Vercel signing secret, deployment, and end-to-end provider rehearsals remain the active Step 8 gate.
 
 ## 2026-08-09
 

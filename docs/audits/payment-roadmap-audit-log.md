@@ -524,3 +524,16 @@ Recorded on 2026-08-13.
 - The first platform ping was not immediately visible, so it was not counted as success; an isolated repeat produced durable intake. This preserved the rule that provider request acceptance alone is not webhook evidence.
 - The legacy Twilio Messaging Service's incoming, fallback, and delivery callback URLs were updated through the API. Signed, non-keyword inbound and fallback probes returned valid empty TwiML without consent changes. Its validity period is confirmed at 3,600 seconds.
 - Custom-domain cutover no longer blocks Step 8. Resend sending-domain authentication and the durable email delivery/reconciliation implementation are next.
+
+### Step 8 email checkpoint — durable Resend foundation
+
+Recorded on 2026-08-13.
+
+- Preflight preserved the channel-independent approval snapshot as the payment-consent system of record. Email is a parallel delivery method; it does not redefine amount calculation, approval, collection, or receipt truth.
+- Confirmed the configured Resend credential is send-only. The application calls the email API directly and adds only the maintained `svix` verifier dependency for signed raw-body webhook validation.
+- Deployed durable email attempts before provider calls, stable provider idempotency keys, provider-response race reconciliation, append-only events keyed by `svix-id`, and timestamp-aware out-of-order handling.
+- Permanent bounces, complaints, and provider suppression events create a global normalized-address suppression. A later owner send cannot silently bypass that safety state.
+- Added owner/admin payer-email persistence and email-first approval controls. The message contains the exact period and amount plus a single-use 72-hour review link; approval remains explicitly separate from charging.
+- The template has HTML and plain-text forms, escapes all school/payer content, and identifies the school through the visible sender name while using the authenticated Common Time subdomain.
+- Migration `20260813120000` deployed successfully. Linked Supabase database lint reports no errors; generated types, TypeScript, and ESLint pass.
+- Exit gate remains open: register the production Resend webhook, deploy its signing secret, exercise send/delivery/replay/out-of-order/bounce/suppression/supersession/approval acceptance, and confirm the owner sees reconciled truth.

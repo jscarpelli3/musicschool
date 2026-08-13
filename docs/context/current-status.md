@@ -18,7 +18,7 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 - **Vercel/domain:** `commontime.studio`, `www.commontime.studio`, and `app.commontime.studio` are valid on Vercel. Apex redirects to the indexable `www` Coming Soon page; `app` and the legacy application hostname are explicitly noindex. Production `APP_URL`, Supabase Site URL, Google/Supabase callback behavior, Stripe test destinations, and the legacy Twilio callbacks have passed the custom-domain cutover.
 - **Google:** Google OAuth through Supabase is working locally and on the deployed app after correcting provider redirect configuration.
 - **Stripe:** Connect is configured in test mode. The first school completed hosted onboarding; test card setup, attachment, detachment, Connect synchronization, and signed webhook intake have been exercised.
-- **Transactional email:** Resend is the selected first provider but is not configured or implemented yet. Common Time will send from one authenticated platform domain while displaying the school identity and reply-to address.
+- **Transactional email:** `notifications.commontime.studio` is authenticated in Resend and a send-only API key is configured locally and in Vercel. The durable email-attempt/event/suppression schema, owner payer-email control, approval send action, responsive HTML/text template, idempotent Resend adapter, and signed webhook route are implemented. Production webhook registration and the full send/replay/bounce/supersession acceptance sequence remain open.
 - **Twilio:** the initial generic MusicSchool toll-free submission was rejected because it did not identify one end business, pointed reviewers into a login-protected app, and presented consent as reusable across schools/programs. The legacy service callbacks now use the custom app domain and its validity period is confirmed at 3,600 seconds, but the shared-sender implementation remains test foundation only; production SMS requires one isolated subaccount, number, verification, and consent program per add-on school.
 
 ## Implemented Product Foundation
@@ -45,14 +45,13 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 
 ## Next Steps
 
-1. Create the Resend account/domain configuration and implement payer email plus durable email-delivery reconciliation.
-2. Close Payment Step 8 only after email retries, provider failure visibility, bounce/complaint suppression, supersession, and duplicate prevention pass an end-to-end approval sequence.
+1. Register the Resend webhook at `https://app.commontime.studio/api/resend/webhooks`, add its signing secret to Vercel/local environments, and redeploy.
+2. Close Payment Step 8 only after email send, replay, out-of-order event, provider failure, bounce/complaint suppression, supersession, and approval acceptance pass end to end.
 3. Implement Stripe charge execution against an approved, locked, current request with idempotency, receipts, refunds/disputes, and reconciliation.
 4. Rehearse the planner/reschedule flow under a teacher-only account, then design policy-bound guardian/student access and magic-link delivery.
 5. If the first school purchases SMS, create its fixed public consent/business page, assign the current toll-free number exclusively to it, and resubmit with exact end-business information.
-6. Establish `notifications.commontime.studio` in Resend and implement the email delivery ledger/webhook flow.
-7. Expand the `www.commontime.studio` Coming Soon page into the marketing/public-policy surface when launch content is ready.
+6. Expand the `www.commontime.studio` Coming Soon page into the marketing/public-policy surface when launch content is ready.
 
 ## Updated
 
-2026-08-09
+2026-08-13
