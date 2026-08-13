@@ -13,6 +13,8 @@ This is the canonical checklist for replacing the temporary Vercel address with 
 - Operator:
 - Rollback decision deadline:
 
+Application-origin checkpoint passed on 2026-08-13. Keep the temporary Vercel hostname and old Supabase redirect entry through the rollback window; remaining future work is Resend domain authentication and any later live-mode/provider additions.
+
 Use an origin only: scheme plus hostname, with no path and no trailing slash. `APP_URL`, approval links, authentication returns, and provider callbacks use `https://app.commontime.studio`. Public marketing, pricing, and product content use `https://www.commontime.studio`. Resend authenticates `notifications.commontime.studio`; it is not a browsable application hostname.
 
 The application now enforces the hostname split: the apex permanently redirects to `https://www.commontime.studio`; `www` serves only the public Coming Soon page; all other hostnames receive an `X-Robots-Tag: noindex, nofollow, noarchive` response header. Both `www` and `app` must be attached to the Vercel project before relying on this behavior.
@@ -72,7 +74,7 @@ If Twilio does not permit editing an approved or pending toll-free submission, o
 
 No Twilio SID, auth token, API key, Messaging Service SID, or phone number changes merely because the app domain changes.
 
-Before launch, recheck the Messaging Service validity period. It was observed at `36000` seconds (10 hours), but a final change was not confirmed; choose and record the intended retry window rather than inheriting the dashboard default accidentally.
+The legacy Messaging Service validity period was read back through Twilio's API on 2026-08-13 and is intentionally configured at `3600` seconds (one hour).
 
 ### Stripe
 
@@ -233,6 +235,15 @@ As of 2026-08-09, a repository-wide scan confirmed:
 - Auth callback, sign-out, and Stripe payment-return routes construct redirects from the incoming request origin.
 - No custom cookie domain, CSP, CORS allowlist, canonical metadata URL, sitemap, manifest, service worker, analytics, monitoring, or transactional-email provider is currently configured.
 - No GitHub Action or repository configuration currently references the temporary application hostname.
+
+### 2026-08-13 Cutover Evidence
+
+- `app.commontime.studio/login` returns HTTPS 200 and `X-Robots-Tag: noindex, nofollow, noarchive`.
+- `www.commontime.studio` returns the public Coming Soon page; the apex returns a permanent redirect to `www`.
+- Google authentication through Supabase returns successfully to the custom application origin.
+- A signed Twilio status probe built for `app.commontime.studio` passed signature validation and reached the expected non-persisting account check. The same probe signed for the legacy Vercel URL was rejected as an invalid signature, proving the deployed `APP_URL` changed.
+- All three Stripe test event destinations point to `https://app.commontime.studio/api/stripe/webhooks` with their original scopes and event selections. Platform and connected-account thin destinations produced durable ignored ping events without errors. The connected-payments snapshot secret accepted a signed synthetic test event at the new endpoint.
+- The legacy Twilio Messaging Service was updated through the provider API to the new incoming, fallback, and delivery-status URLs. Signed non-keyword probes returned HTTP 200 with empty TwiML from both inbound routes and created no consent mutation.
 
 ## Safe Cutover Order
 

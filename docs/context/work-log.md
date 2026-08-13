@@ -18,6 +18,8 @@ Use this file for short chronological notes about meaningful work.
 
 - Added hostname-aware deployment behavior: the apex permanently redirects to `www`, `www` renders a lightweight indexable Common Time Coming Soon page, and application/legacy hostnames emit an HTTP-level noindex/noarchive directive.
 - Added a one-page public sitemap and robots response for `www`; unknown public paths return to the Coming Soon root rather than exposing application routes on the marketing hostname.
+- Completed the custom application-origin checkpoint: Supabase/Google login, production `APP_URL`, all Stripe test webhook destinations, and the legacy Twilio callbacks now use `app.commontime.studio` and passed provider/durable-intake checks.
+- Confirmed the legacy Twilio Messaging Service validity period is 3,600 seconds and verified signed inbound/fallback health checks without recording a consent event.
 
 ## 2026-08-09
 

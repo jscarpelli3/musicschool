@@ -512,3 +512,15 @@ Recorded on 2026-08-11.
 - Existing approval snapshots remain channel-independent. Existing SMS delivery, signature, callback, and consent code remains useful infrastructure but must be refactored away from global environment-only sender configuration before production school onboarding.
 - Software tests do not require purchasing another number. A real US/Canada handset acceptance test does require one approved sender. The current rejected number can be assigned exclusively to the first school and resubmitted after its public compliance page and exact legal/business information are ready.
 - Charge execution remains blocked by the revised email Step 8 exit gate, not by Twilio verification.
+
+### Custom application-origin cutover checkpoint
+
+Recorded on 2026-08-13.
+
+- Vercel serves `app.commontime.studio` as the non-indexable application, `www.commontime.studio` as the indexable public Coming Soon surface, and permanently redirects the apex to `www`. The legacy Vercel hostname remains available and noindex for rollback.
+- Supabase Site URL/callback configuration and an actual Google login returned successfully to `app.commontime.studio`.
+- Production `APP_URL` was proven from server behavior rather than assumed from the Vercel dashboard: a Twilio request signed for the new callback URL passed signature verification to the expected account guard, while the same request signed for the old hostname failed signature verification.
+- Stripe API inventory confirmed all three test event destinations use the new webhook URL. Platform and connected-account thin destinations passed genuine provider pings with durable, error-free ignored-event intake. The snapshot connected-payments secret passed a signed synthetic live-endpoint event and recorded it as ignored.
+- The first platform ping was not immediately visible, so it was not counted as success; an isolated repeat produced durable intake. This preserved the rule that provider request acceptance alone is not webhook evidence.
+- The legacy Twilio Messaging Service's incoming, fallback, and delivery callback URLs were updated through the API. Signed, non-keyword inbound and fallback probes returned valid empty TwiML without consent changes. Its validity period is confirmed at 3,600 seconds.
+- Custom-domain cutover no longer blocks Step 8. Resend sending-domain authentication and the durable email delivery/reconciliation implementation are next.
