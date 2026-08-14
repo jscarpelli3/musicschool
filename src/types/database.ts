@@ -289,6 +289,142 @@ export type Database = {
           },
         ]
       }
+      billing_collection_mandate_events: {
+        Row: {
+          channel: string
+          event_type: string
+          evidence: Json
+          id: number
+          mandate_id: string
+          occurred_at: string
+          school_id: string
+        }
+        Insert: {
+          channel: string
+          event_type: string
+          evidence?: Json
+          id?: never
+          mandate_id: string
+          occurred_at?: string
+          school_id: string
+        }
+        Update: {
+          channel?: string
+          event_type?: string
+          evidence?: Json
+          id?: never
+          mandate_id?: string
+          occurred_at?: string
+          school_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_collection_mandate_events_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_collection_mandate_events_school_id_mandate_id_fkey"
+            columns: ["school_id", "mandate_id"]
+            isOneToOne: false
+            referencedRelation: "billing_collection_mandates"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
+      billing_collection_mandates: {
+        Row: {
+          accepted_at: string
+          advance_notice_days: number
+          billing_account_id: string
+          channel: string
+          created_at: string
+          evidence: Json
+          id: string
+          mandate_type: string
+          monthly_cap_cents: number | null
+          payment_method_id: string
+          revoked_at: string | null
+          school_id: string
+          scope: string
+          source_approval_request_id: string
+          status: string
+          superseded_at: string | null
+          terms_sha256: string
+          terms_text: string
+          terms_version: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at: string
+          advance_notice_days: number
+          billing_account_id: string
+          channel: string
+          created_at?: string
+          evidence?: Json
+          id?: string
+          mandate_type?: string
+          monthly_cap_cents?: number | null
+          payment_method_id: string
+          revoked_at?: string | null
+          school_id: string
+          scope?: string
+          source_approval_request_id: string
+          status?: string
+          superseded_at?: string | null
+          terms_sha256: string
+          terms_text: string
+          terms_version: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string
+          advance_notice_days?: number
+          billing_account_id?: string
+          channel?: string
+          created_at?: string
+          evidence?: Json
+          id?: string
+          mandate_type?: string
+          monthly_cap_cents?: number | null
+          payment_method_id?: string
+          revoked_at?: string | null
+          school_id?: string
+          scope?: string
+          source_approval_request_id?: string
+          status?: string
+          superseded_at?: string | null
+          terms_sha256?: string
+          terms_text?: string
+          terms_version?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_collection_mandates_school_id_billing_account_id_fkey"
+            columns: ["school_id", "billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "billing_collection_mandates_school_id_payment_method_id_bi_fkey"
+            columns: ["school_id", "payment_method_id", "billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_payment_methods"
+            referencedColumns: ["school_id", "id", "billing_account_id"]
+          },
+          {
+            foreignKeyName: "billing_collection_mandates_school_id_source_approval_requ_fkey"
+            columns: ["school_id", "source_approval_request_id"]
+            isOneToOne: false
+            referencedRelation: "billing_approval_requests"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
       billing_line_items: {
         Row: {
           amount_cents: number | null
@@ -2934,6 +3070,15 @@ export type Database = {
         }
         Returns: string
       }
+      enroll_auto_charge_mandate: {
+        Args: {
+          p_advance_notice_days: number
+          p_evidence?: Json
+          p_monthly_cap_cents: number
+          raw_token: string
+        }
+        Returns: string
+      }
       fail_email_provider_submission: {
         Args: {
           p_delivery_id: string
@@ -2949,6 +3094,22 @@ export type Database = {
           p_provider_error_message?: string
         }
         Returns: undefined
+      }
+      get_auto_charge_enrollment: {
+        Args: { raw_token: string }
+        Returns: {
+          active_mandate_id: string
+          advance_notice_days: number
+          billing_account_name: string
+          currency: string
+          current_amount_cents: number
+          eligible: boolean
+          monthly_cap_cents: number
+          payment_method_label: string
+          payment_method_last_four: string
+          reason: string
+          school_name: string
+        }[]
       }
       get_billing_approval: {
         Args: { raw_token: string }

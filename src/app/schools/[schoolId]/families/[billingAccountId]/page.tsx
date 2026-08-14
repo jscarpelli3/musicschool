@@ -6,7 +6,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { CardSetupControls } from "./card-setup-controls";
 import { BillingDraftForm } from "./billing-draft-form";
-import { BillingApprovalSms } from "./billing-approval-sms";
 import { BillingApprovalEmail } from "./billing-approval-email";
 import { BillingContactEmail } from "./billing-contact-email";
 import { BillingContactPhone } from "./billing-contact-phone";
@@ -49,13 +48,12 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     supabase.from("payment_attempts").select("billing_period_id, amount_cents, status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("status", "succeeded"),
     supabase.from("payment_method_setup_requests").select("id, status, expires_at, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }).limit(3),
     supabase.from("school_payment_connections").select("status, charges_enabled").eq("school_id", schoolId).eq("provider", "stripe").maybeSingle(),
-    supabase.from("billing_approval_requests").select("id, billing_period_id").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
-    supabase.from("sms_deliveries").select("approval_request_id, status, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
+    supabase.from("billing_approval_requests").select("id, billing_period_id, approval_status, approved_at, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
     supabase.from("email_deliveries").select("approval_request_id, status, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
   ]);
   const failedRelated = related.find((result) => result.error);
   if (failedRelated?.error) throw new Error(`Family detail could not load: ${failedRelated.error.message}`);
-  const [peopleResult, studentsResult, periodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, smsDeliveriesResult, emailDeliveriesResult] = related;
+  const [peopleResult, studentsResult, periodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult] = related;
   const periodIds = (periodsResult.data ?? []).map((period) => period.id);
   const { data: lineItems, error: lineItemsError } = periodIds.length
     ? await supabase.from("billing_line_items")
@@ -96,11 +94,8 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     return groups;
   }, {});
   const periodByApprovalRequest = new Map((approvalRequestsResult.data ?? []).map((request) => [request.id, request.billing_period_id]));
-  const latestSmsStatusByPeriod = new Map<string, string>();
-  for (const delivery of smsDeliveriesResult.data ?? []) {
-    const billingPeriodId = periodByApprovalRequest.get(delivery.approval_request_id);
-    if (billingPeriodId && !latestSmsStatusByPeriod.has(billingPeriodId)) latestSmsStatusByPeriod.set(billingPeriodId, delivery.status);
-  }
+  const latestApprovalByPeriod = new Map<string, (typeof approvalRequestsResult.data extends (infer T)[] | null ? T : never)>();
+  for (const request of approvalRequestsResult.data ?? []) if (request.billing_period_id && !latestApprovalByPeriod.has(request.billing_period_id)) latestApprovalByPeriod.set(request.billing_period_id, request);
   const latestEmailStatusByPeriod = new Map<string, string>();
   for (const delivery of emailDeliveriesResult.data ?? []) {
     const billingPeriodId = periodByApprovalRequest.get(delivery.approval_request_id);
@@ -144,7 +139,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
                   {!periodLines.length ? <EmptyDetail>No line items are recorded.</EmptyDetail> : null}
                   {canManagePayments && ["draft", "review"].includes(billingPeriod.status) ? <BillingAdjustmentForm schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
                   {canManagePayments && ["draft", "review"].includes(billingPeriod.status) && billingPeriod.amount_due_cents > 0 ? <div className="border-t border-line pt-5"><p className="max-w-lg text-xs leading-5 text-muted">Lock only after reviewing every line. Locking freezes this exact amount for the separate payer-approval step.</p><BillingPeriodLock schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /></div> : null}
-                  {canManagePayments && ["locked", "approval_pending"].includes(billingPeriod.status) && billingPeriod.amount_due_cents > 0 ? <><BillingApprovalEmail schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} latestStatus={latestEmailStatusByPeriod.get(billingPeriod.id)} /><div className="mt-5 border-t border-line pt-5"><p className="text-xs uppercase tracking-[0.14em] text-muted">Optional SMS add-on</p><BillingApprovalSms schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} latestStatus={latestSmsStatusByPeriod.get(billingPeriod.id)} /></div></> : null}
+                  {canManagePayments && ["locked", "approval_pending", "approved"].includes(billingPeriod.status) && billingPeriod.amount_due_cents > 0 ? <BillingApprovalEmail schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} latestStatus={latestEmailStatusByPeriod.get(billingPeriod.id)} approvalStatus={latestApprovalByPeriod.get(billingPeriod.id)?.approval_status} approvedAt={latestApprovalByPeriod.get(billingPeriod.id)?.approved_at} /> : null}
                 </div>
               </details>
             );

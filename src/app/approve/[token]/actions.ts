@@ -1,5 +1,9 @@
 "use server";
 
+import { createHash } from "node:crypto";
+import { headers } from "next/headers";
+import { revalidatePath } from "next/cache";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createPublicClient } from "@/lib/supabase/public";
 
 export async function approveBillingRequest(token: string) {
@@ -26,4 +30,35 @@ export async function approveBillingRequest(token: string) {
   };
 
   return { ok: false, message: messages[String(data)] ?? "This request cannot be approved." };
+}
+
+export async function enrollAutoChargeMandate(token: string, capValue: string, noCap: boolean, noticeDays: number) {
+  const capText = capValue.trim();
+  if (!noCap && !/^\d{1,7}(\.\d{1,2})?$/.test(capText)) return { ok: false, message: "Enter a valid monthly maximum." };
+  if (!Number.isInteger(noticeDays) || noticeDays < 1 || noticeDays > 14) return { ok: false, message: "Choose a valid advance-notice period." };
+  const capCents = noCap ? null : Math.round(Number(capText) * 100);
+  const requestHeaders = await headers();
+  const fingerprint = (value: string) => createHash("sha256").update(value).digest("hex");
+  const evidence = {
+    ip_sha256: fingerprint(requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || "unavailable"),
+    user_agent_sha256: fingerprint(requestHeaders.get("user-agent") || "unavailable"),
+    disclosure_render: "automatic-monthly-itemized-v1",
+  };
+  const admin = createAdminClient();
+  const { error } = await admin.rpc("enroll_auto_charge_mandate", {
+    p_advance_notice_days: noticeDays,
+    p_evidence: evidence,
+    p_monthly_cap_cents: capCents!,
+    raw_token: token,
+  });
+  if (error) {
+    const message = error.message.includes("cap_below_current_amount")
+      ? "The monthly maximum cannot be lower than the amount you just approved."
+      : error.message.includes("active_saved_method_required")
+        ? "A currently authorized saved payment method is required."
+        : "Automatic payment could not be enabled. Your existing monthly approval remains valid.";
+    return { ok: false, message };
+  }
+  revalidatePath(`/approve/${token}`);
+  return { ok: true, message: "Automatic monthly payment authorized. Future itemized statements will follow this preference." };
 }

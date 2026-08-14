@@ -557,3 +557,15 @@ Recorded on 2026-08-14.
 - Added owner/admin-only adjustment removal with full deleted-line evidence in the audit log. The existing line mutation guard and period amount constraint prevent locked edits and negative total periods.
 - Added touch-safe responsive controls and visible removal only while editable. No adjustment depends on hover or browser-only state.
 - Migration `20260814123000` deployed, linked database lint passed, generated types were refreshed, and TypeScript/ESLint pass. Live owner UI rehearsal remains after deployment.
+
+### Step 8B checkpoint — explicit automatic-charge mandate
+
+Recorded on 2026-08-14.
+
+- Preflight confirmed the existing Stripe setup disclosure authorizes saved off-session use only for separately approved amounts. It is not treated as standing automatic-charge consent.
+- Added a distinct payer-held mandate tied to one school, billing account, active default payment method, and unrevoked off-session method consent. The mandate records itemized-charge scope, optional monthly cap, 1–14 day statement notice, canonical disclosure/version/hash, acceptance evidence, and append-only events.
+- Only an unexpired approval link whose exact request was already approved may start enrollment. Enrollment runs through a service-only function after server validation; direct anonymous mandate mutation is not exposed.
+- A new acceptance supersedes rather than overwrites an active mandate. Saving a card never enrolls automatic payment, and families without an eligible saved method receive an explicit setup-required state.
+- The approved payer page now offers capped automatic payment as an optional future-month choice while preserving review-each-month as the default. No Stripe charge execution was added.
+- Removed the always-visible shared-SMS approval action from the owner billing panel. Email is the standard path; approved periods read as ready to collect, with collection explicitly not started.
+- Migration `20260814130000` deployed after one safe atomic rollback corrected a PL/pgSQL record assignment. Linked database lint, generated types, TypeScript, and ESLint pass. Live saved-card enrollment, mandate supersession, cap, and revocation rehearsals remain.

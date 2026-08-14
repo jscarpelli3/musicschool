@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
 import { createPublicClient } from "@/lib/supabase/public";
 import { approveBillingRequest } from "./actions";
+import { AutoChargeEnrollment } from "./auto-charge-enrollment";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,10 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
 
   const canApprove = approval.approval_status === "pending";
   const approve = approveBillingRequest.bind(null, token);
+  const { data: enrollmentRows } = approval.approval_status === "approved"
+    ? await supabase.rpc("get_auto_charge_enrollment", { raw_token: token })
+    : { data: null };
+  const enrollment = enrollmentRows?.[0];
 
   return (
     <main className="mx-auto min-h-screen max-w-3xl px-5 py-10 sm:px-8 sm:py-16">
@@ -109,6 +114,7 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
           <p>Expires {new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeStyle: "short" }).format(new Date(approval.expires_at))}</p>
           <p className="sm:text-right">A Stripe receipt is emailed only after a successful charge.</p>
         </div>
+        {approval.approval_status === "approved" && enrollment ? <AutoChargeEnrollment token={token} schoolName={enrollment.school_name} accountName={enrollment.billing_account_name} methodLabel={enrollment.payment_method_label ?? "saved payment method"} lastFour={enrollment.payment_method_last_four} amountCents={enrollment.current_amount_cents} currency={enrollment.currency} eligible={enrollment.eligible} activeMandate={Boolean(enrollment.active_mandate_id)} initialCapCents={enrollment.monthly_cap_cents} initialNoticeDays={enrollment.advance_notice_days} /> : null}
       </section>
     </main>
   );
