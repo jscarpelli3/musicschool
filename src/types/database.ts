@@ -3231,6 +3231,10 @@ export type Database = {
         Args: { target_profile_id: string }
         Returns: boolean
       }
+      unlock_unsubmitted_billing_period: {
+        Args: { p_billing_period_id: string; p_school_id: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

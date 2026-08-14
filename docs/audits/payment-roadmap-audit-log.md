@@ -557,6 +557,8 @@ Recorded on 2026-08-14.
 - Added owner/admin-only adjustment removal with full deleted-line evidence in the audit log. The existing line mutation guard and period amount constraint prevent locked edits and negative total periods.
 - Added touch-safe responsive controls and visible removal only while editable. No adjustment depends on hover or browser-only state.
 - Migration `20260814123000` deployed, linked database lint passed, generated types were refreshed, and TypeScript/ESLint pass. Live owner UI rehearsal remains after deployment.
+- Live rehearsal intentionally locked a period after adding an adjustment and exposed a missing pre-send revision path. Added owner/admin `Unlock to revise` for locked periods with no pending/approved request. It preserves lines, clears the stale lock timestamp, returns the period to review through the guarded transition, and appends audit evidence.
+- Unlock explicitly refuses any period whose amount has already been sent or approved; those require a separate atomic request-replacement flow so an old bearer link can never remain valid for a superseded amount.
 
 ### Step 8B checkpoint — explicit automatic-charge mandate
 

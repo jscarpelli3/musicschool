@@ -78,6 +78,25 @@ export async function lockFamilyBillingPeriod(schoolId: string, billingAccountId
   return { ok: true, message: "Amount locked. Lesson lines can no longer change." };
 }
 
+export async function unlockUnsubmittedBillingPeriod(schoolId: string, billingAccountId: string, billingPeriodId: string) {
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) redirect(`/login?next=${path}`);
+  const { error } = await supabase.rpc("unlock_unsubmitted_billing_period", {
+    p_billing_period_id: billingPeriodId,
+    p_school_id: schoolId,
+  });
+  if (error) {
+    const message = error.message.includes("replacement_flow")
+      ? "An approval link already exists. Use the replacement flow so the old link is cancelled safely."
+      : "This amount could not be unlocked. Nothing changed.";
+    return { ok: false, message };
+  }
+  revalidatePath(path);
+  return { ok: true, message: "Amount unlocked. Review or adjust it, then lock the new total." };
+}
+
 export async function addBillingAdjustment(
   schoolId: string,
   billingAccountId: string,

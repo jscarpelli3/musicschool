@@ -10,6 +10,7 @@ import { BillingApprovalEmail } from "./billing-approval-email";
 import { BillingContactEmail } from "./billing-contact-email";
 import { BillingContactPhone } from "./billing-contact-phone";
 import { BillingPeriodLock } from "./billing-period-lock";
+import { BillingPeriodUnlock } from "./billing-period-unlock";
 import { PaymentMethodRemove } from "./payment-method-remove";
 import { BillingAdjustmentForm, BillingAdjustmentRemove } from "./billing-adjustments";
 
@@ -139,6 +140,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
                   {!periodLines.length ? <EmptyDetail>No line items are recorded.</EmptyDetail> : null}
                   {canManagePayments && ["draft", "review"].includes(billingPeriod.status) ? <BillingAdjustmentForm schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
                   {canManagePayments && ["draft", "review"].includes(billingPeriod.status) && billingPeriod.amount_due_cents > 0 ? <div className="border-t border-line pt-5"><p className="max-w-lg text-xs leading-5 text-muted">Lock only after reviewing every line. Locking freezes this exact amount for the separate payer-approval step.</p><BillingPeriodLock schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /></div> : null}
+                  {canManagePayments && billingPeriod.status === "locked" && !latestApprovalByPeriod.get(billingPeriod.id) ? <BillingPeriodUnlock schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
                   {canManagePayments && ["locked", "approval_pending", "approved"].includes(billingPeriod.status) && billingPeriod.amount_due_cents > 0 ? <BillingApprovalEmail schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} latestStatus={latestEmailStatusByPeriod.get(billingPeriod.id)} approvalStatus={latestApprovalByPeriod.get(billingPeriod.id)?.approval_status} approvedAt={latestApprovalByPeriod.get(billingPeriod.id)?.approved_at} /> : null}
                 </div>
               </details>
