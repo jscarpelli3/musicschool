@@ -62,3 +62,19 @@ export async function enrollAutoChargeMandate(token: string, capValue: string, n
   revalidatePath(`/approve/${token}`);
   return { ok: true, message: "Automatic monthly payment authorized. Future itemized statements will follow this preference." };
 }
+
+export async function revokeAutoChargeMandate(token: string) {
+  const requestHeaders = await headers();
+  const fingerprint = (value: string) => createHash("sha256").update(value).digest("hex");
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("revoke_auto_charge_mandate", {
+    p_evidence: {
+      ip_sha256: fingerprint(requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || "unavailable"),
+      user_agent_sha256: fingerprint(requestHeaders.get("user-agent") || "unavailable"),
+    },
+    raw_token: token,
+  });
+  if (error) return { ok: false, message: "Automatic payment could not be revoked. Please contact the school before the next charge." };
+  revalidatePath(`/approve/${token}`);
+  return { ok: true, message: data === "revoked" ? "Automatic payment revoked for future charges." : "Automatic payment was already inactive." };
+}

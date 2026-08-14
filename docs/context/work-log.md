@@ -30,6 +30,7 @@ Use this file for short chronological notes about meaningful work.
 - The exit audit exposed and fixed a legacy split-state defect: payer approval advanced the request but not its parent period. Approval now advances both atomically, and the accepted test period was reconciled to approved without creating a payment attempt.
 - Added the first owner-adjustment slice: real charge/credit ledger lines with required category/explanation, automatic total recalculation, audit-backed removal, draft-refresh preservation, and locked-period denial. The database migration, types, lint, and app checks pass; deployment rehearsal is next.
 - Added separate payer auto-charge mandates without broadening the earlier saved-card consent. Approved payers may opt into itemized automatic monthly collection with a notice window and optional cap; email is now the sole standard approval channel and SMS is hidden unless a future school add-on exists.
+- Added immediate mandate revocation with append-only evidence. The short approval page can now enroll or stop automatic payment; long-lived frictionless payer access remains a prerequisite before production collection.
 
 ## 2026-08-09
 

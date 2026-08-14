@@ -3214,6 +3214,10 @@ export type Database = {
         }
         Returns: Json
       }
+      revoke_auto_charge_mandate: {
+        Args: { p_evidence?: Json; raw_token: string }
+        Returns: string
+      }
       set_lesson_reschedule_permission: {
         Args: {
           p_allowed: boolean

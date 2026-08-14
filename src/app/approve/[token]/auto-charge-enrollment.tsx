@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
-import { enrollAutoChargeMandate } from "./actions";
+import { enrollAutoChargeMandate, revokeAutoChargeMandate } from "./actions";
 
 export function AutoChargeEnrollment({ token, schoolName, accountName, methodLabel, lastFour, amountCents, currency, eligible, activeMandate, initialCapCents, initialNoticeDays }: {
   token: string; schoolName: string; accountName: string; methodLabel: string; lastFour: string | null;
@@ -11,7 +11,7 @@ export function AutoChargeEnrollment({ token, schoolName, accountName, methodLab
   const [cap, setCap] = useState(((initialCapCents ?? amountCents) / 100).toFixed(2));
   const [noCap, setNoCap] = useState(activeMandate && initialCapCents === null);
   const [noticeDays, setNoticeDays] = useState(initialNoticeDays ?? 3);
-  if (activeMandate) return <div className="mt-10 border border-brand p-5 sm:p-6"><p className="text-xs uppercase tracking-[0.14em] text-brand">Automatic payment active</p><p className="mt-3 text-sm leading-6 text-muted">Future itemized monthly statements may be charged to {methodLabel}{lastFour ? ` ending in ${lastFour}` : ""} after {noticeDays} days’ notice{initialCapCents === null ? ", with no monthly maximum" : `, up to ${new Intl.NumberFormat("en-US", { style: "currency", currency }).format(initialCapCents / 100)} per month`}.</p></div>;
+  if (activeMandate) return <div className="mt-10 border border-brand p-5 sm:p-6"><p className="text-xs uppercase tracking-[0.14em] text-brand">Automatic payment active</p><p className="mt-3 text-sm leading-6 text-muted">Future itemized monthly statements may be charged to {methodLabel}{lastFour ? ` ending in ${lastFour}` : ""} after {noticeDays} days’ notice{initialCapCents === null ? ", with no monthly maximum" : `, up to ${new Intl.NumberFormat("en-US", { style: "currency", currency }).format(initialCapCents / 100)} per month`}.</p><div className="mt-6"><HoldToConfirm action={() => revokeAutoChargeMandate(token)} idleLabel="Hold to stop automatic payment" holdingLabel="Keep holding to revoke…" /></div></div>;
   if (!eligible) return <div className="mt-10 border-t border-line pt-8"><p className="text-xs uppercase tracking-[0.14em] text-muted">Automatic payment unavailable</p><p className="mt-3 max-w-2xl text-sm leading-6 text-muted">The school must first send you Stripe’s secure card-setup link. Saving a payment method does not automatically enroll you.</p></div>;
 
   const terms = `I authorize ${schoolName} to automatically charge ${methodLabel}${lastFour ? ` ending in ${lastFour}` : ""} for itemized monthly school charges on ${accountName}. I will receive the itemized statement at least ${noticeDays} day(s) before collection. ${noCap ? "I have not set a monthly maximum." : `The total automatic charge may not exceed ${cap || "0.00"} ${currency.toUpperCase()} per month.`} I can revoke this authorization for future charges.`;
