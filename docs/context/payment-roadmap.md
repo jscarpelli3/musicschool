@@ -111,7 +111,7 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 - Required email work: payer email management, durable delivery attempts, verified provider webhooks, bounce/complaint suppression, owner send/resend controls, and responsive templates for approval and schedule access.
 - Exit gate: complete an email approval-link send, provider reconciliation, replay, bounce/failure, supersession, and approval acceptance sequence. Charge execution remains Step 9 and cannot be inferred from delivery or approval.
 
-### 8B. Owner adjustments and payer collection preference — NEXT
+### 8B. Owner adjustments and payer collection preference — IN PROGRESS
 
 - Expose the existing durable manual-adjustment capability in the owner billing review. Owners may add credits or charges with an amount, category, and required explanation before locking.
 - A locked or approved amount is immutable. Changing it creates a new draft/version, cancels the superseded pending approval, and requires fresh approval unless a valid standing auto-charge mandate covers the replacement amount.
@@ -120,6 +120,7 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 - Every automatic month still produces and locks an itemized statement. Send the statement before collection; amounts beyond the mandate scope or cap fall back to one-time approval.
 - Revocation takes effect before any new provider attempt. Material changes to scope, cap, cadence, or school require new payer consent; owner edits cannot broaden a mandate.
 - Exit gate: prove adjustment auditability, supersession, opt-in, revocation, cap/scope fallback, notice delivery, and zero unauthorized charge attempts.
+- Implemented foundation: owner charge/credit controls, audit-backed removal, pre-send unlock-to-revise, email-first owner state, separate mandate/enrollment/revocation records, cap and notice configuration, and structured payer proposal rejection. Live cross-flow rehearsal and long-lived payer revocation access remain.
 
 ### 8A. Per-school SMS add-on — DEFERRED / OPTIONAL
 

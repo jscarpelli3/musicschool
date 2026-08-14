@@ -8,9 +8,9 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 
 ## Active Focus
 
-1. Implement durable transactional-email approval delivery and provider reconciliation through Resend.
+1. Rehearse the newly deployed owner-adjustment, unlock/revise, payer rejection, and automatic-payment consent flows.
 2. Keep the owner planner and payment surfaces reliable on phone, touch-only tablet, keyboard, and desktop.
-3. Finish approval delivery and reconciliation before implementing any Stripe charge execution.
+3. Finish approval replacement, mandate safety checks, and email failure tests before implementing any Stripe charge execution.
 
 ## Provider State
 
@@ -18,7 +18,7 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 - **Vercel/domain:** `commontime.studio`, `www.commontime.studio`, and `app.commontime.studio` are valid on Vercel. Apex redirects to the indexable `www` Coming Soon page; `app` and the legacy application hostname are explicitly noindex. Production `APP_URL`, Supabase Site URL, Google/Supabase callback behavior, Stripe test destinations, and the legacy Twilio callbacks have passed the custom-domain cutover.
 - **Google:** Google OAuth through Supabase is working locally and on the deployed app after correcting provider redirect configuration.
 - **Stripe:** Connect is configured in test mode. The first school completed hosted onboarding; test card setup, attachment, detachment, Connect synchronization, and signed webhook intake have been exercised.
-- **Transactional email:** `notifications.commontime.studio` is authenticated in Resend and a send-only API key is configured locally and in Vercel. The durable email-attempt/event/suppression schema, owner payer-email control, approval send action, responsive HTML/text template, idempotent Resend adapter, and signed webhook route are implemented. Production webhook registration and the full send/replay/bounce/supersession acceptance sequence remain open.
+- **Transactional email:** `notifications.commontime.studio` is authenticated in Resend; its send-only key and webhook signing secret are configured locally/Vercel. The production webhook passed signature rejection and real `sent`/`delivered` reconciliation. One $220 approval email was delivered and accepted end to end. Replay, bounce/complaint suppression, provider failure, and supersession rehearsals remain.
 - **Twilio:** the initial generic MusicSchool toll-free submission was rejected because it did not identify one end business, pointed reviewers into a login-protected app, and presented consent as reusable across schools/programs. The legacy service callbacks now use the custom app domain and its validity period is confirmed at 3,600 seconds, but the shared-sender implementation remains test foundation only; production SMS requires one isolated subaccount, number, verification, and consent program per add-on school.
 
 ## Implemented Product Foundation
@@ -30,6 +30,8 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 - Family billing accounts, immutable occurrence pricing, monthly draft generation, review blockers, three/four/five-week handling, fixed-monthly handling, and hold-to-lock review.
 - Stripe Connect account state, hosted payer card setup, saved-method reconciliation, signed/idempotent provider-event intake, and disconnect handling.
 - Expiring single-use approval requests bound to exact locked periods; public hold-to-approve flow remains separate from collection.
+- Owner-entered charges/credits with required explanations, locked-but-unsent unlock-to-revise, email-first approval status, payer structured rejection/notes, and atomic request/period approval truth.
+- Separate payer automatic-charge mandates with optional monthly cap, advance-statement notice, canonical evidence, supersession, and immediate revocation. Saving a card does not imply automatic collection.
 - Public SMS enrollment, append-only consent evidence, durable delivery/status ledgers, owner approval-link send action, signed callbacks, inbound STOP/START/HELP synchronization, and provider-safe retry behavior.
 
 ## Current Gates And Known Gaps
@@ -37,6 +39,8 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 - The current toll-free number is restricted and cannot complete a real US/Canada handset test. It can be assigned to the first school and resubmitted after school-specific business and public consent materials exist; no second number is needed merely to continue software testing.
 - The Twilio parent account still needs an approved ISV Primary Customer Profile before production per-school onboarding. The legacy service uses an intentional 3,600-second validity period.
 - No production or test charge-execution workflow is active yet. Approval, saved-card authorization, and collection remain deliberately separate.
+- Submitted-but-pending proposals still need an owner `Revise and replace request` action that cancels the old bearer link atomically before reopening the statement.
+- Automatic-payment enrollment/revocation is deployed but has not passed a live saved-card rehearsal. Long-lived payer access is still required so revocation remains available after an approval link expires.
 - The first real school needs published cancellation/payment policies before months containing cancellations or no-shows can produce complete drafts.
 - Teacher-only and guardian/student rescheduling flows are deferred. Their authorization and policy limits must not be inferred from the owner flow.
 - Macro calendar closures and dated teacher exceptions are modeled but still need enforcement before client self-service rescheduling launches.
@@ -45,13 +49,24 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 
 ## Next Steps
 
-1. Register the Resend webhook at `https://app.commontime.studio/api/resend/webhooks`, add its signing secret to Vercel/local environments, and redeploy.
-2. Close Payment Step 8 only after email send, replay, out-of-order event, provider failure, bounce/complaint suppression, supersession, and approval acceptance pass end to end.
-3. Implement Stripe charge execution against an approved, locked, current request with idempotency, receipts, refunds/disputes, and reconciliation.
-4. Rehearse the planner/reschedule flow under a teacher-only account, then design policy-bound guardian/student access and magic-link delivery.
-5. If the first school purchases SMS, create its fixed public consent/business page, assign the current toll-free number exclusively to it, and resubmit with exact end-business information.
-6. Expand the `www.commontime.studio` Coming Soon page into the marketing/public-policy surface when launch content is ready.
+1. Complete the live restart checklist below for adjustment, unlock, rejection/note, corrected replacement, saved-card auto-charge enrollment, cap, and revocation.
+2. Add owner `Revise and replace request`, then close Payment Step 8 only after replay, out-of-order event, provider failure, bounce/complaint suppression, and supersession tests.
+3. Add long-lived payer access for mandate review/revocation before any automatic collection.
+4. Implement Stripe charge execution against an exact approved request or valid mandate with idempotency, receipts, refunds/disputes, and reconciliation.
+5. Rehearse the planner/reschedule flow under a teacher-only account, then design policy-bound guardian/student access and magic-link delivery.
+6. If the first school purchases SMS, create its fixed public consent/business page, assign the current toll-free number exclusively to it, and resubmit with exact end-business information.
+7. Expand the `www.commontime.studio` Coming Soon page into the marketing/public-policy surface when launch content is ready.
+
+## Next-Session Restart Checklist
+
+1. Confirm Vercel serves commit `d65d425` or later.
+2. Open **Garcia family · August 2026**. Live state at pause: locked at **$240**, consisting of four $55 lessons plus a **+$20** owner adjustment labeled `Billing correction · i charged too much last time`; no approval request exists.
+3. Use **Unlock to revise**. Verify all five lines remain, remove or correct the adjustment, add a negative credit, refresh the draft, and confirm the adjustment survives before relocking.
+4. Give the Garcia payer a reachable test email, send an approval proposal, and reject it as `missing_credit` with a note. Verify the exact link becomes rejected, the period returns untouched to review, and the owner sees the reason/note.
+5. Correct the Garcia statement, relock, and send a new version. Verify the rejected token remains unusable and only the replacement can be approved.
+6. Use **Open secure Stripe setup** for Garcia with a Stripe test card. After approval, exercise automatic-payment enrollment with a cap and notice window, confirm the mandate in Supabase, then revoke it and verify append-only events.
+7. Do not implement or simulate a charge during these rehearsals. Charge execution remains a later gated step.
 
 ## Updated
 
-2026-08-13
+2026-08-14
