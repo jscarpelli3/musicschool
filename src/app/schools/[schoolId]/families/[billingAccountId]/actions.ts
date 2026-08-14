@@ -17,6 +17,7 @@ export type BillingApprovalSmsState = { ok: boolean; message: string };
 export type BillingContactPhoneState = { ok: boolean; message: string };
 export type BillingApprovalEmailState = { ok: boolean; message: string };
 export type BillingContactEmailState = { ok: boolean; message: string };
+export type BillingAdjustmentState = { ok: boolean; message: string };
 
 function appOrigin() {
   const value = process.env.APP_URL?.trim();
@@ -75,6 +76,59 @@ export async function lockFamilyBillingPeriod(schoolId: string, billingAccountId
 
   revalidatePath(`/schools/${schoolId}/families/${billingAccountId}`);
   return { ok: true, message: "Amount locked. Lesson lines can no longer change." };
+}
+
+export async function addBillingAdjustment(
+  schoolId: string,
+  billingAccountId: string,
+  billingPeriodId: string,
+  _previous: BillingAdjustmentState,
+  formData: FormData,
+): Promise<BillingAdjustmentState> {
+  void _previous;
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const amountText = String(formData.get("amount") ?? "").trim();
+  if (!/^\d{1,7}(\.\d{1,2})?$/.test(amountText)) return { ok: false, message: "Enter a positive dollar amount with no more than two decimal places." };
+  const amountCents = Math.round(Number(amountText) * 100);
+  const kind = String(formData.get("kind") ?? "");
+  const category = String(formData.get("category") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  if (!["charge", "credit"].includes(kind) || !category || !description) return { ok: false, message: "Choose charge or credit, select a category, and explain the adjustment." };
+
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) redirect(`/login?next=${path}`);
+  const { error } = await supabase.rpc("add_billing_adjustment", {
+    p_amount_cents: amountCents,
+    p_billing_period_id: billingPeriodId,
+    p_category: category,
+    p_description: description,
+    p_kind: kind,
+    p_school_id: schoolId,
+  });
+  if (error) {
+    const message = error.message.includes("not_editable")
+      ? "This amount has already been locked. Start a revision before changing it."
+      : "The adjustment could not be saved. The billing total is unchanged.";
+    return { ok: false, message };
+  }
+  revalidatePath(path);
+  return { ok: true, message: `${kind === "credit" ? "Credit" : "Charge"} added to the billing ledger.` };
+}
+
+export async function removeBillingAdjustment(schoolId: string, billingAccountId: string, billingPeriodId: string, adjustmentId: string) {
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) redirect(`/login?next=${path}`);
+  const { error } = await supabase.rpc("remove_billing_adjustment", {
+    p_adjustment_id: adjustmentId,
+    p_billing_period_id: billingPeriodId,
+    p_school_id: schoolId,
+  });
+  if (error) return { ok: false, message: "This adjustment could not be removed. The billing total is unchanged." };
+  revalidatePath(path);
+  return { ok: true, message: "Adjustment removed from the billing ledger." };
 }
 
 export async function sendBillingApprovalSms(

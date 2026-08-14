@@ -547,3 +547,13 @@ Recorded on 2026-08-14.
 - The approval request preserved exactly four lines and $220, remained `payment_status = not_started`, and the payer's hold-to-approve action recorded immutable amount/currency/period evidence. No Stripe payment attempt was created.
 - Exit audit found that the legacy approval function advanced only the approval request while leaving its billing period `approval_pending`. Migration `20260814120000` now advances the matching period to `approved` inside the same transaction and reconciled the accepted test period. Database lint passed; the period is approved with no paid timestamp and no payment attempt.
 - UI reorientation remains: email must read as the standard approval path; SMS must not appear as an equal always-available action and should be gated behind the per-school paid add-on configuration.
+
+### Step 8B activation — owner billing adjustments
+
+Recorded on 2026-08-14.
+
+- Confirmed the ledger already preserved `manual_adjustment` lines across draft regeneration and recalculated totals, but the owner had no interface or constrained mutation function for them.
+- Added owner/admin-only atomic charge and credit creation with a positive entered amount, signed ledger value, category, required explanation, audit event, and a practical upper-bound guard. Adjustments are allowed only in draft/review and remain ordinary payer-visible line items.
+- Added owner/admin-only adjustment removal with full deleted-line evidence in the audit log. The existing line mutation guard and period amount constraint prevent locked edits and negative total periods.
+- Added touch-safe responsive controls and visible removal only while editable. No adjustment depends on hover or browser-only state.
+- Migration `20260814123000` deployed, linked database lint passed, generated types were refreshed, and TypeScript/ESLint pass. Live owner UI rehearsal remains after deployment.

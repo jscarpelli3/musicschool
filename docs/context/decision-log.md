@@ -153,6 +153,13 @@ Use one entry per meaningful technical or product decision.
 - Decision: Support multiple collection methods and approval modes independently from the pricing model. Model standing and per-period authorization evidence, and let the connected school initiate off-session Stripe payments using saved methods when appropriately authorized.
 - Consequences: Billing accounts and future service agreements need configurable collection and approval behavior. The platform never stores raw card data and must handle off-session failures or authentication fallbacks.
 
+### 2026-08-14: Owner adjustments and payer-selected automatic collection
+
+- Context: School owners need to correct or customize a family's monthly amount, while some families prefer not to approve an ordinary recurring lesson statement every month.
+- Decision: Owners can add explained positive or negative adjustments while a period is editable. Locked/approved financial snapshots remain immutable; replacements are versioned and supersede prior pending approvals. Payers—not owners—select either per-period approval or a separately recorded standing auto-charge mandate.
+- Decision: Auto-charge consent is not inferred from card setup. It is revocable, school/billing-account scoped, disclosure-versioned, optionally capped, and applied only after an itemized locked statement and required advance notice. Out-of-scope amounts return to per-period approval.
+- Consequences: Build adjustment UI and mandate enrollment/revocation before Stripe charge execution. The charge queue must prove one of two authorization paths for the exact amount: an approved request or a valid standing mandate.
+
 ### 2026-08-05: Treat phone and tablet behavior as first-class design work
 
 - Status: accepted

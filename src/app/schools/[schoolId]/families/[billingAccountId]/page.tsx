@@ -12,6 +12,7 @@ import { BillingContactEmail } from "./billing-contact-email";
 import { BillingContactPhone } from "./billing-contact-phone";
 import { BillingPeriodLock } from "./billing-period-lock";
 import { PaymentMethodRemove } from "./payment-method-remove";
+import { BillingAdjustmentForm, BillingAdjustmentRemove } from "./billing-adjustments";
 
 export const dynamic = "force-dynamic";
 
@@ -138,9 +139,10 @@ export default async function FamilyDetailPage({ params, searchParams }: {
                   {periodLines.map((line) => {
                     const metadata = line.metadata && typeof line.metadata === "object" && !Array.isArray(line.metadata) ? line.metadata : {};
                     const disposition = "disposition" in metadata && typeof metadata.disposition === "string" ? metadata.disposition : line.source_type.replaceAll("_", " ");
-                    return <div key={line.id} className="grid gap-2 border-t border-line py-4 first:border-t-0 sm:grid-cols-[1fr_auto] sm:gap-6"><div><p className="text-sm">{line.description}</p><p className="mt-1 text-xs text-muted">{line.service_date ?? "Period adjustment"} · <span className="uppercase">{disposition}</span></p></div><p className="text-sm sm:text-right">{money(line.amount_cents ?? 0, billingPeriod.currency)}</p></div>;
+                    return <div key={line.id} className="grid gap-2 border-t border-line py-4 first:border-t-0 sm:grid-cols-[1fr_auto] sm:gap-6"><div><p className="text-sm">{line.description}</p><p className="mt-1 text-xs text-muted">{line.service_date ?? "Period adjustment"} · <span className="uppercase">{line.source_type === "manual_adjustment" ? "owner adjustment" : disposition}</span></p>{canManagePayments && ["draft", "review"].includes(billingPeriod.status) && line.source_type === "manual_adjustment" ? <div className="mt-2"><BillingAdjustmentRemove schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} adjustmentId={line.id} /></div> : null}</div><p className={`text-sm sm:text-right ${(line.amount_cents ?? 0) < 0 ? "text-brand" : ""}`}>{money(line.amount_cents ?? 0, billingPeriod.currency)}</p></div>;
                   })}
                   {!periodLines.length ? <EmptyDetail>No line items are recorded.</EmptyDetail> : null}
+                  {canManagePayments && ["draft", "review"].includes(billingPeriod.status) ? <BillingAdjustmentForm schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
                   {canManagePayments && ["draft", "review"].includes(billingPeriod.status) && billingPeriod.amount_due_cents > 0 ? <div className="border-t border-line pt-5"><p className="max-w-lg text-xs leading-5 text-muted">Lock only after reviewing every line. Locking freezes this exact amount for the separate payer-approval step.</p><BillingPeriodLock schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /></div> : null}
                   {canManagePayments && ["locked", "approval_pending"].includes(billingPeriod.status) && billingPeriod.amount_due_cents > 0 ? <><BillingApprovalEmail schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} latestStatus={latestEmailStatusByPeriod.get(billingPeriod.id)} /><div className="mt-5 border-t border-line pt-5"><p className="text-xs uppercase tracking-[0.14em] text-muted">Optional SMS add-on</p><BillingApprovalSms schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} latestStatus={latestSmsStatusByPeriod.get(billingPeriod.id)} /></div></> : null}
                 </div>

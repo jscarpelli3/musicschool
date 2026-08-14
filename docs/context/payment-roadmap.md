@@ -110,6 +110,16 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 - Required email work: payer email management, durable delivery attempts, verified provider webhooks, bounce/complaint suppression, owner send/resend controls, and responsive templates for approval and schedule access.
 - Exit gate: complete an email approval-link send, provider reconciliation, replay, bounce/failure, supersession, and approval acceptance sequence. Charge execution remains Step 9 and cannot be inferred from delivery or approval.
 
+### 8B. Owner adjustments and payer collection preference — NEXT
+
+- Expose the existing durable manual-adjustment capability in the owner billing review. Owners may add credits or charges with an amount, category, and required explanation before locking.
+- A locked or approved amount is immutable. Changing it creates a new draft/version, cancels the superseded pending approval, and requires fresh approval unless a valid standing auto-charge mandate covers the replacement amount.
+- Let the payer explicitly choose per billing account between `approve_each_period` and `automatic_charge`. Saving a Stripe payment method alone never opts a payer into automatic collection.
+- Standing auto-charge consent records the school, payer, billing account, selected payment method or default-method rule, permitted charge categories, cadence, optional monthly cap, advance-notice window, disclosure version, effective time, and revocation time.
+- Every automatic month still produces and locks an itemized statement. Send the statement before collection; amounts beyond the mandate scope or cap fall back to one-time approval.
+- Revocation takes effect before any new provider attempt. Material changes to scope, cap, cadence, or school require new payer consent; owner edits cannot broaden a mandate.
+- Exit gate: prove adjustment auditability, supersession, opt-in, revocation, cap/scope fallback, notice delivery, and zero unauthorized charge attempts.
+
 ### 8A. Per-school SMS add-on — DEFERRED / OPTIONAL
 
 - SMS is a separately priced school add-on, not a prerequisite for billing, scheduling, or portal access.
@@ -124,7 +134,7 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 
 ### 9. Owner charge queue — PENDING
 
-- Approved and ready-to-charge work queue.
+- Ready-to-charge work queue containing either an exact approved request or an active mandate that covers the exact locked amount.
 - Durable attempt record created before the Stripe call.
 - Stable idempotency key and duplicate-charge prevention.
 - Decline and customer-authentication recovery.

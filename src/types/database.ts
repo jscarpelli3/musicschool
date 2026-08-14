@@ -2799,6 +2799,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_billing_adjustment: {
+        Args: {
+          p_amount_cents: number
+          p_billing_period_id: string
+          p_category: string
+          p_description: string
+          p_kind: string
+          p_school_id: string
+        }
+        Returns: string
+      }
       apply_email_delivery_status: {
         Args: {
           p_delivery_id: string
@@ -3020,6 +3031,14 @@ export type Database = {
           p_provider_message_sid: string
         }
         Returns: string
+      }
+      remove_billing_adjustment: {
+        Args: {
+          p_adjustment_id: string
+          p_billing_period_id: string
+          p_school_id: string
+        }
+        Returns: undefined
       }
       reschedule_lesson_as_owner: {
         Args: {

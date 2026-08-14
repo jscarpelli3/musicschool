@@ -28,6 +28,7 @@ Use this file for short chronological notes about meaningful work.
 
 - Completed the first real Resend approval sequence for a locked four-lesson, $220 family period. Provider acceptance, signed sent/delivered callbacks, immutable approval evidence, and absence of a Stripe charge were verified directly in Supabase.
 - The exit audit exposed and fixed a legacy split-state defect: payer approval advanced the request but not its parent period. Approval now advances both atomically, and the accepted test period was reconciled to approved without creating a payment attempt.
+- Added the first owner-adjustment slice: real charge/credit ledger lines with required category/explanation, automatic total recalculation, audit-backed removal, draft-refresh preservation, and locked-period denial. The database migration, types, lint, and app checks pass; deployment rehearsal is next.
 
 ## 2026-08-09
 
