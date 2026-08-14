@@ -208,6 +208,9 @@ export type Database = {
           line_items: Json
           payment_status: string
           period_label: string
+          rejected_at: string | null
+          rejection_note: string | null
+          rejection_reason_code: string | null
           request_version: number
           school_id: string
           stripe_payment_intent_id: string | null
@@ -230,6 +233,9 @@ export type Database = {
           line_items: Json
           payment_status?: string
           period_label: string
+          rejected_at?: string | null
+          rejection_note?: string | null
+          rejection_reason_code?: string | null
           request_version?: number
           school_id: string
           stripe_payment_intent_id?: string | null
@@ -252,6 +258,9 @@ export type Database = {
           line_items?: Json
           payment_status?: string
           period_label?: string
+          rejected_at?: string | null
+          rejection_note?: string | null
+          rejection_reason_code?: string | null
           request_version?: number
           school_id?: string
           stripe_payment_intent_id?: string | null
@@ -3191,6 +3200,10 @@ export type Database = {
           p_phone_e164: string
           p_provider_message_sid: string
         }
+        Returns: string
+      }
+      reject_billing_request: {
+        Args: { p_note?: string; p_reason_code: string; raw_token: string }
         Returns: string
       }
       remove_billing_adjustment: {

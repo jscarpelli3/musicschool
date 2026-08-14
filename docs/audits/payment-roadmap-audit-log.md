@@ -547,6 +547,8 @@ Recorded on 2026-08-14.
 - The approval request preserved exactly four lines and $220, remained `payment_status = not_started`, and the payer's hold-to-approve action recorded immutable amount/currency/period evidence. No Stripe payment attempt was created.
 - Exit audit found that the legacy approval function advanced only the approval request while leaving its billing period `approval_pending`. Migration `20260814120000` now advances the matching period to `approved` inside the same transaction and reconciled the accepted test period. Database lint passed; the period is approved with no paid timestamp and no payment attempt.
 - UI reorientation remains: email must read as the standard approval path; SMS must not appear as an equal always-available action and should be gated behind the per-school paid add-on configuration.
+- Added payer rejection as a first-class response rather than treating silence as disagreement. The payer selects a normalized reason and may attach a note; `Other` requires a note. Rejection invalidates the exact proposal, appends immutable evidence, and returns the untouched period to owner review.
+- The owner sees the rejection reason and note beside the editable statement. No lesson outcome, credit, or amount is changed from payer input; the owner must review facts, adjust explicitly, relock, and send a new version.
 
 ### Step 8B activation — owner billing adjustments
 

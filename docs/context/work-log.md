@@ -32,6 +32,7 @@ Use this file for short chronological notes about meaningful work.
 - Added separate payer auto-charge mandates without broadening the earlier saved-card consent. Approved payers may opt into itemized automatic monthly collection with a notice window and optional cap; email is now the sole standard approval channel and SMS is hidden unless a future school add-on exists.
 - Added immediate mandate revocation with append-only evidence. The short approval page can now enroll or stop automatic payment; long-lived frictionless payer access remains a prerequisite before production collection.
 - The first live adjustment rehearsal intentionally locked its edited period and exposed a workflow hole. Added an audited unlock-to-review control for unsent locked amounts; submitted links remain protected for the forthcoming revise-and-replace flow.
+- Added structured payer rejection with optional explanatory notes. Rejected bearer proposals become unusable and return their unchanged period to owner review; the owner sees the exact feedback and remains responsible for any factual or financial correction.
 
 ## 2026-08-09
 

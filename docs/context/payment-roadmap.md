@@ -106,6 +106,7 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 - Transactional email is the included/default delivery channel. Start with Resend and one authenticated Common Time sending domain; preserve school identity through the visible sender name and school reply-to address.
 - Portal links use Supabase phone OTP when a durable device session is absent; payment approval remains a separate expiring, single-purpose token.
 - Expiration, single use, idempotency, and consent evidence.
+- Payers may approve or reject an exact proposal. Rejection captures a structured reason plus optional note, invalidates that proposal, and returns the untouched period to owner review for an explicit corrected version.
 - Implemented foundation: locked-period approval snapshots plus the earlier shared-sender SMS delivery/status, webhook, and consent work. The channel-independent approval records remain valid.
 - Required email work: payer email management, durable delivery attempts, verified provider webhooks, bounce/complaint suppression, owner send/resend controls, and responsive templates for approval and schedule access.
 - Exit gate: complete an email approval-link send, provider reconciliation, replay, bounce/failure, supersession, and approval acceptance sequence. Charge execution remains Step 9 and cannot be inferred from delivery or approval.

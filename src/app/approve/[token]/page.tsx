@@ -4,6 +4,7 @@ import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
 import { createPublicClient } from "@/lib/supabase/public";
 import { approveBillingRequest } from "./actions";
 import { AutoChargeEnrollment } from "./auto-charge-enrollment";
+import { RejectChargesForm } from "./reject-charges-form";
 
 export const dynamic = "force-dynamic";
 
@@ -98,6 +99,7 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
             <div className="mt-6">
               <HoldToConfirm action={approve} idleLabel={`Hold to approve ${money(approval.amount_cents, approval.currency)}`} />
             </div>
+            <RejectChargesForm token={token} />
           </>
         ) : (
           <div className="border-l border-brand pl-5">
@@ -105,6 +107,8 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
             <p className="mt-2 text-sm text-muted">
               {approval.approval_status === "approved"
                 ? "The school has your approval. This does not mean the payment has been processed."
+                : approval.approval_status === "rejected"
+                  ? "Your note was sent to the school. This proposal cannot be charged or approved unless the school prepares a replacement."
                 : "Contact the school if you need a new approval request."}
             </p>
           </div>

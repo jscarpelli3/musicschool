@@ -32,6 +32,35 @@ export async function approveBillingRequest(token: string) {
   return { ok: false, message: messages[String(data)] ?? "This request cannot be approved." };
 }
 
+export type RejectBillingState = { ok: boolean; message: string };
+
+export async function rejectBillingRequest(token: string, _previous: RejectBillingState, formData: FormData): Promise<RejectBillingState> {
+  void _previous;
+  const reason = String(formData.get("reason") ?? "");
+  const note = String(formData.get("note") ?? "").trim();
+  const supabase = createPublicClient();
+  const { data, error } = await supabase.rpc("reject_billing_request", {
+    p_note: note || undefined,
+    p_reason_code: reason,
+    raw_token: token,
+  });
+  if (error) return { ok: false, message: "Your response could not be recorded. The proposal is still pending." };
+  if (data === "rejected" || data === "already_rejected") {
+    revalidatePath(`/approve/${token}`);
+    return { ok: true, message: data === "rejected" ? "Sent back to the school for review. No payment was started." : "This proposal was already sent back for review." };
+  }
+  const messages: Record<string, string> = {
+    invalid_reason: "Choose the reason these charges need review.",
+    note_required: "Add a short note when choosing Other.",
+    note_too_long: "Keep the note under 1,000 characters.",
+    approved: "This proposal was already approved.",
+    expired: "This proposal expired. Contact the school if the amount still needs review.",
+    cancelled: "The school already replaced or cancelled this proposal.",
+    not_found: "This approval link is invalid.",
+  };
+  return { ok: false, message: messages[String(data)] ?? "This proposal cannot be sent back for review." };
+}
+
 export async function enrollAutoChargeMandate(token: string, capValue: string, noCap: boolean, noticeDays: number) {
   const capText = capValue.trim();
   if (!noCap && !/^\d{1,7}(\.\d{1,2})?$/.test(capText)) return { ok: false, message: "Enter a valid monthly maximum." };
