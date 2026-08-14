@@ -24,6 +24,11 @@ Use this file for short chronological notes about meaningful work.
 - Added editable payer email, email-first approval controls, responsive HTML/plain-text approval mail, direct send-only Resend API integration with stable idempotency keys, and a raw-body Svix-verified webhook endpoint.
 - Regenerated linked database types and passed TypeScript, ESLint, and linked Supabase database lint. Resend webhook registration, its Vercel signing secret, deployment, and end-to-end provider rehearsals remain the active Step 8 gate.
 
+## 2026-08-14
+
+- Completed the first real Resend approval sequence for a locked four-lesson, $220 family period. Provider acceptance, signed sent/delivered callbacks, immutable approval evidence, and absence of a Stripe charge were verified directly in Supabase.
+- The exit audit exposed and fixed a legacy split-state defect: payer approval advanced the request but not its parent period. Approval now advances both atomically, and the accepted test period was reconciled to approved without creating a payment attempt.
+
 ## 2026-08-09
 
 - Completed the Stripe Connect test foundation through hosted school onboarding, human-readable account synchronization, signed/idempotent webhook intake, payer card setup, saved-method reconciliation, and detach handling.

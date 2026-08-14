@@ -537,3 +537,13 @@ Recorded on 2026-08-13.
 - The template has HTML and plain-text forms, escapes all school/payer content, and identifies the school through the visible sender name while using the authenticated Common Time subdomain.
 - Migration `20260813120000` deployed successfully. Linked Supabase database lint reports no errors; generated types, TypeScript, and ESLint pass.
 - Exit gate remains open: register the production Resend webhook, deploy its signing secret, exercise send/delivery/replay/out-of-order/bounce/suppression/supersession/approval acceptance, and confirm the owner sees reconciled truth.
+
+### Step 8 email acceptance — first delivered approval
+
+Recorded on 2026-08-14.
+
+- Prepared and locked Julian Reed's August 2026 demo billing period with four immutable $55 per-session lines totaling $220. The initial draft correctly stopped on a past lesson missing an outcome; correcting that demo fact to completed allowed generation without fabricating a cancellation policy.
+- Sent the first real approval email to the requested test payer address. The local attempt was created before submission, Resend accepted it, and distinct signed `email.sent` and `email.delivered` events reconciled the delivery to `delivered`.
+- The approval request preserved exactly four lines and $220, remained `payment_status = not_started`, and the payer's hold-to-approve action recorded immutable amount/currency/period evidence. No Stripe payment attempt was created.
+- Exit audit found that the legacy approval function advanced only the approval request while leaving its billing period `approval_pending`. Migration `20260814120000` now advances the matching period to `approved` inside the same transaction and reconciled the accepted test period. Database lint passed; the period is approved with no paid timestamp and no payment attempt.
+- UI reorientation remains: email must read as the standard approval path; SMS must not appear as an equal always-available action and should be gated behind the per-school paid add-on configuration.
