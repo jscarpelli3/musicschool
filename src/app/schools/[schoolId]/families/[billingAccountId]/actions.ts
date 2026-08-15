@@ -97,6 +97,20 @@ export async function unlockUnsubmittedBillingPeriod(schoolId: string, billingAc
   return { ok: true, message: "Amount unlocked. Review or adjust it, then lock the new total." };
 }
 
+export async function reviseSubmittedBillingPeriod(schoolId: string, billingAccountId: string, billingPeriodId: string) {
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) redirect(`/login?next=${path}`);
+  const { error } = await supabase.rpc("revise_submitted_billing_period", {
+    p_billing_period_id: billingPeriodId,
+    p_school_id: schoolId,
+  });
+  if (error) return { ok: false, message: "The pending request could not be cancelled. The statement remains unchanged." };
+  revalidatePath(path);
+  return { ok: true, message: "Pending link cancelled. The statement is back in review and can be corrected safely." };
+}
+
 export async function addBillingAdjustment(
   schoolId: string,
   billingAccountId: string,

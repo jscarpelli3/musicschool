@@ -39,7 +39,7 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 - The current toll-free number is restricted and cannot complete a real US/Canada handset test. It can be assigned to the first school and resubmitted after school-specific business and public consent materials exist; no second number is needed merely to continue software testing.
 - The Twilio parent account still needs an approved ISV Primary Customer Profile before production per-school onboarding. The legacy service uses an intentional 3,600-second validity period.
 - No production or test charge-execution workflow is active yet. Approval, saved-card authorization, and collection remain deliberately separate.
-- Submitted-but-pending proposals still need an owner `Revise and replace request` action that cancels the old bearer link atomically before reopening the statement.
+- Submitted-but-pending proposals now have an owner `Revise and replace request` action that cancels the old bearer link atomically before reopening the statement; live recovery rehearsal remains.
 - Automatic-payment enrollment/revocation is deployed but has not passed a live saved-card rehearsal. Long-lived payer access is still required so revocation remains available after an approval link expires.
 - The first real school needs published cancellation/payment policies before months containing cancellations or no-shows can produce complete drafts.
 - Teacher-only and guardian/student rescheduling flows are deferred. Their authorization and policy limits must not be inferred from the owner flow.
@@ -51,7 +51,7 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 ## Next Steps
 
 1. Complete the live restart checklist below for adjustment, unlock, rejection/note, corrected replacement, saved-card auto-charge enrollment, cap, and revocation.
-2. Add owner `Revise and replace request`, then close Payment Step 8 only after replay, out-of-order event, provider failure, bounce/complaint suppression, and supersession tests.
+2. Rehearse owner `Revise and replace request`, then close Payment Step 8 only after replay, out-of-order event, bounce/complaint suppression, and supersession tests.
 3. Add long-lived payer access for mandate review/revocation before any automatic collection.
 4. Implement Stripe charge execution against an exact approved request or valid mandate with idempotency, receipts, refunds/disputes, and reconciliation.
 5. Rehearse the planner/reschedule flow under a teacher-only account, then design policy-bound guardian/student access and magic-link delivery.

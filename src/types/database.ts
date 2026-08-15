@@ -3227,6 +3227,10 @@ export type Database = {
         }
         Returns: Json
       }
+      revise_submitted_billing_period: {
+        Args: { p_billing_period_id: string; p_school_id: string }
+        Returns: string
+      }
       revoke_auto_charge_mandate: {
         Args: { p_evidence?: Json; raw_token: string }
         Returns: string

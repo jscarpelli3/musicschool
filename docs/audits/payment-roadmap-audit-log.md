@@ -561,6 +561,8 @@ Recorded on 2026-08-14.
 - Migration `20260814123000` deployed, linked database lint passed, generated types were refreshed, and TypeScript/ESLint pass. Live owner UI rehearsal remains after deployment.
 - Live rehearsal intentionally locked a period after adding an adjustment and exposed a missing pre-send revision path. Added owner/admin `Unlock to revise` for locked periods with no pending/approved request. It preserves lines, clears the stale lock timestamp, returns the period to review through the guarded transition, and appends audit evidence.
 - Unlock explicitly refuses any period whose amount has already been sent or approved; those require a separate atomic request-replacement flow so an old bearer link can never remain valid for a superseded amount.
+- The Garcia rehearsal then intentionally/accidentally relocked the corrected $200 amount and attempted delivery to its seeded `example.com` payer address. The durable request moved to pending, Resend submission failed, and no provider email ID was recorded; draft refresh correctly refused a submitted period.
+- Added `Revise and replace request`: owner/admin cancellation locks the pending request, records a cancellation event/audit evidence, invalidates its bearer token, and only then returns the unchanged period to review. Failed delivery history remains intact. The owner must relock and create a new version after correcting the amount or recipient.
 
 ### Step 8B checkpoint — explicit automatic-charge mandate
 
