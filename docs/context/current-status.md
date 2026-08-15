@@ -44,6 +44,7 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 - The first real school needs published cancellation/payment policies before months containing cancellations or no-shows can produce complete drafts.
 - Teacher-only and guardian/student rescheduling flows are deferred. Their authorization and policy limits must not be inferred from the owner flow.
 - Macro calendar closures and dated teacher exceptions are modeled but still need enforcement before client self-service rescheduling launches.
+- Scheduling follow-up: add explicit occurrence-level substitute/change-teacher controls and standalone makeup/ad-hoc lesson creation. The data direction permits both; UI, authorization, optional makeup-origin linkage, and payroll attribution still need rehearsal.
 - Phone day view defaults to one teacher and phone month view summarizes counts. Week view remains deliberately horizontally scrollable; an agenda or paged-day treatment is a future refinement.
 - A paid Supabase backup plan and tested Storage export/restore procedure remain production-readiness requirements.
 

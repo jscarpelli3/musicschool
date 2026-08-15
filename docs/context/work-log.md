@@ -33,6 +33,7 @@ Use this file for short chronological notes about meaningful work.
 - Added immediate mandate revocation with append-only evidence. The short approval page can now enroll or stop automatic payment; long-lived frictionless payer access remains a prerequisite before production collection.
 - The first live adjustment rehearsal intentionally locked its edited period and exposed a workflow hole. Added an audited unlock-to-review control for unsent locked amounts; submitted links remain protected for the forthcoming revise-and-replace flow.
 - Added structured payer rejection with optional explanatory notes. Rejected bearer proposals become unusable and return their unchanged period to owner review; the owner sees the exact feedback and remains responsible for any factual or financial correction.
+- Confirmed that students do not belong exclusively to one teacher. Logged occurrence-level substitute assignment and free-floating standalone makeup/ad-hoc lessons as scheduling invariants, including immutable teacher-change history and actual-teacher workload attribution.
 
 ## 2026-08-09
 
