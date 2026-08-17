@@ -599,6 +599,7 @@ Recorded on 2026-08-17.
 - Kim version 2 approval passed at $150. Database evidence confirms version 1 remains rejected at $160 with `payment_status = not_started`; version 2 is approved at $150 with `payment_status = not_started`; the billing period is approved at $150 with no paid timestamp; and zero payment attempts exist. Approval/rejection controls disappeared after acceptance. The rejection-correction-replacement-approval chain is complete without money movement.
 - Approval-link scalability hardening added database uniqueness for `(billing_period_id, request_version)` and at most one pending request per period. Live preflight found seven period-bound requests with zero duplicate versions and zero periods containing multiple pending requests. Rejection already terminates the addressed token atomically and independently of replacement creation.
 - Public approval lookup now returns only whether a later version exists, never its token. Terminal pages distinguish rejected, replaced/cancelled, and expired states and tell the payer to use the newest email only when a later version exists. TypeScript, ESLint, and the webpack production build pass after deployment.
+- Invalidated-link disclosure was tightened: rejected, cancelled/replaced, and expired pages now omit the old billing account, amount, and charge breakdown and show only a large terminal status with next-step guidance. Approved pages retain the immutable accepted breakdown. TypeScript, ESLint, and production build pass.
 
 ### Step 8B checkpoint — explicit automatic-charge mandate
 

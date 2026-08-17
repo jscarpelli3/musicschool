@@ -51,6 +51,21 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
   if (error || !approval) notFound();
 
   const canApprove = approval.approval_status === "pending";
+  const invalidated = ["rejected", "cancelled", "expired"].includes(approval.approval_status);
+  const invalidatedTitle = approval.has_newer_request
+    ? "This statement was updated."
+    : approval.approval_status === "rejected"
+      ? "This statement was sent back."
+      : approval.approval_status === "expired"
+        ? "This link has expired."
+        : "This statement was cancelled.";
+  const invalidatedMessage = approval.has_newer_request
+    ? "This link can no longer be used. Check your email for the revised statement from the school."
+    : approval.approval_status === "rejected"
+      ? "Your response was sent to the school. This link can no longer be approved."
+      : approval.approval_status === "expired"
+        ? "Contact the school if you need a new statement."
+        : "Contact the school if you expected a replacement statement.";
   const approve = approveBillingRequest.bind(null, token);
   const { data: enrollmentRows } = approval.approval_status === "approved"
     ? await supabase.rpc("get_auto_charge_enrollment", { raw_token: token })
@@ -62,11 +77,18 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
       <header className="border-b border-line pb-8 sm:flex sm:items-end sm:justify-between">
         <div>
           <p className="text-sm text-muted">{approval.school_name}</p>
-          <h1 className="mt-3 font-display text-4xl leading-none sm:text-6xl">Review this month</h1>
+          <h1 className="mt-3 font-display text-4xl leading-none sm:text-6xl">{invalidated ? "Statement unavailable" : "Review this month"}</h1>
         </div>
         <p className="mt-5 text-sm text-muted sm:mt-0">{approval.period_label}</p>
       </header>
 
+      {invalidated ? (
+        <section className="py-14 sm:py-20" aria-labelledby="invalidated-statement">
+          <p className="text-sm text-brand">This link is no longer active</p>
+          <h2 id="invalidated-statement" className="mt-4 max-w-2xl font-display text-4xl leading-tight sm:text-6xl">{invalidatedTitle}</h2>
+          <p className="mt-6 max-w-xl text-lg leading-8 text-muted">{invalidatedMessage}</p>
+        </section>
+      ) : <>
       <section className="py-8 sm:py-12" aria-labelledby="charge-breakdown">
         <div className="flex items-baseline justify-between gap-6 border-b border-line pb-5">
           <div>
@@ -108,19 +130,7 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
             <p className="mt-2 text-sm text-muted">
               {approval.approval_status === "approved"
                 ? "The school has your approval. This does not mean the payment has been processed."
-                : approval.approval_status === "rejected"
-                  ? approval.has_newer_request
-                    ? "This statement was updated. This link cannot be used; check your email for the revised statement from the school."
-                    : "You sent this statement back to the school for review. This link can no longer be approved."
-                  : approval.approval_status === "cancelled"
-                    ? approval.has_newer_request
-                      ? "This statement was replaced. This link cannot be used; check your email for the revised statement from the school."
-                      : "The school cancelled this statement. Contact the school if you expected a replacement."
-                    : approval.approval_status === "expired"
-                      ? approval.has_newer_request
-                        ? "This link expired and the statement was updated. Check your email for the revised statement from the school."
-                        : "This link expired. Contact the school for a new statement."
-                      : "Contact the school if you need a new approval request."}
+                : "Contact the school if you need a new approval request."}
             </p>
           </div>
         )}
@@ -131,6 +141,7 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
         </div>
         {approval.approval_status === "approved" && enrollment ? <AutoChargeEnrollment token={token} schoolName={enrollment.school_name} accountName={enrollment.billing_account_name} methodLabel={enrollment.payment_method_label ?? "saved payment method"} lastFour={enrollment.payment_method_last_four} amountCents={enrollment.current_amount_cents} currency={enrollment.currency} eligible={enrollment.eligible} activeMandate={Boolean(enrollment.active_mandate_id)} initialCapCents={enrollment.monthly_cap_cents} initialNoticeDays={enrollment.advance_notice_days} /> : null}
       </section>
+      </>}
     </main>
   );
 }
