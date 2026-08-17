@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.15"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       audit_log: {
@@ -1017,6 +1042,7 @@ export type Database = {
           amount_cents: number
           billing_mode: string
           billing_service_date: string
+          billing_timing: string
           captured_at: string
           currency: string
           id: string
@@ -1030,6 +1056,7 @@ export type Database = {
           amount_cents: number
           billing_mode: string
           billing_service_date: string
+          billing_timing?: string
           captured_at?: string
           currency: string
           id?: string
@@ -1043,6 +1070,7 @@ export type Database = {
           amount_cents?: number
           billing_mode?: string
           billing_service_date?: string
+          billing_timing?: string
           captured_at?: string
           currency?: string
           id?: string
@@ -1366,6 +1394,7 @@ export type Database = {
         Row: {
           amount_cents: number
           billing_mode: string
+          billing_timing: string
           created_at: string
           created_by: string
           currency: string
@@ -1380,6 +1409,7 @@ export type Database = {
         Insert: {
           amount_cents: number
           billing_mode: string
+          billing_timing?: string
           created_at?: string
           created_by: string
           currency: string
@@ -1394,6 +1424,7 @@ export type Database = {
         Update: {
           amount_cents?: number
           billing_mode?: string
+          billing_timing?: string
           created_at?: string
           created_by?: string
           currency?: string
@@ -2359,14 +2390,18 @@ export type Database = {
         Row: {
           address_line_1: string | null
           address_line_2: string | null
+          billing_day: number
+          billing_timing_default: string
           city: string | null
           created_at: string
           created_by: string
           currency: string
           family_billing_mode: string
           id: string
+          intended_charge_day: number
           logo_path: string | null
           name: string
+          payer_review_days: number
           phone: string | null
           postal_code: string | null
           primary_color: string | null
@@ -2378,14 +2413,18 @@ export type Database = {
         Insert: {
           address_line_1?: string | null
           address_line_2?: string | null
+          billing_day?: number
+          billing_timing_default?: string
           city?: string | null
           created_at?: string
           created_by: string
           currency?: string
           family_billing_mode?: string
           id?: string
+          intended_charge_day?: number
           logo_path?: string | null
           name: string
+          payer_review_days?: number
           phone?: string | null
           postal_code?: string | null
           primary_color?: string | null
@@ -2397,14 +2436,18 @@ export type Database = {
         Update: {
           address_line_1?: string | null
           address_line_2?: string | null
+          billing_day?: number
+          billing_timing_default?: string
           city?: string | null
           created_at?: string
           created_by?: string
           currency?: string
           family_billing_mode?: string
           id?: string
+          intended_charge_day?: number
           logo_path?: string | null
           name?: string
+          payer_review_days?: number
           phone?: string | null
           postal_code?: string | null
           primary_color?: string | null
@@ -2470,6 +2513,7 @@ export type Database = {
       }
       service_products: {
         Row: {
+          billing_timing_override: string | null
           capacity: number
           created_at: string
           created_by: string
@@ -2489,6 +2533,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billing_timing_override?: string | null
           capacity?: number
           created_at?: string
           created_by: string
@@ -2508,6 +2553,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billing_timing_override?: string | null
           capacity?: number
           created_at?: string
           created_by?: string
@@ -3380,6 +3426,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

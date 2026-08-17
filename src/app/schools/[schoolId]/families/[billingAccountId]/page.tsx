@@ -85,6 +85,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   const billingMessages: Record<string, string> = {
     prepared: "Draft prepared from the current schedule and saved to the billing ledger.",
     needs_review: "Draft stopped without changing the ledger. At least one lesson needs an outcome or an effective cancellation policy.",
+    period_incomplete: "This account bills after service. Prepare this month after every scheduled lesson has ended and its outcome is recorded.",
     not_refreshable: "That period has already moved beyond review and cannot be refreshed.",
     invalid_month: "Choose a valid service month.",
     error: "The draft could not be prepared. The prior ledger state was left intact.",

@@ -50,6 +50,7 @@ export async function prepareFamilyBillingDraft(schoolId: string, billingAccount
       || detail.includes("requires_owner_review")
       || detail.includes("missing_effective_cancellation_policy")
       ? "needs_review"
+      : detail.includes("after_service_period_is_not_complete") ? "period_incomplete"
       : detail.includes("billing_period_is_not_refreshable") ? "not_refreshable" : "error";
     redirect(`${path}?billing=${status}`);
   }

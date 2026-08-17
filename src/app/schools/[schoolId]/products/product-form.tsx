@@ -53,6 +53,15 @@ export function ProductForm({ schoolId }: { schoolId: string }) {
         </fieldset>
         <input type="hidden" name="pricing_model" value="per_session" />
         <label className="md:col-span-2">
+          <span className="block text-xs text-muted">When this offering is billed</span>
+          <select name="billing_timing" defaultValue="school_default" className={fieldClass}>
+            <option value="school_default">Use the school default</option>
+            <option value="before_service">Before lessons happen</option>
+            <option value="after_service">After lessons happen</option>
+          </select>
+          <span className="mt-2 block text-xs leading-5 text-muted">This becomes an immutable term when a student is enrolled. Changing the default later does not rewrite existing agreements.</span>
+        </label>
+        <label className="md:col-span-2">
           <span className="block text-xs text-muted">Price per lesson or class meeting</span>
           <div className="flex border-b border-line focus-within:border-brand">
             <span className="py-3 text-muted">$</span>

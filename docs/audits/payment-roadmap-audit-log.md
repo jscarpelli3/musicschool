@@ -584,6 +584,16 @@ Recorded on 2026-08-14.
 - After bulk preparation, route owners to a review queue summarizing ready, needs-review, blocked, and unchanged drafts with totals and drill-down. The normal path is review each statement. A rare bulk-lock action may exist as visually secondary text, not the primary button; it opens a summary/exception confirmation surface and requires a deliberate hold-to-confirm before locking only currently eligible drafts.
 - Bulk preparation, review, and lock do not send approval requests or charge payers. Bulk send and bulk collection, if ever added, require distinct later designs and authorization gates. The batch records actor, scope, included/excluded periods, per-period results, and idempotency key so refresh/retry cannot duplicate ledger lines or side effects.
 
+### Explicit billing timing foundation
+
+Recorded on 2026-08-17.
+
+- Replaced the draft generator's implicit hybrid behavior with explicit `before_service` and `after_service` agreement facts. Existing schools, offerings, and 84 occurrence snapshots were conservatively backfilled as before-service, matching the prior scheduled-obligation behavior.
+- Added a school default, optional offering override, preparation day, payer review window, and intended charge day. Defaults apply only to future agreements/standalone lessons; immutable lesson-series terms and occurrence price snapshots preserve resolved timing historically.
+- Before-service scheduled occurrences may be drafted without an outcome. After-service periods refuse future/incomplete occurrences and require resolved outcomes/policies. Statement metadata records the timing used for every generated line.
+- A rollback-only database rehearsal passed: a future before-service lesson charged its snapshotted price, a future after-service period was blocked, and a completed historical after-service lesson charged correctly. The rehearsal left no fixtures.
+- Linked types regenerated; TypeScript and ESLint pass. The webpack production build passes. The default Turbopack build runner remains blocked in this execution environment by an OS port-binding restriction unrelated to application compilation.
+
 ### Step 8B checkpoint — explicit automatic-charge mandate
 
 Recorded on 2026-08-14.

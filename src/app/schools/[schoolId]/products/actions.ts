@@ -30,6 +30,7 @@ export async function createProduct(
   const intervalCount = integer(formData, "interval_count");
   const intervalUnit = String(formData.get("interval_unit"));
   const pricingModel = String(formData.get("pricing_model"));
+  const billingTiming = String(formData.get("billing_timing"));
   const priceCents = cents(formData.get("price"));
   const requestedCapacity = integer(formData, "capacity");
   const capacity = format === "private_lesson" ? 1 : requestedCapacity;
@@ -43,6 +44,7 @@ export async function createProduct(
   if (!(["fixed_monthly", "per_session"] as string[]).includes(pricingModel)) return { error: "Choose a valid pricing model." };
   if (priceCents === null) return { error: "Enter a valid price with no more than two decimal places." };
   if (!capacity || capacity < 1 || capacity > 500) return { error: "Class capacity must be between 2 and 500." };
+  if (!(["school_default", "before_service", "after_service"] as string[]).includes(billingTiming)) return { error: "Choose when this offering is billed." };
 
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getClaims();
@@ -66,6 +68,7 @@ export async function createProduct(
     interval_count: intervalCount,
     interval_unit: intervalUnit,
     pricing_model: pricingModel,
+    billing_timing_override: billingTiming === "school_default" ? null : billingTiming,
     price_cents: priceCents,
     currency: school.currency,
     capacity,
@@ -78,6 +81,31 @@ export async function createProduct(
 
   revalidatePath(`/schools/${schoolId}/products`);
   redirect(`/schools/${schoolId}/products?created=1`);
+}
+
+export async function updateSchoolBillingTiming(schoolId: string, formData: FormData) {
+  const timing = String(formData.get("billing_timing_default"));
+  const billingDay = integer(formData, "billing_day");
+  const reviewDays = integer(formData, "payer_review_days");
+  const chargeDay = integer(formData, "intended_charge_day");
+  if (!["before_service", "after_service"].includes(timing)
+    || !billingDay || billingDay < 1 || billingDay > 28
+    || !reviewDays || reviewDays < 1 || reviewDays > 14
+    || !chargeDay || chargeDay < 1 || chargeDay > 28) {
+    redirect(`/schools/${schoolId}/products?billing=invalid`);
+  }
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  if (!data?.claims?.sub) redirect(`/login?next=/schools/${schoolId}/products`);
+  const { data: updated, error } = await supabase.from("schools").update({
+    billing_timing_default: timing,
+    billing_day: billingDay,
+    payer_review_days: reviewDays,
+    intended_charge_day: chargeDay,
+  }).eq("id", schoolId).select("id").maybeSingle();
+  if (error || !updated) redirect(`/schools/${schoolId}/products?billing=error`);
+  revalidatePath(`/schools/${schoolId}/products`);
+  redirect(`/schools/${schoolId}/products?billing=saved`);
 }
 
 export async function archiveProduct(schoolId: string, productId: string) {
