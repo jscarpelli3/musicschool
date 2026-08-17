@@ -81,6 +81,8 @@ The product should feel like a well-run independent music school: cultivated, hu
 - Receipt links should read `View Stripe receipt` and disclose when one payment covers multiple students. Never present a family payment as multiple independent receipts merely because it appears in more than one student's history.
 - Failed-payment notices must identify the family, statement, amount, attempt time, current payment truth, and available recovery actions in plain language. Provider decline codes may support the translation but should not be the owner's primary explanation.
 - Bulk draft preparation should lead to a review queue, not directly to payer communication or collection. Individual review is the dominant action. `Lock all eligible drafts` is a secondary text action that opens a summary of totals and exceptions and then requires deliberate confirmation; it must never visually compete with reviewing the next draft.
+- Payer approval, rejection, payment failure, and other owner-action events create durable in-app notifications. Show a toast when the owner is active, retain the item in an inbox until read/resolved, and send email independently. A toast alone is never the record and may not be the only notification path.
+- Revised statements always receive a new approval URL. An old link keeps its original amount and terminal status and says that the statement was updated and the payer should use the newest message. Never silently change the amount behind an existing URL or redirect an old bearer link to a new bearer link.
 
 The live study is available at `/design/interactions`.
 
