@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createPublicClient } from "@/lib/supabase/public";
+import { dispatchOwnerResponseEmails } from "@/lib/notifications/dispatch-owner-notifications";
 
 export async function approveBillingRequest(token: string) {
   const supabase = createPublicClient();
@@ -15,6 +16,7 @@ export async function approveBillingRequest(token: string) {
   if (error) return { ok: false, message: "We could not record this approval. Please try again." };
 
   if (data === "approved" || data === "already_approved") {
+    if (data === "approved") await dispatchOwnerResponseEmails(token);
     return {
       ok: true,
       message: data === "approved"
@@ -46,6 +48,7 @@ export async function rejectBillingRequest(token: string, _previous: RejectBilli
   });
   if (error) return { ok: false, message: "Your response could not be recorded. The proposal is still pending." };
   if (data === "rejected" || data === "already_rejected") {
+    if (data === "rejected") await dispatchOwnerResponseEmails(token);
     revalidatePath(`/approve/${token}`);
     return { ok: true, message: data === "rejected" ? "Sent back to the school for review. No payment was started." : "This proposal was already sent back for review." };
   }

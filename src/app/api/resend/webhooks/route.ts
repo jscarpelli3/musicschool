@@ -48,5 +48,20 @@ export async function POST(request: Request) {
     console.error("Resend webhook reconciliation failed", { code: error.code, eventId });
     return NextResponse.json({ error: "Event intake failed." }, { status: 500 });
   }
+  if (data === "pending_reconciliation") {
+    const status = ({
+      "email.sent": "sent", "email.delivered": "delivered", "email.delivery_delayed": "delayed",
+      "email.bounced": "bounced", "email.complained": "complained", "email.failed": "failed", "email.suppressed": "suppressed",
+    } as Record<string, string>)[event.type];
+    if (status) {
+      const occurred = new Date(occurredAt).toISOString();
+      const failed = ["bounced", "complained", "failed", "suppressed"].includes(status);
+      await admin.from("owner_notification_email_outbox").update({
+        status,
+        delivered_at: status === "delivered" ? occurred : undefined,
+        failed_at: failed ? occurred : undefined,
+      }).eq("provider_email_id", providerEmailId);
+    }
+  }
   return NextResponse.json({ received: true, duplicate: data === "duplicate" });
 }

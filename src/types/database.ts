@@ -1460,6 +1460,147 @@ export type Database = {
           },
         ]
       }
+      owner_notification_email_outbox: {
+        Row: {
+          accepted_at: string | null
+          approval_request_id: string
+          created_at: string
+          delivered_at: string | null
+          failed_at: string | null
+          id: string
+          idempotency_key: string
+          message_text: string
+          notification_id: string
+          provider_email_id: string | null
+          provider_error_code: string | null
+          provider_error_message: string | null
+          recipient_email: string
+          school_id: string
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          approval_request_id: string
+          created_at?: string
+          delivered_at?: string | null
+          failed_at?: string | null
+          id?: string
+          idempotency_key: string
+          message_text: string
+          notification_id: string
+          provider_email_id?: string | null
+          provider_error_code?: string | null
+          provider_error_message?: string | null
+          recipient_email: string
+          school_id: string
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          approval_request_id?: string
+          created_at?: string
+          delivered_at?: string | null
+          failed_at?: string | null
+          id?: string
+          idempotency_key?: string
+          message_text?: string
+          notification_id?: string
+          provider_email_id?: string | null
+          provider_error_code?: string | null
+          provider_error_message?: string | null
+          recipient_email?: string
+          school_id?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_notification_email_outb_school_id_approval_request_i_fkey"
+            columns: ["school_id", "approval_request_id"]
+            isOneToOne: false
+            referencedRelation: "billing_approval_requests"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "owner_notification_email_outbox_school_id_notification_id_fkey"
+            columns: ["school_id", "notification_id"]
+            isOneToOne: false
+            referencedRelation: "owner_notifications"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
+      owner_notifications: {
+        Row: {
+          created_at: string
+          dedupe_key: string
+          entity_id: string
+          entity_type: string
+          href: string
+          id: string
+          kind: string
+          message: string
+          metadata: Json
+          read_at: string | null
+          recipient_profile_id: string
+          resolved_at: string | null
+          school_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          dedupe_key: string
+          entity_id: string
+          entity_type: string
+          href: string
+          id?: string
+          kind: string
+          message: string
+          metadata?: Json
+          read_at?: string | null
+          recipient_profile_id: string
+          resolved_at?: string | null
+          school_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          dedupe_key?: string
+          entity_id?: string
+          entity_type?: string
+          href?: string
+          id?: string
+          kind?: string
+          message?: string
+          metadata?: Json
+          read_at?: string | null
+          recipient_profile_id?: string
+          resolved_at?: string | null
+          school_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_notifications_recipient_profile_id_fkey"
+            columns: ["recipient_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_notifications_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_attempts: {
         Row: {
           amount_cents: number
@@ -3211,6 +3352,14 @@ export type Database = {
           p_school_id: string
         }
         Returns: Json
+      }
+      queue_payer_response_notifications: {
+        Args: {
+          p_kind: string
+          p_note?: string
+          p_request: Database["public"]["Tables"]["billing_approval_requests"]["Row"]
+        }
+        Returns: undefined
       }
       record_public_sms_opt_in: {
         Args: {

@@ -601,6 +601,16 @@ Recorded on 2026-08-17.
 - Public approval lookup now returns only whether a later version exists, never its token. Terminal pages distinguish rejected, replaced/cancelled, and expired states and tell the payer to use the newest email only when a later version exists. TypeScript, ESLint, and the webpack production build pass after deployment.
 - Invalidated-link disclosure was tightened: rejected, cancelled/replaced, and expired pages now omit the old billing account, amount, and charge breakdown and show only a large terminal status with next-step guidance. Approved pages retain the immutable accepted breakdown. TypeScript, ESLint, and production build pass.
 
+### Owner payer-response notifications
+
+Recorded on 2026-08-17.
+
+- Payer approval/rejection now creates one tenant-scoped durable notification per active owner/admin and a pending email-outbox row for each recipient with an email, inside the same database transaction as the payer decision. Notification truth cannot be lost because Resend is unavailable.
+- Added recipient-only RLS, unread/read state, a global school-route inbox, live Realtime toast subscription, and direct navigation to the affected family billing record. Public approval pages never mount the school notification subscription.
+- Server actions submit pending outbox items to Resend with stable idempotency keys after the payer transaction. Acceptance or failure is recorded independently; signed Resend webhooks reconcile sent/delivered/delayed/bounce/complaint/failure states for owner notification emails.
+- A rollback-only database rehearsal passed owner/admin fan-out and duplicate queue invocation without duplicate notifications/outbox rows and left no fixtures. TypeScript, ESLint, and production build pass.
+- Live acceptance remains: create a fresh payer response after deployment, verify toast/inbox, owner email acceptance/delivery, and prove the payer decision remains valid under a forced provider failure. Automated retry scheduling/manual retry UI for failed outbox items remains to be built and must not be reported complete.
+
 ### Step 8B checkpoint — explicit automatic-charge mandate
 
 Recorded on 2026-08-14.

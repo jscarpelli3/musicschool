@@ -1,0 +1,49 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import type { Database } from "@/types/database";
+
+type Notice = Database["public"]["Tables"]["owner_notifications"]["Row"];
+
+export function OwnerNotifications() {
+  const pathname = usePathname();
+  const schoolId = pathname.match(/^\/schools\/([0-9a-f-]{36})(?:\/|$)/i)?.[1];
+  const supabase = useMemo(() => createClient(), []);
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const [open, setOpen] = useState(false);
+  const [toast, setToast] = useState<Notice | null>(null);
+
+  useEffect(() => {
+    if (!schoolId) return;
+    let active = true;
+    void supabase.from("owner_notifications").select("*").eq("school_id", schoolId).order("created_at", { ascending: false }).limit(20).then(({ data }) => { if (active) setNotices(data ?? []); });
+    const channel = supabase.channel(`owner-notifications:${schoolId}`).on("postgres_changes", { event: "INSERT", schema: "public", table: "owner_notifications", filter: `school_id=eq.${schoolId}` }, (payload) => {
+      const notice = payload.new as Notice;
+      setNotices((current) => [notice, ...current.filter((item) => item.id !== notice.id)].slice(0, 20));
+      setToast(notice);
+    }).subscribe();
+    return () => { active = false; void supabase.removeChannel(channel); };
+  }, [schoolId, supabase]);
+
+  if (!schoolId) return null;
+  const unread = notices.filter((notice) => !notice.read_at).length;
+  async function markRead(notice: Notice) {
+    if (!notice.read_at) {
+      const readAt = new Date().toISOString();
+      setNotices((current) => current.map((item) => item.id === notice.id ? { ...item, read_at: readAt } : item));
+      await supabase.from("owner_notifications").update({ read_at: readAt }).eq("id", notice.id);
+    }
+    setOpen(false);
+  }
+
+  return <>
+    <div className="fixed right-5 top-5 z-[90]">
+      <button type="button" onClick={() => setOpen((value) => !value)} className="border border-line bg-canvas px-4 py-2 text-sm text-ink">Notifications{unread ? ` · ${unread}` : ""}</button>
+      {open ? <div className="mt-2 w-[min(24rem,calc(100vw-2.5rem))] border border-line bg-canvas p-4 shadow-xl"><div className="flex items-center justify-between"><p className="font-display text-2xl">Notifications</p><button onClick={() => setOpen(false)} className="text-sm text-muted">Close</button></div><div className="mt-4 max-h-[60vh] overflow-y-auto">{notices.length ? notices.map((notice) => <Link key={notice.id} href={notice.href} onClick={() => void markRead(notice)} className={`block border-t border-line py-4 first:border-t-0 ${notice.read_at ? "text-muted" : "text-ink"}`}><p className="text-sm">{notice.title}</p><p className="mt-1 text-xs leading-5 text-muted">{notice.message}</p></Link>) : <p className="py-6 text-sm text-muted">No notifications yet.</p>}</div></div> : null}
+    </div>
+    {toast ? <div role="status" className="fixed bottom-5 right-5 z-[100] w-[min(26rem,calc(100vw-2.5rem))] border border-brand bg-canvas p-5"><button onClick={() => setToast(null)} className="float-right text-xs text-muted">Dismiss</button><p className="pr-16 font-display text-2xl">{toast.title}</p><p className="mt-2 text-sm leading-6 text-muted">{toast.message}</p><Link href={toast.href} onClick={() => { void markRead(toast); setToast(null); }} className="mt-4 inline-block border-b border-brand pb-1 text-sm text-brand">Open billing record →</Link></div> : null}
+  </>;
+}

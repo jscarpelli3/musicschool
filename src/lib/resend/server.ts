@@ -20,6 +20,7 @@ export async function sendResendEmail(input: {
   html: string;
   text: string;
   idempotencyKey: string;
+  messageKind?: string;
 }) {
   const response = await fetch(RESEND_EMAILS_URL, {
     method: "POST",
@@ -34,7 +35,7 @@ export async function sendResendEmail(input: {
       subject: input.subject,
       html: input.html,
       text: input.text,
-      tags: [{ name: "message_kind", value: "billing_approval" }],
+      tags: [{ name: "message_kind", value: input.messageKind ?? "billing_approval" }],
     }),
   });
 
