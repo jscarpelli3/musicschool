@@ -97,7 +97,7 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
               Hold below to approve this exact amount. The school may then charge the payment method you authorized them to keep on file. Approval itself does not charge your card.
             </p>
             <div className="mt-6">
-              <HoldToConfirm action={approve} idleLabel={`Hold to approve ${money(approval.amount_cents, approval.currency)}`} />
+              <HoldToConfirm action={approve} idleLabel={`Hold to approve ${money(approval.amount_cents, approval.currency)}`} refreshOnSuccess />
             </div>
             <RejectChargesForm token={token} />
           </>

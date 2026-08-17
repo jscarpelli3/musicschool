@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
+import { useRouter } from "next/navigation";
 import "./hold-to-confirm.css";
 
 type HoldToConfirmProps = {
@@ -11,6 +12,7 @@ type HoldToConfirmProps = {
   disabled?: boolean;
   disabledMessage?: string;
   onSuccess?: () => void;
+  refreshOnSuccess?: boolean;
 };
 
 export function HoldToConfirm({
@@ -21,7 +23,9 @@ export function HoldToConfirm({
   disabled = false,
   disabledMessage = "Complete the required information first.",
   onSuccess,
+  refreshOnSuccess = false,
 }: HoldToConfirmProps) {
+  const router = useRouter();
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [state, setState] = useState<"idle" | "holding" | "submitting" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
@@ -44,7 +48,10 @@ export function HoldToConfirm({
         const result = await action();
         setMessage(result.message);
         setState(result.ok ? "success" : "error");
-        if (result.ok) onSuccess?.();
+        if (result.ok) {
+          onSuccess?.();
+          if (refreshOnSuccess) router.refresh();
+        }
       } catch {
         setMessage("We could not record this approval. Please try again.");
         setState("error");
