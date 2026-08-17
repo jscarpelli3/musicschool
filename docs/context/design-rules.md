@@ -63,6 +63,25 @@ The product should feel like a well-run independent music school: cultivated, hu
 - Motion should usually finish in 180–350ms. Longer motion is reserved for meaningful elapsed progress such as holding to confirm.
 - Honor reduced-motion preferences; preserve state communication even when travel animation is removed.
 
+## Billing workflow acceptance requirements
+
+- Present billing as a clear, unmistakable workflow progression; it does not need to be numbered. At every point, state what has been completed, what is happening now, and what the owner must do next in consumer language.
+- State and error messages must belong to the current period version and action. Clear obsolete feedback after a successful transition; never leave a failed refresh warning displayed as though it describes a newly locked period.
+- Delivery status must identify the destination and attempt time, for example: `Failed to send to name@example.com on August 14 at 3:42 PM`. Preserve earlier attempts in an activity history instead of collapsing them into an ambiguous status.
+- Never label provider intake as simply `accepted`; owners can reasonably read that as payer acceptance of the charges. Translate provider states into user-facing delivery language such as `Sent to email provider`, `Delivered`, `Delivery failed`, and separately `Approved by payer`.
+- Preparing, refreshing, locking, submitting/replacing an approval request, and starting a charge are consequential billing actions and require hold-to-confirm. The hold label must name the exact result.
+- Telegraph the current object and context: school, family or payer, service month, statement version, amount, and workflow stage must remain visible while working.
+- Prefer a focused modal, sheet, or dedicated statement workflow for preparation and approval when the surrounding family dashboard makes the active billing task ambiguous. On phones this should behave as a full-screen workflow.
+- Preserve clear dashboard location and direct navigation among family details, students, schedule, billing, payment methods, and statement history; owners should not have to repeatedly back out to find sibling areas.
+- Actions that are invalid in the current state must be disabled or absent. When useful, an adjacent explanation must say exactly which prerequisite is missing. Server-side state guards remain authoritative even when the control is disabled.
+- Button language in test instructions and documentation must exactly match the rendered control. Similar phrases such as `Replace approval link` and `Revise and replace request` may not be treated as interchangeable.
+- Billing workflow correctness takes priority over visual refinement during the current implementation phase. These requirements remain recorded acceptance debt and must be resolved before the workflow is considered production-ready.
+- Payer response controls are state-exclusive. `Approve` and `Send back for review` appear only while the exact request is pending. After approval, rejection or adjustment-request controls disappear; later concerns enter a separate school-contact, correction, credit, or refund workflow and never rewrite accepted consent.
+- Financial actions must use precise nouns. Distinguish `Statement adjustment`, `Account credit`, `Apply account credit`, `One-off charge`, and `Refund payment`; never collapse these into a generic `Adjustment` control. Show whether a credit is available, reserved for a draft, applied to a locked statement, or reversed.
+- Receipt links should read `View Stripe receipt` and disclose when one payment covers multiple students. Never present a family payment as multiple independent receipts merely because it appears in more than one student's history.
+- Failed-payment notices must identify the family, statement, amount, attempt time, current payment truth, and available recovery actions in plain language. Provider decline codes may support the translation but should not be the owner's primary explanation.
+- Bulk draft preparation should lead to a review queue, not directly to payer communication or collection. Individual review is the dominant action. `Lock all eligible drafts` is a secondary text action that opens a summary of totals and exceptions and then requires deliberate confirmation; it must never visually compete with reviewing the next draft.
+
 The live study is available at `/design/interactions`.
 
 ## Current Typography Study

@@ -71,3 +71,16 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 ## Updated
 
 2026-08-14
+## 2026-08-15 pause — approval rejection and billing timing
+
+- Garcia family August 2026 version 2 is approved at $200. Approval did not create a Stripe charge. Preserve it as successful approval evidence.
+- Functional defect: the payer rejection/request-adjustment UI remains visible after approval. Render payer decision controls only while the exact request is pending. Later disputes use a separate contact/correction/credit/refund workflow.
+- Rejection testing moves to Kim family. Daniel Kim's payer email is `elscarpo@gmail.com`; no August billing period exists because preparation safely stopped on the unresolved August 13 lesson.
+- Before resuming that test, implement guarded and audited lesson-outcome entry for owners/admins and the assigned teacher.
+- First add billing timing: school default before-service vs after-service, optional offering override, resolved immutable lesson-agreement snapshot, and separate billing-day/review-deadline/charge-date settings. The present generator implicitly behaves as after-service and must not remain the only mode.
+- Then prepare and lock Kim August, send a new email request, choose `Something looks wrong with these charges`, submit `A credit or discount is missing` through `Send back for review`, verify owner evidence, replace the request, and prove the rejected token is unusable.
+- Financial-ledger requirement added: support durable one-off charges, statement-only adjustments, persistent family account credits, credit reservation/application/release, payments, provider refunds, reversals, and write-offs. A refund returns settled money; a stored credit remains available for later statements. All are append-only/compensating and fully auditable.
+- Receipt requirement added: index receipts in family and relevant student histories using durable local payment allocations and Stripe object IDs. Fetch the connected account's current Stripe-hosted `receipt_url` only when an authorized user requests it because hosted links expire. Multi-student payments remain one family receipt with per-student allocation context.
+- Regular audit program planned in `docs/context/audit-program.md`: security/tenancy, financial reconciliation, workflow/state machines, provider APIs/webhooks, error recovery, database integrity, UI/accessibility/responsiveness, performance/dependencies, privacy/communications, and operational readiness. It defines per-change, pre-deploy, milestone, monthly, quarterly, and cutover gates plus evidence and severity standards.
+- Failed-charge recovery requirement added: durable declined/failed attempts, deduplicated owner alerts, an action-needed queue, safe retry only when authorized, request-new-method flow, payer re-review when amounts change, cash/manual settlement, credit application, follow-up, and explicit write-off. Stripe failure never becomes `paid`, and retries never silently loop.
+- Bulk billing requirement added: idempotently prepare a month across families with per-family transactions/results, then open a review queue. Reviewing individual drafts is primary. A visually secondary bulk-lock path opens an exception summary and deliberate confirmation; bulk preparation/locking never sends approval requests or charges anyone.
