@@ -3176,6 +3176,7 @@ export type Database = {
           collection_action: string
           currency: string
           expires_at: string
+          has_newer_request: boolean
           line_items: Json
           payment_status: string
           period_label: string

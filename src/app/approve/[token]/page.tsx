@@ -32,6 +32,7 @@ type Approval = {
   collection_action: string;
   expires_at: string;
   approved_at: string | null;
+  has_newer_request: boolean;
 };
 
 function money(cents: number, currency: string) {
@@ -108,8 +109,18 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
               {approval.approval_status === "approved"
                 ? "The school has your approval. This does not mean the payment has been processed."
                 : approval.approval_status === "rejected"
-                  ? "Your note was sent to the school. This proposal cannot be charged or approved unless the school prepares a replacement."
-                : "Contact the school if you need a new approval request."}
+                  ? approval.has_newer_request
+                    ? "This statement was updated. This link cannot be used; check your email for the revised statement from the school."
+                    : "You sent this statement back to the school for review. This link can no longer be approved."
+                  : approval.approval_status === "cancelled"
+                    ? approval.has_newer_request
+                      ? "This statement was replaced. This link cannot be used; check your email for the revised statement from the school."
+                      : "The school cancelled this statement. Contact the school if you expected a replacement."
+                    : approval.approval_status === "expired"
+                      ? approval.has_newer_request
+                        ? "This link expired and the statement was updated. Check your email for the revised statement from the school."
+                        : "This link expired. Contact the school for a new statement."
+                      : "Contact the school if you need a new approval request."}
             </p>
           </div>
         )}
