@@ -1,10 +1,3 @@
-alter table public.billing_approval_events drop constraint billing_approval_events_event_type_check;
-alter table public.billing_approval_events add constraint billing_approval_events_event_type_check
-  check (event_type in ('created','viewed','approved','rejected','expired','cancelled','delivery_retried','payment_started','payment_succeeded','payment_failed'));
-alter table public.billing_approval_events drop constraint billing_approval_events_channel_check;
-alter table public.billing_approval_events add constraint billing_approval_events_channel_check
-  check (channel in ('approval_link','email','sms_reply','in_app','system'));
-
 create or replace function public.retry_billing_approval_email_delivery(
   p_school_id uuid,
   p_approval_request_id uuid,
@@ -67,6 +60,3 @@ begin
   return query select delivery_id, prior_delivery.recipient_email, prior_delivery.from_address, prior_delivery.subject, delivery_key;
 end;
 $$;
-
-revoke all on function public.retry_billing_approval_email_delivery(uuid,uuid,text,text,timestamptz) from public, anon;
-grant execute on function public.retry_billing_approval_email_delivery(uuid,uuid,text,text,timestamptz) to authenticated;
