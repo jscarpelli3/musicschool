@@ -3361,6 +3361,14 @@ export type Database = {
           subject: string
         }[]
       }
+      update_billing_contact_email: {
+        Args: {
+          p_billing_account_id: string
+          p_email: string
+          p_school_id: string
+        }
+        Returns: number
+      }
       preview_lesson_event_billing_disposition: {
         Args: {
           p_as_of?: string

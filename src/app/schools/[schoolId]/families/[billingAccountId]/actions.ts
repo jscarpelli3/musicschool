@@ -454,15 +454,16 @@ export async function updateBillingContactEmail(
   const { data: auth } = await supabase.auth.getClaims();
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=${path}`);
-  const [{ data: membership }, { data: account }] = await Promise.all([
-    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
-    supabase.from("billing_accounts").select("billing_contact_person_id").eq("school_id", schoolId).eq("id", billingAccountId).maybeSingle(),
-  ]);
-  if (!membership || !["owner", "admin"].includes(membership.role) || !account) return { ok: false, message: "You do not have permission to update this payer." };
-  const { error } = await supabase.from("people").update({ email }).eq("school_id", schoolId).eq("id", account.billing_contact_person_id);
+  const { data: cancelledCount, error } = await supabase.rpc("update_billing_contact_email", {
+    p_billing_account_id: billingAccountId,
+    p_email: email,
+    p_school_id: schoolId,
+  });
   if (error) return { ok: false, message: "The email address could not be saved. Nothing changed." };
   revalidatePath(path);
-  return { ok: true, message: `Payer email saved as ${email}.` };
+  return { ok: true, message: cancelledCount
+    ? `Payer email saved as ${email}. ${cancelledCount} pending approval ${cancelledCount === 1 ? "link was" : "links were"} invalidated; send again to the new address.`
+    : `Payer email saved as ${email}.` };
 }
 
 export async function generateFamilyCardSetupLink(
