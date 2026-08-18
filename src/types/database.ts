@@ -1474,6 +1474,8 @@ export type Database = {
           provider_email_id: string | null
           provider_error_code: string | null
           provider_error_message: string | null
+          retry_count: number
+          retry_not_before: string | null
           recipient_email: string
           school_id: string
           status: string
@@ -1493,6 +1495,8 @@ export type Database = {
           provider_email_id?: string | null
           provider_error_code?: string | null
           provider_error_message?: string | null
+          retry_count?: number
+          retry_not_before?: string | null
           recipient_email: string
           school_id: string
           status?: string
@@ -1512,6 +1516,8 @@ export type Database = {
           provider_email_id?: string | null
           provider_error_code?: string | null
           provider_error_message?: string | null
+          retry_count?: number
+          retry_not_before?: string | null
           recipient_email?: string
           school_id?: string
           status?: string
@@ -3176,6 +3182,10 @@ export type Database = {
       complete_email_provider_submission: {
         Args: { p_delivery_id: string; p_provider_email_id: string }
         Returns: undefined
+      }
+      claim_owner_notification_email_retry: {
+        Args: { p_delivery_id: string }
+        Returns: string
       }
       complete_payment_method_revocation: {
         Args: { p_payment_method_id: string }

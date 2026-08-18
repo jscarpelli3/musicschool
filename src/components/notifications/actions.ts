@@ -21,7 +21,12 @@ export async function retryOwnerNotificationEmail(deliveryId: string) {
     .eq("school_id", delivery.school_id).eq("profile_id", profileId).eq("status", "active").maybeSingle();
   if (!membership || !["owner", "admin"].includes(membership.role)) return { ok: false, message: "Only an owner or admin can retry this email." };
 
-  const result = await dispatchOwnerNotificationEmail(delivery.id, true);
+  const { data: claim } = await supabase.rpc("claim_owner_notification_email_retry", { p_delivery_id: delivery.id });
+  if (claim !== "claimed") return { ok: false, message: claim === "cooldown"
+    ? "Retry is cooling down. Wait until the time shown, then try again."
+    : claim === "retry_limit_reached" ? "This email reached its retry limit. Contact support before trying again."
+    : "This email is no longer eligible for retry." };
+  const result = await dispatchOwnerNotificationEmail(delivery.id);
   revalidatePath("/", "layout");
   return result.ok
     ? { ok: true, message: "Notification email handed back to the provider." }

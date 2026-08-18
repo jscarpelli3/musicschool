@@ -16,13 +16,12 @@ export async function dispatchOwnerResponseEmails(rawToken: string) {
   }
 }
 
-export async function dispatchOwnerNotificationEmail(deliveryId: string, retryFailed = false) {
+export async function dispatchOwnerNotificationEmail(deliveryId: string) {
   const admin = createAdminClient();
-  const eligibleStatuses = retryFailed ? ["pending", "failed"] : ["pending"];
   const { data: delivery } = await admin.from("owner_notification_email_outbox")
-    .select("id, school_id, recipient_email, subject, message_text, idempotency_key, status")
+    .select("id, school_id, recipient_email, subject, message_text, idempotency_key, status, retry_count")
     .eq("id", deliveryId)
-    .in("status", eligibleStatuses)
+    .eq("status", "pending")
     .maybeSingle();
   if (!delivery) return { ok: false as const, reason: "not_retryable" as const };
   const { data: school } = await admin.from("schools").select("name").eq("id", delivery.school_id).single();
@@ -39,7 +38,8 @@ export async function dispatchOwnerNotificationEmail(deliveryId: string, retryFa
     const { error } = await admin.from("owner_notification_email_outbox").update({
       status: "accepted", provider_email_id: result.id, accepted_at: new Date().toISOString(),
       provider_error_code: null, provider_error_message: null, failed_at: null,
-    }).eq("id", delivery.id).in("status", eligibleStatuses);
+      retry_not_before: null,
+    }).eq("id", delivery.id).eq("status", "pending");
     return error ? { ok: false as const, reason: "state_update_failed" as const } : { ok: true as const };
   } catch (error) {
     const provider = error instanceof ResendRequestError ? error : null;
@@ -47,7 +47,8 @@ export async function dispatchOwnerNotificationEmail(deliveryId: string, retryFa
       status: "failed", provider_error_code: provider?.code ?? "request_failed",
       provider_error_message: error instanceof Error ? error.message.slice(0, 500) : "Provider request failed.",
       failed_at: new Date().toISOString(),
-    }).eq("id", delivery.id).in("status", eligibleStatuses);
+      retry_not_before: new Date(Date.now() + Math.min(60, delivery.retry_count === 0 ? 1 : 5 * delivery.retry_count) * 60_000).toISOString(),
+    }).eq("id", delivery.id).eq("status", "pending");
     return { ok: false as const, reason: "provider_failed" as const };
   }
 }
