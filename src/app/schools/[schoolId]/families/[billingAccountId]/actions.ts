@@ -338,6 +338,78 @@ export async function sendBillingApprovalEmail(
   return { ok: true, message: `Approval request sent to ${email}.` };
 }
 
+export async function retryBillingApprovalEmail(
+  schoolId: string,
+  billingAccountId: string,
+  billingPeriodId: string,
+  _previous: BillingApprovalEmailState,
+): Promise<BillingApprovalEmailState> {
+  void _previous;
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId) redirect(`/login?next=${path}`);
+
+  const [{ data: membership }, { data: school }, { data: account }, { data: request }] = await Promise.all([
+    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
+    supabase.from("schools").select("name").eq("id", schoolId).maybeSingle(),
+    supabase.from("billing_accounts").select("billing_contact_person_id").eq("school_id", schoolId).eq("id", billingAccountId).maybeSingle(),
+    supabase.from("billing_approval_requests").select("id, period_label, amount_cents, currency, approval_status")
+      .eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("billing_period_id", billingPeriodId)
+      .order("request_version", { ascending: false }).limit(1).maybeSingle(),
+  ]);
+  if (!membership || !["owner", "admin"].includes(membership.role) || !school || !account || !request) {
+    return { ok: false, message: "You do not have permission to retry this approval email." };
+  }
+  if (request.approval_status !== "pending") return { ok: false, message: "This approval request is no longer pending." };
+
+  const [{ data: contact }, { data: priorDelivery }] = await Promise.all([
+    supabase.from("people").select("first_name, last_name, preferred_name").eq("school_id", schoolId).eq("id", account.billing_contact_person_id).maybeSingle(),
+    supabase.from("email_deliveries").select("recipient_email").eq("school_id", schoolId).eq("approval_request_id", request.id)
+      .order("attempt_number", { ascending: false }).limit(1).maybeSingle(),
+  ]);
+  if (!priorDelivery) return { ok: false, message: "The failed email attempt could not be found." };
+
+  const rawToken = randomBytes(32).toString("base64url");
+  const approvalUrl = `${appOrigin()}/approve/${rawToken}`;
+  const amount = new Intl.NumberFormat("en-US", { style: "currency", currency: request.currency }).format(request.amount_cents / 100);
+  const payerName = `${contact?.preferred_name || contact?.first_name || "there"}${contact?.last_name ? ` ${contact.last_name}` : ""}`;
+  const message = billingApprovalEmail({ schoolName: school.name, payerName, periodLabel: request.period_label, amount, approvalUrl });
+  const hash = (value: string) => createHash("sha256").update(value).digest("hex");
+  const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+  const { data: prepared, error: prepareError } = await supabase.rpc("retry_billing_approval_email_delivery", {
+    p_approval_request_id: request.id,
+    p_body_sha256: hash(`${message.text}\n${message.html}`),
+    p_expires_at: expiresAt,
+    p_school_id: schoolId,
+    p_token_hash: hash(rawToken),
+  }).maybeSingle();
+  if (prepareError || !prepared) return { ok: false, message: prepareError?.message.includes("recipient_suppressed")
+    ? "Email is paused for this payer after a permanent delivery problem or complaint."
+    : "This failed email is no longer eligible for retry." };
+
+  const admin = createAdminClient();
+  try {
+    const sent = await sendResendEmail({
+      from: prepared.from_address, to: prepared.recipient_email, subject: prepared.subject,
+      html: message.html, text: message.text, idempotencyKey: prepared.idempotency_key,
+    });
+    const { error } = await admin.rpc("complete_email_provider_submission", { p_delivery_id: prepared.email_delivery_id, p_provider_email_id: sent.id });
+    if (error) return { ok: false, message: "Resend accepted the retry, but local reconciliation failed. Do not retry again yet." };
+  } catch (error) {
+    const providerError = error instanceof ResendRequestError ? error : null;
+    await admin.rpc("fail_email_provider_submission", {
+      p_delivery_id: prepared.email_delivery_id,
+      p_provider_error_code: providerError?.code ?? (providerError?.status ? String(providerError.status) : undefined),
+      p_provider_error_message: providerError?.message ?? "Provider request failed.",
+    });
+    return { ok: false, message: "Resend did not accept the retry. The approval request remains pending and can be retried again." };
+  }
+  revalidatePath(path);
+  return { ok: true, message: `The same approval request was emailed again to ${priorDelivery.recipient_email}.` };
+}
+
 export async function updateBillingContactPhone(
   schoolId: string,
   billingAccountId: string,

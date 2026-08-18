@@ -3345,6 +3345,22 @@ export type Database = {
         }
         Returns: string
       }
+      retry_billing_approval_email_delivery: {
+        Args: {
+          p_approval_request_id: string
+          p_body_sha256: string
+          p_expires_at: string
+          p_school_id: string
+          p_token_hash: string
+        }
+        Returns: {
+          email_delivery_id: string
+          from_address: string
+          idempotency_key: string
+          recipient_email: string
+          subject: string
+        }[]
+      }
       preview_lesson_event_billing_disposition: {
         Args: {
           p_as_of?: string
