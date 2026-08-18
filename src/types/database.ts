@@ -1607,6 +1607,69 @@ export type Database = {
           },
         ]
       }
+      platform_support_incidents: {
+        Row: {
+          acknowledged_at: string | null
+          created_at: string
+          diagnostics: Json
+          failure_category: string
+          id: string
+          kind: string
+          reported_by: string
+          resolved_at: string | null
+          school_id: string
+          source_id: string
+          source_type: string
+          status: string
+          summary: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          created_at?: string
+          diagnostics?: Json
+          failure_category: string
+          id?: string
+          kind: string
+          reported_by: string
+          resolved_at?: string | null
+          school_id: string
+          source_id: string
+          source_type: string
+          status?: string
+          summary: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          created_at?: string
+          diagnostics?: Json
+          failure_category?: string
+          id?: string
+          kind?: string
+          reported_by?: string
+          resolved_at?: string | null
+          school_id?: string
+          source_id?: string
+          source_type?: string
+          status?: string
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_support_incidents_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_support_incidents_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_attempts: {
         Row: {
           amount_cents: number
@@ -3370,6 +3433,10 @@ export type Database = {
           recipient_email: string
           subject: string
         }[]
+      }
+      report_owner_notification_email_problem: {
+        Args: { p_delivery_id: string }
+        Returns: string
       }
       update_billing_contact_email: {
         Args: {

@@ -32,3 +32,13 @@ export async function retryOwnerNotificationEmail(deliveryId: string) {
     ? { ok: true, message: "Email retry accepted. Delivery status will update here." }
     : { ok: false, message: result.reason === "provider_failed" ? "The provider failed again. The payer response remains recorded." : "This email is no longer eligible for retry." };
 }
+
+export async function reportOwnerNotificationEmailProblem(deliveryId: string) {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) return { ok: false, message: "Sign in again before reporting this problem." };
+  const { data, error } = await supabase.rpc("report_owner_notification_email_problem", { p_delivery_id: deliveryId });
+  if (error || !data) return { ok: false, message: "The problem report could not be recorded. Please try again." };
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Problem reported to Common Time support." };
+}
