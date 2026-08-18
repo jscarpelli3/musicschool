@@ -1,10 +1,7 @@
-alter table public.owner_notification_email_outbox
-  add column retry_count integer not null default 0 check (retry_count between 0 and 5),
-  add column retry_not_before timestamptz;
-
-update public.owner_notification_email_outbox
-set retry_not_before = now()
-where status = 'failed';
+update public.owner_notification_email_outbox set retry_count=5 where retry_count>5;
+alter table public.owner_notification_email_outbox drop constraint owner_notification_email_outbox_retry_count_check;
+alter table public.owner_notification_email_outbox add constraint owner_notification_email_outbox_retry_count_check
+  check (retry_count between 0 and 5);
 
 create or replace function public.claim_owner_notification_email_retry(p_delivery_id uuid)
 returns text language plpgsql security definer set search_path = '' as $$
@@ -24,6 +21,3 @@ begin
     jsonb_build_object('retry_count',delivery_row.retry_count+1));
   return 'claimed';
 end; $$;
-
-revoke all on function public.claim_owner_notification_email_retry(uuid) from public,anon;
-grant execute on function public.claim_owner_notification_email_retry(uuid) to authenticated;
