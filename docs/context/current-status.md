@@ -50,13 +50,14 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 
 ## Next Steps
 
-1. Complete the live restart checklist below for adjustment, unlock, rejection/note, corrected replacement, saved-card auto-charge enrollment, cap, and revocation.
-2. Rehearse owner `Revise and replace request`, then close Payment Step 8 only after replay, out-of-order event, bounce/complaint suppression, and supersession tests.
-3. Add long-lived payer access for mandate review/revocation before any automatic collection.
-4. Implement Stripe charge execution against an exact approved request or valid mandate with idempotency, receipts, refunds/disputes, and reconciliation.
-5. Rehearse the planner/reschedule flow under a teacher-only account, then design policy-bound guardian/student access and magic-link delivery.
-6. If the first school purchases SMS, create its fixed public consent/business page, assign the current toll-free number exclusively to it, and resubmit with exact end-business information.
-7. Expand the `www.commontime.studio` Coming Soon page into the marketing/public-policy surface when launch content is ready.
+1. Resume the agreed passwordless client scheduling portal design in [`client-scheduling-portal.md`](client-scheduling-portal.md), beginning with `/portal` email-code authentication and verified contact authorization.
+2. Implement policy-bound client cancellation, multi-recipient notifications, and the `Lessons to schedule` entitlement pool before adding within-family transfers or reschedule/credit follow-up choices.
+3. Complete the live restart checklist below for adjustment, unlock, rejection/note, corrected replacement, saved-card auto-charge enrollment, cap, and revocation.
+4. Rehearse owner `Revise and replace request`, then close Payment Step 8 only after replay, out-of-order event, bounce/complaint suppression, and supersession tests.
+5. Keep payment management owner-mediated in V1; do not build a payer payment portal or automatic-collection execution without a new product decision.
+6. Rehearse the planner/reschedule flow under a teacher-only account before enabling teacher cancellation-notification actions.
+7. If the first school purchases SMS, create its fixed public consent/business page, assign the current toll-free number exclusively to it, and resubmit with exact end-business information.
+8. Expand the `www.commontime.studio` Coming Soon page into the marketing/public-policy surface when launch content is ready.
 
 ## Next-Session Restart Checklist
 
