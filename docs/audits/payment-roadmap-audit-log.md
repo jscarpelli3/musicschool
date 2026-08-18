@@ -611,6 +611,17 @@ Recorded on 2026-08-17.
 - A rollback-only database rehearsal passed owner/admin fan-out and duplicate queue invocation without duplicate notifications/outbox rows and left no fixtures. TypeScript, ESLint, and production build pass.
 - Live acceptance remains: create a fresh payer response after deployment, verify toast/inbox, owner email acceptance/delivery, and prove the payer decision remains valid under a forced provider failure. Automated retry scheduling/manual retry UI for failed outbox items remains to be built and must not be reported complete.
 
+### Owner notification failure recovery
+
+Recorded on 2026-08-18.
+
+- Added an owner/admin-only manual retry action for transiently failed payer-response notification emails. The action authenticates from the server session, verifies active school membership and role, and refuses rows that are no longer in the retryable `failed` state.
+- Retry uses the delivery's original stable Resend idempotency key. Successful retry clears prior provider failure details; failed retry remains visibly failed and does not alter the already-recorded payer response.
+- Bounced, complained, suppressed, delivered, and other non-transient states cannot be manually resent through this path.
+- The notification inbox now surfaces failed email alerts with attempt time and a retry control while retaining the durable in-app payer-response notice.
+- TypeScript, ESLint, `git diff --check`, and the Next.js 16.3 webpack production build pass. The build retains the pre-existing package-module warning for `tailwind.config.ts`.
+- Live preflight found zero deployed owner-notification outbox rows. Live toast/inbox/delivery/failure-isolation/retry acceptance therefore remains open until a fresh payer response is created after deployment. Automatic retry scheduling remains pending.
+
 ### Step 8B checkpoint — explicit automatic-charge mandate
 
 Recorded on 2026-08-14.

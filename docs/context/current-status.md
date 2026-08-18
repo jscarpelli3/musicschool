@@ -70,7 +70,7 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 
 ## Updated
 
-2026-08-14
+2026-08-18
 ## 2026-08-15 pause — approval rejection and billing timing
 
 - Garcia family August 2026 version 2 is approved at $200. Approval did not create a Stripe charge. Preserve it as successful approval evidence.
@@ -90,4 +90,4 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 - Kim replacement request is live: rejected version 1 remains $160; pending version 2 is $150 and has a distinct token. Old-link UX should say the statement was updated and direct the payer to their newest message without exposing or redirecting to the new token.
 - Kim replacement is now approved: version 1 remains rejected at $160, version 2 is approved at $150, the period is approved/unpaid, and no payment attempt exists. The manual approval revision chain has passed end to end.
 - Approval request scalability is now database-enforced: unique period/version and one pending request per period. Rejection deactivates its URL immediately, regardless of whether a replacement is ever created. Old pages know only whether a newer version exists and provide terminal, non-redirecting guidance without exposing the replacement token.
-- Owner payer-response notifications are deployed at the database layer and implemented in the app: transactional durable owner/admin notices plus email outbox, recipient-only inbox, live toast, independent Resend submission, and webhook reconciliation. Rollback fan-out/deduplication passed. Next live payer response must verify toast, inbox, email delivery, and failure isolation; retry scheduling remains pending.
+- Owner payer-response notifications are deployed at the database layer and implemented in the app: transactional durable owner/admin notices plus email outbox, recipient-only inbox, live toast, independent Resend submission, webhook reconciliation, and an owner/admin-only manual retry for transient provider failures. Retries preserve the original provider idempotency key and cannot resend delivered, bounced, complained, or suppressed mail. Rollback fan-out/deduplication passed. The deployed outbox was empty at the 2026-08-18 preflight, so a fresh live payer response must still verify toast, inbox, delivery, forced-provider-failure isolation, and manual retry; automatic retry scheduling remains pending.
