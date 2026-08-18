@@ -29,6 +29,6 @@ export async function retryOwnerNotificationEmail(deliveryId: string) {
   const result = await dispatchOwnerNotificationEmail(delivery.id);
   revalidatePath("/", "layout");
   return result.ok
-    ? { ok: true, message: "Notification email handed back to the provider." }
+    ? { ok: true, message: "Email retry accepted. Delivery status will update here." }
     : { ok: false, message: result.reason === "provider_failed" ? "The provider failed again. The payer response remains recorded." : "This email is no longer eligible for retry." };
 }
