@@ -138,3 +138,14 @@ Notification delivery failure must not roll back or obscure the cancellation. Ca
 - Unknown, inactive, or unlinked verified emails receive an empty schedule rather than tenant details.
 - Migration `20260819100000` is deployed; linked database lint reports no new issues. TypeScript and ESLint pass.
 - Before live code-entry acceptance, configure the hosted Supabase email template to render the one-time token rather than only a magic-link confirmation URL. Cancellation controls remain intentionally absent until this access boundary passes live authorization tests.
+
+## 2026-08-19 Security Hardening Checkpoint — Pending Deployment
+
+- The foundation checkpoint above records the originally deployed behavior and is superseded by this design once the pending migrations deploy.
+- Portal authorization is payer-specific: a private authorization binds one normalized email to one active billing account per school. The same email may independently authorize payer accounts at different schools.
+- General `student_contacts` relationships no longer grant portal schedule access. Lessons are reached only through the authorized billing account's `billing_account_students` assignments.
+- Separate active payer accounts in one school may not share an email. Existing ambiguous data is denied and receives a contact-the-school state rather than combined family data.
+- Owners/admins silently provision the passwordless Auth identity when maintaining a payer email. Portal requests cannot create Auth identities and therefore never invoke the signup flow.
+- Access states are explicit and server-derived: `not_setup`, `ambiguous`, and `ready`. Only `ready` can execute the lesson query; a ready payer with no scheduled lessons retains the legitimate empty state.
+- Payer email changes transactionally update only that school's payer authorization. An old-email session loses this access while retaining any independent access at other schools.
+- Full findings, controls, validation evidence, unresolved abuse risk, and deployment gates are recorded in `docs/audits/security-audit-log.md` under `SEC-AUDIT-2026-08-19-001`.

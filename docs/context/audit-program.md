@@ -2,6 +2,8 @@
 
 This program defines repeatable audits for the build and eventual production service. An audit is evidence gathering, not a confidence statement. Every run records date, environment, commit/deployment, scope, checks performed, findings, severity, owner, remediation, retest evidence, and unresolved risk.
 
+The append-only master record for security process changes, scans, findings, remediation, retests, and open security work is `docs/audits/security-audit-log.md`. Every security-focused audit or scan must be recorded there; feature-specific logs may link to it rather than duplicate evidence.
+
 ## Operating rules
 
 - Never mark an audit passed because code compiles or a provider returned `200`. Verify the resulting application and database state.
@@ -10,6 +12,7 @@ This program defines repeatable audits for the build and eventual production ser
 - A failed audit creates a tracked finding. Fixes require a focused retest plus the relevant regression audit.
 - Keep secrets, raw payment credentials, approval bearer tokens, and unnecessary personal data out of audit output.
 - Record assumptions and checks that could not be completed. `Not tested` is never equivalent to `passed`.
+- Distinguish implemented locally, deployed, and live-tested evidence. Record security audit process changes in the master security log.
 
 ## Audit suites
 

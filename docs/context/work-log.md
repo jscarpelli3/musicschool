@@ -2,6 +2,12 @@
 
 Use this file for short chronological notes about meaningful work.
 
+## 2026-08-19 — security audit program and payer portal hardening
+
+- Established `docs/audits/security-audit-log.md` as the living, append-only master security due-diligence record. It defines scope, procedure, evidence requirements, severity/retest rules, process-change history, recurring TODOs, and the first detailed audit run.
+- Logged the payer-portal boundary findings and local remediation: payer-account-only authorization, private per-school email bindings, cross-school reuse, same-school duplicate denial, owner/admin-only silent Auth provisioning, no portal self-signup, explicit access states, local-only logout, and database regression assertions.
+- Recorded the remaining deployment and live-test gate accurately. TypeScript, focused lint, and production build pass; Supabase migrations and live adversarial checks remain blocked until CLI authentication is restored.
+
 ## 2026-08-11
 
 - Recorded Twilio's rejection of the initial generic toll-free verification: the submission did not identify one end business, exposed a login-protected website to review, and allowed consent to appear reusable across schools/programs.
