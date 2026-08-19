@@ -50,7 +50,7 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 
 ## Next Steps
 
-1. Resume the agreed passwordless client scheduling portal design in [`client-scheduling-portal.md`](client-scheduling-portal.md), beginning with `/portal` email-code authentication and verified contact authorization.
+1. Rehearse the deployed read-only `/portal` email-code and verified-contact authorization foundation documented in [`client-scheduling-portal.md`](client-scheduling-portal.md); configure the Supabase email template to show the OTP before live acceptance.
 2. Implement policy-bound client cancellation, multi-recipient notifications, and the `Lessons to schedule` entitlement pool before adding within-family transfers or reschedule/credit follow-up choices.
 3. Complete the live restart checklist below for adjustment, unlock, rejection/note, corrected replacement, saved-card auto-charge enrollment, cap, and revocation.
 4. Rehearse owner `Revise and replace request`, then close Payment Step 8 only after replay, out-of-order event, bounce/complaint suppression, and supersession tests.

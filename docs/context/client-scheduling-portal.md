@@ -2,7 +2,7 @@
 
 ## Status
 
-Agreed V1 direction as of 2026-08-18. Implementation has not started.
+Agreed V1 direction as of 2026-08-18. The passwordless read-only portal foundation was implemented on 2026-08-19; cancellation mutations have not started.
 
 ## Product Boundary
 
@@ -129,3 +129,12 @@ Notification delivery failure must not roll back or obscure the cancellation. Ca
 8. Add reschedule and account-credit follow-up requests.
 9. Rehearse cross-tenant denial, stale sessions, duplicate submission, late/timely boundaries, paid/unpaid states, notification failure, transfer compatibility, and concurrent scheduling.
 
+## 2026-08-19 Foundation Checkpoint
+
+- Added `/portal` email one-time-code request and verification UI using Supabase Auth. Responses do not disclose whether an email has family access.
+- Added a security-definer portal schedule function that derives authorization only from the authenticated JWT email, active contact records, current `student_contacts`, and active/paused student enrollment.
+- Family sessions receive no direct access to school, people, contact, student, or lesson tables and are not made school members.
+- The read-only portal shows scheduled lessons from the current instant through three months ahead with school timezone, student, teacher, offering, and place context.
+- Unknown, inactive, or unlinked verified emails receive an empty schedule rather than tenant details.
+- Migration `20260819100000` is deployed; linked database lint reports no new issues. TypeScript and ESLint pass.
+- Before live code-entry acceptance, configure the hosted Supabase email template to render the one-time token rather than only a magic-link confirmation URL. Cancellation controls remain intentionally absent until this access boundary passes live authorization tests.

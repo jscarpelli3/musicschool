@@ -3380,6 +3380,24 @@ export type Database = {
           school_name: string
         }[]
       }
+      get_client_portal_lessons: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          ends_at: string
+          lesson_id: string
+          place_name: string
+          product_name: string
+          reschedule_allowed: boolean
+          reschedule_blocked_reason: string | null
+          school_id: string
+          school_name: string
+          school_timezone: string
+          starts_at: string
+          student_id: string
+          student_name: string
+          teacher_name: string
+        }[]
+      }
       get_billing_approval: {
         Args: { raw_token: string }
         Returns: {
