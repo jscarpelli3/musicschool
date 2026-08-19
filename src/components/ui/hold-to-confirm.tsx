@@ -8,6 +8,8 @@ type HoldToConfirmProps = {
   action: () => Promise<{ ok: boolean; message: string }>;
   idleLabel: string;
   holdingLabel?: string;
+  submittingLabel?: string;
+  successLabel?: string;
   duration?: number;
   disabled?: boolean;
   disabledMessage?: string;
@@ -19,6 +21,8 @@ export function HoldToConfirm({
   action,
   idleLabel,
   holdingLabel = "Keep holding…",
+  submittingLabel = "Recording…",
+  successLabel = "Recorded",
   duration = 1400,
   disabled = false,
   disabledMessage = "Complete the required information first.",
@@ -77,9 +81,9 @@ export function HoldToConfirm({
   const label = state === "holding"
     ? holdingLabel
     : state === "submitting"
-      ? "Recording approval…"
+      ? submittingLabel
       : state === "success"
-        ? "Approved"
+        ? successLabel
         : idleLabel;
 
   return (
