@@ -10,9 +10,12 @@ export const metadata: Metadata = {
 export default function ComingSoonPage() {
   return (
     <main className="coming-soon mx-auto flex min-h-screen w-full max-w-[90rem] flex-col px-5 py-6 sm:px-8 sm:py-8 lg:px-14 lg:py-10">
-      <header className="flex items-center justify-between border-b border-line pb-5 text-xs tracking-[0.08em] text-muted sm:text-sm">
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-5 text-xs tracking-[0.08em] text-muted sm:text-sm">
         <span className="text-ink">Common Time</span>
-        <span>For independent music schools</span>
+        <nav aria-label="Account access" className="flex items-center gap-5 sm:gap-7">
+          <a className="transition hover:text-ink" href="https://app.commontime.studio/login">School sign in</a>
+          <a className="text-brand transition hover:text-brand-hover" href="https://app.commontime.studio/portal">Family portal</a>
+        </nav>
       </header>
 
       <section className="grid flex-1 content-center gap-12 py-16 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end lg:gap-20">
