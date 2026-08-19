@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { LessonCalendar } from "@/components/calendar/lesson-calendar";
 import { PortalAuth } from "./portal-auth";
 import { PortalSignOut } from "./portal-sign-out";
 
@@ -20,17 +21,28 @@ export default async function ClientPortalPage() {
 
   const { data: lessons, error } = await supabase.rpc("get_client_portal_lessons");
   if (error) throw new Error(`Portal schedule could not load: ${error.message}`);
+  const rangeStart = new Date();
+  const rangeEnd = new Date(rangeStart);
+  rangeEnd.setUTCMonth(rangeEnd.getUTCMonth() + 3);
+  const schools = new Map<string, { name: string; timeZone: string; lessons: NonNullable<typeof lessons> }>();
+  for (const lesson of lessons ?? []) {
+    const school = schools.get(lesson.school_id) ?? { name: lesson.school_name, timeZone: lesson.school_timezone, lessons: [] };
+    school.lessons.push(lesson);
+    schools.set(lesson.school_id, school);
+  }
 
   return <main className="mx-auto min-h-screen max-w-4xl px-5 py-10 sm:px-8 sm:py-16">
     <header className="flex items-end justify-between gap-6 border-b border-line pb-7"><div><p className="text-sm text-brand">Family scheduling</p><h1 className="mt-3 font-display text-5xl">Upcoming lessons</h1><p className="mt-3 text-xs text-muted">Signed in as {email}</p></div><PortalSignOut label="Use a different email" /></header>
-    <p className="mt-6 max-w-2xl text-sm leading-6 text-muted">Scheduled lessons for the next three months. Cancellation and reschedule controls will appear here after the access boundary is verified.</p>
-    <div className="mt-10 space-y-5">{lessons?.length ? lessons.map((lesson) => {
-      const start = new Date(lesson.starts_at);
-      const end = new Date(lesson.ends_at);
-      const date = new Intl.DateTimeFormat("en-US", { timeZone: lesson.school_timezone, weekday: "long", month: "long", day: "numeric" }).format(start);
-      const time = new Intl.DateTimeFormat("en-US", { timeZone: lesson.school_timezone, hour: "numeric", minute: "2-digit" }).format(start);
-      const endTime = new Intl.DateTimeFormat("en-US", { timeZone: lesson.school_timezone, hour: "numeric", minute: "2-digit" }).format(end);
-      return <article key={lesson.lesson_id} className="border border-line p-5 sm:p-6"><div className="flex flex-wrap justify-between gap-4"><div><p className="text-xs uppercase tracking-[0.14em] text-brand">{lesson.school_name}</p><h2 className="mt-2 font-display text-3xl">{lesson.student_name}</h2><p className="mt-2 text-sm text-muted">{lesson.product_name} with {lesson.teacher_name}</p></div><div className="sm:text-right"><p>{date}</p><p className="mt-1 text-sm text-muted">{time}–{endTime}</p><p className="mt-1 text-xs text-muted">{lesson.place_name}</p></div></div></article>;
-    }) : <section className="border border-line p-8"><h2 className="font-display text-3xl">No upcoming lessons</h2><p className="mt-3 text-sm leading-6 text-muted">No scheduled lessons were found for contacts associated with this verified email.</p></section>}</div>
+    <p className="mt-6 max-w-2xl text-sm leading-6 text-muted">Scheduled lessons for the next three months. On phones, the same calendar becomes a compact agenda for easier reading.</p>
+    <div className="mt-10 space-y-section">{lessons?.length ? Array.from(schools.entries()).map(([schoolId, school]) => <section key={schoolId}>
+      {schools.size > 1 ? <header className="mb-8 border-b border-line pb-4"><h2 className="font-display text-3xl">{school.name}</h2><p className="mt-2 text-xs text-muted">Times shown in {school.timeZone}</p></header> : null}
+      <LessonCalendar
+        id={`family-lessons-${schoolId}`}
+        lessons={school.lessons.map((lesson) => ({ lessonId: lesson.lesson_id, studentName: lesson.student_name, teacherName: lesson.teacher_name, productName: lesson.product_name, placeName: lesson.place_name, startsAt: lesson.starts_at, endsAt: lesson.ends_at }))}
+        rangeStart={rangeStart}
+        rangeEnd={rangeEnd}
+        timeZone={school.timeZone}
+      />
+    </section>) : <section className="border-t border-line py-8"><h2 className="font-display text-3xl">No upcoming lessons</h2><p className="mt-3 text-sm leading-6 text-muted">No scheduled lessons were found for this family during the next three months.</p></section>}</div>
   </main>;
 }

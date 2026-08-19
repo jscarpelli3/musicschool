@@ -211,3 +211,9 @@ Decision: pass / conditional pass / fail / not completed
 - A live HTTP smoke check of `https://app.commontime.studio/portal` returned `200` with private/no-cache/no-store behavior, HSTS, and `X-Robots-Tag: noindex, nofollow, noarchive`.
 - Database and application versions now match in production. Focused TypeScript and ESLint checks passed before publication; the prior production build evidence remains applicable.
 - SEC-TODO-004 is ready for owner-driven live OTP and lesson-visibility testing. Findings remain open until the full adversarial matrix and resulting database state are recorded.
+
+#### Status update — 2026-08-19 18:22 UTC
+
+- The product owner completed the live populated-family happy path using the uniquely bound Davis payer email: the normal OTP template delivered a code, Supabase accepted it, and the authenticated portal displayed the authorized upcoming lessons.
+- This passes the `valid-populated` case in SEC-TODO-004 and confirms that portal self-signup/Confirm-signup email is no longer part of this provisioned payer flow.
+- The remaining unknown, unprovisioned, valid-empty, inactive, ambiguous legacy, cross-school, stale-session/email-change, cross-family identifier, and concurrency cases remain open. This partial pass does not close the audit.

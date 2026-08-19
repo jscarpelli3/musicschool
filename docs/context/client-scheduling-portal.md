@@ -149,3 +149,11 @@ Notification delivery failure must not roll back or obscure the cancellation. Ca
 - Access states are explicit and server-derived: `not_setup`, `ambiguous`, and `ready`. Only `ready` can execute the lesson query; a ready payer with no scheduled lessons retains the legitimate empty state.
 - Payer email changes transactionally update only that school's payer authorization. An old-email session loses this access while retaining any independent access at other schools.
 - Full findings, controls, validation evidence, unresolved abuse risk, and deployment gates are recorded in `docs/audits/security-audit-log.md` under `SEC-AUDIT-2026-08-19-001`.
+
+## Reusable Calendar Presentation
+
+- The read-only portal schedule uses the shared `CalendarRange` primitive and `LessonCalendar` composition rather than route-specific calendar markup or date arithmetic.
+- The calendar derives all displayed months and day placement from a rolling range, item timestamps, and the school's IANA timezone. It includes partial boundary months automatically and does not contain hardcoded month layouts.
+- A payer attached to multiple schools receives separate calendars so lessons are never grouped under the wrong timezone.
+- Phone uses a compact monthly agenda from the same grouped data; tablet and desktop use a seven-day month grid. Neither representation requires hover or separate business logic.
+- Styling uses the established Tailwind tokens and utilities. No calendar-specific inline styles or parallel CSS system was introduced.

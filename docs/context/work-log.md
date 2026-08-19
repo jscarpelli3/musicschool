@@ -10,6 +10,8 @@ Use this file for short chronological notes about meaningful work.
 - Expanded the master audit process with dedicated Stripe and Resend API regression suites and baseline/automation TODOs. The suites cover configuration, authorization and tenant/object binding, signatures, replay/concurrency/order, idempotency, ambiguous provider failures, retries/suppression, safe logs, and provider-state reconciliation.
 - Deployed payer-portal migrations `20260819113000` and `20260819114000`; the database boundary assertions passed and linked lint has no new finding. Cleaned the reachable test email down to one Davis family binding, preserved historical evidence, confirmed its silent Auth identity, and verified the live access state is `ready` with exactly one active authorization.
 - Published matching application commit `59c5f45`; Vercel completed the production deployment and the live `/portal` smoke check passed with private/no-store caching, HSTS, and search-engine exclusion. The Davis live OTP/lesson test and the remaining adversarial portal matrix are next.
+- Davis live portal acceptance passed: the provisioned payer received the normal code template, entered the OTP, and saw the authorized lessons. Logged this as the `valid-populated` partial pass without closing the remaining security matrix.
+- Replaced the portal's bespoke lesson cards with reusable `CalendarRange` and `LessonCalendar` components. Calendar months, day placement, school grouping, and timezone conversion are data-driven; phone renders an agenda and tablet/desktop render the month grid from the same component and Tailwind token system.
 
 ## 2026-08-11
 
