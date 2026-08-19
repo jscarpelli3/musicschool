@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CalendarRange } from "./calendar-range";
+import { LessonRequestControls } from "./lesson-request-controls";
 
 export type LessonCalendarItem = {
   lessonId: string;
@@ -99,6 +100,7 @@ export function LessonCalendar({ id, lessons, rangeStart, rangeEnd, timeZone }: 
         <div className="py-5"><dt className="text-xs text-muted">Teacher</dt><dd className="mt-2 text-sm">{selectedLesson.teacherName}</dd></div>
         <div className="py-5"><dt className="text-xs text-muted">Place</dt><dd className="mt-2 text-sm">{selectedLesson.placeName}</dd></div>
       </dl>
+      <LessonRequestControls lessonId={selectedLesson.lessonId} timeZone={timeZone} />
     </aside>
   </div> : null}</>;
 }

@@ -3398,6 +3398,22 @@ export type Database = {
           teacher_name: string
         }[]
       }
+      preview_client_lesson_change_request: {
+        Args: { p_lesson_event_id: string; p_request_type: string }
+        Returns: Json
+      }
+      submit_client_lesson_change_request: {
+        Args: { p_lesson_event_id: string; p_request_type: string; p_requested_resolution: string }
+        Returns: Json
+      }
+      get_pending_lesson_request_emails: {
+        Args: { p_request_id: string }
+        Returns: { id: string; school_id: string; recipient_email: string; subject: string; message_text: string; idempotency_key: string }[]
+      }
+      record_lesson_request_email_submission: {
+        Args: { p_delivery_id: string; p_provider_email_id?: string | null; p_error_code?: string | null; p_error_message?: string | null }
+        Returns: boolean
+      }
       get_client_portal_calendar_accounts: {
         Args: Record<PropertyKey, never>
         Returns: {
