@@ -59,6 +59,59 @@ Each full audit evaluates, where applicable:
 - Run focused retests plus regression checks. Record actual evidence and distinguish local, deployed, and live results.
 - Update this process when a review exposes a missing class of check.
 
+## Stripe API security regression suite
+
+Run this suite for every material Stripe integration change, before switching provider mode or webhook destinations, and during the recurring full audit. Inventory every current Stripe call and webhook event before starting; future payment/refund/dispute endpoints inherit this gate automatically.
+
+### Configuration and trust boundaries
+
+- Confirm test/live mode, API-version pinning, platform versus connected-account context, webhook destinations, active/retiring signing secrets, return URLs, and least-privilege secret placement in every environment.
+- Prove that school, billing account, customer, setup session, payment method, PaymentIntent, Charge, Refund, and connected-account identifiers are resolved server-side and checked against durable tenant bindings. Never trust browser metadata or a provider object ID alone as authorization.
+- Verify production responses and logs do not expose Stripe secrets, signatures, raw payment details, internal stack traces, or unnecessary webhook payload data.
+
+### Outbound Stripe calls
+
+- Test anonymous, teacher, unrelated-school member, stale-session, and guessed-ID denial for account onboarding, account synchronization, customer creation, card setup, method revocation, and every future collection/refund action.
+- Verify amount, currency, payer, school, connected account, customer, idempotency key, metadata, return path, and authorization source are calculated from authoritative state immediately before each side effect.
+- Exercise timeout/failure before request, after provider acceptance, and during local finalization. Prove retries cannot create duplicate customers, sessions, methods, charges, refunds, or local records.
+- Retrieve newly created or returned objects from Stripe in the expected connected-account context before accepting them locally. Reject wrong mode, account, customer, object type, status, currency, or amount.
+
+### Stripe webhook intake and processing
+
+- Test missing, malformed, forged, stale, and correctly signed requests against the raw body for every configured secret during rotation; cover both supported classic and v2 event formats.
+- Test malformed JSON, oversized/unexpected payloads, unsupported event types, missing account/object IDs, wrong test/live mode, unknown connected accounts, and provider objects belonging to another school.
+- Replay identical events sequentially and concurrently; deliver related events out of order; reclaim a deliberately failed and an expired-processing-lease event. Verify one durable intake record, one permitted business mutation, safe duplicate acknowledgement, and retained failure evidence.
+- Confirm intake durability precedes business processing, provider `5xx` retries recover transient failures, unsupported events become explicitly ignored, and logs/errors contain safe identifiers only.
+- Reconcile a sample of local provider events and resulting customer/method/payment state directly against Stripe. A webhook HTTP `200` alone never passes the audit.
+
+### Stripe evidence required
+
+- Record Stripe mode, account scope, endpoint/event inventory, API version, non-secret webhook destination/secret-rotation state, fixture IDs safe to retain, request/result matrix, local database evidence, provider-dashboard/API evidence, replay/concurrency results, failures, and cleanup.
+
+## Resend API security regression suite
+
+Run this suite for every material sending, template, retry, suppression, or webhook change; before sender-domain/webhook/key cutovers; and during the recurring full audit. Inventory every application message kind, outbox, sender identity, recipient resolver, retry path, and webhook event first.
+
+### Configuration and outbound sending
+
+- Confirm API-key placement and scope, verified domain, exact From addresses, webhook destination/signing secret, environment separation, provider tracking settings, and key-rotation procedure.
+- Test anonymous, payer, teacher, unrelated-school member, stale-session, and guessed-ID denial for each send/retry/report action. Derive recipients and tenant context from authoritative server data, not submitted email addresses or record IDs alone.
+- Verify subject, HTML, text, display name, and recipient fields resist header/HTML injection; templates escape user/school content; messages contain no bearer token except the deliberately scoped destination required by that workflow.
+- Require a durable outbox/attempt before the provider call, stable idempotency where supported, bounded retry/cooldown, and explicit separation between business truth and delivery truth.
+- Exercise invalid key, timeout before acceptance, ambiguous timeout after possible acceptance, provider `4xx`, provider `5xx`, rate limit, invalid/suppressed recipient, bounce, complaint, and recovery. Prove retries cannot duplicate business actions or silently bypass suppression.
+
+### Resend/Svix webhook intake and reconciliation
+
+- Test missing, malformed, forged, stale, and valid `svix-id`, `svix-timestamp`, and `svix-signature` headers against the untouched raw body.
+- Test malformed/unsupported payloads, unknown event types, missing provider email/event IDs, invalid timestamps, recipient mismatch, unknown provider email IDs, and webhook events arriving before local provider-ID finalization.
+- Replay identical events sequentially and concurrently and deliver sent/delayed/delivered/failed/bounced/complained/suppressed events out of order. Verify deduplication and monotonic terminal-state handling so late events cannot resurrect a failed/suppressed message or downgrade delivery truth.
+- Confirm permanent bounce/complaint suppression has the intended global-versus-school scope, cannot be bypassed by manual retry, and can be corrected only through an authenticated, audited support process.
+- Reconcile local attempts/outboxes against Resend provider events for a sample of success, transient failure, permanent failure, retry, and complaint cases. Provider handoff alone never proves delivery.
+
+### Resend evidence required
+
+- Record sender domain/address, message-kind inventory, endpoint/event inventory, non-secret webhook configuration state, fixture delivery IDs safe to retain, authorization matrix, signature/replay/out-of-order results, outbox/database evidence, provider evidence, suppression/retry results, failures, and cleanup.
+
 ## Required audit entry template
 
 ```text
@@ -88,6 +141,8 @@ Decision: pass / conditional pass / fail / not completed
 - **SEC-TODO-005 — Auth lifecycle cleanup:** Define safe retention and cleanup for Auth identities no longer authorized by any payer account without disrupting staff identities or identities still used by another school.
 - **SEC-TODO-006 — Periodic cadence ownership:** Assign accountable people and calendar reminders for pre-deploy, monthly, quarterly, cutover, and incident-driven audits.
 - **SEC-TODO-007 — Independent review:** Before handling live payments and family data at scale, arrange a qualified independent penetration test/security architecture review and track every result here.
+- **SEC-TODO-008 — Stripe API baseline and automation:** Run the dedicated Stripe suite against every current outbound operation and webhook event, close findings, then automate signature, replay, concurrency, wrong-account, wrong-mode, idempotency, and failure-recovery cases where practical.
+- **SEC-TODO-009 — Resend API baseline and automation:** Run the dedicated Resend suite against every message kind and webhook event, close findings, then automate signature, replay, ordering, recipient mismatch, idempotency, suppression, retry-limit, and provider-failure cases where practical.
 
 ## Audit process change log
 
@@ -97,6 +152,12 @@ Decision: pass / conditional pass / fail / not completed
 - Added stable audit/finding/TODO identifiers, evidence requirements, explicit local/deployed/live distinctions, severity gates, retest requirements, and process-change logging.
 - Added explicit identity lifecycle, tenant/family boundaries, abuse/enumeration, provider scope, dependency/supply-chain, operational, and business-integrity coverage.
 - Added the rule that security process gaps discovered during an audit must update the procedure and be logged here.
+
+### SEC-PROCESS-2026-08-19-002 — Stripe and Resend API suites added
+
+- Expanded the general provider review into mandatory, repeatable Stripe and Resend regression suites.
+- Added configuration, tenant/object ownership, outbound authorization, raw-body signature verification, replay, concurrency, ordering, idempotency, ambiguous failure, provider reconciliation, suppression, safe logging, and evidence requirements.
+- Added explicit baseline-and-automation work as `SEC-TODO-008` and `SEC-TODO-009`. Future Stripe payment/refund/dispute APIs and Resend message kinds enter these suites automatically when introduced.
 
 ## Audit run log
 

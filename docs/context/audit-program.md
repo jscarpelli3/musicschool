@@ -45,6 +45,7 @@ The append-only master record for security process changes, scans, findings, rem
 
 ### 4. External API and webhook audit
 
+- Run the mandatory provider-specific Stripe and Resend regression suites maintained in `docs/audits/security-audit-log.md`; record every run and finding there.
 - Stripe, Resend, Twilio, Supabase, Google OAuth, and Vercel configuration inventory by environment and tenant scope.
 - Request validation, timeouts, retry/backoff, idempotency keys, pagination, API-version pinning, rate-limit behavior, and safe error translation.
 - Signature validation against the raw request, replay detection, out-of-order and duplicate delivery, unknown-event handling, endpoint mode/account matching, and durable intake before processing.

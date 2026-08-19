@@ -7,6 +7,7 @@ Use this file for short chronological notes about meaningful work.
 - Established `docs/audits/security-audit-log.md` as the living, append-only master security due-diligence record. It defines scope, procedure, evidence requirements, severity/retest rules, process-change history, recurring TODOs, and the first detailed audit run.
 - Logged the payer-portal boundary findings and local remediation: payer-account-only authorization, private per-school email bindings, cross-school reuse, same-school duplicate denial, owner/admin-only silent Auth provisioning, no portal self-signup, explicit access states, local-only logout, and database regression assertions.
 - Recorded the remaining deployment and live-test gate accurately. TypeScript, focused lint, and production build pass; Supabase migrations and live adversarial checks remain blocked until CLI authentication is restored.
+- Expanded the master audit process with dedicated Stripe and Resend API regression suites and baseline/automation TODOs. The suites cover configuration, authorization and tenant/object binding, signatures, replay/concurrency/order, idempotency, ambiguous provider failures, retries/suppression, safe logs, and provider-state reconciliation.
 
 ## 2026-08-11
 
