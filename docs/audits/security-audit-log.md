@@ -204,3 +204,10 @@ Decision: pass / conditional pass / fail / not completed
 - Live data cleanup restored unique demo addresses to five duplicated payer contacts and assigned the reachable test address exclusively to Davis family. Historical delivery/audit evidence was not rewritten.
 - The existing test Auth identity was confirmed through the server-only admin boundary. Live verification reports access state `ready`, exactly one private authorization binding, and Davis family as the sole active payer account for that address.
 - Database portions of SEC-FIND-2026-08-19-001 through 004 are deployed. Matching application publication and the adversarial live matrix in SEC-TODO-004 remain required before those findings are closed.
+
+#### Status update — 2026-08-19 18:02 UTC
+
+- Application commit `59c5f45` was pushed after the database migrations and its Vercel production deployment completed successfully.
+- A live HTTP smoke check of `https://app.commontime.studio/portal` returned `200` with private/no-cache/no-store behavior, HSTS, and `X-Robots-Tag: noindex, nofollow, noarchive`.
+- Database and application versions now match in production. Focused TypeScript and ESLint checks passed before publication; the prior production build evidence remains applicable.
+- SEC-TODO-004 is ready for owner-driven live OTP and lesson-visibility testing. Findings remain open until the full adversarial matrix and resulting database state are recorded.

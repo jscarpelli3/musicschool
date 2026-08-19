@@ -9,6 +9,7 @@ Use this file for short chronological notes about meaningful work.
 - Recorded the remaining deployment and live-test gate accurately. TypeScript, focused lint, and production build pass; Supabase migrations and live adversarial checks remain blocked until CLI authentication is restored.
 - Expanded the master audit process with dedicated Stripe and Resend API regression suites and baseline/automation TODOs. The suites cover configuration, authorization and tenant/object binding, signatures, replay/concurrency/order, idempotency, ambiguous provider failures, retries/suppression, safe logs, and provider-state reconciliation.
 - Deployed payer-portal migrations `20260819113000` and `20260819114000`; the database boundary assertions passed and linked lint has no new finding. Cleaned the reachable test email down to one Davis family binding, preserved historical evidence, confirmed its silent Auth identity, and verified the live access state is `ready` with exactly one active authorization.
+- Published matching application commit `59c5f45`; Vercel completed the production deployment and the live `/portal` smoke check passed with private/no-store caching, HSTS, and search-engine exclusion. The Davis live OTP/lesson test and the remaining adversarial portal matrix are next.
 
 ## 2026-08-11
 
