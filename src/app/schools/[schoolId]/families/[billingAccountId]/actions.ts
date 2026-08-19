@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { createFamilyCardSetup } from "@/lib/stripe/payment-methods";
 import { getStripe } from "@/lib/stripe/server";
 import { normalizeE164 } from "@/lib/phone";
+import { ensurePortalAuthIdentity } from "@/lib/portal/auth-identities";
 import { billingApprovalEmail } from "@/lib/resend/billing-approval-email";
 import { ResendRequestError, sendResendEmail } from "@/lib/resend/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -454,11 +455,28 @@ export async function updateBillingContactEmail(
   const { data: auth } = await supabase.auth.getClaims();
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=${path}`);
+  const [{ data: membership }, { data: account }] = await Promise.all([
+    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
+    supabase.from("billing_accounts").select("id").eq("school_id", schoolId).eq("id", billingAccountId).maybeSingle(),
+  ]);
+  if (!membership || !["owner", "admin"].includes(membership.role) || !account) {
+    return { ok: false, message: "You do not have permission to update this payer." };
+  }
+
+  try {
+    await ensurePortalAuthIdentity(email);
+  } catch {
+    return { ok: false, message: "The payer portal identity could not be prepared, so the email was not changed. Try again shortly." };
+  }
+
   const { data: cancelledCount, error } = await supabase.rpc("update_billing_contact_email", {
     p_billing_account_id: billingAccountId,
     p_email: email,
     p_school_id: schoolId,
   });
+  if (error?.message.includes("duplicate_payer_email")) {
+    return { ok: false, message: "This email already belongs to another family account at this school. Open that family to add the student there, or use a different email." };
+  }
   if (error) return { ok: false, message: "The email address could not be saved. Nothing changed." };
   revalidatePath(path);
   return { ok: true, message: cancelledCount

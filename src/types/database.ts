@@ -3398,6 +3398,18 @@ export type Database = {
           teacher_name: string
         }[]
       }
+      client_portal_email_access_state: {
+        Args: { p_email: string }
+        Returns: string
+      }
+      current_client_portal_access_state: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_portal_auth_user_id_by_email: {
+        Args: { p_email: string }
+        Returns: string | null
+      }
       get_billing_approval: {
         Args: { raw_token: string }
         Returns: {

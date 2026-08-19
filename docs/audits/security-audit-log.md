@@ -195,3 +195,12 @@ Decision: pass / conditional pass / fail / not completed
 
 - **Decision: not completed / deployment blocked for this feature.** The local remediation is ready for database validation, but Supabase CLI authentication is unavailable in the working shell. Do not publish the application changes before migrations `20260819113000` and `20260819114000` deploy and pass linked lint/verification.
 - **Next action:** authenticate Supabase CLI, dry-run/review and apply migrations, run linked database lint, regenerate types if needed, deploy the application, execute SEC-TODO-004, append evidence here, then change each finding only through a dated status update.
+
+#### Status update — 2026-08-19 18:00 UTC
+
+- Supabase CLI authentication was restored. Dry-run identified only migrations `20260819113000` and `20260819114000`.
+- The first application attempt failed safely and transactionally on a reserved SQL alias; no partial schema change was retained. The alias was corrected and both migrations then deployed successfully.
+- The verification migration passed during deployment. Linked database lint reports no new finding; its sole warning remains the pre-existing unread `school_name` variable in `queue_payer_response_notifications`.
+- Live data cleanup restored unique demo addresses to five duplicated payer contacts and assigned the reachable test address exclusively to Davis family. Historical delivery/audit evidence was not rewritten.
+- The existing test Auth identity was confirmed through the server-only admin boundary. Live verification reports access state `ready`, exactly one private authorization binding, and Davis family as the sole active payer account for that address.
+- Database portions of SEC-FIND-2026-08-19-001 through 004 are deployed. Matching application publication and the adversarial live matrix in SEC-TODO-004 remain required before those findings are closed.

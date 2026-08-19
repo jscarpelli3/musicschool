@@ -17,7 +17,19 @@ export function PortalAuth() {
     setPending(true);
     setMessage("");
     const normalizedEmail = email.trim().toLowerCase();
-    const { error } = await createClient().auth.signInWithOtp({ email: normalizedEmail, options: { shouldCreateUser: true } });
+    const supabase = createClient();
+    const { data: accessState, error: accessError } = await supabase.rpc("client_portal_email_access_state", { p_email: normalizedEmail });
+    if (accessError || accessState === "not_setup") {
+      setPending(false);
+      setMessage("Your family portal has not been set up yet. Check the email address or contact your school for help.");
+      return;
+    }
+    if (accessState === "ambiguous") {
+      setPending(false);
+      setMessage("More than one family account uses this email. Please contact the school for help.");
+      return;
+    }
+    const { error } = await supabase.auth.signInWithOtp({ email: normalizedEmail, options: { shouldCreateUser: false } });
     setPending(false);
     if (error) {
       setMessage("We could not send a sign-in code. Wait a moment and try again.");
