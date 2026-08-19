@@ -10,6 +10,14 @@ export async function proxy(request: NextRequest) {
   const hostname = requestHost.toLowerCase().replace(/:\d+$/, "");
 
   if (MARKETING_HOSTS.has(hostname)) {
+    if (request.nextUrl.pathname === "/portal" || request.nextUrl.pathname.startsWith("/portal/")) {
+      const destination = request.nextUrl.clone();
+      destination.protocol = "https:";
+      destination.hostname = "app.commontime.studio";
+      destination.port = "";
+      return NextResponse.redirect(destination, 308);
+    }
+
     if (hostname === "commontime.studio") {
       const destination = new URL("https://www.commontime.studio");
       return NextResponse.redirect(destination, 308);
