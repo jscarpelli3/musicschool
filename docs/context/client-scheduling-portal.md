@@ -157,3 +157,13 @@ Notification delivery failure must not roll back or obscure the cancellation. Ca
 - A payer attached to multiple schools receives separate calendars so lessons are never grouped under the wrong timezone.
 - Phone uses a compact monthly agenda from the same grouped data; tablet and desktop use a seven-day month grid. Neither representation requires hover or separate business logic.
 - Styling uses the established Tailwind tokens and utilities. No calendar-specific inline styles or parallel CSS system was introduced.
+
+## Private Calendar Subscription
+
+- The primary calendar handoff is a subscription rather than repeated bulk imports. Each school/family billing account receives its own feed so school names and timezones never cross calendar boundaries.
+- A subscription uses a 256-bit random bearer token. Only its SHA-256 digest is stored. The credential grants read-only access to calendar-safe lesson fields for one active billing account; it grants no portal, payer, contact, or payment access.
+- Creating a replacement link atomically revokes the old link. Families can also revoke access directly. A payer email/billing-contact authorization change revokes the existing link so possession by the old contact does not preserve access.
+- Calendar events use the immutable lesson occurrence ID as a stable iCalendar UID. Time changes increase the event sequence, while cancelled or rescheduled occurrences remain in the feed temporarily with `STATUS:CANCELLED`; this lets subscribed calendars update instead of creating duplicates or retaining stale lessons.
+- The feed includes scheduled occurrences up to twelve months ahead and retains cancelled/rescheduled evidence for six months. The portal UI may continue to show a shorter three-month working window.
+- Apple-style calendar handlers can open the `webcal` subscription directly. Google Calendar and Outlook web users can copy the HTTPS feed URL into their provider's subscription-from-URL flow. Provider polling is outside Common Time's control and changes may take hours to appear.
+- The raw link is shown only when created or replaced and must be treated as private. Existing active status is visible later, but the raw token cannot be recovered from the database.

@@ -143,6 +143,7 @@ Decision: pass / conditional pass / fail / not completed
 - **SEC-TODO-007 — Independent review:** Before handling live payments and family data at scale, arrange a qualified independent penetration test/security architecture review and track every result here.
 - **SEC-TODO-008 — Stripe API baseline and automation:** Run the dedicated Stripe suite against every current outbound operation and webhook event, close findings, then automate signature, replay, concurrency, wrong-account, wrong-mode, idempotency, and failure-recovery cases where practical.
 - **SEC-TODO-009 — Resend API baseline and automation:** Run the dedicated Resend suite against every message kind and webhook event, close findings, then automate signature, replay, ordering, recipient mismatch, idempotency, suppression, retry-limit, and provider-failure cases where practical.
+- **SEC-TODO-010 — Private calendar subscription rehearsal:** Before production family use, test token entropy/storage, invalid and revoked tokens, replacement concurrency, payer-email rotation, inactive accounts, cross-family/cross-school access, empty feeds, event UID/update/cancellation behavior, response caching/referrer headers, provider polling, and accidental token logging. Confirm Google, Apple, and Outlook subscription behavior on representative devices.
 
 ## Audit process change log
 
@@ -217,3 +218,14 @@ Decision: pass / conditional pass / fail / not completed
 - The product owner completed the live populated-family happy path using the uniquely bound Davis payer email: the normal OTP template delivered a code, Supabase accepted it, and the authenticated portal displayed the authorized upcoming lessons.
 - This passes the `valid-populated` case in SEC-TODO-004 and confirms that portal self-signup/Confirm-signup email is no longer part of this provisioned payer flow.
 - The remaining unknown, unprovisioned, valid-empty, inactive, ambiguous legacy, cross-school, stale-session/email-change, cross-family identifier, and concurrency cases remain open. This partial pass does not close the audit.
+
+### SEC-AUDIT-2026-08-19-002 — Private family calendar subscription design review
+
+- **Date:** 2026-08-19.
+- **Environment:** Local application and migration workspace; deployment pending.
+- **Trigger/objective:** Add a low-friction calendar subscription without repeated imports or duplicate lessons while preserving the hardened payer boundary.
+- **Scope:** Calendar token lifecycle, database grants, feed account scoping, stable event identity, cancellations/reschedules, HTTP caching/referrer behavior, and portal controls.
+- **Controls implemented locally:** Per-billing-account 256-bit bearer tokens with digest-only storage; authenticated/account-scoped creation, replacement, and revocation RPCs; service-role-only feed resolution; automatic revocation on payer authorization change; active-account enforcement; stable lesson UIDs; sequence/last-modified metadata; cancelled-event publication; no-store/no-referrer/noindex response headers; no payment/contact data in feeds.
+- **Automated evidence:** TypeScript and focused ESLint pass. Next.js 16.3 production build passes and recognizes `/api/calendar/[token]` as a dynamic route. Database verification migration asserts table denial and RPC grants but has not yet run against the linked database.
+- **Open risk:** A calendar URL is intentionally a long-lived bearer credential and any recipient can read the limited lesson feed until revoked. Calendar providers may retain fetched data and poll slowly. Provider/device acceptance and adversarial boundary tests remain required under `SEC-TODO-010`.
+- **Decision:** Conditional pass locally; do not publish the application until migrations `20260819120000` and `20260819121000` deploy successfully and the linked checks pass.

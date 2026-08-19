@@ -3398,6 +3398,41 @@ export type Database = {
           teacher_name: string
         }[]
       }
+      get_client_portal_calendar_accounts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          billing_account_id: string
+          school_id: string
+          school_name: string
+          school_timezone: string
+          subscription_active: boolean
+        }[]
+      }
+      rotate_client_portal_calendar_subscription: {
+        Args: { p_school_id: string }
+        Returns: string
+      }
+      revoke_client_portal_calendar_subscription: {
+        Args: { p_school_id: string }
+        Returns: boolean
+      }
+      get_payer_calendar_subscription: {
+        Args: { raw_token: string }
+        Returns: {
+          ends_at: string | null
+          event_status: string | null
+          lesson_id: string | null
+          place_name: string | null
+          product_name: string | null
+          school_id: string
+          school_name: string
+          school_timezone: string
+          starts_at: string | null
+          student_name: string | null
+          teacher_name: string | null
+          updated_at: string | null
+        }[]
+      }
       client_portal_email_access_state: {
         Args: { p_email: string }
         Returns: string

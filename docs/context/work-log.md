@@ -12,6 +12,7 @@ Use this file for short chronological notes about meaningful work.
 - Published matching application commit `59c5f45`; Vercel completed the production deployment and the live `/portal` smoke check passed with private/no-store caching, HSTS, and search-engine exclusion. The Davis live OTP/lesson test and the remaining adversarial portal matrix are next.
 - Davis live portal acceptance passed: the provisioned payer received the normal code template, entered the OTP, and saw the authorized lessons. Logged this as the `valid-populated` partial pass without closing the remaining security matrix.
 - Replaced the portal's bespoke lesson cards with reusable `CalendarRange` and `LessonCalendar` components. Calendar months, day placement, school grouping, and timezone conversion are data-driven; phone renders an agenda and tablet/desktop render the month grid from the same component and Tailwind token system.
+- Built a private, revocable family lesson-calendar subscription locally. The feed is scoped to one active payer billing account, stores only a token digest, uses stable lesson event IDs, publishes cancellations/reschedules as calendar cancellations, and avoids duplicate-prone repeated imports. Added portal create/replace/revoke controls and provider-specific URL instructions. TypeScript, focused lint, and the production build pass; database migrations and publication remain blocked until Supabase CLI authentication is restored.
 
 ## 2026-08-11
 

@@ -1,0 +1,40 @@
+import { createAdminClient } from "@/lib/supabase/admin";
+import { buildLessonCalendar } from "@/lib/calendar/icalendar";
+
+export const dynamic = "force-dynamic";
+
+const TOKEN_PATTERN = /^[0-9a-f]{64}$/;
+
+export async function GET(_request: Request, context: { params: Promise<{ token: string }> }) {
+  const { token } = await context.params;
+  if (!TOKEN_PATTERN.test(token)) return new Response("Calendar not found", { status: 404 });
+
+  const { data, error } = await createAdminClient().rpc("get_payer_calendar_subscription", { raw_token: token });
+  if (error || !data?.length) return new Response("Calendar not found", { status: 404 });
+
+  const metadata = data[0];
+  const calendar = buildLessonCalendar(`${metadata.school_name} lessons`, data.flatMap((lesson) => lesson.lesson_id && lesson.starts_at && lesson.ends_at && lesson.updated_at
+    ? [{
+        lessonId: lesson.lesson_id,
+        studentName: lesson.student_name ?? "Student",
+        teacherName: lesson.teacher_name ?? "Teacher",
+        productName: lesson.product_name ?? "Lesson",
+        placeName: lesson.place_name ?? "",
+        startsAt: lesson.starts_at,
+        endsAt: lesson.ends_at,
+        status: lesson.event_status ?? "scheduled",
+        updatedAt: lesson.updated_at,
+      }]
+    : []));
+
+  return new Response(calendar, {
+    headers: {
+      "Content-Type": "text/calendar; charset=utf-8",
+      "Content-Disposition": `inline; filename="${metadata.school_id}-lessons.ics"`,
+      "Cache-Control": "private, no-store, max-age=0",
+      "Referrer-Policy": "no-referrer",
+      "X-Content-Type-Options": "nosniff",
+      "X-Robots-Tag": "noindex, nofollow, noarchive",
+    },
+  });
+}
