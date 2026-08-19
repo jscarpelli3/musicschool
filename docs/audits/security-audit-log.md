@@ -229,3 +229,11 @@ Decision: pass / conditional pass / fail / not completed
 - **Automated evidence:** TypeScript and focused ESLint pass. Next.js 16.3 production build passes and recognizes `/api/calendar/[token]` as a dynamic route. Database verification migration asserts table denial and RPC grants but has not yet run against the linked database.
 - **Open risk:** A calendar URL is intentionally a long-lived bearer credential and any recipient can read the limited lesson feed until revoked. Calendar providers may retain fetched data and poll slowly. Provider/device acceptance and adversarial boundary tests remain required under `SEC-TODO-010`.
 - **Decision:** Conditional pass locally; do not publish the application until migrations `20260819120000` and `20260819121000` deploy successfully and the linked checks pass.
+
+#### Status update — 2026-08-19 19:36 UTC
+
+- Migrations `20260819120000` and `20260819121000` deployed successfully to the linked Supabase project; the embedded privilege/boundary assertions passed.
+- Linked database lint reports no new issue. Its only result is the pre-existing unread `school_name` variable warning in `queue_payer_response_notifications`.
+- Commits `bf35032` and `4de36f8` were pushed together after the database deployment. Vercel reported the production deployment successful.
+- Live unauthenticated smoke checks returned `200` for `/portal` with private/no-store and search-engine exclusion headers, and `404` for a malformed calendar credential without exposing feed data.
+- Deployment gate is cleared. Authenticated provider/device acceptance and the adversarial cases in `SEC-TODO-010` remain open; this audit is not a complete provider compatibility pass.
