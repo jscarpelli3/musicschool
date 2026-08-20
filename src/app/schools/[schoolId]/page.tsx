@@ -6,12 +6,7 @@ import { saveStudentRosterView } from "./dashboard-actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function SchoolDashboard({
-  params,
-}: {
-  params: Promise<{ schoolId: string }>;
-}) {
-  const { schoolId } = await params;
+export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; view: "dashboard" | "students" }) {
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getClaims();
   const profileId = authData?.claims?.sub;
@@ -232,13 +227,13 @@ export default async function SchoolDashboard({
 
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-6 py-section">
-      <StudentRosterTable
+      {view === "students" ? <StudentRosterTable
         rows={studentRowsForTable}
         monthLabel={monthLabel}
         initialView={rosterPreference?.settings as Partial<RosterViewSettings> | null}
         saveView={saveStudentRosterView.bind(null, schoolId)}
-      />
-      <OwnerPlanner
+      /> : null}
+      {view === "dashboard" ? <OwnerPlanner
         schoolId={schoolId}
         canReschedule={canManageSchool}
         initialDate={initialDate}
@@ -255,7 +250,12 @@ export default async function SchoolDashboard({
           can_reschedule: lesson.reschedule_allowed && lesson.status === "scheduled" && new Date(lesson.starts_at).getTime() > now,
           can_mark_reschedule: canManageSchool || currentTeacherId === lesson.teacher_id,
         }))}
-      />
+      /> : null}
     </main>
   );
+}
+
+export default async function SchoolDashboard({ params }: { params: Promise<{ schoolId: string }> }) {
+  const { schoolId } = await params;
+  return <SchoolWorkspace schoolId={schoolId} view="dashboard" />;
 }

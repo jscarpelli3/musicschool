@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { OwnerNotifications } from "@/components/notifications/owner-notifications";
+import { SchoolManagementNav } from "@/components/schools/school-management-nav";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,6 @@ export default async function SchoolLayout({ children, params }: { children: Rea
     school.logo_path ? supabase.storage.from("school-logos").createSignedUrl(school.logo_path, 3600) : Promise.resolve({ data: null }),
   ]);
   const avatarUrl = avatar?.signedUrl ?? profile?.avatar_url;
-  const canManage = membership.role === "owner" || membership.role === "admin";
   return <>
     <div className="mx-auto max-w-7xl px-5 pt-8 sm:px-8 sm:pt-10">
       <header className="flex items-start justify-between gap-6 border-b border-line pb-7">
@@ -33,7 +32,7 @@ export default async function SchoolLayout({ children, params }: { children: Rea
         </Link>
         <div className="flex shrink-0 items-center gap-3"><Link href="/profile" aria-label="Profile settings" className="flex items-center gap-3 text-sm text-muted hover:text-ink">{avatarUrl ? <img /* eslint-disable-line @next/next/no-img-element */ src={avatarUrl} alt="Your avatar" className="h-10 w-10 rounded-full border border-line object-cover" /> : null}<span className="hidden sm:inline">Profile</span></Link><form action="/auth/signout" method="post"><button className="rounded-control border border-line px-4 py-control text-sm text-muted hover:text-ink">Sign out</button></form></div>
       </header>
-      <nav className="flex flex-wrap items-center gap-6 border-b border-line py-5" aria-label="School management"><Link href={`/schools/${schoolId}`} className="text-sm text-brand hover:text-brand-hover">Dashboard</Link>{canManage ? <Link href={`/schools/${schoolId}/lessons/new`} className="text-sm text-brand hover:text-brand-hover">New lesson +</Link> : null}{canManage ? <Link href={`/schools/${schoolId}/setup`} className="text-sm text-brand hover:text-brand-hover">School setup →</Link> : null}<div className="ml-auto"><OwnerNotifications schoolId={schoolId} embedded /></div></nav>
+      <SchoolManagementNav schoolId={schoolId} role={membership.role} />
     </div>
     {children}
   </>;

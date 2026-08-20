@@ -5,7 +5,6 @@ const tabs = [
   { key: "offerings", label: "Lessons & classes", path: "products" },
   { key: "spaces", label: "Lesson spaces", path: "places" },
   { key: "policies", label: "Policies & documents", path: "policies" },
-  { key: "staff", label: "Staff", path: "staff" },
   { key: "payments", label: "Payments", path: "payments" },
 ] as const;
 

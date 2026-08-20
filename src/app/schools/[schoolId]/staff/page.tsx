@@ -1,5 +1,4 @@
 import { notFound, redirect } from "next/navigation";
-import { SetupHeader } from "@/components/school-setup/setup-header";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +18,7 @@ export default async function StaffPage({ params }: { params: Promise<{ schoolId
     supabase.from("school_members").select("profile_id, role, status").eq("school_id", schoolId),
   ]);
   if (!school || !membership) notFound();
-  if (membership.role !== "owner" && membership.role !== "admin") redirect(`/schools/${schoolId}`);
+  if (membership.role !== "owner") redirect(`/schools/${schoolId}`);
 
   const personById = new Map((people ?? []).map((person) => [person.id, person]));
   const roleByProfile = new Map((members ?? []).map((member) => [member.profile_id, member]));
@@ -32,7 +31,7 @@ export default async function StaffPage({ params }: { params: Promise<{ schoolId
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
-      <SetupHeader schoolId={schoolId} schoolName={school.name} active="staff" />
+      <header className="border-b border-line pb-7"><h1 className="font-display text-5xl">Staff.</h1><p className="mt-3 text-sm text-muted">{roster.length} teaching staff at {school.name}</p></header>
       <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
         <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">
           <h2 className="font-display text-3xl">Staff roster</h2>
