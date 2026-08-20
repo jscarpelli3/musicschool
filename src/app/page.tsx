@@ -26,7 +26,7 @@ export default async function Home() {
   return (
     <main className="mx-auto min-h-screen max-w-3xl px-6 py-20">
       <section>
-        <p className="mb-8 text-sm text-muted">MusicSchool</p>
+        <p className="mb-8 text-sm text-muted">Common Time</p>
         <h1 className="font-display text-5xl font-normal tracking-[-0.035em]">Choose a school.</h1>
         <div className="mt-10 border-t border-line">
           {memberships.map(({ role, schools: school }) =>

@@ -1,4 +1,4 @@
-# Music School
+# Common Time
 
 A lean, multi-tenant music-school operations app built with Next.js, Supabase, and TypeScript.
 

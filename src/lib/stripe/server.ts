@@ -39,7 +39,7 @@ export function getStripe() {
 
   stripeClient = new Stripe(secretKey, {
     appInfo: {
-      name: "MusicSchool",
+      name: "Common Time",
       version: process.env.npm_package_version,
     },
   });

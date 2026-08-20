@@ -12,6 +12,13 @@
   --ui-brand: #b9a078;
   --ui-brand-hover: #d1b98f;
   --ui-danger: #c78374;
+  --ui-outcome-rescheduled: #7f8d8a;
+  --ui-outcome-cancelled: #756f62;
+  --ui-outcome-no-show: #9f684f;
+  --ui-overlay: rgb(8 7 6 / 0.68);
+  --ui-shadow-soft: 0 0.75rem 1.875rem rgb(0 0 0 / 0.22);
+  --ui-shadow-medium: 0 1.25rem 3.5rem rgb(0 0 0 / 0.28);
+  --ui-shadow-strong: 0 2rem 7rem rgb(0 0 0 / 0.42);
   --ui-radius-control: 0.125rem;
   --ui-radius-card: 0.125rem;
   --ui-radius-panel: 0;

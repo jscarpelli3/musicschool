@@ -54,7 +54,7 @@ export default function DesignStudy() {
   return (
     <main className="min-h-screen bg-canvas text-ink">
       <header className={`${plex.className} grid gap-8 border-b border-line px-6 py-8 md:grid-cols-[1fr_2fr] md:px-12`}>
-        <p className="text-sm text-brand">MusicSchool / dark study 01</p>
+        <p className="text-sm text-brand">Common Time / dark study 01</p>
         <div>
           <h1 className="max-w-3xl text-3xl font-medium tracking-[-0.03em] md:text-5xl">
             Three voices for a school that happens to use software.

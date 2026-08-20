@@ -21,7 +21,7 @@ export function SmsConsentForm({ defaultSchool = "" }: { defaultSchool?: string 
       <label className="mt-8 flex items-start gap-4 border-t border-line pt-7 text-sm leading-6">
         <input name="smsConsent" value="yes" type="checkbox" className="mt-1.5 shrink-0 accent-[var(--color-brand)]" />
         <span>
-          By checking this box and submitting this form, I consent to receive recurring transactional text messages from MusicSchool and the music school named above about lesson scheduling, billing approvals, payment status, reminders, and secure account access. Message frequency varies. Message and data rates may apply. Reply HELP for help or STOP to opt out. Consent is not a condition of purchase.
+          By checking this box and submitting this form, I consent to receive recurring transactional text messages from Common Time and the music school named above about lesson scheduling, billing approvals, payment status, reminders, and secure account access. Message frequency varies. Message and data rates may apply. Reply HELP for help or STOP to opt out. Consent is not a condition of purchase.
         </span>
       </label>
 

@@ -23,7 +23,7 @@ Snapshot at the time of this audit:
 - 14 inline React style assignments in production components, plus 1 in the interaction study.
 - 4 production component-specific stylesheets, 1 global stylesheet, and 1 temporary interaction-study stylesheet.
 - 9 semantic color tokens, 3 radius tokens, 3 spacing tokens, 1 shadow token, and 2 font-family tokens.
-- 3 raw outcome colors in JSX outside the semantic palette.
+- 0 raw browser-component colors outside the semantic palette; email markup retains literal values for client compatibility.
 - 7 repeated local field-class definitions or equivalent field patterns.
 - 16 repeated uppercase tracked status/taxonomy treatments.
 - 48 buttons without an explicit `type`; some are intentional form submits, but the convention is not enforced.
@@ -86,9 +86,9 @@ This is the correct architecture: CSS variables hold values; Tailwind exposes se
 
 - Tokens exist but are underused. `space-section` is used, while page gutters, content widths, header spacing, row density, control heights, and type scales are repeatedly assembled by hand.
 - `shadow-panel` is defined as `none`, but dropdowns and sheets use `shadow-xl`, `shadow-2xl`, and raw CSS shadows. A global shadow change would not affect those components.
-- `bg-panel/40` appears in billing approval UI, but `panel` is not a configured color token. This is a stale or invalid semantic name.
-- Three student-outcome colors use raw hex utilities. Those colors represent repeated domain states and need semantic tokens.
-- Planner CSS contains raw black overlays and shadow values. They are reasonable effects, but not globally adjustable.
+- Billing approval surfaces now use the configured `surface` token; the stale `panel` reference was removed.
+- Student outcomes now use semantic rescheduled, cancelled, and no-show tokens.
+- Planner overlays and shadow values now resolve through centralized global effect variables.
 - There is no complete semantic state family for success, warning, informational, pending, disabled, selected, unread, and overlay states. `brand` is currently doing several jobs.
 - School-level accent theming is described in the design rules but is not yet represented as a scoped token override in the UI shell.
 
@@ -236,7 +236,7 @@ Systemic gaps:
 ## Public, family, and owner surface consistency
 
 - Public home has the strongest editorial composition and clearest visual identity.
-- Login still labels the product `MusicSchool`, while public pages and current product language use `Common Time`. This is a visible brand inconsistency.
+- Production UI, policy, support, consent, and provider-facing product labels consistently use `Common Time`.
 - Family portal uses the shared palette and typography successfully but is visually narrower and simpler than the operational owner UI, which is appropriate.
 - Owner pages have the same materials and type but are increasingly composed from one-off patterns as functionality grows.
 - The temporary `/design` and `/design/interactions` studies remain shipped routes. They should either become an explicit internal design-system reference or be removed from production when no longer needed.
@@ -260,7 +260,7 @@ Systemic gaps:
 ### P0 — fix before a large redesign
 
 1. Establish shared page shell, header, section, field, button, action-link, status, row, empty-state, and sheet primitives.
-2. Replace stale `bg-panel/40` and raw outcome colors with real semantic tokens.
+2. Keep browser-component colors on the semantic token map; literal email colors remain an explicit compatibility exception.
 3. Add a global and component-level keyboard focus convention.
 4. Namespace component CSS and remove the `.line-action` collision.
 5. Define a visual-regression matrix with authenticated fixture states before broad styling changes.
@@ -272,7 +272,7 @@ Systemic gaps:
 3. Standardize primary, secondary, quiet, danger, selected, pending, and disabled control states.
 4. Unify planner and calendar sheet/dialog shells where their accessibility behavior overlaps.
 5. Audit and normalize page-title punctuation, taxonomy labels, and status language.
-6. Replace remaining `MusicSchool` branding in production UI with `Common Time` where appropriate.
+6. Keep product naming centralized and consistently rendered as `Common Time`.
 
 ### P2 — verify before V1 visual sign-off
 
@@ -314,3 +314,10 @@ Update this document whenever the styling architecture changes materially. Recor
 - Scope: full Tailwind/CSS/component scan plus public production samples at phone, tablet, and desktop sizes.
 - Result: the aesthetic foundation is coherent; global palette and font changes are centralized; broad component-level redesign is blocked by repeated visual class strings and incomplete semantic state/effect tokens.
 - Action: use the P0/P1 sequence above before or as the first phase of a major visual redesign.
+
+#### UI-AUDIT-2026-08-20-002 — Naming and raw-color cleanup
+
+- Replaced legacy `MusicSchool` labels across production UI, public policies, SMS consent, billing safety copy, Stripe-facing account naming, and internal design studies with `Common Time`.
+- Moved lesson outcome colors and planner overlay/shadow values into the centralized semantic foundation.
+- Replaced the invalid `bg-panel/40` billing surface with the configured `surface` token.
+- Preserved literal colors only in transactional email HTML, where CSS variables and the browser Tailwind layer are unavailable.

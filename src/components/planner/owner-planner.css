@@ -194,7 +194,7 @@
   border: 1px solid var(--ui-line);
   background: var(--ui-ink);
   color: var(--ui-canvas);
-  box-shadow: 0 10px 25px rgb(0 0 0 / 0.24);
+  box-shadow: var(--ui-shadow-soft);
   content: attr(data-tooltip);
   font-size: 0.65rem;
   font-weight: 400;
@@ -299,7 +299,7 @@
     linear-gradient(115deg, color-mix(in srgb, var(--ui-brand) 13%, var(--ui-surface)) 0%, color-mix(in srgb, var(--ui-brand) 5%, var(--ui-surface)) 72%),
     var(--ui-surface);
   box-shadow:
-    0 1.25rem 3.5rem rgb(0 0 0 / 0.16),
+    var(--ui-shadow-medium),
     inset 0 0 0 1px color-mix(in srgb, var(--ui-brand) 10%, transparent);
 }
 
@@ -324,7 +324,7 @@
   padding: clamp(1.5rem, 4vw, 2.5rem);
   border: 1px solid var(--ui-line);
   background: var(--ui-surface);
-  box-shadow: 0 2rem 7rem rgb(0 0 0 / 0.42);
+  box-shadow: var(--ui-shadow-strong);
   transform: translate(-50%, -50%);
 }
 
@@ -349,7 +349,7 @@
   inset: 0;
   padding: 0;
   border: 0;
-  background: rgb(8 7 6 / 0.68);
+  background: var(--ui-overlay);
   animation: planner-fade-in 160ms ease-out;
 }
 
@@ -363,7 +363,7 @@
   overflow-y: auto;
   border-left: 1px solid var(--ui-line);
   background: color-mix(in srgb, var(--ui-surface) 96%, transparent);
-  box-shadow: -24px 0 80px rgb(0 0 0 / 0.28);
+  box-shadow: var(--ui-shadow-medium);
   animation: planner-sheet-in 240ms cubic-bezier(0.2, 0.75, 0.25, 1);
 }
 

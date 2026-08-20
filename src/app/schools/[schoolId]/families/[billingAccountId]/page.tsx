@@ -155,7 +155,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
         </div>
       </DetailSection>
 
-      <DetailSection title="Payment methods" description="Safe provider references only. MusicSchool never stores card numbers or bank credentials.">
+      <DetailSection title="Payment methods" description="Safe provider references only. Common Time never stores card numbers or bank credentials.">
         <div className="space-y-5">
           {card === "complete" ? <p className="border-l-2 border-brand pl-4 text-sm text-ink">Stripe received the setup. The saved method will appear here after verified webhook reconciliation.</p> : null}
           {card === "canceled" ? <p className="border-l-2 border-line pl-4 text-sm text-muted">Card setup was canceled. Nothing was saved.</p> : null}

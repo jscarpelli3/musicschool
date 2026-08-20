@@ -87,10 +87,10 @@ function sortArrow(column: Column, mode: number) {
 
 const outcomes: Record<LessonOutcome, { label: string; mark: string }> = {
   completed: { label: "Serviced", mark: "bg-brand" },
-  rescheduled: { label: "Rescheduled", mark: "bg-[#7f8d8a]" },
-  cancelled_timely: { label: "Cancelled in time", mark: "bg-[#756f62]" },
+  rescheduled: { label: "Rescheduled", mark: "bg-outcome-rescheduled" },
+  cancelled_timely: { label: "Cancelled in time", mark: "bg-outcome-cancelled" },
   cancelled_late: { label: "Late cancellation", mark: "bg-danger" },
-  no_show: { label: "No-show", mark: "bg-[#9f684f]" },
+  no_show: { label: "No-show", mark: "bg-outcome-no-show" },
   upcoming: { label: "Upcoming", mark: "border border-line bg-transparent" },
   unrecorded: { label: "Needs status", mark: "border border-danger bg-transparent" },
 };

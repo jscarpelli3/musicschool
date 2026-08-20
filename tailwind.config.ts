@@ -13,6 +13,9 @@ const config = {
         brand: "var(--ui-brand)",
         "brand-hover": "var(--ui-brand-hover)",
         danger: "var(--ui-danger)",
+        "outcome-rescheduled": "var(--ui-outcome-rescheduled)",
+        "outcome-cancelled": "var(--ui-outcome-cancelled)",
+        "outcome-no-show": "var(--ui-outcome-no-show)",
       },
       borderRadius: {
         control: "var(--ui-radius-control)",

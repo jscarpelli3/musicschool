@@ -6,7 +6,7 @@ export default function InteractionStudyPage() {
     <main className="min-h-screen bg-canvas text-ink">
       <header className="grid gap-8 border-b border-line px-6 py-8 md:grid-cols-[1fr_2fr] md:px-12">
         <div>
-          <p className="text-sm text-brand">MusicSchool / interaction study 01</p>
+          <p className="text-sm text-brand">Common Time / interaction study 01</p>
           <Link href="/design" className="mt-5 inline-block text-xs text-muted hover:text-ink">← Typography study</Link>
         </div>
         <div>

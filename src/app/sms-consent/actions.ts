@@ -22,5 +22,5 @@ export async function recordSmsConsent(_state: SmsConsentState, formData: FormDa
     p_school_name: schoolName,
   });
   if (error) return { ok: false, message: "We could not record your SMS enrollment. Please try again." };
-  return { ok: true, message: "You’re enrolled in MusicSchool transactional messages. Messaging will begin after program activation." };
+  return { ok: true, message: "You’re enrolled in Common Time transactional messages. Messaging will begin after program activation." };
 }
