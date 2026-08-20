@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { IBM_Plex_Sans, Newsreader } from "next/font/google";
 import type { ReactNode } from "react";
 import "./globals.css";
-import { OwnerNotifications } from "@/components/notifications/owner-notifications";
 
 const sans = IBM_Plex_Sans({
   subsets: ["latin"],
@@ -26,7 +25,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en" className={`${sans.variable} ${display.variable}`}>
-      <body><OwnerNotifications />{children}</body>
+      <body>{children}</body>
     </html>
   );
 }

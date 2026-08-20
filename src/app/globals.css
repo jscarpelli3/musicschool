@@ -71,6 +71,12 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
+.notification-control > div {
+  position: absolute;
+  top: 100%;
+  right: 0;
+}
+
 @media (pointer: coarse) {
   button:not(.lesson-block, .availability-block, .lesson-sheet-backdrop),
   select,

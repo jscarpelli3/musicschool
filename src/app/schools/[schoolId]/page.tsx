@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { OwnerPlanner } from "@/components/planner/owner-planner";
+import { OwnerNotifications } from "@/components/notifications/owner-notifications";
 import { StudentRosterTable, type LessonOutcome, type RosterViewSettings, type StudentRosterRow } from "@/components/students/student-roster-table";
 import { createClient } from "@/lib/supabase/server";
 import { saveStudentRosterView } from "./dashboard-actions";
@@ -284,7 +285,7 @@ export default async function SchoolDashboard({
           </form>
         </div>
       </header>
-      <nav className="flex gap-8 py-6" aria-label="School management">
+      <nav className="flex flex-wrap items-center gap-8 py-6" aria-label="School management">
         {canManageSchool ? (
           <Link href={`/schools/${schoolId}/lessons/new`} className="text-sm text-brand hover:text-brand-hover">
             New lesson +
@@ -295,6 +296,7 @@ export default async function SchoolDashboard({
             School setup →
           </Link>
         ) : null}
+        <OwnerNotifications schoolId={schoolId} embedded />
       </nav>
       <StudentRosterTable
         rows={studentRowsForTable}
