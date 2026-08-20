@@ -3,22 +3,22 @@
 
 :root {
   color-scheme: dark;
-  --ui-canvas: #171613;
-  --ui-surface: #201e1a;
-  --ui-surface-raised: #2a2722;
-  --ui-ink: #e7e0d4;
-  --ui-muted: #a59d90;
-  --ui-line: #474139;
-  --ui-brand: #b9a078;
-  --ui-brand-hover: #d1b98f;
-  --ui-danger: #c78374;
-  --ui-outcome-rescheduled: #7f8d8a;
-  --ui-outcome-cancelled: #756f62;
-  --ui-outcome-no-show: #9f684f;
-  --ui-overlay: rgb(8 7 6 / 0.68);
-  --ui-shadow-soft: 0 0.75rem 1.875rem rgb(0 0 0 / 0.22);
-  --ui-shadow-medium: 0 1.25rem 3.5rem rgb(0 0 0 / 0.28);
-  --ui-shadow-strong: 0 2rem 7rem rgb(0 0 0 / 0.42);
+  --ui-canvas: #02060c;
+  --ui-surface: #071422;
+  --ui-surface-raised: #0b2136;
+  --ui-ink: #e8f6ff;
+  --ui-muted: #8da5b8;
+  --ui-line: #19344b;
+  --ui-brand: #20a8e8;
+  --ui-brand-hover: #62ccf7;
+  --ui-danger: #ff8292;
+  --ui-outcome-rescheduled: #70abc8;
+  --ui-outcome-cancelled: #697f94;
+  --ui-outcome-no-show: #f29a70;
+  --ui-overlay: rgb(1 5 11 / 0.76);
+  --ui-shadow-soft: 0 0.75rem 1.875rem rgb(0 12 28 / 0.34);
+  --ui-shadow-medium: 0 1.25rem 3.5rem rgb(0 10 24 / 0.42);
+  --ui-shadow-strong: 0 2rem 7rem rgb(0 7 18 / 0.58);
   --ui-radius-control: 0.125rem;
   --ui-radius-card: 0.125rem;
   --ui-radius-panel: 0;
@@ -26,7 +26,7 @@
   --ui-space-card: 1.5rem;
   --ui-space-section: 3.5rem;
   --ui-shadow-panel: none;
-  --ui-font-sans: var(--font-sans), Arial, sans-serif;
+  --ui-font-sans: var(--font-sans), "Helvetica Neue", Arial, sans-serif;
   --ui-font-display: var(--font-display), Georgia, serif;
 }
 
@@ -54,7 +54,7 @@ body::before {
   inset: 0;
   pointer-events: none;
   content: "";
-  opacity: 0.035;
+  opacity: 0.025;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");
 }
 

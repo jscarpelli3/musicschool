@@ -33,9 +33,9 @@ Snapshot at the time of this audit:
 The established direction is coherent and worth preserving until deliberately replaced:
 
 - Character: cultivated, calm, specific, and human; an independent music school rather than generic SaaS.
-- Atmosphere: dark, warm, tactile, and residential.
-- Palette: warm charcoal, soot, parchment, limestone, aged wood, and restrained antique brass.
-- Typography: Newsreader for expressive display text and IBM Plex Sans for operational UI.
+- Atmosphere: dark, precise, and luminous.
+- Palette: near-black, midnight blue, deep navy, pale blue-white, and focused electric cyan derived from the temporary Common Time identity.
+- Typography: Newsreader for expressive display text and DM Sans for operational UI.
 - Geometry: square or nearly square controls, thin architectural rules, open sections, scarce rounding, and minimal shadow.
 - Hierarchy: typography, whitespace, alignment, and rules before cards or containers.
 - Interaction grammar: lines draw, track, fill, connect, expand, compress, and confirm state changes.
@@ -321,3 +321,10 @@ Update this document whenever the styling architecture changes materially. Recor
 - Moved lesson outcome colors and planner overlay/shadow values into the centralized semantic foundation.
 - Replaced the invalid `bg-panel/40` billing surface with the configured `surface` token.
 - Preserved literal colors only in transactional email HTML, where CSS variables and the browser Tailwind layer are unavailable.
+
+#### UI-AUDIT-2026-08-20-003 — Identity palette and main type
+
+- Added the temporary Common Time identity as a statically optimized product asset and used it on public/sign-in surfaces while preserving school logos inside authenticated school contexts.
+- Replaced the warm charcoal/brass token values with an accessible near-black, navy, blue-white, and cyan system derived from the identity artwork.
+- Adopted DM Sans as the main operational family and retained Newsreader for expressive display hierarchy.
+- Verified the public and login surfaces at 375 and 1440 pixels with no horizontal overflow.

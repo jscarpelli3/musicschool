@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { CommonTimeLogo } from "@/components/brand/common-time-logo";
 import { createClient } from "@/lib/supabase/client";
 
 export function PortalAuth() {
@@ -54,7 +55,8 @@ export function PortalAuth() {
   }
 
   return <section className="mx-auto w-full max-w-md border-t border-line pt-8">
-    <p className="text-sm text-brand">Family scheduling</p>
+    <CommonTimeLogo priority className="w-56 max-w-full" />
+    <p className="mt-5 text-sm text-brand">Family scheduling</p>
     <h1 className="mt-6 font-display text-5xl leading-none">Your lessons.</h1>
     <p className="mt-5 text-sm leading-6 text-muted">Use the email address your school has on file. We will send a one-time code—no password required.</p>
     {step === "email" ? <form onSubmit={sendCode} className="mt-10 space-y-6">

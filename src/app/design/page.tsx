@@ -1,4 +1,4 @@
-import { Bricolage_Grotesque, IBM_Plex_Sans, Newsreader } from "next/font/google";
+import { Bricolage_Grotesque, DM_Sans, Newsreader } from "next/font/google";
 import Link from "next/link";
 
 const newsreader = Newsreader({
@@ -13,7 +13,7 @@ const bricolage = Bricolage_Grotesque({
   weight: "variable",
 });
 
-const plex = IBM_Plex_Sans({
+const plex = DM_Sans({
   subsets: ["latin"],
   display: "swap",
   weight: "variable",
@@ -72,7 +72,7 @@ export default function DesignStudy() {
       <section className={`${plex.className} grid min-h-[42rem] border-b border-line bg-canvas md:grid-cols-[1fr_2fr]`}>
         <aside className="border-b border-line px-6 py-10 md:border-r md:border-b-0 md:px-12">
           <p className="text-sm tabular-nums text-brand">01</p>
-          <p className="mt-3 text-sm">Newsreader + IBM Plex Sans</p>
+          <p className="mt-3 text-sm">Newsreader + DM Sans</p>
           <p className="mt-8 max-w-xs text-sm leading-6 text-muted">
             Warm and editorial. The serif belongs to names and moments; Plex handles operations.
           </p>
@@ -112,7 +112,7 @@ export default function DesignStudy() {
       <section className={`${plex.className} grid min-h-[42rem] bg-surface-raised text-ink md:grid-cols-[1fr_2fr]`}>
         <aside className="border-b border-line px-6 py-10 md:border-r md:border-b-0 md:px-12">
           <p className="text-sm tabular-nums text-brand">03</p>
-          <p className="mt-3 text-sm">IBM Plex Sans</p>
+          <p className="mt-3 text-sm">DM Sans</p>
           <p className="mt-8 max-w-xs text-sm leading-6 text-muted">
             Precise and operational. A strong option if the product should recede behind the work.
           </p>

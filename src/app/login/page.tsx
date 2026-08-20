@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { CommonTimeLogo } from "@/components/brand/common-time-logo";
 import { createClient } from "@/lib/supabase/client";
 
 function LoginForm() {
@@ -39,8 +40,8 @@ function LoginForm() {
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-20">
       <section className="w-full max-w-sm border-t border-line pt-8">
-        <p className="text-sm text-muted">Common Time</p>
-        <h1 className="mt-10 font-display text-5xl font-normal tracking-[-0.035em]">Welcome back.</h1>
+        <CommonTimeLogo priority className="w-64 max-w-full" />
+        <h1 className="mt-6 font-display text-5xl font-normal tracking-[-0.035em]">Welcome back.</h1>
         <p className="mt-4 text-sm leading-6 text-muted">
           Use your Google account to continue.
         </p>

@@ -89,16 +89,16 @@ The live study is available at `/design/interactions`.
 
 ## Current Typography Study
 
-- Newsreader with IBM Plex Sans: expressive editorial headings with practical interface text.
+- Newsreader with DM Sans: expressive editorial headings with a clean, geometric operational interface.
 - Bricolage Grotesque: a single-family direction with more personality and softer rhythm.
-- IBM Plex Sans: a restrained, operational direction that emphasizes clarity and density.
+- DM Sans: the selected main interface family, emphasizing clarity and density without losing the product's musical character.
 
 The study lives at `/design`. All three trials now use dark material palettes so typography can be compared without changing the chosen atmosphere. It is a temporary decision tool, not a production feature commitment.
 
 ## Selected Direction
 
-- Atmosphere: dark, tactile, and residential rather than glossy or technical.
-- Palette: warm charcoal, soot, aged wood, limestone, parchment, and restrained antique brass.
-- Typography: Newsreader for expressive headings and IBM Plex Sans for operational interface text.
+- Atmosphere: dark, precise, and luminous without becoming glossy or generic.
+- Palette: near-black, midnight blue, deep navy, pale blue-white, and focused electric cyan drawn from the temporary Common Time identity.
+- Typography: Newsreader for expressive headings and DM Sans for operational interface text.
 - Texture: a nearly imperceptible grain may soften large digital surfaces; it must never reduce legibility or become a decorative effect.
 - Geometry: square and near-square edges, thin architectural rules, open sections, and little or no shadow.

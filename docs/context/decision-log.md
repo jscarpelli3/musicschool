@@ -132,6 +132,13 @@ Use one entry per meaningful technical or product decision.
 - Decision: Use Newsreader for display type and IBM Plex Sans for interface type. Build the palette from warm charcoal, parchment, aged wood, limestone, and restrained antique brass. Favor open sections, thin rules, near-square controls, and subtle material grain.
 - Consequences: The interface should feel cultivated and tactile without copying retail styling literally. School accent colors remain subordinate to legibility and the shared product structure.
 
+### 2026-08-20: Align the product system to the Common Time identity
+
+- Status: accepted
+- Context: The temporary Common Time logo establishes a near-black, midnight-blue, and electric-cyan identity that no longer matches the original warm charcoal and brass interface palette. The operational type also needs a cleaner main family.
+- Decision: Derive the centralized UI palette from the Common Time identity, use DM Sans as the main operational font, retain Newsreader as the expressive display face, and place the product logo only on product-level surfaces. School-specific areas continue to prioritize each school's own uploaded identity.
+- Consequences: The palette and main type change globally through tokens and the root font configuration. Public and sign-in surfaces display the Common Time logo; authenticated school headers do not replace school logos with platform branding.
+
 ### 2026-08-04: Model the school catalog independently from Stripe
 
 - Status: accepted

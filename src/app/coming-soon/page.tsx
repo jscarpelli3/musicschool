@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { CommonTimeLogo } from "@/components/brand/common-time-logo";
 
 export const metadata: Metadata = {
   title: "Common Time · Music school operations, in tune",
@@ -11,7 +12,7 @@ export default function ComingSoonPage() {
   return (
     <main className="coming-soon mx-auto flex min-h-screen w-full max-w-[90rem] flex-col px-5 py-6 sm:px-8 sm:py-8 lg:px-14 lg:py-10">
       <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-5 text-xs tracking-[0.08em] text-muted sm:text-sm">
-        <span className="text-ink">Common Time</span>
+        <CommonTimeLogo priority className="w-44" />
         <nav aria-label="Account access" className="flex items-center gap-5 sm:gap-7">
           <a className="transition hover:text-ink" href="https://app.commontime.studio/login">School sign in</a>
           <a className="text-brand transition hover:text-brand-hover" href="https://app.commontime.studio/portal">Family portal</a>

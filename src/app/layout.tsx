@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans, Newsreader } from "next/font/google";
+import { DM_Sans, Newsreader } from "next/font/google";
 import type { ReactNode } from "react";
 import "./globals.css";
 
-const sans = IBM_Plex_Sans({
+const sans = DM_Sans({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-sans",
