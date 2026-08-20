@@ -1,16 +1,12 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 
-export function DetailHeader({ backHref, backLabel, eyebrow, title, meta }: {
-  backHref: string;
-  backLabel: string;
+export function DetailHeader({ eyebrow, title, meta }: {
   eyebrow: string;
   title: string;
   meta?: string;
 }) {
   return (
-    <header className="grid gap-7 border-b border-line pb-8 md:grid-cols-[1fr_2fr] md:items-end">
-      <Link href={backHref} className="text-sm text-muted hover:text-ink">← {backLabel}</Link>
+    <header className="border-b border-line pb-8">
       <div>
         <p className="text-xs text-brand">{eyebrow}</p>
         <h1 className="mt-3 font-display text-5xl font-normal tracking-[-0.04em] sm:text-6xl">{title}</h1>

@@ -54,7 +54,7 @@ export default async function StudentDetailPage({ params }: {
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
-      <DetailHeader backHref={`/schools/${schoolId}`} backLabel="Dashboard" eyebrow={`${school.name} · Student`} title={displayName(person)} meta={`${student.enrollment_status} enrollment · ${person.status} record`} />
+      <DetailHeader eyebrow={`${school.name} · Student`} title={displayName(person)} meta={`${student.enrollment_status} enrollment · ${person.status} record`} />
 
       <DetailSection title="Student record" description="School-facing identity and enrollment information.">
         <dl className="grid gap-x-8 gap-y-6 sm:grid-cols-2">
