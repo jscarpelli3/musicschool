@@ -1,7 +1,5 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { OwnerPlanner } from "@/components/planner/owner-planner";
-import { OwnerNotifications } from "@/components/notifications/owner-notifications";
 import { StudentRosterTable, type LessonOutcome, type RosterViewSettings, type StudentRosterRow } from "@/components/students/student-roster-table";
 import { createClient } from "@/lib/supabase/server";
 import { saveStudentRosterView } from "./dashboard-actions";
@@ -19,10 +17,10 @@ export default async function SchoolDashboard({
   const profileId = authData?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}`);
 
-  const [{ data: school }, { data: membership }, { data: profile }] = await Promise.all([
+  const [{ data: school }, { data: membership }] = await Promise.all([
     supabase
       .from("schools")
-      .select("id, name, slug, timezone, family_billing_mode, logo_path")
+      .select("id, name, slug, timezone")
       .eq("id", schoolId)
       .maybeSingle(),
     supabase
@@ -31,11 +29,6 @@ export default async function SchoolDashboard({
       .eq("school_id", schoolId)
       .eq("profile_id", profileId)
       .eq("status", "active")
-      .maybeSingle(),
-    supabase
-      .from("profiles")
-      .select("full_name, email, avatar_url, avatar_path")
-      .eq("id", profileId)
       .maybeSingle(),
   ]);
 
@@ -232,15 +225,6 @@ export default async function SchoolDashboard({
     }];
   }).sort((a, b) => a.family.localeCompare(b.family) || a.student.localeCompare(b.student));
 
-  const [{ data: avatar }, { data: logo }] = await Promise.all([
-    profile?.avatar_path
-      ? supabase.storage.from("avatars").createSignedUrl(profile.avatar_path, 3600)
-      : Promise.resolve({ data: null }),
-    school.logo_path
-      ? supabase.storage.from("school-logos").createSignedUrl(school.logo_path, 3600)
-      : Promise.resolve({ data: null }),
-  ]);
-  const avatarUrl = avatar?.signedUrl ?? profile?.avatar_url;
   const canManageSchool = membership.role === "owner" || membership.role === "admin";
   const currentTeacherId = membership.role === "teacher"
     ? (peopleRows ?? []).find((person) => person.profile_id === profileId)?.id ?? null
@@ -248,56 +232,6 @@ export default async function SchoolDashboard({
 
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-6 py-section">
-      <header className="flex items-start justify-between gap-6 border-b border-line pb-8">
-        <div className="flex items-center gap-5">
-          {logo?.signedUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={logo.signedUrl}
-              alt={`${school.name} logo`}
-              className="h-16 w-16 rounded-card border border-line bg-surface object-contain p-2"
-            />
-          ) : (
-            <div className="grid h-16 w-16 place-items-center rounded-card border border-line bg-surface text-xl font-semibold text-brand">
-              {school.name.slice(0, 1).toUpperCase()}
-            </div>
-          )}
-          <div>
-          <p className="text-sm capitalize text-muted">{membership.role}</p>
-          <h1 className="mt-3 font-display text-5xl font-normal tracking-[-0.035em]">{school.name}</h1>
-          <p className="mt-2 text-sm text-muted">
-            {school.timezone} · {school.family_billing_mode.replaceAll("_", " ")}
-          </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link href="/profile" aria-label="Profile settings" className="flex items-center gap-3 text-sm text-muted hover:text-ink">
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatarUrl} alt="Your avatar" className="h-10 w-10 rounded-full border border-line object-cover" />
-          ) : null}
-            <span className="hidden sm:inline">Profile</span>
-          </Link>
-          <form action="/auth/signout" method="post">
-            <button className="rounded-control border border-line px-4 py-control text-sm text-muted transition hover:text-ink">
-              Sign out
-            </button>
-          </form>
-        </div>
-      </header>
-      <nav className="flex flex-wrap items-center gap-8 py-6" aria-label="School management">
-        {canManageSchool ? (
-          <Link href={`/schools/${schoolId}/lessons/new`} className="text-sm text-brand hover:text-brand-hover">
-            New lesson +
-          </Link>
-        ) : null}
-        {canManageSchool ? (
-          <Link href={`/schools/${schoolId}/setup`} className="text-sm text-brand hover:text-brand-hover">
-            School setup →
-          </Link>
-        ) : null}
-        <OwnerNotifications schoolId={schoolId} embedded />
-      </nav>
       <StudentRosterTable
         rows={studentRowsForTable}
         monthLabel={monthLabel}
