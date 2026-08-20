@@ -1543,6 +1543,7 @@ export type Database = {
       }
       owner_notifications: {
         Row: {
+          archived_at: string | null
           created_at: string
           dedupe_key: string
           entity_id: string
@@ -1559,6 +1560,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          archived_at?: string | null
           created_at?: string
           dedupe_key: string
           entity_id: string
@@ -1575,6 +1577,7 @@ export type Database = {
           title: string
         }
         Update: {
+          archived_at?: string | null
           created_at?: string
           dedupe_key?: string
           entity_id?: string
@@ -3490,6 +3493,10 @@ export type Database = {
       lock_family_billing_period: {
         Args: { p_billing_period_id: string; p_school_id: string }
         Returns: string
+      }
+      manage_my_notifications: {
+        Args: { p_action: string; p_notification_ids: string[]; p_school_id: string }
+        Returns: number
       }
       prepare_family_billing_draft: {
         Args: {
