@@ -248,3 +248,12 @@ Decision: pass / conditional pass / fail / not completed
 - **Automated evidence:** TypeScript and focused ESLint pass. Production build and linked database migration remain pending at the time of this entry.
 - **Open risk:** Existing broad member-readable RLS policies predate this slice and still require a dedicated teacher least-privilege audit across people, students, contacts, billing, products, places, and lesson tables. Teacher invite/provisioning, correction authority, notification actions, and a live assigned-versus-unassigned account matrix are not yet complete.
 - **Decision:** Conditional local pass for the outcome mutation boundary. Do not describe the complete teacher data boundary as production-hardened until the cross-table RLS audit and live teacher-account rehearsal pass.
+
+#### Status update — 2026-08-21 teacher self-rescheduling
+
+- Added a per-teacher permission that defaults off and can be changed only by an active school owner through an audited database function.
+- The teacher reschedule transaction re-resolves the actor’s school-scoped teacher identity, rechecks the permission and exact occurrence assignment under a row lock, preserves teacher/place/duration/billing identity, forbids owner-style availability overrides, and rejects future/time, availability, teacher-conflict, student-conflict, status, and per-lesson permission violations.
+- Successful teacher moves append immutable lesson-change and audit records and create deduplicated durable notifications for active owners/admins. The realtime notification client refreshes the current owner route so an open calendar receives fresh server data without requiring a manual reload.
+- When permission is off, the teacher can only record a student reschedule request; this creates owner/admin notifications and audit evidence and does not mutate the lesson.
+- Removed `partial` from teacher outcome entry and added a database trigger preventing new partial outcomes. Existing historical partial values remain readable.
+- Production migration, deploy, live teacher-account authorization matrix, concurrency rehearsal, and cross-table teacher RLS review remain pending.

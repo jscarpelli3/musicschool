@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/types/database";
 import { reportOwnerNotificationEmailProblem, retryOwnerNotificationEmail } from "./actions";
@@ -11,6 +12,7 @@ type FailedEmail = Pick<Database["public"]["Tables"]["owner_notification_email_o
 
 export function OwnerNotifications({ schoolId, embedded = false }: { schoolId: string; embedded?: boolean }) {
   const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
   const [notices, setNotices] = useState<Notice[]>([]);
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState<Notice | null>(null);
@@ -33,9 +35,10 @@ export function OwnerNotifications({ schoolId, embedded = false }: { schoolId: s
       const notice = payload.new as Notice;
       setNotices((current) => [notice, ...current.filter((item) => item.id !== notice.id)].slice(0, 20));
       setToast(notice);
+      router.refresh();
     }).subscribe();
     return () => { active = false; void supabase.removeChannel(channel); };
-  }, [schoolId, supabase]);
+  }, [router, schoolId, supabase]);
 
   useEffect(() => {
     const interval = window.setInterval(() => setClock(Date.now()), 15_000);

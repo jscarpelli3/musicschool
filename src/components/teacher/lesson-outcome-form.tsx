@@ -14,7 +14,6 @@ export function LessonOutcomeForm({
   const [notes, setNotes] = useState("");
   const labels: Record<string, string> = {
     completed: "taught as planned",
-    partial: "partially taught",
     no_show: "student did not attend",
   };
 

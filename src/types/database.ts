@@ -3134,6 +3134,7 @@ export type Database = {
       teachers: {
         Row: {
           bio: string | null
+          can_self_reschedule: boolean
           created_at: string
           default_lesson_minutes: number
           person_id: string
@@ -3142,6 +3143,7 @@ export type Database = {
         }
         Insert: {
           bio?: string | null
+          can_self_reschedule?: boolean
           created_at?: string
           default_lesson_minutes?: number
           person_id: string
@@ -3150,6 +3152,7 @@ export type Database = {
         }
         Update: {
           bio?: string | null
+          can_self_reschedule?: boolean
           created_at?: string
           default_lesson_minutes?: number
           person_id?: string
@@ -3570,6 +3573,23 @@ export type Database = {
         }
         Returns: undefined
       }
+      report_student_reschedule_request_to_owner: {
+        Args: {
+          p_lesson_event_id: string
+          p_note?: string
+          p_school_id: string
+        }
+        Returns: undefined
+      }
+      reschedule_assigned_lesson_as_teacher: {
+        Args: {
+          p_lesson_event_id: string
+          p_local_start: string
+          p_reason: string
+          p_school_id: string
+        }
+        Returns: Json
+      }
       record_resend_delivery_event: {
         Args: {
           p_event_type: string
@@ -3638,6 +3658,14 @@ export type Database = {
           p_blocked_reason?: string
           p_lesson_event_id: string
           p_school_id: string
+        }
+        Returns: undefined
+      }
+      set_teacher_self_reschedule_permission: {
+        Args: {
+          p_allowed: boolean
+          p_school_id: string
+          p_teacher_id: string
         }
         Returns: undefined
       }

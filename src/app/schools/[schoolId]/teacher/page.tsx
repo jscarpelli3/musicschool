@@ -1,7 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { LessonOutcomeForm } from "@/components/teacher/lesson-outcome-form";
+import { TeacherRescheduleControls } from "@/components/teacher/teacher-reschedule-controls";
 import { createClient } from "@/lib/supabase/server";
-import { recordTeacherLessonOutcome } from "./actions";
+import { recordTeacherLessonOutcome, reportStudentRescheduleRequest, rescheduleTeacherLesson } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,9 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
   if (!teacherPerson) {
     return <main className="mx-auto min-h-screen max-w-5xl px-5 py-12 sm:px-8"><h1 className="font-display text-5xl">Teacher setup needed.</h1><p className="mt-5 max-w-xl text-sm leading-6 text-muted">Your login is active, but it is not linked to a teacher record at this school. Ask the school owner to finish your staff setup.</p></main>;
   }
+
+  const { data: teacherSettings } = await supabase.from("teachers").select("can_self_reschedule").eq("school_id", schoolId).eq("person_id", teacherPerson.id).maybeSingle();
+  if (!teacherSettings) notFound();
 
   const now = new Date();
   const rangeStart = new Date(now.getTime() - 14 * 86_400_000).toISOString();
@@ -54,6 +58,9 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
   const dateTime = new Intl.DateTimeFormat("en-US", { timeZone: school.timezone, weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" });
   const time = new Intl.DateTimeFormat("en-US", { timeZone: school.timezone, hour: "numeric", minute: "2-digit" });
   const nowMs = now.getTime();
+  const earliestLocalParts = new Intl.DateTimeFormat("sv-SE", { timeZone: school.timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
+  const localPart = (type: string) => earliestLocalParts.find((part) => part.type === type)?.value ?? "";
+  const earliestLocal = `${localPart("year")}-${localPart("month")}-${localPart("day")}T${localPart("hour")}:${localPart("minute")}`;
   const upcoming = (lessons ?? []).filter((lesson) => new Date(lesson.ends_at).getTime() > nowMs && lesson.status === "scheduled");
   const recent = (lessons ?? []).filter((lesson) => new Date(lesson.ends_at).getTime() <= nowMs || lesson.status !== "scheduled").reverse();
 
@@ -72,6 +79,7 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
             <div className="pb-7 sm:pl-40">
               <p className="text-sm text-muted">{place?.name ?? "Place not assigned"}{place?.details ? ` · ${place.details}` : ""}</p>
               {lesson.staff_notes ? <p className="mt-4 border-l border-line pl-4 text-sm leading-6">{lesson.staff_notes}</p> : null}
+              {lesson.status === "scheduled" && new Date(lesson.starts_at).getTime() > nowMs ? <TeacherRescheduleControls canSelfReschedule={teacherSettings.can_self_reschedule} earliestLocal={earliestLocal} rescheduleAction={rescheduleTeacherLesson.bind(null, schoolId, lesson.id)} requestAction={reportStudentRescheduleRequest.bind(null, schoolId, lesson.id)} /> : null}
               {canLog ? <LessonOutcomeForm action={recordTeacherLessonOutcome.bind(null, schoolId, lesson.id)} /> : null}
             </div>
           </details>

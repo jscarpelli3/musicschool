@@ -1,5 +1,7 @@
 import { notFound, redirect } from "next/navigation";
+import { SetupHeader } from "@/components/school-setup/setup-header";
 import { createClient } from "@/lib/supabase/server";
+import { setTeacherSelfReschedulePermission } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +15,7 @@ export default async function StaffPage({ params }: { params: Promise<{ schoolId
   const [{ data: school }, { data: membership }, { data: teachers }, { data: people }, { data: members }] = await Promise.all([
     supabase.from("schools").select("id, name").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
-    supabase.from("teachers").select("person_id, default_lesson_minutes").eq("school_id", schoolId),
+    supabase.from("teachers").select("person_id, default_lesson_minutes, can_self_reschedule").eq("school_id", schoolId),
     supabase.from("people").select("id, profile_id, first_name, last_name, preferred_name, email, phone, status").eq("school_id", schoolId),
     supabase.from("school_members").select("profile_id, role, status").eq("school_id", schoolId),
   ]);
@@ -26,12 +28,12 @@ export default async function StaffPage({ params }: { params: Promise<{ schoolId
     const person = personById.get(teacher.person_id);
     if (!person) return [];
     const member = person.profile_id ? roleByProfile.get(person.profile_id) : null;
-    return [{ ...person, role: member?.role ?? "teacher", membershipStatus: member?.status ?? "not invited", defaultMinutes: teacher.default_lesson_minutes }];
+    return [{ ...person, role: member?.role ?? "teacher", membershipStatus: member?.status ?? "not invited", defaultMinutes: teacher.default_lesson_minutes, canSelfReschedule: teacher.can_self_reschedule }];
   });
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
-      <header className="border-b border-line pb-7"><h1 className="font-display text-5xl">Staff.</h1><p className="mt-3 text-sm text-muted">{roster.length} teaching staff at {school.name}</p></header>
+      <SetupHeader schoolId={schoolId} schoolName={school.name} active="staff" />
       <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
         <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">
           <h2 className="font-display text-3xl">Staff roster</h2>
@@ -45,7 +47,15 @@ export default async function StaffPage({ params }: { params: Promise<{ schoolId
                 <p className="mt-1 text-sm capitalize text-muted">{person.role} · {person.membershipStatus}</p>
                 <p className="mt-2 text-sm text-muted">{person.email || "No email"}{person.phone ? ` · ${person.phone}` : ""}</p>
               </div>
-              <p className="text-sm text-muted">Default {person.defaultMinutes} min</p>
+              <div className="text-sm text-muted">
+                <p>Default {person.defaultMinutes} min</p>
+                <form action={setTeacherSelfReschedulePermission.bind(null, schoolId, person.id)} className="mt-3">
+                  <input type="hidden" name="allowed" value={person.canSelfReschedule ? "false" : "true"} />
+                  <button className="border-b border-brand pb-1 text-brand">
+                    {person.canSelfReschedule ? "Disable own rescheduling" : "Allow own rescheduling"}
+                  </button>
+                </form>
+              </div>
             </article>
           ))}
         </div>
