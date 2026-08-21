@@ -237,3 +237,14 @@ Decision: pass / conditional pass / fail / not completed
 - Commits `bf35032` and `4de36f8` were pushed together after the database deployment. Vercel reported the production deployment successful.
 - Live unauthenticated smoke checks returned `200` for `/portal` with private/no-store and search-engine exclusion headers, and `404` for a malformed calendar credential without exposing feed data.
 - Deployment gate is cleared. Authenticated provider/device acceptance and the adversarial cases in `SEC-TODO-010` remain open; this audit is not a complete provider compatibility pass.
+
+### SEC-AUDIT-2026-08-21-001 — Teacher lesson-outcome boundary
+
+- **Date:** 2026-08-21.
+- **Environment:** Local application and migration workspace; deployment pending.
+- **Trigger/objective:** Begin the teacher workflow without granting teachers owner-level scheduling or school-record access through the new UI.
+- **Scope:** Teacher identity linkage, assigned-lesson outcome authorization, timing and state guards, direct route behavior, server input validation, and audit evidence.
+- **Controls implemented locally:** Teacher navigation exposes only the assigned schedule; owner dashboard and roster entry points redirect teachers to that schedule; the outcome RPC locks the occurrence, requires an active membership, verifies the exact assigned teacher through the school-scoped person/profile link, rejects future and already-final lessons, limits outcomes and notes, and appends actor/role/assignment evidence to `audit_log`.
+- **Automated evidence:** TypeScript and focused ESLint pass. Production build and linked database migration remain pending at the time of this entry.
+- **Open risk:** Existing broad member-readable RLS policies predate this slice and still require a dedicated teacher least-privilege audit across people, students, contacts, billing, products, places, and lesson tables. Teacher invite/provisioning, correction authority, notification actions, and a live assigned-versus-unassigned account matrix are not yet complete.
+- **Decision:** Conditional local pass for the outcome mutation boundary. Do not describe the complete teacher data boundary as production-hardened until the cross-table RLS audit and live teacher-account rehearsal pass.

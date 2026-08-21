@@ -3561,6 +3561,15 @@ export type Database = {
         }
         Returns: string
       }
+      record_lesson_outcome: {
+        Args: {
+          p_lesson_event_id: string
+          p_outcome: string
+          p_school_id: string
+          p_staff_notes?: string
+        }
+        Returns: undefined
+      }
       record_resend_delivery_event: {
         Args: {
           p_event_type: string

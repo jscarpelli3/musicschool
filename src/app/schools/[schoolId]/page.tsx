@@ -28,6 +28,7 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
   ]);
 
   if (!school || !membership) notFound();
+  if (membership.role === "teacher") redirect(`/schools/${schoolId}/teacher`);
 
   const dashboardQueries = await Promise.all([
     supabase.from("teachers").select("person_id").eq("school_id", schoolId),

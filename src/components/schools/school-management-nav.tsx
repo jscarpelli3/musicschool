@@ -7,12 +7,15 @@ import { OwnerNotifications } from "@/components/notifications/owner-notificatio
 export function SchoolManagementNav({ schoolId, role }: { schoolId: string; role: string }) {
   const pathname = usePathname();
   const base = `/schools/${schoolId}`;
-  const items = [
-    { label: "Dashboard", href: base, active: pathname === base },
-    { label: "Students", href: `${base}/students`, active: pathname.startsWith(`${base}/students`) },
-    { label: "Families", href: `${base}/families`, active: pathname.startsWith(`${base}/families`) },
-    ...(role === "owner" ? [{ label: "Staff", href: `${base}/staff`, active: pathname.startsWith(`${base}/staff`) }] : []),
-  ];
+  const dashboardHref = role === "teacher" ? `${base}/teacher` : base;
+  const items = role === "teacher"
+    ? [{ label: "My schedule", href: dashboardHref, active: pathname.startsWith(dashboardHref) }]
+    : [
+        { label: "Dashboard", href: dashboardHref, active: pathname === dashboardHref },
+        { label: "Students", href: `${base}/students`, active: pathname.startsWith(`${base}/students`) },
+        { label: "Families", href: `${base}/families`, active: pathname.startsWith(`${base}/families`) },
+        ...(role === "owner" ? [{ label: "Staff", href: `${base}/staff`, active: pathname.startsWith(`${base}/staff`) }] : []),
+      ];
   const canManage = role === "owner" || role === "admin";
 
   return (
