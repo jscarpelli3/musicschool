@@ -1,17 +1,15 @@
 import { notFound, redirect } from "next/navigation";
 import { SetupHeader } from "@/components/school-setup/setup-header";
-import { ThemeSelector } from "@/components/school-setup/theme-selector";
 import { createClient } from "@/lib/supabase/server";
-import { isSchoolThemeKey } from "@/lib/ui/school-themes";
 import { uploadSchoolLogo } from "../media-actions";
-import { updateSchoolInfo, updateSchoolTheme } from "./actions";
+import { updateSchoolInfo } from "./actions";
 
 export const dynamic = "force-dynamic";
 const field = "w-full border-b border-line bg-transparent py-3 outline-none transition focus:border-brand";
 
 export default async function SchoolInfoPage({ params, searchParams }: {
   params: Promise<{ schoolId: string }>;
-  searchParams: Promise<{ status?: string; media?: string; theme?: string }>;
+  searchParams: Promise<{ status?: string; media?: string }>;
 }) {
   const { schoolId } = await params;
   const query = await searchParams;
@@ -21,7 +19,7 @@ export default async function SchoolInfoPage({ params, searchParams }: {
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/setup`);
 
   const [{ data: school }, { data: membership }] = await Promise.all([
-    supabase.from("schools").select("id, name, logo_path, phone, address_line_1, address_line_2, city, region, postal_code, timezone, theme_key").eq("id", schoolId).maybeSingle(),
+    supabase.from("schools").select("id, name, logo_path, phone, address_line_1, address_line_2, city, region, postal_code, timezone").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
   ]);
   if (!school || !membership) notFound();
@@ -61,10 +59,6 @@ export default async function SchoolInfoPage({ params, searchParams }: {
             </form>
           </div>
         </div>
-      </section>
-      <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
-        <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10"><h2 className="font-display text-3xl">Palette</h2><p className="mt-3 text-sm leading-6 text-muted">A complete, contrast-tested color system for this school’s workspace.</p>{query.theme ? <p role="status" className={`mt-4 text-sm ${query.theme === "saved" ? "text-brand" : "text-danger"}`}>{query.theme === "saved" ? "Palette updated." : "The palette could not be updated."}</p> : null}</div>
-        {membership.role === "owner" ? <ThemeSelector currentTheme={isSchoolThemeKey(school.theme_key) ? school.theme_key : "midnight"} action={updateSchoolTheme.bind(null, schoolId)} /> : <p className="py-10 text-sm text-muted md:pl-10">Only the school owner can change the workspace palette.</p>}
       </section>
       <form action={updateSchoolInfo.bind(null, schoolId)} className="grid md:grid-cols-[1fr_2fr]">
         <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">

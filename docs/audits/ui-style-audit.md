@@ -357,3 +357,8 @@ Update this document whenever the styling architecture changes materially. Recor
 
 - Renamed Bubblegum to Berries so its pink-and-berry color direction matches its label.
 - Added Gumballs as a separate playful primary-color palette using candy yellow, blue, and red with deep blue—not black or charcoal—for its operational text.
+
+#### UI-AUDIT-2026-08-21-009 — Appearance setup boundary
+
+- Moved workspace palette controls out of School Info and into a dedicated Appearance tab in the shared School Setup navigation.
+- Kept the palette selector reusable and retained the same owner-only action and database authorization boundary.

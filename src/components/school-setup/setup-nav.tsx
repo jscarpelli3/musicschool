@@ -2,6 +2,7 @@ import Link from "next/link";
 
 const tabs = [
   { key: "info", label: "School info", path: "setup" },
+  { key: "appearance", label: "Appearance", path: "appearance" },
   { key: "offerings", label: "Lessons & classes", path: "products" },
   { key: "spaces", label: "Lesson spaces", path: "places" },
   { key: "policies", label: "Policies & documents", path: "policies" },
