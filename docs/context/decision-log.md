@@ -231,5 +231,5 @@ Use one entry per meaningful technical or product decision.
 
 - Status: accepted
 - Context: Owners may want their workspace to feel distinct, but arbitrary color picking would weaken accessibility and make the interface difficult to maintain.
-- Decision: Offer a small set of complete, platform-defined dark palettes in School Setup. Apply each palette through the existing semantic tokens at the shared school layout, and permit only the school owner to change it.
+- Decision: Offer a small set of complete, platform-defined light and dark palettes in School Setup. Apply each palette through the existing semantic tokens at the shared school layout, and permit only the school owner to change it.
 - Consequences: School routes can change atmosphere without route-specific color code. Contrast, typography, spacing, geometry, and interaction behavior remain controlled by Common Time.

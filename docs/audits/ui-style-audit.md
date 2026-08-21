@@ -335,3 +335,9 @@ Update this document whenever the styling architecture changes materially. Recor
 - Applied the selected palette once at the shared authenticated school layout so school routes and reusable components inherit it without bespoke colors.
 - Kept palette selection owner-only in both the server action and database boundary. Admins retain read access but cannot change the theme.
 - Preserved the selected typography, geometry, spacing, semantic roles, and dark color scheme across all options.
+
+#### UI-AUDIT-2026-08-21-005 — Palette differentiation
+
+- Replaced Aubergine, whose near-black purple values were insufficiently distinct from Midnight, with the light Paper palette.
+- Added Rosewood and Tidepool to create clearly differentiated red and teal directions.
+- Expanded the palette system to support both light and dark schemes while preserving the same semantic tokens and component behavior.

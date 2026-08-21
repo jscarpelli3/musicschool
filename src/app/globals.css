@@ -45,19 +45,24 @@
   --ui-outcome-no-show: #efa06f;
 }
 
-[data-school-theme="aubergine"] {
-  --ui-canvas: #100812;
-  --ui-surface: #1b0f20;
-  --ui-surface-raised: #2b1832;
-  --ui-ink: #faeffc;
-  --ui-muted: #bca4c0;
-  --ui-line: #4b3153;
-  --ui-brand: #d58cff;
-  --ui-brand-hover: #edbdff;
-  --ui-danger: #ff8195;
-  --ui-outcome-rescheduled: #a994c5;
-  --ui-outcome-cancelled: #867489;
-  --ui-outcome-no-show: #ee9d78;
+[data-school-theme="paper"] {
+  color-scheme: light;
+  --ui-canvas: #f3ede1;
+  --ui-surface: #e7ddce;
+  --ui-surface-raised: #fffaf0;
+  --ui-ink: #1d252b;
+  --ui-muted: #626b70;
+  --ui-line: #c2b7a7;
+  --ui-brand: #176683;
+  --ui-brand-hover: #0b4c65;
+  --ui-danger: #a6313d;
+  --ui-outcome-rescheduled: #37758b;
+  --ui-outcome-cancelled: #687176;
+  --ui-outcome-no-show: #a64c35;
+  --ui-overlay: rgb(29 37 43 / 0.62);
+  --ui-shadow-soft: 0 0.75rem 1.875rem rgb(72 60 43 / 0.12);
+  --ui-shadow-medium: 0 1.25rem 3.5rem rgb(72 60 43 / 0.17);
+  --ui-shadow-strong: 0 2rem 7rem rgb(72 60 43 / 0.23);
 }
 
 [data-school-theme="ember"] {
@@ -88,6 +93,38 @@
   --ui-outcome-rescheduled: #9aa8b5;
   --ui-outcome-cancelled: #707b86;
   --ui-outcome-no-show: #d79272;
+}
+
+[data-school-theme="rosewood"] {
+  --ui-canvas: #170707;
+  --ui-surface: #2a0d0f;
+  --ui-surface-raised: #46191c;
+  --ui-ink: #fff0ea;
+  --ui-muted: #cda29b;
+  --ui-line: #6b3337;
+  --ui-brand: #ff8c78;
+  --ui-brand-hover: #ffc0b2;
+  --ui-danger: #ff8da1;
+  --ui-outcome-rescheduled: #c49a91;
+  --ui-outcome-cancelled: #957873;
+  --ui-outcome-no-show: #ff9a6f;
+  --ui-overlay: rgb(18 3 4 / 0.78);
+}
+
+[data-school-theme="tidepool"] {
+  --ui-canvas: #031012;
+  --ui-surface: #072126;
+  --ui-surface-raised: #0c363d;
+  --ui-ink: #e8fcfa;
+  --ui-muted: #91b7b6;
+  --ui-line: #1f5559;
+  --ui-brand: #42dfd0;
+  --ui-brand-hover: #88f4e9;
+  --ui-danger: #ff8798;
+  --ui-outcome-rescheduled: #62b7b2;
+  --ui-outcome-cancelled: #718d8d;
+  --ui-outcome-no-show: #eaa076;
+  --ui-overlay: rgb(1 13 15 / 0.78);
 }
 
 * {
