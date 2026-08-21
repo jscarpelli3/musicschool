@@ -39,14 +39,14 @@ function LoginForm() {
 
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-20">
-      <section className="w-full max-w-sm border-t border-line pt-8">
+      <section className="flex w-full max-w-sm flex-col items-center border-t border-line pt-8 text-center">
         <CommonTimeLogo priority className="w-64 max-w-full" />
         <h1 className="mt-6 font-display text-5xl font-normal tracking-[-0.035em]">Welcome back.</h1>
         <p className="mt-4 text-sm leading-6 text-muted">
           Use your Google account to continue.
         </p>
         {error ? (
-          <p className="mt-5 border-l-2 border-danger py-2 pl-4 text-sm text-danger">
+          <p className="mt-5 w-full border-l-2 border-danger py-2 pl-4 text-left text-sm text-danger">
             {error}
           </p>
         ) : null}
