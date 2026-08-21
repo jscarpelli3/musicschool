@@ -352,3 +352,8 @@ Update this document whenever the styling architecture changes materially. Recor
 - Removed the remaining blue cast and colored state tokens from Monochrome; it now uses only true black, white, and neutral grays.
 - Added the light Lemonade and Bubblegum palettes to provide deliberately bright, playful choices without introducing route-level styling exceptions.
 - Retained accessible text, muted text, action, and state contrast within the shared semantic token system.
+
+#### UI-AUDIT-2026-08-21-008 — Playful palette naming and primary color option
+
+- Renamed Bubblegum to Berries so its pink-and-berry color direction matches its label.
+- Added Gumballs as a separate playful primary-color palette using candy yellow, blue, and red with deep blue—not black or charcoal—for its operational text.

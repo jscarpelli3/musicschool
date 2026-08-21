@@ -151,7 +151,7 @@
   --ui-shadow-strong: 0 2rem 7rem rgb(102 78 0 / 0.23);
 }
 
-[data-school-theme="bubblegum"] {
+[data-school-theme="berries"] {
   color-scheme: light;
   --ui-canvas: #ffd8e9;
   --ui-surface: #ffb5d5;
@@ -169,6 +169,26 @@
   --ui-shadow-soft: 0 0.75rem 1.875rem rgb(111 24 70 / 0.12);
   --ui-shadow-medium: 0 1.25rem 3.5rem rgb(111 24 70 / 0.17);
   --ui-shadow-strong: 0 2rem 7rem rgb(111 24 70 / 0.23);
+}
+
+[data-school-theme="gumballs"] {
+  color-scheme: light;
+  --ui-canvas: #fff1a8;
+  --ui-surface: #8edcf0;
+  --ui-surface-raised: #fffbdc;
+  --ui-ink: #173b73;
+  --ui-muted: #365b86;
+  --ui-line: #4f83ad;
+  --ui-brand: #a61f43;
+  --ui-brand-hover: #7d1230;
+  --ui-danger: #a61f43;
+  --ui-outcome-rescheduled: #245b9d;
+  --ui-outcome-cancelled: #526c91;
+  --ui-outcome-no-show: #9e3423;
+  --ui-overlay: rgb(23 59 115 / 0.55);
+  --ui-shadow-soft: 0 0.75rem 1.875rem rgb(23 59 115 / 0.12);
+  --ui-shadow-medium: 0 1.25rem 3.5rem rgb(23 59 115 / 0.17);
+  --ui-shadow-strong: 0 2rem 7rem rgb(23 59 115 / 0.23);
 }
 
 * {

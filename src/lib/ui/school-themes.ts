@@ -7,7 +7,8 @@ export const SCHOOL_THEMES = [
   { key: "orchid", name: "Orchid", description: "Saturated violet with a luminous lavender accent." },
   { key: "tidepool", name: "Tidepool", description: "Dark teal with a bright aquatic accent." },
   { key: "lemonade", name: "Lemonade", description: "Sunny yellow with a playful violet accent." },
-  { key: "bubblegum", name: "Bubblegum", description: "Bright pink with a rich berry accent." },
+  { key: "berries", name: "Berries", description: "Bright pink with a rich berry accent." },
+  { key: "gumballs", name: "Gumballs", description: "Candy yellow, blue, and cherry red." },
 ] as const;
 
 export type SchoolThemeKey = (typeof SCHOOL_THEMES)[number]["key"];
