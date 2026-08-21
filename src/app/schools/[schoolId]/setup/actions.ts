@@ -3,6 +3,25 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isSchoolThemeKey } from "@/lib/ui/school-themes";
+
+export async function updateSchoolTheme(schoolId: string, formData: FormData) {
+  const themeKey = String(formData.get("theme_key") ?? "");
+  if (!isSchoolThemeKey(themeKey)) redirect(`/schools/${schoolId}/setup?theme=invalid`);
+
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId) redirect(`/login?next=/schools/${schoolId}/setup`);
+  const { data: membership } = await supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle();
+  if (membership?.role !== "owner") redirect(`/schools/${schoolId}`);
+
+  const { data: updated, error } = await supabase.from("schools").update({ theme_key: themeKey }).eq("id", schoolId).select("id").maybeSingle();
+  if (error || !updated) redirect(`/schools/${schoolId}/setup?theme=error`);
+  revalidatePath(`/schools/${schoolId}`);
+  revalidatePath(`/schools/${schoolId}/setup`);
+  redirect(`/schools/${schoolId}/setup?theme=saved`);
+}
 
 export async function updateSchoolInfo(schoolId: string, formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();

@@ -18,7 +18,7 @@ The product should feel like a well-run independent music school: cultivated, hu
 10. Labels use sentence case. All caps is reserved for short codes, dates, or genuine categories.
 11. Empty states should explain the next useful action in plain language. Avoid cute filler copy and generic illustrations.
 12. Motion must explain a state change or preserve spatial context. No ambient motion.
-13. School branding may alter the accent color and logo, but not contrast, spacing, or basic interaction rules.
+13. School branding may use a platform-defined complete palette and school logo, but not arbitrary colors. Every palette must preserve contrast, spacing, semantic roles, and basic interaction rules.
 14. Add a new visual token only when it expresses a repeated design decision. Do not turn every one-off measurement into configuration.
 15. Every feature must be intentionally designed for phone, tablet, and desktop. Responsive behavior is part of the feature definition, not cleanup after the desktop view ships.
 16. Hover may enhance an interaction but may never be the only way to discover information or perform an action. Touch and keyboard behavior must be explicit.

@@ -13,7 +13,7 @@ export default async function SchoolLayout({ children, params }: { children: Rea
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}`);
   const [{ data: school }, { data: membership }, { data: profile }] = await Promise.all([
-    supabase.from("schools").select("id, name, timezone, family_billing_mode, logo_path").eq("id", schoolId).maybeSingle(),
+    supabase.from("schools").select("id, name, timezone, family_billing_mode, logo_path, theme_key").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("profiles").select("avatar_url, avatar_path").eq("id", profileId).maybeSingle(),
   ]);
@@ -23,7 +23,7 @@ export default async function SchoolLayout({ children, params }: { children: Rea
     school.logo_path ? supabase.storage.from("school-logos").createSignedUrl(school.logo_path, 3600) : Promise.resolve({ data: null }),
   ]);
   const avatarUrl = avatar?.signedUrl ?? profile?.avatar_url;
-  return <>
+  return <div data-school-theme={school.theme_key} className="min-h-screen bg-canvas text-ink">
     <div className="mx-auto max-w-7xl px-5 pt-8 sm:px-8 sm:pt-10">
       <header className="flex items-start justify-between gap-6 border-b border-line pb-7">
         <Link href={`/schools/${schoolId}`} className="flex min-w-0 items-center gap-4">
@@ -35,5 +35,5 @@ export default async function SchoolLayout({ children, params }: { children: Rea
       <SchoolManagementNav schoolId={schoolId} role={membership.role} />
     </div>
     {children}
-  </>;
+  </div>;
 }

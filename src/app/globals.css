@@ -30,6 +30,66 @@
   --ui-font-display: var(--font-display), Georgia, serif;
 }
 
+[data-school-theme="conservatory"] {
+  --ui-canvas: #06100c;
+  --ui-surface: #0c1d16;
+  --ui-surface-raised: #143024;
+  --ui-ink: #edf9f2;
+  --ui-muted: #99b5a6;
+  --ui-line: #28503d;
+  --ui-brand: #70d6a0;
+  --ui-brand-hover: #a4edc2;
+  --ui-danger: #ff8792;
+  --ui-outcome-rescheduled: #79b9a3;
+  --ui-outcome-cancelled: #718779;
+  --ui-outcome-no-show: #efa06f;
+}
+
+[data-school-theme="aubergine"] {
+  --ui-canvas: #100812;
+  --ui-surface: #1b0f20;
+  --ui-surface-raised: #2b1832;
+  --ui-ink: #faeffc;
+  --ui-muted: #bca4c0;
+  --ui-line: #4b3153;
+  --ui-brand: #d58cff;
+  --ui-brand-hover: #edbdff;
+  --ui-danger: #ff8195;
+  --ui-outcome-rescheduled: #a994c5;
+  --ui-outcome-cancelled: #867489;
+  --ui-outcome-no-show: #ee9d78;
+}
+
+[data-school-theme="ember"] {
+  --ui-canvas: #120905;
+  --ui-surface: #211109;
+  --ui-surface-raised: #331b10;
+  --ui-ink: #fff3e9;
+  --ui-muted: #c1a695;
+  --ui-line: #573522;
+  --ui-brand: #ff9e57;
+  --ui-brand-hover: #ffc48e;
+  --ui-danger: #ff7f8c;
+  --ui-outcome-rescheduled: #b59a84;
+  --ui-outcome-cancelled: #8e7566;
+  --ui-outcome-no-show: #ef795d;
+}
+
+[data-school-theme="monochrome"] {
+  --ui-canvas: #080a0d;
+  --ui-surface: #11151a;
+  --ui-surface-raised: #1b222a;
+  --ui-ink: #f3f5f7;
+  --ui-muted: #9ca7b3;
+  --ui-line: #343e49;
+  --ui-brand: #d4dbe2;
+  --ui-brand-hover: #ffffff;
+  --ui-danger: #ff7f90;
+  --ui-outcome-rescheduled: #9aa8b5;
+  --ui-outcome-cancelled: #707b86;
+  --ui-outcome-no-show: #d79272;
+}
+
 * {
   box-sizing: border-box;
 }

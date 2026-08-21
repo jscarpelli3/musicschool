@@ -328,3 +328,10 @@ Update this document whenever the styling architecture changes materially. Recor
 - Replaced the warm charcoal/brass token values with an accessible near-black, navy, blue-white, and cyan system derived from the identity artwork.
 - Adopted DM Sans as the main operational family and retained Newsreader for expressive display hierarchy.
 - Verified the public and login surfaces at 375 and 1440 pixels with no horizontal overflow.
+
+#### UI-AUDIT-2026-08-21-004 — Constrained school palette system
+
+- Added five complete school workspace palettes—Midnight, Conservatory, Aubergine, Ember, and Monochrome—using the existing semantic token contract.
+- Applied the selected palette once at the shared authenticated school layout so school routes and reusable components inherit it without bespoke colors.
+- Kept palette selection owner-only in both the server action and database boundary. Admins retain read access but cannot change the theme.
+- Preserved the selected typography, geometry, spacing, semantic roles, and dark color scheme across all options.

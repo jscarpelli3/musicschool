@@ -2621,6 +2621,7 @@ export type Database = {
           region: string | null
           slug: string
           timezone: string
+          theme_key: string
           updated_at: string
         }
         Insert: {
@@ -2644,6 +2645,7 @@ export type Database = {
           region?: string | null
           slug: string
           timezone: string
+          theme_key?: string
           updated_at?: string
         }
         Update: {
@@ -2667,6 +2669,7 @@ export type Database = {
           region?: string | null
           slug?: string
           timezone?: string
+          theme_key?: string
           updated_at?: string
         }
         Relationships: [

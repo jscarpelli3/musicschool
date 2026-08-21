@@ -226,3 +226,10 @@ Use one entry per meaningful technical or product decision.
 - Decision: Do not model a permanent exclusive teacher-student assignment. Recurring series provide planning defaults; every lesson occurrence owns its actual teacher assignment. Occurrences may override the series teacher or exist without any series.
 - Decision: Add explicit substitute/change-teacher actions that can preserve time, place, student, billing-service date, and immutable price while recording the prior teacher, new teacher, actor, and reason. Support standalone makeup/ad-hoc lessons and optional linkage to the occurrence or entitlement they replace.
 - Consequences: Conflict checks, availability, payroll/workload, calendars, and delivery reporting use the occurrence teacher. Billing follows the occurrence's immutable terms and must not change merely because a substitute delivered it. Teacher-specific permissions must allow only authorized pickup/assignment rather than implying access to every student.
+
+# 2026-08-21 — Constrained school workspace palettes
+
+- Status: accepted
+- Context: Owners may want their workspace to feel distinct, but arbitrary color picking would weaken accessibility and make the interface difficult to maintain.
+- Decision: Offer a small set of complete, platform-defined dark palettes in School Setup. Apply each palette through the existing semantic tokens at the shared school layout, and permit only the school owner to change it.
+- Consequences: School routes can change atmosphere without route-specific color code. Contrast, typography, spacing, geometry, and interaction behavior remain controlled by Common Time.
