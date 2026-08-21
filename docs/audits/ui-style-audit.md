@@ -346,3 +346,9 @@ Update this document whenever the styling architecture changes materially. Recor
 
 - Replaced Rosewood because its dark red-brown range remained too close to Ember in the complete interface.
 - Added Orchid with a substantially lighter violet canvas, purple surfaces, and lavender accent so it remains distinct from both Ember and Midnight.
+
+#### UI-AUDIT-2026-08-21-007 — Neutral and playful palette expansion
+
+- Removed the remaining blue cast and colored state tokens from Monochrome; it now uses only true black, white, and neutral grays.
+- Added the light Lemonade and Bubblegum palettes to provide deliberately bright, playful choices without introducing route-level styling exceptions.
+- Retained accessible text, muted text, action, and state contrast within the shared semantic token system.

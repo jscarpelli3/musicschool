@@ -81,18 +81,22 @@
 }
 
 [data-school-theme="monochrome"] {
-  --ui-canvas: #080a0d;
-  --ui-surface: #11151a;
-  --ui-surface-raised: #1b222a;
-  --ui-ink: #f3f5f7;
-  --ui-muted: #9ca7b3;
-  --ui-line: #343e49;
-  --ui-brand: #d4dbe2;
+  --ui-canvas: #000000;
+  --ui-surface: #111111;
+  --ui-surface-raised: #242424;
+  --ui-ink: #ffffff;
+  --ui-muted: #b8b8b8;
+  --ui-line: #505050;
+  --ui-brand: #ffffff;
   --ui-brand-hover: #ffffff;
-  --ui-danger: #ff7f90;
-  --ui-outcome-rescheduled: #9aa8b5;
-  --ui-outcome-cancelled: #707b86;
-  --ui-outcome-no-show: #d79272;
+  --ui-danger: #ffffff;
+  --ui-outcome-rescheduled: #d0d0d0;
+  --ui-outcome-cancelled: #909090;
+  --ui-outcome-no-show: #ffffff;
+  --ui-overlay: rgb(0 0 0 / 0.82);
+  --ui-shadow-soft: 0 0.75rem 1.875rem rgb(255 255 255 / 0.04);
+  --ui-shadow-medium: 0 1.25rem 3.5rem rgb(255 255 255 / 0.05);
+  --ui-shadow-strong: 0 2rem 7rem rgb(255 255 255 / 0.07);
 }
 
 [data-school-theme="orchid"] {
@@ -125,6 +129,46 @@
   --ui-outcome-cancelled: #718d8d;
   --ui-outcome-no-show: #eaa076;
   --ui-overlay: rgb(1 13 15 / 0.78);
+}
+
+[data-school-theme="lemonade"] {
+  color-scheme: light;
+  --ui-canvas: #fff3a6;
+  --ui-surface: #ffe36a;
+  --ui-surface-raised: #fffbd7;
+  --ui-ink: #29210a;
+  --ui-muted: #66571d;
+  --ui-line: #c6a82d;
+  --ui-brand: #5836b6;
+  --ui-brand-hover: #3d238d;
+  --ui-danger: #9c2448;
+  --ui-outcome-rescheduled: #55408f;
+  --ui-outcome-cancelled: #6c6037;
+  --ui-outcome-no-show: #a13e28;
+  --ui-overlay: rgb(41 33 10 / 0.58);
+  --ui-shadow-soft: 0 0.75rem 1.875rem rgb(102 78 0 / 0.12);
+  --ui-shadow-medium: 0 1.25rem 3.5rem rgb(102 78 0 / 0.17);
+  --ui-shadow-strong: 0 2rem 7rem rgb(102 78 0 / 0.23);
+}
+
+[data-school-theme="bubblegum"] {
+  color-scheme: light;
+  --ui-canvas: #ffd8e9;
+  --ui-surface: #ffb5d5;
+  --ui-surface-raised: #fff1f7;
+  --ui-ink: #351326;
+  --ui-muted: #75445d;
+  --ui-line: #ce7da5;
+  --ui-brand: #7b1856;
+  --ui-brand-hover: #570b3a;
+  --ui-danger: #9c243a;
+  --ui-outcome-rescheduled: #71427a;
+  --ui-outcome-cancelled: #765464;
+  --ui-outcome-no-show: #9f3f27;
+  --ui-overlay: rgb(53 19 38 / 0.58);
+  --ui-shadow-soft: 0 0.75rem 1.875rem rgb(111 24 70 / 0.12);
+  --ui-shadow-medium: 0 1.25rem 3.5rem rgb(111 24 70 / 0.17);
+  --ui-shadow-strong: 0 2rem 7rem rgb(111 24 70 / 0.23);
 }
 
 * {
