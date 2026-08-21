@@ -3169,6 +3169,57 @@ export type Database = {
           },
         ]
       }
+      teacher_invitation_deliveries: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          created_by: string
+          failed_at: string | null
+          id: string
+          idempotency_key: string
+          provider_email_id: string | null
+          provider_error_code: string | null
+          provider_error_message: string | null
+          recipient_email: string
+          recipient_profile_id: string
+          school_id: string
+          status: string
+          teacher_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          created_by: string
+          failed_at?: string | null
+          id?: string
+          idempotency_key: string
+          provider_email_id?: string | null
+          provider_error_code?: string | null
+          provider_error_message?: string | null
+          recipient_email: string
+          recipient_profile_id: string
+          school_id: string
+          status?: string
+          teacher_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          created_by?: string
+          failed_at?: string | null
+          id?: string
+          idempotency_key?: string
+          provider_email_id?: string | null
+          provider_error_code?: string | null
+          provider_error_message?: string | null
+          recipient_email?: string
+          recipient_profile_id?: string
+          school_id?: string
+          status?: string
+          teacher_id?: string
+        }
+        Relationships: []
+      }
       user_view_preferences: {
         Row: {
           created_at: string
@@ -3209,6 +3260,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activate_my_teacher_memberships: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      create_teacher_record: {
+        Args: {
+          p_default_lesson_minutes?: number
+          p_email: string
+          p_first_name: string
+          p_last_name: string
+          p_school_id: string
+        }
+        Returns: string
+      }
       add_billing_adjustment: {
         Args: {
           p_amount_cents: number
@@ -3579,6 +3644,25 @@ export type Database = {
           p_note?: string
           p_school_id: string
         }
+        Returns: undefined
+      }
+      prepare_teacher_invitation: {
+        Args: {
+          p_email: string
+          p_profile_id: string
+          p_school_id: string
+          p_teacher_id: string
+        }
+        Returns: {
+          delivery_id: string
+          idempotency_key: string
+          recipient_email: string
+          school_name: string
+          teacher_name: string
+        }[]
+      }
+      deactivate_teacher_access: {
+        Args: { p_school_id: string; p_teacher_id: string }
         Returns: undefined
       }
       reschedule_assigned_lesson_as_teacher: {

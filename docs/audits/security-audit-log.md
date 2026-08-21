@@ -257,3 +257,20 @@ Decision: pass / conditional pass / fail / not completed
 - When permission is off, the teacher can only record a student reschedule request; this creates owner/admin notifications and audit evidence and does not mutate the lesson.
 - Removed `partial` from teacher outcome entry and added a database trigger preventing new partial outcomes. Existing historical partial values remain readable.
 - Production migration, deploy, live teacher-account authorization matrix, concurrency rehearsal, and cross-table teacher RLS review remain pending.
+
+### SEC-AUDIT-2026-08-21-002 — Teacher invitation and identity lifecycle
+
+- **Date:** 2026-08-21.
+- **Environment:** Local application and migration workspace; deployment pending.
+- **Trigger/objective:** Give owners a passwordless teacher onboarding path without merging school-scoped staff records or allowing unprovisioned signups.
+- **Scope:** Teacher creation, Auth identity provisioning, same-school uniqueness, cross-school email reuse, invitation delivery truth, activation, resend, email replacement, and deactivation.
+- **Controls implemented locally:** Service-role identity provisioning occurs only after the Server Action verifies an active owner membership. The database rechecks owner authority, Auth email/identity correspondence, school-scoped teacher uniqueness, existing person/profile bindings, and non-teacher role collisions. Invitation membership starts as `invited` and activates only after the authenticated identity proves control of the email. Email replacement deactivates the previous teacher membership only at the affected school. Delivery attempts are append-only rows with provider acceptance/failure truth and unique idempotency keys. Deactivation is school-scoped and audited.
+- **Login controls:** Main login now supports Google or email OTP with `shouldCreateUser: false`. Successful OAuth and OTP paths activate only invited teacher memberships already linked through an active school-scoped teacher record.
+- **Open risk:** Provider delivered/bounced reconciliation is not yet wired for the teacher invitation outbox; current truth ends at provider acceptance or request failure. Rate limiting/resend cooldown, owner-facing invitation history detail, Auth identity orphan cleanup, simultaneous email-change races, and the live cross-school/same-school adversarial matrix remain required.
+- **Decision:** Conditional local pass. Deployment and live acceptance are required before onboarding is considered operational; the broader teacher cross-table RLS finding remains open.
+
+#### Status update — 2026-08-21 linked database deployment
+
+- Teacher invitation/account migrations deployed to the linked project successfully.
+- Linked database lint initially identified an ambiguous PL/pgSQL teacher identifier in the previously deployed self-reschedule function. Follow-up migration `20260821141000` renamed and qualified that identifier; the repeated lint contains no teacher-flow error.
+- The remaining lint warnings are the two pre-existing unused variables in payer/lesson-request notification functions. Teacher invitation delivery and login still require live owner/teacher acceptance.

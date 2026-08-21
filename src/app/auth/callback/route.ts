@@ -12,7 +12,10 @@ export async function GET(request: NextRequest) {
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(new URL(next, request.url));
+    if (!error) {
+      await supabase.rpc("activate_my_teacher_memberships");
+      return NextResponse.redirect(new URL(next, request.url));
+    }
   }
 
   return NextResponse.redirect(new URL("/login?error=auth", request.url));
