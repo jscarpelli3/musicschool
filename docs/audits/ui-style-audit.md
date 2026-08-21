@@ -341,3 +341,8 @@ Update this document whenever the styling architecture changes materially. Recor
 - Replaced Aubergine, whose near-black purple values were insufficiently distinct from Midnight, with the light Paper palette.
 - Added Rosewood and Tidepool to create clearly differentiated red and teal directions.
 - Expanded the palette system to support both light and dark schemes while preserving the same semantic tokens and component behavior.
+
+#### UI-AUDIT-2026-08-21-006 — Warm palette separation
+
+- Replaced Rosewood because its dark red-brown range remained too close to Ember in the complete interface.
+- Added Orchid with a substantially lighter violet canvas, purple surfaces, and lavender accent so it remains distinct from both Ember and Midnight.

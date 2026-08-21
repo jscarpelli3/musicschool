@@ -4,7 +4,7 @@ export const SCHOOL_THEMES = [
   { key: "paper", name: "Paper", description: "Warm ivory with crisp blue-black type." },
   { key: "ember", name: "Ember", description: "Burnt umber with a warm orange accent." },
   { key: "monochrome", name: "Monochrome", description: "Cool graphite with a restrained silver accent." },
-  { key: "rosewood", name: "Rosewood", description: "Deep red wood with a soft coral accent." },
+  { key: "orchid", name: "Orchid", description: "Saturated violet with a luminous lavender accent." },
   { key: "tidepool", name: "Tidepool", description: "Dark teal with a bright aquatic accent." },
 ] as const;
 

@@ -95,20 +95,20 @@
   --ui-outcome-no-show: #d79272;
 }
 
-[data-school-theme="rosewood"] {
-  --ui-canvas: #170707;
-  --ui-surface: #2a0d0f;
-  --ui-surface-raised: #46191c;
-  --ui-ink: #fff0ea;
-  --ui-muted: #cda29b;
-  --ui-line: #6b3337;
-  --ui-brand: #ff8c78;
-  --ui-brand-hover: #ffc0b2;
-  --ui-danger: #ff8da1;
-  --ui-outcome-rescheduled: #c49a91;
-  --ui-outcome-cancelled: #957873;
-  --ui-outcome-no-show: #ff9a6f;
-  --ui-overlay: rgb(18 3 4 / 0.78);
+[data-school-theme="orchid"] {
+  --ui-canvas: #25102f;
+  --ui-surface: #381849;
+  --ui-surface-raised: #522469;
+  --ui-ink: #fff3ff;
+  --ui-muted: #d5aedf;
+  --ui-line: #77478a;
+  --ui-brand: #efa0ff;
+  --ui-brand-hover: #facdff;
+  --ui-danger: #ff9eae;
+  --ui-outcome-rescheduled: #c3a1d0;
+  --ui-outcome-cancelled: #a081aa;
+  --ui-outcome-no-show: #f5ae82;
+  --ui-overlay: rgb(25 7 32 / 0.78);
 }
 
 [data-school-theme="tidepool"] {
