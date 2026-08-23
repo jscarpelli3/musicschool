@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { SCHOOL_THEMES, type SchoolThemeKey } from "@/lib/ui/school-themes";
 
 export function ThemeSelector({
@@ -22,11 +23,14 @@ export function ThemeSelector({
                 className="peer sr-only"
               />
               <span className="block border border-line bg-canvas p-4 text-ink transition peer-checked:border-brand peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-brand">
-                <span className="flex gap-1" aria-hidden="true">
-                  <span className="h-5 flex-1 bg-surface" />
-                  <span className="h-5 flex-1 bg-surface-raised" />
-                  <span className="h-5 flex-1 bg-brand" />
-                  <span className="h-5 flex-1 bg-ink" />
+                <span className="flex items-center gap-4" aria-hidden="true">
+                  <Image src={`/app-icons/${theme.key}.png`} alt="" width={52} height={52} className="h-13 w-13 shrink-0" />
+                  <span className="flex flex-1 gap-1">
+                    <span className="h-5 flex-1 bg-surface" />
+                    <span className="h-5 flex-1 bg-surface-raised" />
+                    <span className="h-5 flex-1 bg-brand" />
+                    <span className="h-5 flex-1 bg-ink" />
+                  </span>
                 </span>
                 <span className="mt-4 flex items-baseline justify-between gap-3">
                   <strong className="text-sm font-medium">{theme.name}</strong>

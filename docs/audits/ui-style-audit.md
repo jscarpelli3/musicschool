@@ -362,3 +362,9 @@ Update this document whenever the styling architecture changes materially. Recor
 
 - Moved workspace palette controls out of School Info and into a dedicated Appearance tab in the shared School Setup navigation.
 - Kept the palette selector reusable and retained the same owner-only action and database authorization boundary.
+
+#### UI-AUDIT-2026-08-22-010 — Product icon system
+
+- Adopted the supplied `:C` icon test as the canonical Common Time browser, Apple touch, and installable-app icon without redrawing its geometry.
+- Added manifest-backed 192px and 512px install assets and retained the transparent rounded-square source at full resolution.
+- Added deterministic hue-matched variants for every school palette and displayed them in the Appearance selector. The canonical blue remains the stable browser/app identity regardless of a school’s workspace preference.
