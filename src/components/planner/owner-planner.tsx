@@ -73,6 +73,7 @@ type Props = {
   lessons: Lesson[];
   contextLabel?: string;
   showTeacherFilter?: boolean;
+  showAvailabilityLabels?: boolean;
 };
 
 type LessonWithParts = Lesson & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> };
@@ -155,6 +156,7 @@ export function OwnerPlanner({
   lessons,
   contextLabel = "School planner",
   showTeacherFilter = true,
+  showAvailabilityLabels = true,
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<View>("week");
@@ -384,6 +386,7 @@ export function OwnerPlanner({
           onBeginReschedule={(lesson) => beginReschedule(lesson, true)}
           onDropProposal={(next) => { setProposal(next); setDragCandidate(null); }}
           dropError={dropError}
+          showAvailabilityLabels={showAvailabilityLabels}
           onDropError={setDropError}
           onExitReschedule={cancelReschedule}
         />
@@ -486,6 +489,7 @@ function TimelineView({
   dropError,
   onDropError,
   onExitReschedule,
+  showAvailabilityLabels,
 }: {
   view: "day" | "week";
   anchor: Date;
@@ -504,6 +508,7 @@ function TimelineView({
   dropError: string | null;
   onDropError: (message: string | null) => void;
   onExitReschedule: () => void;
+  showAvailabilityLabels: boolean;
 }) {
   const [activeTrack, setActiveTrack] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -675,7 +680,7 @@ function TimelineView({
                         onFocus={() => setActiveTrack(trackKey)}
                         onBlur={() => setActiveTrack(null)}
                       >
-                        <span className="availability-label">{teacher.name}</span>
+                        {showAvailabilityLabels ? <span className="availability-label">{teacher.name}</span> : null}
                         <span className="sr-only">{teacher.name} available {clock(start)} to {clock(end)}</span>
                       </button>
                     );
