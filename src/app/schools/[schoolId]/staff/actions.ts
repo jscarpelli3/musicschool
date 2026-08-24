@@ -9,6 +9,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { teacherInvitationEmail } from "@/lib/teachers/invitation-email";
 import { normalizeInstrumentNames } from "@/lib/schools/instruments";
 
+type TeacherInviteResult = { ok: boolean; message: string };
+
 export async function setTeacherSelfReschedulePermission(schoolId: string, teacherId: string, formData: FormData) {
   const allowed = formData.get("allowed") === "true";
   const supabase = await createClient();
@@ -21,12 +23,12 @@ export async function setTeacherSelfReschedulePermission(schoolId: string, teach
   revalidatePath(`/schools/${schoolId}/staff`);
 }
 
-export async function createAndInviteTeacher(schoolId: string, formData: FormData) {
+export async function createAndInviteTeacher(schoolId: string, formData: FormData): Promise<TeacherInviteResult> {
   const firstName = String(formData.get("first_name") ?? "").trim();
   const lastName = String(formData.get("last_name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const instruments = normalizeInstrumentNames(formData.getAll("instrument").map(String));
-  if (!firstName || !lastName || instruments.length === 0) redirect(`/schools/${schoolId}/staff?invite=invalid`);
+  if (!firstName || !lastName || instruments.length === 0) return { ok: false, message: "Complete the teacher details and choose at least one instrument." };
   const supabase = await createClient();
   const { data: teacherId, error } = await supabase.rpc("create_teacher_record", {
     p_school_id: schoolId,
@@ -36,25 +38,29 @@ export async function createAndInviteTeacher(schoolId: string, formData: FormDat
     p_instrument_names: instruments,
   });
   if (error || !teacherId) {
-    if (error?.message.includes("duplicate_teacher_email")) redirect(`/schools/${schoolId}/staff?invite=duplicate`);
-    redirect(`/schools/${schoolId}/staff?invite=error`);
+    if (error?.message.includes("duplicate_teacher_email")) return { ok: false, message: "That email is already used by another teacher at this school." };
+    return { ok: false, message: "The teacher could not be created. Check the details and try again." };
   }
-  await inviteTeacherAccess(schoolId, teacherId, formData);
+  const result = await deliverTeacherAccess(schoolId, teacherId, email);
+  revalidatePath(`/schools/${schoolId}/staff`);
+  if (result === "sent") return { ok: true, message: "Teacher created and invitation sent." };
+  if (result === "delivery-failed") return { ok: false, message: "The teacher was created, but the invitation email was not sent. Use Resend invitation in the staff roster after the email-provider problem is corrected." };
+  if (result === "identity-error") return { ok: false, message: "The teacher was created, but passwordless access could not be prepared. Use Invite teacher in the staff roster to try again." };
+  return { ok: false, message: "The teacher was created, but access could not be prepared. Use Invite teacher in the staff roster to try again." };
 }
 
-export async function inviteTeacherAccess(schoolId: string, teacherId: string, formData: FormData) {
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  if (!/^[0-9a-f-]{36}$/i.test(schoolId) || !/^[0-9a-f-]{36}$/i.test(teacherId) || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 320) redirect(`/schools/${schoolId}/staff?invite=invalid`);
+async function deliverTeacherAccess(schoolId: string, teacherId: string, email: string): Promise<"sent" | "invalid" | "identity-error" | "delivery-failed" | "error"> {
+  if (!/^[0-9a-f-]{36}$/i.test(schoolId) || !/^[0-9a-f-]{36}$/i.test(teacherId) || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 320) return "invalid";
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
   const profileId = auth?.claims?.sub;
   const { data: membership } = profileId ? await supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle() : { data: null };
-  if (membership?.role !== "owner") redirect(`/schools/${schoolId}`);
+  if (membership?.role !== "owner") return "error";
   let authProfileId: string;
   try {
     authProfileId = await ensurePortalAuthIdentity(email);
   } catch {
-    redirect(`/schools/${schoolId}/staff?invite=identity-error`);
+    return "identity-error";
   }
 
   const { data: prepared, error } = await supabase.rpc("prepare_teacher_invitation", {
@@ -65,8 +71,7 @@ export async function inviteTeacherAccess(schoolId: string, teacherId: string, f
   });
   const invitation = prepared?.[0];
   if (error || !invitation) {
-    if (error?.message.includes("duplicate_teacher_email")) redirect(`/schools/${schoolId}/staff?invite=duplicate`);
-    redirect(`/schools/${schoolId}/staff?invite=error`);
+    return "error";
   }
 
   const origin = (process.env.APP_URL ?? "https://app.commontime.studio").replace(/\/$/, "");
@@ -87,10 +92,20 @@ export async function inviteTeacherAccess(schoolId: string, teacherId: string, f
   } catch (sendError) {
     const provider = sendError instanceof ResendRequestError ? sendError : null;
     await admin.from("teacher_invitation_deliveries").update({ status: "failed", provider_error_code: provider?.code ?? "request_failed", provider_error_message: sendError instanceof Error ? sendError.message.slice(0, 500) : "Provider request failed.", failed_at: new Date().toISOString() }).eq("id", invitation.delivery_id).eq("status", "pending");
-    redirect(`/schools/${schoolId}/staff?invite=delivery-failed`);
+    return "delivery-failed";
   }
+  return "sent";
+}
+
+export async function inviteTeacherAccess(schoolId: string, teacherId: string, formData: FormData) {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const result = await deliverTeacherAccess(schoolId, teacherId, email);
+  if (result === "invalid") redirect(`/schools/${schoolId}/staff?invite=invalid#staff-status`);
+  if (result === "identity-error") redirect(`/schools/${schoolId}/staff?invite=identity-error#staff-status`);
+  if (result === "delivery-failed") redirect(`/schools/${schoolId}/staff?invite=delivery-failed#staff-status`);
+  if (result !== "sent") redirect(`/schools/${schoolId}/staff?invite=error#staff-status`);
   revalidatePath(`/schools/${schoolId}/staff`);
-  redirect(`/schools/${schoolId}/staff?invite=sent`);
+  redirect(`/schools/${schoolId}/staff?invite=sent#staff-status`);
 }
 
 export async function deactivateTeacherAccess(schoolId: string, teacherId: string) {

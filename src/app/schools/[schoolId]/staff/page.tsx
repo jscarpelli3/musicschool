@@ -40,11 +40,22 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
     const member = person.profile_id ? roleByProfile.get(person.profile_id) : null;
     return [{ ...person, role: member?.role ?? "teacher", membershipStatus: member?.status ?? "not invited", defaultMinutes: teacher.default_lesson_minutes, canSelfReschedule: teacher.can_self_reschedule, latestDelivery: latestDeliveryByTeacher.get(person.id) ?? null }];
   });
+  const inviteStatus = query.invite === "sent"
+    ? { tone: "text-brand border-brand/40 bg-brand/10", message: "Teacher invitation sent." }
+    : query.invite === "delivery-failed"
+      ? { tone: "text-danger border-danger/40 bg-danger/10", message: "The teacher was created and access was prepared, but the invitation email was not sent. Find the teacher in the staff roster and resend the invitation after the email-provider problem is corrected." }
+      : query.invite === "duplicate"
+        ? { tone: "text-danger border-danger/40 bg-danger/10", message: "That email is already used by another teacher at this school." }
+        : query.invite === "identity-error"
+          ? { tone: "text-danger border-danger/40 bg-danger/10", message: "The teacher identity could not be prepared. Nothing was linked." }
+          : query.invite
+            ? { tone: "text-danger border-danger/40 bg-danger/10", message: "The teacher invitation could not be prepared. Check the form and try again." }
+            : null;
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
       <SetupHeader schoolId={schoolId} schoolName={school.name} active="staff" />
-      {query.invite ? <p role="status" className={`border-b border-line py-4 text-sm ${query.invite === "sent" ? "text-brand" : "text-danger"}`}>{query.invite === "sent" ? "Teacher invitation sent." : query.invite === "delivery-failed" ? "Teacher access was prepared, but the invitation email failed. Correct the provider problem and resend it." : query.invite === "duplicate" ? "That email is already used by another teacher at this school." : query.invite === "identity-error" ? "The teacher identity could not be prepared. Nothing was linked." : "The teacher invitation could not be prepared."}</p> : null}
+      {inviteStatus ? <div id="staff-status" role="alert" className={`scroll-mt-6 border p-4 text-sm leading-6 ${inviteStatus.tone}`}>{inviteStatus.message}</div> : null}
       {query.access ? <p role="status" className={`border-b border-line py-4 text-sm ${query.access === "disabled" ? "text-brand" : "text-danger"}`}>{query.access === "disabled" ? "Teacher access disabled for this school." : "Teacher access could not be changed."}</p> : null}
       {query.instruments ? <p role="status" className={`border-b border-line py-4 text-sm ${query.instruments === "saved" ? "text-brand" : "text-danger"}`}>{query.instruments === "saved" ? "School instruments saved." : "The instrument list could not be saved."}</p> : null}
       <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">

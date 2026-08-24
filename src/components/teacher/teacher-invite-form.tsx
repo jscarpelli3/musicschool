@@ -1,10 +1,11 @@
 "use client";
 
 import { useRef, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
 
 type TeacherInviteFormProps = {
-  action: (formData: FormData) => Promise<void>;
+  action: (formData: FormData) => Promise<{ ok: boolean; message: string }>;
   children: ReactNode;
   className?: string;
   disabled?: boolean;
@@ -12,6 +13,7 @@ type TeacherInviteFormProps = {
 
 export function TeacherInviteForm({ action, children, className, disabled = false }: TeacherInviteFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
 
   async function submit() {
     const form = formRef.current;
@@ -24,8 +26,9 @@ export function TeacherInviteForm({ action, children, className, disabled = fals
       return { ok: false, message: "Choose at least one instrument this teacher teaches." };
     }
 
-    await action(new FormData(form));
-    return { ok: true, message: "Teacher invitation sent." };
+    const result = await action(new FormData(form));
+    router.refresh();
+    return result;
   }
 
   return (
