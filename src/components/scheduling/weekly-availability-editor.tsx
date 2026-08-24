@@ -37,7 +37,7 @@ export function WeeklyAvailabilityEditor({ initialBlocks, action }: { initialBlo
       <div className="space-y-3">
         {dirty ? <p className="text-xs font-medium text-brand">Changes not saved yet</p> : null}
         {blocks.length ? blocks.map((block) => (
-          <div key={block.key} className="border border-line p-3">
+          <div key={block.key} className={block.saved ? "bg-brand/10 p-3" : "border border-brand/60 bg-transparent p-3"}>
             <div className="flex min-h-7 items-start justify-between gap-3">
               <span className={`text-xs font-medium ${block.saved ? "invisible" : "text-brand"}`}>Not saved yet</span>
               <button type="button" aria-label={`Remove ${days[block.weekday]} availability block`} title="Remove this block" onClick={() => { setBlocks((current) => current.filter((item) => item.key !== block.key)); changed(); }} className="grid h-7 w-7 place-items-center text-xl leading-none text-danger">×</button>

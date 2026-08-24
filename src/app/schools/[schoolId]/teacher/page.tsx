@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { LessonOutcomeForm } from "@/components/teacher/lesson-outcome-form";
+import { OwnerPlanner } from "@/components/planner/owner-planner";
 import { TeacherRescheduleControls } from "@/components/teacher/teacher-reschedule-controls";
 import { WeeklyAvailabilityEditor } from "@/components/scheduling/weekly-availability-editor";
 import { createClient } from "@/lib/supabase/server";
@@ -34,7 +35,7 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
   if (!teacherSettings) notFound();
 
   const today = new Intl.DateTimeFormat("sv-SE", { timeZone: school.timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-  const { data: availability, error: availabilityError } = await supabase.from("teacher_availability_rules").select("weekday, start_time, end_time, effective_from, effective_until").eq("school_id",schoolId).eq("teacher_id",teacherPerson.id).order("weekday").order("start_time");
+  const { data: availability, error: availabilityError } = await supabase.from("teacher_availability_rules").select("id, teacher_id, weekday, start_time, end_time, effective_from, effective_until").eq("school_id",schoolId).eq("teacher_id",teacherPerson.id).order("weekday").order("start_time");
   const currentAvailability = (availability ?? []).filter((rule) => rule.effective_from <= today && (!rule.effective_until || rule.effective_until >= today)).map((rule) => ({ weekday: rule.weekday, start_time: rule.start_time.slice(0,5), end_time: rule.end_time.slice(0,5) }));
 
   const now = new Date();
@@ -42,7 +43,7 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
   const rangeEnd = new Date(now.getTime() + 90 * 86_400_000).toISOString();
   const { data: lessons, error: lessonError } = await supabase
     .from("lesson_events")
-    .select("id, student_id, product_id, place_id, starts_at, ends_at, status, outcome, staff_notes")
+    .select("id, student_id, product_id, place_id, starts_at, ends_at, status, cancellation_timing, notes, outcome, staff_notes, reschedule_allowed, reschedule_blocked_reason, reschedule_reason_code, reschedule_reason_detail")
     .eq("school_id", schoolId)
     .eq("teacher_id", teacherPerson.id)
     .gte("starts_at", rangeStart)
@@ -67,6 +68,7 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
   const earliestLocalParts = new Intl.DateTimeFormat("sv-SE", { timeZone: school.timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
   const localPart = (type: string) => earliestLocalParts.find((part) => part.type === type)?.value ?? "";
   const earliestLocal = `${localPart("year")}-${localPart("month")}-${localPart("day")}T${localPart("hour")}:${localPart("minute")}`;
+  const initialDate = earliestLocal.slice(0,10);
   const upcoming = (lessons ?? []).filter((lesson) => new Date(lesson.ends_at).getTime() > nowMs && lesson.status === "scheduled");
   const recent = (lessons ?? []).filter((lesson) => new Date(lesson.ends_at).getTime() <= nowMs || lesson.status !== "scheduled").reverse();
 
@@ -97,6 +99,21 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
   return (
     <main className="mx-auto min-h-screen max-w-5xl px-5 py-12 sm:px-8">
       <header className="border-b border-line pb-9"><p className="text-sm text-muted">{school.name}</p><h1 className="mt-3 font-display text-5xl sm:text-6xl">Your lessons.</h1><p className="mt-4 text-sm text-muted">{displayName(teacherPerson)} · Times shown in {school.timezone}</p></header>
+      <OwnerPlanner
+        schoolId={schoolId}
+        canReschedule={false}
+        initialDate={initialDate}
+        timezone={school.timezone}
+        teachers={[{ id: teacherPerson.id, name: displayName(teacherPerson), isOwner: false }]}
+        studentNames={Object.fromEntries((students ?? []).map((student) => [student.id, displayName(student)]))}
+        studentDetails={Object.fromEntries((students ?? []).map((student) => [student.id, { name: displayName(student), email: null, phone: null, contacts: [], payers: [] }]))}
+        productNames={Object.fromEntries((products ?? []).map((product) => [product.id, product.name]))}
+        placeDetails={Object.fromEntries((places ?? []).map((place) => [place.id, { name: place.name, details: place.details }]))}
+        availability={availability ?? []}
+        lessons={(lessons ?? []).map((lesson) => ({ ...lesson, teacher_id: teacherPerson.id, place_id: lesson.place_id ?? "", billing_service_date: lesson.starts_at.slice(0,10), can_reschedule: false, can_mark_reschedule: false }))}
+        contextLabel="My schedule"
+        showTeacherFilter={false}
+      />
       <section className="border-b border-line py-10"><h2 className="font-display text-3xl">Weekly availability</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-muted">Record every recurring block when lessons normally fit. Availability guides scheduling; changing it never moves an existing lesson.</p><div className="mt-6">{availabilityError ? <p role="alert" className="border border-danger/40 bg-danger/10 p-4 text-sm text-danger">Your availability could not be loaded, so editing is disabled. Reload the page and try again.</p> : teacherSettings.can_manage_own_availability ? <WeeklyAvailabilityEditor initialBlocks={currentAvailability} action={saveTeacherWeeklyAvailability.bind(null,schoolId,teacherPerson.id)} /> : <p className="border border-line p-4 text-sm text-muted">The school owner manages your availability. Ask them to update these blocks.</p>}</div></section>
       <section className="py-10"><div className="flex items-baseline justify-between gap-4"><h2 className="font-display text-3xl">Upcoming</h2><span className="text-sm text-muted">{upcoming.length}</span></div><div className="mt-6">{lessonList(upcoming)}</div></section>
       <section className="border-t border-line py-10"><div className="flex items-baseline justify-between gap-4"><h2 className="font-display text-3xl">Recent and ready to log</h2><span className="text-sm text-muted">{recent.length}</span></div><div className="mt-6">{lessonList(recent)}</div></section>

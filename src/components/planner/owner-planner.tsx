@@ -71,6 +71,8 @@ type Props = {
   placeDetails: Record<string, { name: string; details: string | null }>;
   availability: Availability[];
   lessons: Lesson[];
+  contextLabel?: string;
+  showTeacherFilter?: boolean;
 };
 
 type LessonWithParts = Lesson & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> };
@@ -151,6 +153,8 @@ export function OwnerPlanner({
   placeDetails,
   availability,
   lessons,
+  contextLabel = "School planner",
+  showTeacherFilter = true,
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<View>("week");
@@ -278,17 +282,17 @@ export function OwnerPlanner({
     <section className="border-t border-line">
       <div className="grid gap-8 border-b border-line py-6 md:grid-cols-[1fr_auto] md:items-end">
         <div>
-          <p className="text-xs text-muted">School planner · {timezone.replaceAll("_", " ")}</p>
+          <p className="text-xs text-muted">{contextLabel} · {timezone.replaceAll("_", " ")}</p>
           <h2 className="mt-3 font-display text-4xl font-normal tracking-[-0.03em]">{title}</h2>
         </div>
         <div className="flex flex-wrap items-end gap-8">
-          <label className="border-b border-line pb-2 text-sm">
+          {showTeacherFilter ? <label className="border-b border-line pb-2 text-sm">
             <span className="mr-3 text-muted">Teacher</span>
             <select value={teacherId} onChange={(event) => setTeacherId(event.target.value)} className="bg-transparent outline-none">
               <option value="all">All teachers</option>
               {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}{teacher.isOwner ? " · you" : ""}</option>)}
             </select>
-          </label>
+          </label> : null}
           <div className="flex border-b border-line" role="group" aria-label="Planner view">
             {views.map((option) => (
               <button
