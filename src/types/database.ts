@@ -787,6 +787,51 @@ export type Database = {
           },
         ]
       }
+      domain_events: {
+        Row: {
+          actor_profile_id: string | null
+          actor_role: string | null
+          causation_id: string | null
+          correlation_id: string
+          entity_id: string
+          entity_type: string
+          event_type: string
+          id: string
+          occurred_at: string
+          payload: Json
+          school_id: string
+          source: string
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          actor_role?: string | null
+          causation_id?: string | null
+          correlation_id?: string
+          entity_id: string
+          entity_type: string
+          event_type: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          school_id: string
+          source: string
+        }
+        Update: {
+          actor_profile_id?: string | null
+          actor_role?: string | null
+          causation_id?: string | null
+          correlation_id?: string
+          entity_id?: string
+          entity_type?: string
+          event_type?: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          school_id?: string
+          source?: string
+        }
+        Relationships: []
+      }
       email_deliveries: {
         Row: {
           accepted_at: string | null
@@ -3164,28 +3209,34 @@ export type Database = {
       teachers: {
         Row: {
           bio: string | null
+          can_manage_own_availability: boolean
           can_self_reschedule: boolean
           created_at: string
           default_lesson_minutes: number
           person_id: string
+          scheduling_authority: string
           school_id: string
           updated_at: string
         }
         Insert: {
           bio?: string | null
+          can_manage_own_availability?: boolean
           can_self_reschedule?: boolean
           created_at?: string
           default_lesson_minutes?: number
           person_id: string
+          scheduling_authority?: string
           school_id: string
           updated_at?: string
         }
         Update: {
           bio?: string | null
+          can_manage_own_availability?: boolean
           can_self_reschedule?: boolean
           created_at?: string
           default_lesson_minutes?: number
           person_id?: string
+          scheduling_authority?: string
           school_id?: string
           updated_at?: string
         }
@@ -3797,6 +3848,19 @@ export type Database = {
           p_blocked_reason?: string
           p_lesson_event_id: string
           p_school_id: string
+        }
+        Returns: undefined
+      }
+      replace_teacher_weekly_availability: {
+        Args: { p_blocks: Json; p_school_id: string; p_teacher_id: string }
+        Returns: undefined
+      }
+      set_teacher_scheduling_settings: {
+        Args: {
+          p_can_manage_own_availability: boolean
+          p_scheduling_authority: string
+          p_school_id: string
+          p_teacher_id: string
         }
         Returns: undefined
       }

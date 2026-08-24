@@ -13,6 +13,13 @@ Use one entry per meaningful technical or product decision.
 
 ## Entries
 
+### 2026-08-24: Separate teacher availability from scheduling authority
+
+- Status: accepted
+- Context: Teachers need multiple recurring weekly availability blocks, owners need the same editing power, and trusted teachers need autonomy without a vague auto-approval switch.
+- Decision: Keep availability as a soft boundary; use `propose_only` and `manage_assigned_lessons` as explicit scheduling-authority modes; keep self-availability permission separate; and append meaningful transitions as relational `domain_events` rows with bounded JSONB context.
+- Consequences: Availability edits never move existing lessons. Teacher-originated outside-block proposals carry the teacher’s consent, owner-originated exceptions will require teacher acceptance, and hard resource conflicts remain non-overridable.
+
 ### 2026-03-10: Create project context scaffold
 
 - Status: accepted

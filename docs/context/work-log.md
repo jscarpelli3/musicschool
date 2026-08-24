@@ -2,6 +2,10 @@
 
 Use this file for short chronological notes about meaningful work.
 
+## 2026-08-24 — teacher availability and autonomy
+
+- Added owner and teacher weekly availability editors backed by effective-dated multi-block rules; per-teacher scheduling authority and separate self-availability permission; atomic replacement with rollback-safe errors; and append-only domain-event plus audit evidence. Existing lessons are never moved by an availability edit. Durable lesson proposals and outside-block acceptance remain the next active slice.
+
 ## 2026-08-19 — security audit program and payer portal hardening
 
 - Established `docs/audits/security-audit-log.md` as the living, append-only master security due-diligence record. It defines scope, procedure, evidence requirements, severity/retest rules, process-change history, recurring TODOs, and the first detailed audit run.

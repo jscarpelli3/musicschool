@@ -1,7 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { LessonOutcomeForm } from "@/components/teacher/lesson-outcome-form";
 import { TeacherRescheduleControls } from "@/components/teacher/teacher-reschedule-controls";
+import { WeeklyAvailabilityEditor } from "@/components/scheduling/weekly-availability-editor";
 import { createClient } from "@/lib/supabase/server";
+import { saveTeacherWeeklyAvailability } from "../availability-actions";
 import { recordTeacherLessonOutcome, reportStudentRescheduleRequest, rescheduleTeacherLesson } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -28,8 +30,12 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
     return <main className="mx-auto min-h-screen max-w-5xl px-5 py-12 sm:px-8"><h1 className="font-display text-5xl">Teacher setup needed.</h1><p className="mt-5 max-w-xl text-sm leading-6 text-muted">Your login is active, but it is not linked to a teacher record at this school. Ask the school owner to finish your staff setup.</p></main>;
   }
 
-  const { data: teacherSettings } = await supabase.from("teachers").select("can_self_reschedule").eq("school_id", schoolId).eq("person_id", teacherPerson.id).maybeSingle();
+  const { data: teacherSettings } = await supabase.from("teachers").select("scheduling_authority, can_manage_own_availability").eq("school_id", schoolId).eq("person_id", teacherPerson.id).maybeSingle();
   if (!teacherSettings) notFound();
+
+  const today = new Intl.DateTimeFormat("sv-SE", { timeZone: school.timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const { data: availability, error: availabilityError } = await supabase.from("teacher_availability_rules").select("weekday, start_time, end_time, effective_from, effective_until").eq("school_id",schoolId).eq("teacher_id",teacherPerson.id).order("weekday").order("start_time");
+  const currentAvailability = (availability ?? []).filter((rule) => rule.effective_from <= today && (!rule.effective_until || rule.effective_until >= today)).map((rule) => ({ weekday: rule.weekday, start_time: rule.start_time.slice(0,5), end_time: rule.end_time.slice(0,5) }));
 
   const now = new Date();
   const rangeStart = new Date(now.getTime() - 14 * 86_400_000).toISOString();
@@ -79,7 +85,7 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
             <div className="pb-7 sm:pl-40">
               <p className="text-sm text-muted">{place?.name ?? "Place not assigned"}{place?.details ? ` · ${place.details}` : ""}</p>
               {lesson.staff_notes ? <p className="mt-4 border-l border-line pl-4 text-sm leading-6">{lesson.staff_notes}</p> : null}
-              {lesson.status === "scheduled" && new Date(lesson.starts_at).getTime() > nowMs ? <TeacherRescheduleControls canSelfReschedule={teacherSettings.can_self_reschedule} earliestLocal={earliestLocal} rescheduleAction={rescheduleTeacherLesson.bind(null, schoolId, lesson.id)} requestAction={reportStudentRescheduleRequest.bind(null, schoolId, lesson.id)} /> : null}
+              {lesson.status === "scheduled" && new Date(lesson.starts_at).getTime() > nowMs ? <TeacherRescheduleControls canSelfReschedule={teacherSettings.scheduling_authority === "manage_assigned_lessons"} earliestLocal={earliestLocal} rescheduleAction={rescheduleTeacherLesson.bind(null, schoolId, lesson.id)} requestAction={reportStudentRescheduleRequest.bind(null, schoolId, lesson.id)} /> : null}
               {canLog ? <LessonOutcomeForm action={recordTeacherLessonOutcome.bind(null, schoolId, lesson.id)} /> : null}
             </div>
           </details>
@@ -91,6 +97,7 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
   return (
     <main className="mx-auto min-h-screen max-w-5xl px-5 py-12 sm:px-8">
       <header className="border-b border-line pb-9"><p className="text-sm text-muted">{school.name}</p><h1 className="mt-3 font-display text-5xl sm:text-6xl">Your lessons.</h1><p className="mt-4 text-sm text-muted">{displayName(teacherPerson)} · Times shown in {school.timezone}</p></header>
+      <section className="border-b border-line py-10"><h2 className="font-display text-3xl">Weekly availability</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-muted">Record every recurring block when lessons normally fit. Availability guides scheduling; changing it never moves an existing lesson.</p><div className="mt-6">{availabilityError ? <p role="alert" className="border border-danger/40 bg-danger/10 p-4 text-sm text-danger">Your availability could not be loaded, so editing is disabled. Reload the page and try again.</p> : teacherSettings.can_manage_own_availability ? <WeeklyAvailabilityEditor initialBlocks={currentAvailability} action={saveTeacherWeeklyAvailability.bind(null,schoolId,teacherPerson.id)} /> : <p className="border border-line p-4 text-sm text-muted">The school owner manages your availability. Ask them to update these blocks.</p>}</div></section>
       <section className="py-10"><div className="flex items-baseline justify-between gap-4"><h2 className="font-display text-3xl">Upcoming</h2><span className="text-sm text-muted">{upcoming.length}</span></div><div className="mt-6">{lessonList(upcoming)}</div></section>
       <section className="border-t border-line py-10"><div className="flex items-baseline justify-between gap-4"><h2 className="font-display text-3xl">Recent and ready to log</h2><span className="text-sm text-muted">{recent.length}</span></div><div className="mt-6">{lessonList(recent)}</div></section>
     </main>

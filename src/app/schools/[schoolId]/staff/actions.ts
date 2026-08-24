@@ -23,6 +23,21 @@ export async function setTeacherSelfReschedulePermission(schoolId: string, teach
   revalidatePath(`/schools/${schoolId}/staff`);
 }
 
+export async function setTeacherSchedulingSettings(schoolId: string, teacherId: string, schedulingAuthority: string, canManageOwnAvailability: boolean) {
+  if (!new Set(["propose_only","manage_assigned_lessons"]).has(schedulingAuthority)) return { ok: false, message: "Choose a valid scheduling authority." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_teacher_scheduling_settings", {
+    p_school_id: schoolId,
+    p_teacher_id: teacherId,
+    p_scheduling_authority: schedulingAuthority,
+    p_can_manage_own_availability: canManageOwnAvailability,
+  });
+  if (error) return { ok: false, message: error.message.includes("not_authorized") ? "Only the school owner can change teacher scheduling authority." : "The scheduling settings could not be saved. Nothing changed." };
+  revalidatePath(`/schools/${schoolId}/staff`);
+  revalidatePath(`/schools/${schoolId}/teacher`);
+  return { ok: true, message: "Scheduling authority saved." };
+}
+
 export async function createAndInviteTeacher(schoolId: string, formData: FormData): Promise<TeacherInviteResult> {
   const firstName = String(formData.get("first_name") ?? "").trim();
   const lastName = String(formData.get("last_name") ?? "").trim();

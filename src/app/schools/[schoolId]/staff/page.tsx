@@ -2,9 +2,12 @@ import { notFound, redirect } from "next/navigation";
 import { InstrumentCatalogForm } from "@/components/school-setup/instrument-catalog-form";
 import { SetupHeader } from "@/components/school-setup/setup-header";
 import { TeacherInstrumentFields } from "@/components/staff/teacher-instrument-fields";
+import { TeacherSchedulingSettingsForm } from "@/components/staff/teacher-scheduling-settings-form";
 import { TeacherInviteForm } from "@/components/teacher/teacher-invite-form";
+import { WeeklyAvailabilityEditor } from "@/components/scheduling/weekly-availability-editor";
 import { createClient } from "@/lib/supabase/server";
-import { createAndInviteTeacher, deactivateTeacherAccess, inviteTeacherAccess, setTeacherSelfReschedulePermission } from "./actions";
+import { createAndInviteTeacher, deactivateTeacherAccess, inviteTeacherAccess, setTeacherSchedulingSettings } from "./actions";
+import { saveTeacherWeeklyAvailability } from "../availability-actions";
 import { updateSchoolInstrumentCatalog } from "./instrument-actions";
 
 export const dynamic = "force-dynamic";
@@ -17,19 +20,22 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/staff`);
 
-  const [{ data: school }, { data: membership }, { data: teachers }, { data: people }, { data: members }, { data: deliveries }, { data: instruments }] = await Promise.all([
-    supabase.from("schools").select("id, name").eq("id", schoolId).maybeSingle(),
+  const [{ data: school }, { data: membership }, { data: teachers }, { data: people }, { data: members }, { data: deliveries }, { data: instruments }, { data: availability, error: availabilityError }] = await Promise.all([
+    supabase.from("schools").select("id, name, timezone").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
-    supabase.from("teachers").select("person_id, default_lesson_minutes, can_self_reschedule").eq("school_id", schoolId),
+    supabase.from("teachers").select("person_id, default_lesson_minutes, scheduling_authority, can_manage_own_availability").eq("school_id", schoolId),
     supabase.from("people").select("id, profile_id, first_name, last_name, preferred_name, email, phone, status").eq("school_id", schoolId),
     supabase.from("school_members").select("profile_id, role, status").eq("school_id", schoolId),
     supabase.from("teacher_invitation_deliveries").select("teacher_id, recipient_email, status, created_at").eq("school_id", schoolId).order("created_at", { ascending: false }),
     supabase.from("school_instruments").select("name").eq("school_id", schoolId).eq("is_active", true).order("name"),
+    supabase.from("teacher_availability_rules").select("teacher_id, weekday, start_time, end_time, effective_from, effective_until").eq("school_id", schoolId).order("weekday").order("start_time"),
   ]);
   if (!school || !membership) notFound();
   if (membership.role !== "owner") redirect(`/schools/${schoolId}`);
 
   const personById = new Map((people ?? []).map((person) => [person.id, person]));
+  const today = new Intl.DateTimeFormat("sv-SE", { timeZone: school.timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const currentAvailability = (availability ?? []).filter((rule) => rule.effective_from <= today && (!rule.effective_until || rule.effective_until >= today));
   const instrumentNames = (instruments ?? []).map((instrument) => instrument.name);
   const roleByProfile = new Map((members ?? []).map((member) => [member.profile_id, member]));
   const latestDeliveryByTeacher = new Map<string, NonNullable<typeof deliveries>[number]>();
@@ -38,7 +44,7 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
     const person = personById.get(teacher.person_id);
     if (!person) return [];
     const member = person.profile_id ? roleByProfile.get(person.profile_id) : null;
-    return [{ ...person, role: member?.role ?? "teacher", membershipStatus: member?.status ?? "not invited", defaultMinutes: teacher.default_lesson_minutes, canSelfReschedule: teacher.can_self_reschedule, latestDelivery: latestDeliveryByTeacher.get(person.id) ?? null }];
+    return [{ ...person, role: member?.role ?? "teacher", membershipStatus: member?.status ?? "not invited", defaultMinutes: teacher.default_lesson_minutes, schedulingAuthority: teacher.scheduling_authority, canManageOwnAvailability: teacher.can_manage_own_availability, availability: currentAvailability.filter((rule) => rule.teacher_id === person.id).map((rule) => ({ weekday: rule.weekday, start_time: rule.start_time.slice(0,5), end_time: rule.end_time.slice(0,5) })), latestDelivery: latestDeliveryByTeacher.get(person.id) ?? null }];
   });
   const inviteStatus = query.invite === "sent"
     ? { tone: "text-brand border-brand/40 bg-brand/10", message: "Teacher invitation sent." }
@@ -92,13 +98,9 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
               </div>
               <div className="text-sm text-muted">
                 <p>Default {person.defaultMinutes} min</p>
-                <form action={setTeacherSelfReschedulePermission.bind(null, schoolId, person.id)} className="mt-3">
-                  <input type="hidden" name="allowed" value={person.canSelfReschedule ? "false" : "true"} />
-                  <button className="border-b border-brand pb-1 text-brand">
-                    {person.canSelfReschedule ? "Disable own rescheduling" : "Allow own rescheduling"}
-                  </button>
-                </form>
+                <TeacherSchedulingSettingsForm initialAuthority={person.schedulingAuthority} initialCanManageAvailability={person.canManageOwnAvailability} action={setTeacherSchedulingSettings.bind(null,schoolId,person.id)} />
               </div>
+              <details className="sm:col-span-2"><summary className="py-3 text-sm text-brand">Edit weekly availability</summary><div className="pb-5">{availabilityError ? <p role="alert" className="border border-danger/40 bg-danger/10 p-4 text-sm text-danger">Availability could not be loaded, so editing is disabled. Reload the page and try again.</p> : <WeeklyAvailabilityEditor initialBlocks={person.availability} action={saveTeacherWeeklyAvailability.bind(null,schoolId,person.id)} />}</div></details>
             </article>
           ))}
         </div>
