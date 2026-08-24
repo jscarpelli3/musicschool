@@ -1,11 +1,15 @@
 import { notFound, redirect } from "next/navigation";
+import { InstrumentCatalogForm } from "@/components/school-setup/instrument-catalog-form";
 import { SetupHeader } from "@/components/school-setup/setup-header";
+import { TeacherInstrumentFields } from "@/components/staff/teacher-instrument-fields";
+import { TeacherInviteForm } from "@/components/teacher/teacher-invite-form";
 import { createClient } from "@/lib/supabase/server";
 import { createAndInviteTeacher, deactivateTeacherAccess, inviteTeacherAccess, setTeacherSelfReschedulePermission } from "./actions";
+import { updateSchoolInstrumentCatalog } from "./instrument-actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function StaffPage({ params, searchParams }: { params: Promise<{ schoolId: string }>; searchParams: Promise<{ invite?: string; access?: string }> }) {
+export default async function StaffPage({ params, searchParams }: { params: Promise<{ schoolId: string }>; searchParams: Promise<{ invite?: string; access?: string; instruments?: string }> }) {
   const { schoolId } = await params;
   const query = await searchParams;
   const supabase = await createClient();
@@ -13,18 +17,20 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/staff`);
 
-  const [{ data: school }, { data: membership }, { data: teachers }, { data: people }, { data: members }, { data: deliveries }] = await Promise.all([
+  const [{ data: school }, { data: membership }, { data: teachers }, { data: people }, { data: members }, { data: deliveries }, { data: instruments }] = await Promise.all([
     supabase.from("schools").select("id, name").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("teachers").select("person_id, default_lesson_minutes, can_self_reschedule").eq("school_id", schoolId),
     supabase.from("people").select("id, profile_id, first_name, last_name, preferred_name, email, phone, status").eq("school_id", schoolId),
     supabase.from("school_members").select("profile_id, role, status").eq("school_id", schoolId),
     supabase.from("teacher_invitation_deliveries").select("teacher_id, recipient_email, status, created_at").eq("school_id", schoolId).order("created_at", { ascending: false }),
+    supabase.from("school_instruments").select("name").eq("school_id", schoolId).eq("is_active", true).order("name"),
   ]);
   if (!school || !membership) notFound();
   if (membership.role !== "owner") redirect(`/schools/${schoolId}`);
 
   const personById = new Map((people ?? []).map((person) => [person.id, person]));
+  const instrumentNames = (instruments ?? []).map((instrument) => instrument.name);
   const roleByProfile = new Map((members ?? []).map((member) => [member.profile_id, member]));
   const latestDeliveryByTeacher = new Map<string, NonNullable<typeof deliveries>[number]>();
   for (const delivery of deliveries ?? []) if (!latestDeliveryByTeacher.has(delivery.teacher_id)) latestDeliveryByTeacher.set(delivery.teacher_id, delivery);
@@ -40,15 +46,19 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
       <SetupHeader schoolId={schoolId} schoolName={school.name} active="staff" />
       {query.invite ? <p role="status" className={`border-b border-line py-4 text-sm ${query.invite === "sent" ? "text-brand" : "text-danger"}`}>{query.invite === "sent" ? "Teacher invitation sent." : query.invite === "delivery-failed" ? "Teacher access was prepared, but the invitation email failed. Correct the provider problem and resend it." : query.invite === "duplicate" ? "That email is already used by another teacher at this school." : query.invite === "identity-error" ? "The teacher identity could not be prepared. Nothing was linked." : "The teacher invitation could not be prepared."}</p> : null}
       {query.access ? <p role="status" className={`border-b border-line py-4 text-sm ${query.access === "disabled" ? "text-brand" : "text-danger"}`}>{query.access === "disabled" ? "Teacher access disabled for this school." : "Teacher access could not be changed."}</p> : null}
+      {query.instruments ? <p role="status" className={`border-b border-line py-4 text-sm ${query.instruments === "saved" ? "text-brand" : "text-danger"}`}>{query.instruments === "saved" ? "School instruments saved." : "The instrument list could not be saved."}</p> : null}
+      <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
+        <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10"><h2 className="font-display text-3xl">Instruments</h2><p className="mt-3 text-sm leading-6 text-muted">Set the instruments taught at this school. This becomes the shared list used when adding staff.</p></div>
+        <div className="py-10 md:pl-10"><InstrumentCatalogForm instruments={instrumentNames} action={updateSchoolInstrumentCatalog.bind(null, schoolId)} /></div>
+      </section>
       <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
         <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10"><h2 className="font-display text-3xl">Add a teacher</h2><p className="mt-3 text-sm leading-6 text-muted">Create the school record, prepare passwordless access, and send the first invitation.</p></div>
-        <form action={createAndInviteTeacher.bind(null, schoolId)} className="grid gap-5 py-10 md:grid-cols-2 md:pl-10">
+        <TeacherInviteForm action={createAndInviteTeacher.bind(null, schoolId)} disabled={instrumentNames.length === 0} className="grid gap-5 py-10 md:grid-cols-2 md:pl-10">
           <label><span className="text-xs text-muted">First name</span><input required name="first_name" className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand" /></label>
           <label><span className="text-xs text-muted">Last name</span><input required name="last_name" className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand" /></label>
           <label className="md:col-span-2"><span className="text-xs text-muted">Email</span><input required type="email" name="email" className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand" /></label>
-          <label><span className="text-xs text-muted">Default lesson length</span><select name="default_lesson_minutes" defaultValue="30" className="mt-2 w-full border-b border-line bg-transparent py-2"><option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60">60 minutes</option></select></label>
-          <div className="flex items-end"><button className="border border-brand px-5 py-3 text-sm text-brand">Add and invite teacher</button></div>
-        </form>
+          <TeacherInstrumentFields instruments={instrumentNames} />
+        </TeacherInviteForm>
       </section>
       <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
         <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">

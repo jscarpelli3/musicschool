@@ -7,6 +7,7 @@ import { sendResendEmail, ResendRequestError } from "@/lib/resend/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { teacherInvitationEmail } from "@/lib/teachers/invitation-email";
+import { normalizeInstrumentNames } from "@/lib/schools/instruments";
 
 export async function setTeacherSelfReschedulePermission(schoolId: string, teacherId: string, formData: FormData) {
   const allowed = formData.get("allowed") === "true";
@@ -24,15 +25,15 @@ export async function createAndInviteTeacher(schoolId: string, formData: FormDat
   const firstName = String(formData.get("first_name") ?? "").trim();
   const lastName = String(formData.get("last_name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const defaultMinutes = Number(formData.get("default_lesson_minutes") ?? 30);
-  if (!firstName || !lastName || !Number.isInteger(defaultMinutes)) redirect(`/schools/${schoolId}/staff?invite=invalid`);
+  const instruments = normalizeInstrumentNames(formData.getAll("instrument").map(String));
+  if (!firstName || !lastName || instruments.length === 0) redirect(`/schools/${schoolId}/staff?invite=invalid`);
   const supabase = await createClient();
   const { data: teacherId, error } = await supabase.rpc("create_teacher_record", {
     p_school_id: schoolId,
     p_first_name: firstName,
     p_last_name: lastName,
     p_email: email,
-    p_default_lesson_minutes: defaultMinutes,
+    p_instrument_names: instruments,
   });
   if (error || !teacherId) {
     if (error?.message.includes("duplicate_teacher_email")) redirect(`/schools/${schoolId}/staff?invite=duplicate`);

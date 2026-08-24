@@ -2682,6 +2682,36 @@ export type Database = {
           },
         ]
       }
+      school_instruments: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          normalized_name: string
+          school_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          normalized_name?: string
+          school_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          normalized_name?: string
+          school_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       service_product_policy_selections: {
         Row: {
           created_at: string
@@ -3169,6 +3199,27 @@ export type Database = {
           },
         ]
       }
+      teacher_instruments: {
+        Row: {
+          created_at: string
+          instrument_id: string
+          school_id: string
+          teacher_id: string
+        }
+        Insert: {
+          created_at?: string
+          instrument_id: string
+          school_id: string
+          teacher_id: string
+        }
+        Update: {
+          created_at?: string
+          instrument_id?: string
+          school_id?: string
+          teacher_id?: string
+        }
+        Relationships: []
+      }
       teacher_invitation_deliveries: {
         Row: {
           accepted_at: string | null
@@ -3266,13 +3317,17 @@ export type Database = {
       }
       create_teacher_record: {
         Args: {
-          p_default_lesson_minutes?: number
           p_email: string
           p_first_name: string
+          p_instrument_names?: string[]
           p_last_name: string
           p_school_id: string
         }
         Returns: string
+      }
+      set_school_instrument_catalog: {
+        Args: { p_names: string[]; p_school_id: string }
+        Returns: undefined
       }
       add_billing_adjustment: {
         Args: {

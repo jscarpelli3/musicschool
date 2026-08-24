@@ -13,6 +13,7 @@ type HoldToConfirmProps = {
   duration?: number;
   disabled?: boolean;
   disabledMessage?: string;
+  failureMessage?: string;
   onSuccess?: () => void;
   refreshOnSuccess?: boolean;
 };
@@ -26,6 +27,7 @@ export function HoldToConfirm({
   duration = 1400,
   disabled = false,
   disabledMessage = "Complete the required information first.",
+  failureMessage = "We could not complete this action. Please try again.",
   onSuccess,
   refreshOnSuccess = false,
 }: HoldToConfirmProps) {
@@ -57,7 +59,7 @@ export function HoldToConfirm({
           if (refreshOnSuccess) router.refresh();
         }
       } catch {
-        setMessage("We could not record this approval. Please try again.");
+        setMessage(failureMessage);
         setState("error");
       }
     }, duration);
