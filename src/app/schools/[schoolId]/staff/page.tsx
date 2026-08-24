@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { InstrumentCatalogForm } from "@/components/school-setup/instrument-catalog-form";
 import { SetupHeader } from "@/components/school-setup/setup-header";
@@ -86,7 +87,7 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
           {roster.map((person) => (
             <article key={person.id} className="grid gap-4 border-t border-line py-5 first:border-t-0 sm:grid-cols-[1fr_auto]">
               <div>
-                <h3 className="text-lg">{person.preferred_name || person.first_name} {person.last_name}</h3>
+                <h3 className="text-lg"><Link href={`/schools/${schoolId}/staff/${person.id}`} className="hover:text-brand">{person.preferred_name || person.first_name} {person.last_name}</Link></h3>
                 <p className="mt-1 text-sm capitalize text-muted">{person.role} · {person.membershipStatus}</p>
                 <p className="mt-2 text-sm text-muted">{person.email || "No email"}{person.phone ? ` · ${person.phone}` : ""}</p>
                 {person.latestDelivery ? <p className="mt-2 text-xs text-muted">Latest invitation: {person.latestDelivery.status === "accepted" ? "sent to email provider" : person.latestDelivery.status} · {new Date(person.latestDelivery.created_at).toLocaleString()}</p> : null}
@@ -95,6 +96,7 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
                   <button className="border border-brand px-4 py-2 text-sm text-brand">{person.membershipStatus === "active" ? "Send access email again" : person.latestDelivery ? "Resend invitation" : "Invite teacher"}</button>
                 </form>
                 {person.membershipStatus === "active" || person.membershipStatus === "invited" ? <form action={deactivateTeacherAccess.bind(null, schoolId, person.id)} className="mt-3"><button className="text-xs text-danger">Disable teacher access</button></form> : null}
+                <Link href={`/schools/${schoolId}/staff/${person.id}`} className="mt-4 inline-block text-sm text-brand hover:text-brand-hover">View teacher calendar →</Link>
               </div>
               <div className="text-sm text-muted">
                 <p>Default {person.defaultMinutes} min</p>
