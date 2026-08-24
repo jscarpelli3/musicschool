@@ -9,6 +9,16 @@ This document is an engineering audit, not proof that every path has been live-t
 | Run | Date | Environment / commit | Evidence | Result |
 | --- | --- | --- | --- | --- |
 | EH-001 | 2026-08-24 | Local working tree; commit not recorded | Full source scan of `src/app`, `src/components`, `src/lib`, current Supabase migrations, Next.js 16.3 error-handling guidance, package scripts, and existing audit program | Baseline established; implementation and runtime test work remains open |
+| EH-002 | 2026-08-24 | Local working tree; avatar upload hardening | Source inspection, TypeScript, ESLint, production build, client/server validation design, storage-to-profile failure analysis | Avatar upload moved to explicit result states and staged replacement; fault injection remains open |
+
+### EH-002 avatar upload hardening
+
+- File selection now begins the operation immediately and exposes checking/uploading, success, and plain-language failure states through an `aria-live` region.
+- The browser rejects unsupported, oversized, and undecodable selections before submission; the server independently enforces type/size and decodes, rotates, resizes, strips metadata, and rewrites accepted input as WebP.
+- New images use unique object paths. The profile pointer changes only after the new object is stored successfully. If the profile update fails, the staged object is removed and the previous avatar remains active.
+- The previous owned object is removed only after the new profile pointer is committed. Failure to remove that obsolete object can leave an inaccessible orphan, but cannot leave the profile pointing to a partial upload.
+- A global interaction baseline now supplies pointer, transition, hover, keyboard-focus, and disabled states for buttons, links, summaries, and button roles. Feature-specific Tailwind states remain appropriate when they communicate a richer state.
+- Automated storage/database fault injection, cleanup-failure observability, decompression-bomb fixtures, accessibility tooling, and live mobile/browser testing remain required before this path is considered error-complete.
 
 ### EH-001 scope and limitations
 

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { updateProfile, uploadAvatar } from "./actions";
+import { updateProfile } from "./actions";
+import { AvatarUploader } from "./avatar-uploader";
 
 export const dynamic = "force-dynamic";
 const field = "w-full border-b border-line bg-transparent py-3 outline-none transition focus:border-brand";
@@ -51,16 +52,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           <h2 className="font-display text-3xl">Avatar</h2>
           <p className="mt-3 text-sm leading-6 text-muted">Your image follows you across the schools where you work.</p>
         </div>
-        <div className="flex flex-col gap-7 py-10 sm:flex-row sm:items-center md:pl-10">
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatarUrl} alt="Your avatar" className="h-28 w-28 rounded-full border border-line object-cover" />
-          ) : <div className="grid h-28 w-28 place-items-center rounded-full border border-line font-display text-4xl text-brand">{profile.full_name?.[0] ?? "?"}</div>}
-          <form action={uploadAvatar}>
-            <input required name="avatar" type="file" accept="image/jpeg,image/png,image/webp" className="block max-w-64 text-sm text-muted file:mr-3 file:border-0 file:bg-surface-raised file:px-3 file:py-2 file:text-ink" />
-            <button className="mt-5 border-b border-brand pb-1 text-sm text-brand">Update avatar</button>
-          </form>
-        </div>
+        <div className="py-10 md:pl-10"><AvatarUploader currentUrl={avatarUrl ?? null} initial={profile.full_name?.[0] ?? "?"} /></div>
       </section>
 
       <form action={updateProfile} className="grid md:grid-cols-[1fr_2fr]">
