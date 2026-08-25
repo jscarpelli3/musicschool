@@ -177,6 +177,13 @@ Decision: pass / conditional pass / fail / not completed
 - **Open risk:** Items `SEC-TODO-011` through `SEC-TODO-013`; unified email reconciliation; full adversarial matrix and production edge validation. Rate limits are defense in depth and do not replace Supabase hosted Auth controls.
 - **Decision:** Conditional pass for the implemented boundary layer; application checks/build, deployment, and live negative-path rehearsal still required.
 
+#### Status update — 2026-08-25 05:39 UTC
+
+- Commit `0135c40` passed ESLint, TypeScript, and the Next.js 16.3 production build, then deployed through `main`. Migrations `20260825140000`, `20260825141000`, and corrective migration `20260825142000` are live in the linked Supabase project.
+- Linked database lint has no error from the new functions. The only results are the two previously recorded unused-variable warnings in payer-response and lesson-request functions.
+- Live edge testing proved an unsafe `POST /auth/signout` without Origin is rejected `403` before the handler, while the same request with the exact application Origin and `Sec-Fetch-Site: same-origin` reaches the handler and returns its expected `303` redirect.
+- The general rollout gate is cleared. Authenticated creation of a fresh test lesson is still required to verify modal close, realtime owner toast, Resend handoff, and teacher receipt as one end-to-end scenario. The broader adversarial matrix and open TODOs remain explicitly open.
+
 ### SEC-AUDIT-2026-08-19-001 — Family portal identity and tenant-boundary review
 
 - **Date/time:** 2026-08-19 17:28:54 UTC.
