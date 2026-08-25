@@ -3999,6 +3999,14 @@ export type Database = {
           provider_payment_method_id: string
         }[]
       }
+      can_decide_teacher_proposal: {
+        Args: {
+          p_profile_id: string
+          p_school_id: string
+          p_teacher_id: string
+        }
+        Returns: boolean
+      }
       claim_lesson_created_email: {
         Args: { p_entity_id: string; p_entity_type: string }
         Returns: {

@@ -24,7 +24,7 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
     supabase.from("people").select("id, first_name, last_name, preferred_name").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
   ]);
   if (!school || !membership) notFound();
-  if (membership.role !== "teacher") redirect(`/schools/${schoolId}`);
+  if (!new Set(["teacher","owner","admin"]).has(membership.role)) redirect(`/schools/${schoolId}`);
   if (!teacherPerson) {
     return <main className="mx-auto min-h-screen max-w-5xl px-5 py-12 sm:px-8"><h1 className="font-display text-5xl">Teacher setup needed.</h1><p className="mt-5 max-w-xl text-sm leading-6 text-muted">Your login is active, but it is not linked to a teacher record at this school. Ask the school owner to finish your staff setup.</p></main>;
   }
