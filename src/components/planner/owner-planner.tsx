@@ -76,6 +76,8 @@ type Props = {
   showTeacherFilter?: boolean;
   showAvailabilityLabels?: boolean;
   lessonCreationOptions?: LessonCreationOptions;
+  initialTeacherId?: string;
+  allowAllTeachers?: boolean;
 };
 
 type LessonWithParts = Lesson & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> };
@@ -161,11 +163,13 @@ export function OwnerPlanner({
   showTeacherFilter = true,
   showAvailabilityLabels = true,
   lessonCreationOptions,
+  initialTeacherId = "all",
+  allowAllTeachers = true,
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<View>("week");
   const [anchorKey, setAnchorKey] = useState(initialDate);
-  const [teacherId, setTeacherId] = useState("all");
+  const [teacherId, setTeacherId] = useState(initialTeacherId);
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
   const [rescheduleLessonId, setRescheduleLessonId] = useState<string | null>(null);
   const [dragCandidate, setDragCandidate] = useState<RescheduleProposal | null>(null);
@@ -212,7 +216,7 @@ export function OwnerPlanner({
       compactInitialized.current = true;
       frame = requestAnimationFrame(() => {
         setView("day");
-        if (teachers[0]) setTeacherId(teachers[0].id);
+        if (initialTeacherId !== "" && teachers[0]) setTeacherId(teachers[0].id);
       });
     }
     initializeCompactPlanner(compact);
@@ -221,7 +225,7 @@ export function OwnerPlanner({
       compact.removeEventListener("change", initializeCompactPlanner);
       if (frame !== null) cancelAnimationFrame(frame);
     };
-  }, [teachers]);
+  }, [initialTeacherId, teachers]);
 
   const visibleTeachers = teacherId === "all" ? teachers : teachers.filter((teacher) => teacher.id === teacherId);
   const activeTeacherIds = new Set(visibleTeachers.map((teacher) => teacher.id));
@@ -296,7 +300,8 @@ export function OwnerPlanner({
           {showTeacherFilter ? <label className="border-b border-line pb-2 text-sm">
             <span className="mr-3 text-muted">Teacher</span>
             <select value={teacherId} onChange={(event) => setTeacherId(event.target.value)} className="bg-transparent outline-none">
-              <option value="all">All teachers</option>
+              {initialTeacherId === "" ? <option value="">Choose a teacher</option> : null}
+              {allowAllTeachers ? <option value="all">All teachers</option> : null}
               {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}{teacher.isOwner ? " · you" : ""}</option>)}
             </select>
           </label> : null}
@@ -403,7 +408,7 @@ export function OwnerPlanner({
           onReason={setRescheduleReason}
           allowOutsideAvailability={allowOutsideAvailability}
           action={submitReschedule}
-          onClose={() => setProposal(null)}
+          onClose={cancelReschedule}
           onSuccess={() => {
             const reason = rescheduleReasonLabel(...rescheduleReason.split("::", 2) as [string, string]);
             const oldDate = formatCalendarDate(rescheduleLesson.start.dateKey);
@@ -499,7 +504,6 @@ function TimelineView({
   canCreateLesson: boolean;
   onCreateSlot: (slot: CreationSlot) => void;
 }) {
-  const [activeTrack, setActiveTrack] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [hoverSlot, setHoverSlot] = useState<CreationSlot | null>(null);
   const scrollFrame = useRef<HTMLDivElement | null>(null);
@@ -516,10 +520,13 @@ function TimelineView({
 
   function creationSlotFromPointer(event: { currentTarget: HTMLDivElement; clientX: number; clientY: number }, dateKey: string, columnTeachers: Teacher[]) {
     const rect = event.currentTarget.getBoundingClientRect();
-    const teacherIndex = Math.min(columnTeachers.length - 1, Math.max(0, Math.floor(((event.clientX - rect.left) / rect.width) * columnTeachers.length)));
+    const teacherElement = document.elementsFromPoint(event.clientX,event.clientY).find((element): element is HTMLElement => element instanceof HTMLElement && Boolean(element.dataset.teacherId));
+    const teacherId = teacherElement?.dataset.teacherId && columnTeachers.some((teacher) => teacher.id === teacherElement.dataset.teacherId)
+      ? teacherElement.dataset.teacherId
+      : columnTeachers[0].id;
     const rawMinutes = timelineStart + event.clientY - rect.top;
-    const minutes = Math.max(timelineStart, Math.min(timelineEnd - 30, Math.floor(rawMinutes / 30) * 30));
-    return { dateKey, teacherId: columnTeachers[teacherIndex].id, minutes, time: `${String(Math.floor(minutes / 60)).padStart(2,"0")}:${String(minutes % 60).padStart(2,"0")}` };
+    const minutes = Math.max(timelineStart, Math.min(timelineEnd - 30, Math.round(rawMinutes / 5) * 5));
+    return { dateKey, teacherId, minutes, time: `${String(Math.floor(minutes / 60)).padStart(2,"0")}:${String(minutes % 60).padStart(2,"0")}` };
   }
 
   function candidateFromPointer(clientX: number, clientY: number, movingLesson: LessonWithParts) {
@@ -529,22 +536,7 @@ function TimelineView({
     const columnTeachers = columns.find(({ date }) => key(date) === column.dataset.plannerDate)?.teachers ?? [];
     if (!columnTeachers.length) return null;
     const rect = column.getBoundingClientRect();
-    const relativeX = Math.max(0, Math.min(rect.width - 1, clientX - rect.left));
-    const activeIndex = columnTeachers.findIndex((teacher) => activeTrack === `${column.dataset.plannerDate}:${teacher.id}`);
-    let teacherIndex: number;
-    if (activeIndex >= 0 && columnTeachers.length > 1) {
-      const railWidth = 8;
-      const leftRails = activeIndex * railWidth;
-      const rightStart = rect.width - (columnTeachers.length - activeIndex - 1) * railWidth;
-      teacherIndex = relativeX < leftRails
-        ? Math.min(activeIndex - 1, Math.floor(relativeX / railWidth))
-        : relativeX >= rightStart
-          ? activeIndex + 1 + Math.floor((relativeX - rightStart) / railWidth)
-          : activeIndex;
-    } else {
-      teacherIndex = Math.min(columnTeachers.length - 1, Math.floor((relativeX / rect.width) * columnTeachers.length));
-    }
-    const teacher = columnTeachers[Math.max(0, teacherIndex)];
+    const teacher = columnTeachers.find((candidate) => candidate.id === movingLesson.teacher_id) ?? columnTeachers[0];
     const offset = pointerStart.current?.offset ?? 0;
     const rawMinutes = timelineStart + clientY - rect.top - offset;
     const duration = movingLesson.end.minutes - movingLesson.start.minutes;
@@ -553,6 +545,7 @@ function TimelineView({
   }
 
   function beginPointerDrag(event: ReactPointerEvent<HTMLButtonElement>) {
+    event.stopPropagation();
     const lesson = lessons.find((candidate) => candidate.id === event.currentTarget.dataset.lessonId);
     if (!lesson || (rescheduleLesson && lesson.id !== rescheduleLesson.id)) return;
     if (!rescheduleLesson && (!canReschedule || !lesson.can_reschedule)) return;
@@ -569,6 +562,7 @@ function TimelineView({
   }
 
   function movePointerDrag(event: ReactPointerEvent<HTMLButtonElement>) {
+    event.stopPropagation();
     const movingLesson = rescheduleLesson ?? pendingLesson.current;
     if (!pointerStart.current || !movingLesson) return;
     if (Math.hypot(event.clientX - pointerStart.current.x, event.clientY - pointerStart.current.y) < 4) return;
@@ -592,6 +586,7 @@ function TimelineView({
   }
 
   function endPointerDrag(event: ReactPointerEvent<HTMLButtonElement>) {
+    event.stopPropagation();
     if (!pointerStart.current) return;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     pointerStart.current = null;
@@ -610,6 +605,7 @@ function TimelineView({
   }
 
   function cancelPointerDrag(event: ReactPointerEvent<HTMLButtonElement>) {
+    event.stopPropagation();
     const wasDragging = dragStarted.current;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     pointerStart.current = null;
@@ -641,9 +637,7 @@ function TimelineView({
           {columns.map((column) => {
             const dateKey = key(column.date);
             const teacherCount = column.teachers.length;
-            const activeTeacherIndex = dragging ? -1 : column.teachers.findIndex(
-              (teacher) => activeTrack === `${dateKey}:${teacher.id}`,
-            );
+            const activeTeacherIndex = -1;
             return (
               <div
                 key={`${dateKey}-${column.label}`}
@@ -651,44 +645,32 @@ function TimelineView({
                 data-planner-date={dateKey}
                 style={{ height: `${hourCount * 60}px` }}
                 onPointerMove={(event) => {
-                  if (!canCreateLesson || rescheduleLesson || dragging || event.pointerType === "touch") return;
+                  if (!canCreateLesson || !column.teachers.length || rescheduleLesson || dragging || event.pointerType === "touch") return;
                   if (event.target instanceof Element && event.target.closest(".lesson-block")) { setHoverSlot(null); return; }
                   setHoverSlot(creationSlotFromPointer(event, dateKey, column.teachers));
                 }}
-                onPointerLeave={(event) => { if (event.pointerType !== "touch") { setActiveTrack(null); setHoverSlot(null); } }}
+                onPointerLeave={(event) => { if (event.pointerType !== "touch") setHoverSlot(null); }}
                 onClick={(event) => {
-                  if (!canCreateLesson || rescheduleLesson || event.detail === 0) return;
+                  if (!canCreateLesson || !column.teachers.length || rescheduleLesson || event.detail === 0) return;
                   if (event.target instanceof Element && event.target.closest(".lesson-block")) return;
                   onCreateSlot(creationSlotFromPointer(event, dateKey, column.teachers));
                   setHoverSlot(null);
                 }}
               >
-                {hoverSlot?.dateKey === dateKey && column.teachers.some((teacher) => teacher.id === hoverSlot.teacherId) ? <div className="new-lesson-slot" style={lessonTrackStyle(hoverSlot.minutes, hoverSlot.minutes + 30, Math.max(0,column.teachers.findIndex((teacher) => teacher.id === hoverSlot.teacherId)), teacherCount, activeTeacherIndex)}><span>+ {clock(hoverSlot.minutes)}</span></div> : null}
+                {hoverSlot?.dateKey === dateKey && column.teachers.some((teacher) => teacher.id === hoverSlot.teacherId) ? <div className="new-lesson-slot" style={lessonTrackStyle(hoverSlot.minutes, hoverSlot.minutes + 30, 0, 1, -1)}><span>+ {clock(hoverSlot.minutes)}</span></div> : null}
                 {column.teachers.flatMap((teacher, teacherIndex) => availability
                   .filter((rule) => rule.teacher_id === teacher.id && rule.weekday === column.date.getDay() && rule.effective_from <= dateKey && (!rule.effective_until || rule.effective_until >= dateKey))
                   .map((rule) => {
                     const start = timeMinutes(rule.start_time);
                     const end = timeMinutes(rule.end_time);
-                    const trackKey = `${dateKey}:${teacher.id}`;
                     return (
                       <button
                         key={rule.id}
                         type="button"
                         className="availability-block"
-                        data-active={activeTrack === trackKey}
-                        data-collapsed={activeTeacherIndex >= 0 && activeTrack !== trackKey}
-                        aria-pressed={activeTrack === trackKey}
+                        data-teacher-id={teacher.id}
                         title={`${teacher.name} available ${clock(start)}–${clock(end)}`}
                         style={availabilityTrackStyle(start, end, teacherIndex, teacherCount, activeTeacherIndex)}
-                        onPointerEnter={(event) => { if (event.pointerType !== "touch") setActiveTrack(trackKey); }}
-                        onPointerUp={(event) => {
-                          if (event.pointerType === "touch") setActiveTrack((current) => current === trackKey ? null : trackKey);
-                        }}
-                        onClick={(event) => {
-                          if (event.detail === 0) setActiveTrack((current) => current === trackKey ? null : trackKey);
-                        }}
-                        onFocus={() => setActiveTrack(trackKey)}
-                        onBlur={() => setActiveTrack(null)}
                       >
                         {showAvailabilityLabels ? <span className="availability-label">{teacher.name}</span> : null}
                         <span className="sr-only">{teacher.name} available {clock(start)} to {clock(end)}</span>
@@ -700,7 +682,6 @@ function TimelineView({
                   .map((lesson) => {
                     const teacherIndex = Math.max(0, column.teachers.findIndex((teacher) => teacher.id === lesson.teacher_id));
                     const teacher = column.teachers[teacherIndex];
-                    const trackKey = `${dateKey}:${lesson.teacher_id}`;
                     return (
                       <button
                         key={lesson.id}
@@ -708,20 +689,16 @@ function TimelineView({
                         className="lesson-block quick-view-trigger text-left text-xs"
                         data-lesson-id={lesson.id}
                         data-can-reschedule={canReschedule && lesson.can_reschedule}
-                        data-active={activeTrack === trackKey}
-                        data-collapsed={activeTeacherIndex >= 0 && teacherIndex !== activeTeacherIndex}
                         data-reschedule-origin={rescheduleLesson?.id === lesson.id}
                         data-dragging={dragging && rescheduleLesson?.id === lesson.id}
-                        style={lessonTrackStyle(lesson.start.minutes, lesson.end.minutes, teacherIndex, teacherCount, activeTeacherIndex)}
+                        style={rescheduleLesson?.id === lesson.id ? lessonTrackStyle(lesson.start.minutes, lesson.end.minutes, 0, 1, -1) : lessonTrackStyle(lesson.start.minutes, lesson.end.minutes, teacherIndex, teacherCount, activeTeacherIndex)}
                         aria-label={`${studentNames[lesson.student_id]} with ${teacher?.name}, ${clock(lesson.start.minutes)}, ${placeDetails[lesson.place_id]?.name ?? "place not set"}. ${rescheduleLesson?.id === lesson.id ? "Drag to propose another time." : "Open lesson details."}`}
-                        onPointerEnter={(event) => { if (event.pointerType !== "touch") setActiveTrack(trackKey); }}
-                        onFocus={() => setActiveTrack(trackKey)}
-                        onBlur={() => setActiveTrack(null)}
                         onPointerDown={beginPointerDrag}
                         onPointerMove={movePointerDrag}
                         onPointerUp={endPointerDrag}
                         onPointerCancel={cancelPointerDrag}
                         onClick={(event) => {
+                          event.stopPropagation();
                           if (suppressClick.current) {
                             suppressClick.current = false;
                             return;
@@ -756,9 +733,8 @@ function TimelineView({
                     );
                   })}
                 {candidate && rescheduleLesson && candidate.dateKey === dateKey && column.teachers.some((teacher) => teacher.id === candidate.teacherId) ? (() => {
-                  const targetIndex = Math.max(0, column.teachers.findIndex((teacher) => teacher.id === candidate.teacherId));
                   const destinationTime = `${clock(candidate.minutes)}–${clock(candidate.minutes + rescheduleLesson.end.minutes - rescheduleLesson.start.minutes)}`;
-                  return <div className="lesson-drop-ghost" data-valid={candidate.valid} style={lessonTrackStyle(candidate.minutes, candidate.minutes + rescheduleLesson.end.minutes - rescheduleLesson.start.minutes, targetIndex, teacherCount, activeTeacherIndex)}><strong>{destinationTime}</strong><span>{studentNames[rescheduleLesson.student_id]}</span><small>{candidate.issue ?? "Valid time · release to review"}</small></div>;
+                  return <div className="lesson-drop-ghost" data-valid={candidate.valid} style={lessonTrackStyle(candidate.minutes, candidate.minutes + rescheduleLesson.end.minutes - rescheduleLesson.start.minutes, 0, 1, -1)}><strong>{destinationTime}</strong><span>{studentNames[rescheduleLesson.student_id]}</span><small>{candidate.issue ?? "Valid time · release to review"}</small></div>;
                 })() : null}
               </div>
             );
