@@ -7,7 +7,6 @@ const tabs = [
   { key: "spaces", label: "Lesson spaces", path: "places" },
   { key: "policies", label: "Policies & documents", path: "policies" },
   { key: "payments", label: "Payments", path: "payments" },
-  { key: "staff", label: "Staff", path: "staff" },
 ] as const;
 
 export type SetupTab = (typeof tabs)[number]["key"];

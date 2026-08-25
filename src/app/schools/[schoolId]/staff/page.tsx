@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { InstrumentCatalogForm } from "@/components/school-setup/instrument-catalog-form";
-import { SetupHeader } from "@/components/school-setup/setup-header";
 import { TeacherInstrumentFields } from "@/components/staff/teacher-instrument-fields";
 import { TeacherSchedulingSettingsForm } from "@/components/staff/teacher-scheduling-settings-form";
 import { TeacherInviteForm } from "@/components/teacher/teacher-invite-form";
@@ -9,11 +7,10 @@ import { WeeklyAvailabilityEditor } from "@/components/scheduling/weekly-availab
 import { createClient } from "@/lib/supabase/server";
 import { createAndInviteTeacher, deactivateTeacherAccess, inviteTeacherAccess, setTeacherSchedulingSettings } from "./actions";
 import { saveTeacherWeeklyAvailability } from "../availability-actions";
-import { updateSchoolInstrumentCatalog } from "./instrument-actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function StaffPage({ params, searchParams }: { params: Promise<{ schoolId: string }>; searchParams: Promise<{ invite?: string; access?: string; instruments?: string }> }) {
+export default async function StaffPage({ params, searchParams }: { params: Promise<{ schoolId: string }>; searchParams: Promise<{ invite?: string; access?: string }> }) {
   const { schoolId } = await params;
   const query = await searchParams;
   const supabase = await createClient();
@@ -61,14 +58,9 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
-      <SetupHeader schoolId={schoolId} schoolName={school.name} active="staff" />
+      <header className="grid gap-5 border-b border-line pb-8 md:grid-cols-[1fr_2fr] md:items-end"><p className="text-sm text-muted">{school.name}</p><div><p className="text-sm text-brand">People and access</p><h1 className="mt-3 font-display text-5xl tracking-[-0.04em] sm:text-6xl">Staff.</h1><p className="mt-4 max-w-2xl text-sm leading-6 text-muted">Invite teachers, review access, and set each person’s scheduling boundaries.</p></div></header>
       {inviteStatus ? <div id="staff-status" role="alert" className={`scroll-mt-6 border p-4 text-sm leading-6 ${inviteStatus.tone}`}>{inviteStatus.message}</div> : null}
       {query.access ? <p role="status" className={`border-b border-line py-4 text-sm ${query.access === "disabled" ? "text-brand" : "text-danger"}`}>{query.access === "disabled" ? "Teacher access disabled for this school." : "Teacher access could not be changed."}</p> : null}
-      {query.instruments ? <p role="status" className={`border-b border-line py-4 text-sm ${query.instruments === "saved" ? "text-brand" : "text-danger"}`}>{query.instruments === "saved" ? "School instruments saved." : "The instrument list could not be saved."}</p> : null}
-      <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
-        <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10"><h2 className="font-display text-3xl">Instruments</h2><p className="mt-3 text-sm leading-6 text-muted">Set the instruments taught at this school. This becomes the shared list used when adding staff.</p></div>
-        <div className="py-10 md:pl-10"><InstrumentCatalogForm instruments={instrumentNames} action={updateSchoolInstrumentCatalog.bind(null, schoolId)} /></div>
-      </section>
       <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
         <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10"><h2 className="font-display text-3xl">Add a teacher</h2><p className="mt-3 text-sm leading-6 text-muted">Create the school record, prepare passwordless access, and send the first invitation.</p></div>
         <TeacherInviteForm action={createAndInviteTeacher.bind(null, schoolId)} disabled={instrumentNames.length === 0} className="grid gap-5 py-10 md:grid-cols-2 md:pl-10">
@@ -78,31 +70,24 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
           <TeacherInstrumentFields instruments={instrumentNames} />
         </TeacherInviteForm>
       </section>
-      <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
-        <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">
-          <h2 className="font-display text-3xl">Staff roster</h2>
-          <p className="mt-3 text-sm text-muted">{roster.length} teaching staff</p>
+      <section className="py-10">
+        <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5">
+          <div><p className="text-xs uppercase tracking-[0.14em] text-muted">Team</p><h2 className="mt-2 font-display text-4xl">Staff roster</h2></div>
+          <p className="text-sm text-muted">{roster.length} teaching {roster.length === 1 ? "staff member" : "staff members"}</p>
         </div>
-        <div className="py-10 md:pl-10">
+        <div className="grid gap-6 pt-6">
           {roster.map((person) => (
-            <article key={person.id} className="grid gap-4 border-t border-line py-5 first:border-t-0 sm:grid-cols-[1fr_auto]">
-              <div>
-                <h3 className="text-lg"><Link href={`/schools/${schoolId}/staff/${person.id}`} className="hover:text-brand">{person.preferred_name || person.first_name} {person.last_name}</Link></h3>
-                <p className="mt-1 text-sm capitalize text-muted">{person.role} · {person.membershipStatus}</p>
-                <p className="mt-2 text-sm text-muted">{person.email || "No email"}{person.phone ? ` · ${person.phone}` : ""}</p>
-                {person.latestDelivery ? <p className="mt-2 text-xs text-muted">Latest invitation: {person.latestDelivery.status === "accepted" ? "sent to email provider" : person.latestDelivery.status} · {new Date(person.latestDelivery.created_at).toLocaleString()}</p> : null}
-                <form action={inviteTeacherAccess.bind(null, schoolId, person.id)} className="mt-4 flex max-w-xl flex-col gap-3 sm:flex-row">
-                  <label className="flex-1"><span className="sr-only">Teacher email</span><input required type="email" name="email" defaultValue={person.email ?? ""} placeholder="teacher@example.com" className="w-full border-b border-line bg-transparent py-2 text-sm outline-none focus:border-brand" /></label>
-                  <button className="border border-brand px-4 py-2 text-sm text-brand">{person.membershipStatus === "active" ? "Send access email again" : person.latestDelivery ? "Resend invitation" : "Invite teacher"}</button>
-                </form>
-                {person.membershipStatus === "active" || person.membershipStatus === "invited" ? <form action={deactivateTeacherAccess.bind(null, schoolId, person.id)} className="mt-3"><button className="text-xs text-danger">Disable teacher access</button></form> : null}
-                <Link href={`/schools/${schoolId}/staff/${person.id}`} className="mt-4 inline-block text-sm text-brand hover:text-brand-hover">View teacher calendar →</Link>
+            <article key={person.id} className="border border-line bg-surface/40 p-5 sm:p-7">
+              <header className="flex flex-wrap items-start justify-between gap-5 border-b border-line pb-5">
+                <div><div className="flex flex-wrap items-center gap-3"><h3 className="font-display text-3xl"><Link href={`/schools/${schoolId}/staff/${person.id}`} className="hover:text-brand">{person.preferred_name || person.first_name} {person.last_name}</Link></h3><span className={`border px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${person.membershipStatus === "active" ? "border-brand/40 bg-brand/10 text-brand" : "border-line text-muted"}`}>{person.membershipStatus}</span></div><p className="mt-2 text-sm text-muted">{person.email || "No email address"}{person.phone ? ` · ${person.phone}` : ""}</p></div>
+                <Link href={`/schools/${schoolId}/staff/${person.id}`} className="border-b border-brand pb-1 text-sm text-brand hover:text-brand-hover">Open calendar →</Link>
+              </header>
+              <dl className="grid gap-px bg-line sm:grid-cols-3"><div className="bg-canvas p-4"><dt className="text-xs text-muted">School role</dt><dd className="mt-2 text-sm capitalize">{person.role}</dd></div><div className="bg-canvas p-4"><dt className="text-xs text-muted">Schedule changes</dt><dd className="mt-2 text-sm">{person.schedulingAuthority === "manage_assigned_lessons" ? "Can move assigned lessons" : "Owner approval required"}</dd></div><div className="bg-canvas p-4"><dt className="text-xs text-muted">Outside availability</dt><dd className="mt-2 text-sm">{person.outsideAvailabilityPolicy === "require_approval" ? "Teacher approval required" : "Notify teacher"}</dd></div></dl>
+              <div className="grid gap-6 pt-6 lg:grid-cols-2">
+                <details className="border border-line p-4"><summary className="cursor-pointer text-sm text-brand">Access and invitation</summary><div className="pt-5"><form action={inviteTeacherAccess.bind(null, schoolId, person.id)} className="grid gap-3"><label><span className="text-xs text-muted">Login email</span><input required type="email" name="email" defaultValue={person.email ?? ""} placeholder="teacher@example.com" className="mt-2 w-full border-b border-line bg-transparent py-2 text-sm outline-none focus:border-brand" /></label><button className="justify-self-start border border-brand px-4 py-2 text-sm text-brand">{person.membershipStatus === "active" ? "Send access email again" : person.latestDelivery ? "Resend invitation" : "Invite teacher"}</button></form>{person.latestDelivery ? <p className="mt-4 text-xs text-muted">Latest invitation: {person.latestDelivery.status === "accepted" ? "handed to email provider" : person.latestDelivery.status} · {new Date(person.latestDelivery.created_at).toLocaleString()}</p> : null}{person.membershipStatus === "active" || person.membershipStatus === "invited" ? <form action={deactivateTeacherAccess.bind(null, schoolId, person.id)} className="mt-5 border-t border-line pt-4"><button className="text-xs text-danger">Disable teacher access</button></form> : null}</div></details>
+                <details className="border border-line p-4"><summary className="cursor-pointer text-sm text-brand">Scheduling permissions</summary><TeacherSchedulingSettingsForm initialAuthority={person.schedulingAuthority} initialCanManageAvailability={person.canManageOwnAvailability} initialOutsidePolicy={person.outsideAvailabilityPolicy} action={setTeacherSchedulingSettings.bind(null,schoolId,person.id)} /></details>
               </div>
-              <div className="text-sm text-muted">
-                <p>Default {person.defaultMinutes} min</p>
-                <TeacherSchedulingSettingsForm initialAuthority={person.schedulingAuthority} initialCanManageAvailability={person.canManageOwnAvailability} initialOutsidePolicy={person.outsideAvailabilityPolicy} action={setTeacherSchedulingSettings.bind(null,schoolId,person.id)} />
-              </div>
-              <details className="sm:col-span-2"><summary className="py-3 text-sm text-brand">Edit weekly availability</summary><div className="pb-5">{availabilityError ? <p role="alert" className="border border-danger/40 bg-danger/10 p-4 text-sm text-danger">Availability could not be loaded, so editing is disabled. Reload the page and try again.</p> : <WeeklyAvailabilityEditor initialBlocks={person.availability} action={saveTeacherWeeklyAvailability.bind(null,schoolId,person.id)} />}</div></details>
+              <details className="mt-6 border-t border-line"><summary className="cursor-pointer py-4 text-sm text-brand">Weekly availability · {person.availability.length} {person.availability.length === 1 ? "block" : "blocks"}</summary><div className="pb-2">{availabilityError ? <p role="alert" className="border border-danger/40 bg-danger/10 p-4 text-sm text-danger">Availability could not be loaded, so editing is disabled. Reload and try again.</p> : <WeeklyAvailabilityEditor initialBlocks={person.availability} action={saveTeacherWeeklyAvailability.bind(null,schoolId,person.id)} />}</div></details>
             </article>
           ))}
         </div>

@@ -1,15 +1,17 @@
 import { notFound, redirect } from "next/navigation";
 import { SetupHeader } from "@/components/school-setup/setup-header";
+import { InstrumentCatalogForm } from "@/components/school-setup/instrument-catalog-form";
 import { createClient } from "@/lib/supabase/server";
 import { uploadSchoolLogo } from "../media-actions";
 import { updateSchoolInfo } from "./actions";
+import { updateSchoolInstrumentCatalog } from "./instrument-actions";
 
 export const dynamic = "force-dynamic";
 const field = "w-full border-b border-line bg-transparent py-3 outline-none transition focus:border-brand";
 
 export default async function SchoolInfoPage({ params, searchParams }: {
   params: Promise<{ schoolId: string }>;
-  searchParams: Promise<{ status?: string; media?: string }>;
+  searchParams: Promise<{ status?: string; media?: string; instruments?: string }>;
 }) {
   const { schoolId } = await params;
   const query = await searchParams;
@@ -18,9 +20,10 @@ export default async function SchoolInfoPage({ params, searchParams }: {
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/setup`);
 
-  const [{ data: school }, { data: membership }] = await Promise.all([
+  const [{ data: school }, { data: membership }, { data: instruments }] = await Promise.all([
     supabase.from("schools").select("id, name, logo_path, phone, address_line_1, address_line_2, city, region, postal_code, timezone").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
+    supabase.from("school_instruments").select("name").eq("school_id", schoolId).eq("is_active", true).order("name"),
   ]);
   if (!school || !membership) notFound();
   if (membership.role !== "owner" && membership.role !== "admin") redirect(`/schools/${schoolId}`);
@@ -41,6 +44,7 @@ export default async function SchoolInfoPage({ params, searchParams }: {
       <SetupHeader schoolId={schoolId} schoolName={school.name} active="info" />
       {query.status ? <p className={`border-b border-line py-4 text-sm ${query.status === "saved" ? "text-brand" : "text-danger"}`}>{query.status === "saved" ? "School information saved." : "School information could not be saved."}</p> : null}
       {logoMessage ? <p className={`border-b border-line py-4 text-sm ${logoMessage.error ? "text-danger" : "text-brand"}`}>{logoMessage.text}</p> : null}
+      {query.instruments ? <p role="status" className={`border-b border-line py-4 text-sm ${query.instruments === "saved" ? "text-brand" : "text-danger"}`}>{query.instruments === "saved" ? "School instruments saved." : "The instrument list could not be saved."}</p> : null}
       <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
         <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">
           <h2 className="font-display text-3xl">Identity</h2>
@@ -76,6 +80,10 @@ export default async function SchoolInfoPage({ params, searchParams }: {
           <div className="flex items-end"><button className="border-b border-brand pb-2 text-sm text-brand">Save school info →</button></div>
         </div>
       </form>
+      <section className="grid border-t border-line md:grid-cols-[1fr_2fr]">
+        <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10"><h2 className="font-display text-3xl">Instruments</h2><p className="mt-3 text-sm leading-6 text-muted">Choose the instruments this school teaches. Staff profiles use this shared catalog.</p></div>
+        <div className="py-10 md:pl-10"><InstrumentCatalogForm instruments={(instruments ?? []).map((item) => item.name)} action={updateSchoolInstrumentCatalog.bind(null, schoolId)} /></div>
+      </section>
     </main>
   );
 }
