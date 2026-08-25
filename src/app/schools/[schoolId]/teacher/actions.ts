@@ -78,3 +78,12 @@ export async function reportStudentRescheduleRequest(schoolId: string, lessonId:
   if (error) return { ok: false, message: "The request could not be sent to the owner." };
   return { ok: true, message: "The owner has been notified. The lesson has not moved yet." };
 }
+
+export async function decideLessonProposal(schoolId: string, proposalId: string, decision: "accept"|"decline") {
+  if (![schoolId,proposalId].every((value)=>/^[0-9a-f-]{36}$/i.test(value)) || !new Set(["accept","decline"]).has(decision)) return { ok:false,message:"That proposal could not be verified." };
+  const supabase=await createClient();
+  const {data,error}=await supabase.rpc("decide_outside_availability_lesson_proposal",{p_school_id:schoolId,p_proposal_id:proposalId,p_decision:decision});
+  if(error) return {ok:false,message:error.message.includes("conflict")?"That time now conflicts with another lesson. Nothing changed.":"The proposal could not be updated. Try again."};
+  revalidatePath(`/schools/${schoolId}/teacher`); revalidatePath(`/schools/${schoolId}`);
+  return {ok:true,message:data==="applied"?"Lesson accepted and added to the calendar.":"Proposal declined."};
+}

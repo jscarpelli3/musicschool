@@ -90,7 +90,7 @@ export function NewLessonForm({
   initialTime?: string;
   lockedTeacherId?: string;
   compact?: boolean;
-  onCreated?: () => void;
+  onCreated?: (state: CreateLessonState) => void;
 }) {
   const [state, formAction] = useActionState(action, initialState);
   const startingTeacherId = lockedTeacherId ?? (teachers.some((teacher) => teacher.id === defaultTeacherId) ? defaultTeacherId! : "");
@@ -111,8 +111,8 @@ export function NewLessonForm({
   useEffect(() => {
     if (state.status !== "success" || createdHandled.current) return;
     createdHandled.current = true;
-    onCreated?.();
-  }, [onCreated, state.status]);
+    onCreated?.(state);
+  }, [onCreated, state]);
 
   return <form action={formAction} className={compact ? "grid" : "grid md:grid-cols-[1fr_2fr]"}>
     {!compact ? <div className="border-b border-line py-9 md:border-r md:border-b-0 md:pr-10">

@@ -48,11 +48,11 @@ export function LessonCreationDialog({ schoolId, slot, options, lockTeacher, onC
           initialDate={slot.dateKey}
           initialTime={slot.time}
           compact
-          onCreated={() => {
+          onCreated={(result) => {
             onClose();
             window.dispatchEvent(new CustomEvent("common-time:toast", { detail: {
-              title: "Lesson created",
-              message: "The calendar was updated and the teacher notification was queued for delivery.",
+              title: result.outcome === "pending_teacher" ? "Teacher approval requested" : "Lesson created",
+              message: result.outcome === "pending_teacher" ? "Nothing was added to the calendar yet. The teacher must accept the outside-hours proposal." : "The calendar was updated and the teacher notification was queued for delivery.",
               href: `/schools/${schoolId}/staff/${slot.teacherId}`,
             } }));
             router.refresh();

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { dispatchLessonCreatedEmail } from "@/lib/notifications/dispatch-lesson-created-email";
+import { dispatchLessonProposalEmail } from "@/lib/notifications/dispatch-lesson-proposal-email";
 import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
 import { createClient } from "@/lib/supabase/server";
 
@@ -9,6 +10,7 @@ export type CreateLessonState = {
   status: "idle" | "success" | "error";
   message: string;
   reference?: string;
+  outcome?: "created" | "pending_teacher";
 };
 
 const knownErrors: Record<string, string> = {
@@ -75,6 +77,19 @@ export async function createSingleLesson(
     return { status: "error", message: knownErrors.not_authorized };
   }
 
+  const { data: teacherPolicy } = allowOutside ? await supabase.from("teachers").select("outside_availability_policy").eq("school_id", schoolId).eq("person_id", teacherId).maybeSingle() : { data: null };
+  if (allowOutside && teacherPolicy?.outside_availability_policy === "require_approval") {
+    const { data: proposalId, error: proposalError } = await supabase.rpc("create_outside_availability_lesson_proposal", {
+      p_school_id: schoolId, p_product_id: productId, p_teacher_id: teacherId, p_student_id: studentId, p_place_id: placeId,
+      p_local_start: `${date} ${time}:00`, p_schedule_type: scheduleType, p_ends_on: scheduleType === "weekly" ? endsOn : date,
+      p_notes: notes ?? "", p_reason: overrideReason!,
+    });
+    if (proposalError || !proposalId) return { status: "error", message: "The approval request could not be created. Nothing was added to the calendar." };
+    await dispatchLessonProposalEmail(proposalId);
+    revalidatePath(`/schools/${schoolId}/teacher`);
+    return { status: "success", outcome: "pending_teacher", message: "Approval requested. The lesson will be added only if the teacher accepts." };
+  }
+
   const result = scheduleType === "weekly"
     ? await supabase.rpc("create_weekly_lesson_series", {
         p_school_id: schoolId, p_product_id: productId, p_teacher_id: teacherId, p_student_id: studentId,
@@ -112,5 +127,5 @@ export async function createSingleLesson(
   if (/^[0-9a-f-]{36}$/i.test(createdId)) {
     await dispatchLessonCreatedEmail(scheduleType === "weekly" ? "lesson_series" : "lesson_event", createdId);
   }
-  return { status: "success", message: scheduleType === "weekly" ? `${occurrenceCount} weekly lessons created and added to the calendar.` : "Lesson created and added to the calendar." };
+  return { status: "success", outcome: "created", message: scheduleType === "weekly" ? `${occurrenceCount} weekly lessons created and added to the calendar.` : "Lesson created and added to the calendar." };
 }

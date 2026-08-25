@@ -1544,6 +1544,69 @@ export type Database = {
           },
         ]
       }
+      lesson_proposal_email_outbox: {
+        Row: {
+          created_at: string
+          id: string
+          idempotency_key: string
+          message_text: string
+          proposal_id: string
+          provider_email_id: string | null
+          provider_error_code: string | null
+          provider_error_message: string | null
+          recipient_email: string
+          school_id: string
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          message_text: string
+          proposal_id: string
+          provider_email_id?: string | null
+          provider_error_code?: string | null
+          provider_error_message?: string | null
+          recipient_email: string
+          school_id: string
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          message_text?: string
+          proposal_id?: string
+          provider_email_id?: string | null
+          provider_error_code?: string | null
+          provider_error_message?: string | null
+          recipient_email?: string
+          school_id?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_proposal_email_outbox_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_schedule_proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_proposal_email_outbox_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lesson_request_email_outbox: {
         Row: {
           accepted_at: string | null
@@ -1609,6 +1672,131 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "lesson_change_requests"
             referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
+      lesson_schedule_proposals: {
+        Row: {
+          applied_entity_id: string | null
+          applied_entity_type: string | null
+          created_at: string
+          created_by: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          ends_on: string | null
+          id: string
+          notes: string | null
+          place_id: string
+          product_id: string
+          proposed_ends_at: string
+          proposed_local_start: string
+          proposed_starts_at: string
+          reason: string
+          schedule_type: string
+          school_id: string
+          status: string
+          student_id: string
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          applied_entity_id?: string | null
+          applied_entity_type?: string | null
+          created_at?: string
+          created_by: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          ends_on?: string | null
+          id?: string
+          notes?: string | null
+          place_id: string
+          product_id: string
+          proposed_ends_at: string
+          proposed_local_start: string
+          proposed_starts_at: string
+          reason: string
+          schedule_type: string
+          school_id: string
+          status?: string
+          student_id: string
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          applied_entity_id?: string | null
+          applied_entity_type?: string | null
+          created_at?: string
+          created_by?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          ends_on?: string | null
+          id?: string
+          notes?: string | null
+          place_id?: string
+          product_id?: string
+          proposed_ends_at?: string
+          proposed_local_start?: string
+          proposed_starts_at?: string
+          reason?: string
+          schedule_type?: string
+          school_id?: string
+          status?: string
+          student_id?: string
+          teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_schedule_proposals_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_schedule_proposals_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_schedule_proposals_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_schedule_proposals_school_id_place_id_fkey"
+            columns: ["school_id", "place_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_places"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_schedule_proposals_school_id_product_id_fkey"
+            columns: ["school_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "service_products"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_schedule_proposals_school_id_student_id_fkey"
+            columns: ["school_id", "student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["school_id", "person_id"]
+          },
+          {
+            foreignKeyName: "lesson_schedule_proposals_school_id_teacher_id_fkey"
+            columns: ["school_id", "teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["school_id", "person_id"]
           },
         ]
       }
@@ -3926,6 +4114,21 @@ export type Database = {
           sms_delivery_id: string
         }[]
       }
+      create_outside_availability_lesson_proposal: {
+        Args: {
+          p_ends_on: string
+          p_local_start: string
+          p_notes: string
+          p_place_id: string
+          p_product_id: string
+          p_reason: string
+          p_schedule_type: string
+          p_school_id: string
+          p_student_id: string
+          p_teacher_id: string
+        }
+        Returns: string
+      }
       create_school: {
         Args: { school_name: string; school_timezone?: string }
         Returns: string
@@ -3977,6 +4180,15 @@ export type Database = {
       deactivate_teacher_access: {
         Args: { p_school_id: string; p_teacher_id: string }
         Returns: undefined
+      }
+      decide_outside_availability_lesson_proposal: {
+        Args: {
+          p_decision: string
+          p_note?: string
+          p_proposal_id: string
+          p_school_id: string
+        }
+        Returns: string
       }
       enroll_auto_charge_mandate: {
         Args: {
@@ -4328,15 +4540,26 @@ export type Database = {
         Args: { p_names: string[]; p_school_id: string }
         Returns: undefined
       }
-      set_teacher_scheduling_settings: {
-        Args: {
-          p_can_manage_own_availability: boolean
-          p_scheduling_authority: string
-          p_school_id: string
-          p_teacher_id: string
-        }
-        Returns: undefined
-      }
+      set_teacher_scheduling_settings:
+        | {
+            Args: {
+              p_can_manage_own_availability: boolean
+              p_scheduling_authority: string
+              p_school_id: string
+              p_teacher_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_can_manage_own_availability: boolean
+              p_outside_availability_policy: string
+              p_scheduling_authority: string
+              p_school_id: string
+              p_teacher_id: string
+            }
+            Returns: undefined
+          }
       set_teacher_self_reschedule_permission: {
         Args: { p_allowed: boolean; p_school_id: string; p_teacher_id: string }
         Returns: undefined

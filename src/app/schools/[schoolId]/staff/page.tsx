@@ -24,7 +24,7 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
   const [{ data: school }, { data: membership }, { data: teachers }, { data: people }, { data: members }, { data: deliveries }, { data: instruments }, { data: availability, error: availabilityError }] = await Promise.all([
     supabase.from("schools").select("id, name, timezone").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
-    supabase.from("teachers").select("person_id, default_lesson_minutes, scheduling_authority, can_manage_own_availability").eq("school_id", schoolId),
+    supabase.from("teachers").select("person_id, default_lesson_minutes, scheduling_authority, can_manage_own_availability, outside_availability_policy").eq("school_id", schoolId),
     supabase.from("people").select("id, profile_id, first_name, last_name, preferred_name, email, phone, status").eq("school_id", schoolId),
     supabase.from("school_members").select("profile_id, role, status").eq("school_id", schoolId),
     supabase.from("teacher_invitation_deliveries").select("teacher_id, recipient_email, status, created_at").eq("school_id", schoolId).order("created_at", { ascending: false }),
@@ -45,7 +45,7 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
     const person = personById.get(teacher.person_id);
     if (!person) return [];
     const member = person.profile_id ? roleByProfile.get(person.profile_id) : null;
-    return [{ ...person, role: member?.role ?? "teacher", membershipStatus: member?.status ?? "not invited", defaultMinutes: teacher.default_lesson_minutes, schedulingAuthority: teacher.scheduling_authority, canManageOwnAvailability: teacher.can_manage_own_availability, availability: currentAvailability.filter((rule) => rule.teacher_id === person.id).map((rule) => ({ weekday: rule.weekday, start_time: rule.start_time.slice(0,5), end_time: rule.end_time.slice(0,5) })), latestDelivery: latestDeliveryByTeacher.get(person.id) ?? null }];
+    return [{ ...person, role: member?.role ?? "teacher", membershipStatus: member?.status ?? "not invited", defaultMinutes: teacher.default_lesson_minutes, schedulingAuthority: teacher.scheduling_authority, canManageOwnAvailability: teacher.can_manage_own_availability, outsideAvailabilityPolicy: teacher.outside_availability_policy, availability: currentAvailability.filter((rule) => rule.teacher_id === person.id).map((rule) => ({ weekday: rule.weekday, start_time: rule.start_time.slice(0,5), end_time: rule.end_time.slice(0,5) })), latestDelivery: latestDeliveryByTeacher.get(person.id) ?? null }];
   });
   const inviteStatus = query.invite === "sent"
     ? { tone: "text-brand border-brand/40 bg-brand/10", message: "Teacher invitation sent." }
@@ -100,7 +100,7 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
               </div>
               <div className="text-sm text-muted">
                 <p>Default {person.defaultMinutes} min</p>
-                <TeacherSchedulingSettingsForm initialAuthority={person.schedulingAuthority} initialCanManageAvailability={person.canManageOwnAvailability} action={setTeacherSchedulingSettings.bind(null,schoolId,person.id)} />
+                <TeacherSchedulingSettingsForm initialAuthority={person.schedulingAuthority} initialCanManageAvailability={person.canManageOwnAvailability} initialOutsidePolicy={person.outsideAvailabilityPolicy} action={setTeacherSchedulingSettings.bind(null,schoolId,person.id)} />
               </div>
               <details className="sm:col-span-2"><summary className="py-3 text-sm text-brand">Edit weekly availability</summary><div className="pb-5">{availabilityError ? <p role="alert" className="border border-danger/40 bg-danger/10 p-4 text-sm text-danger">Availability could not be loaded, so editing is disabled. Reload the page and try again.</p> : <WeeklyAvailabilityEditor initialBlocks={person.availability} action={saveTeacherWeeklyAvailability.bind(null,schoolId,person.id)} />}</div></details>
             </article>
