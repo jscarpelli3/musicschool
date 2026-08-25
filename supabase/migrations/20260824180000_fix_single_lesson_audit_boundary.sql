@@ -1,6 +1,8 @@
 -- Creating a lesson and its audit entry is one privileged transaction. The
 -- function still verifies the caller's owner/admin membership before writing;
 -- SECURITY DEFINER lets the audit insert remain unavailable as a direct API.
+revoke insert on public.audit_log from public, anon, authenticated;
+
 alter function public.create_single_lesson(
   uuid, uuid, uuid, uuid, uuid, timestamp without time zone, text, boolean, text
 ) security definer;
