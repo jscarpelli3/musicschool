@@ -50,6 +50,11 @@ export function LessonCreationDialog({ schoolId, slot, options, lockTeacher, onC
           compact
           onCreated={() => {
             onClose();
+            window.dispatchEvent(new CustomEvent("common-time:toast", { detail: {
+              title: "Lesson created",
+              message: "The calendar was updated and the teacher notification was queued for delivery.",
+              href: `/schools/${schoolId}/staff/${slot.teacherId}`,
+            } }));
             router.refresh();
           }}
         />
