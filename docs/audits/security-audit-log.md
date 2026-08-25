@@ -144,6 +144,9 @@ Decision: pass / conditional pass / fail / not completed
 - **SEC-TODO-008 — Stripe API baseline and automation:** Run the dedicated Stripe suite against every current outbound operation and webhook event, close findings, then automate signature, replay, concurrency, wrong-account, wrong-mode, idempotency, and failure-recovery cases where practical.
 - **SEC-TODO-009 — Resend API baseline and automation:** Run the dedicated Resend suite against every message kind and webhook event, close findings, then automate signature, replay, ordering, recipient mismatch, idempotency, suppression, retry-limit, and provider-failure cases where practical.
 - **SEC-TODO-010 — Private calendar subscription rehearsal:** Before production family use, test token entropy/storage, invalid and revoked tokens, replacement concurrency, payer-email rotation, inactive accounts, cross-family/cross-school access, empty feeds, event UID/update/cancellation behavior, response caching/referrer headers, provider polling, and accidental token logging. Confirm Google, Apple, and Outlook subscription behavior on representative devices.
+- **SEC-TODO-011 — Complete action-specific throttling:** Add and tune durable limits for owner financial mutations, teacher invites, avatar/media uploads, reschedules, availability changes, and remaining management actions. Validate legitimate bulk workflows before production enforcement.
+- **SEC-TODO-012 — Production Auth/session configuration audit:** Record and test Supabase Auth send/verify limits, session lifetime, inactivity timeout, refresh-token reuse interval/detection, OAuth redirect allowlist, and CAPTCHA escalation policy. Do not substitute client UI logic for hosted Auth enforcement.
+- **SEC-TODO-013 — Edge-header and security telemetry rehearsal:** Verify Vercel Host/Origin/forwarded-IP normalization externally and add redacted alerts for rejected origins/hosts, repeated throttles, invalid provider signatures, webhook failures, and communication reconciliation incidents.
 
 ## Audit process change log
 
@@ -161,6 +164,18 @@ Decision: pass / conditional pass / fail / not completed
 - Added explicit baseline-and-automation work as `SEC-TODO-008` and `SEC-TODO-009`. Future Stripe payment/refund/dispute APIs and Resend message kinds enter these suites automatically when introduced.
 
 ## Audit run log
+
+### SEC-AUDIT-2026-08-25-001 — Application request-boundary and abuse-control audit
+
+- **Date:** 2026-08-25.
+- **Environment:** Local application plus linked hosted Supabase; application deployment pending at this entry.
+- **Trigger/objective:** Inventory every application-controlled route/action boundary and add server-side origin, request-shape, abuse, tenant, and customer separation controls without visible normal-flow friction.
+- **Scope/evidence:** Route Handler and Server Action inventory is recorded in `docs/audits/request-boundary-audit-2026-08-25.md`. Relevant Next.js 16.3 Route Handler and Authentication guides were reviewed before implementation.
+- **Changes deployed to database:** Added inaccessible, atomic `security_rate_limit_buckets`; service-role-only HMAC-keyed consumption/pruning RPCs; lesson-created teacher email outbox/claim/finalization/reconciliation functions. Regenerated database types from the linked schema.
+- **Application controls implemented locally:** production Host allowlist; centralized unsafe browser Origin/Fetch Metadata gate; explicit sensitive-action origin checks; server-side login/portal OTP send and verify; durable throttles for OTP, lesson creation/change requests, billing decisions/mandates, calendar tokens/rotation, and public SMS consent; webhook payload limits; checked email finalization writes; Resend unknown-outcome state for new-lesson mail.
+- **Tenant/customer separation:** no client authorization decision is authoritative. Actions resolve current claims on the server and school/account/teacher ownership inside school-scoped queries or locked RPCs; RLS/grants remain the final direct-access backstop.
+- **Open risk:** Items `SEC-TODO-011` through `SEC-TODO-013`; unified email reconciliation; full adversarial matrix and production edge validation. Rate limits are defense in depth and do not replace Supabase hosted Auth controls.
+- **Decision:** Conditional pass for the implemented boundary layer; application checks/build, deployment, and live negative-path rehearsal still required.
 
 ### SEC-AUDIT-2026-08-19-001 — Family portal identity and tenant-boundary review
 

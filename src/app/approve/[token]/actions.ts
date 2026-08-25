@@ -6,8 +6,21 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createPublicClient } from "@/lib/supabase/public";
 import { dispatchOwnerResponseEmails } from "@/lib/notifications/dispatch-owner-notifications";
+import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
+
+async function protectApprovalAction(token: string, action: string) {
+  if (!/^[A-Za-z0-9_-]{20,256}$/.test(token)) return false;
+  try {
+    await protectServerAction({ scope: `billing.approval.${action}`, subject: `token:${token}`, limit: 10, windowSeconds: 900, blockSeconds: 900 });
+    return true;
+  } catch (caught) {
+    if (caught instanceof RequestBoundaryError) return false;
+    return false;
+  }
+}
 
 export async function approveBillingRequest(token: string) {
+  if (!await protectApprovalAction(token,"approve")) return { ok: false, message: "This request could not be validated. Wait a moment, reload, and try again." };
   const supabase = createPublicClient();
   const { data, error } = await supabase.rpc("approve_billing_request", {
     raw_token: token,
@@ -40,6 +53,7 @@ export async function rejectBillingRequest(token: string, _previous: RejectBilli
   void _previous;
   const reason = String(formData.get("reason") ?? "");
   const note = String(formData.get("note") ?? "").trim();
+  if (!await protectApprovalAction(token,"reject")) return { ok: false, message: "This request could not be validated. Wait a moment, reload, and try again." };
   const supabase = createPublicClient();
   const { data, error } = await supabase.rpc("reject_billing_request", {
     p_note: note || undefined,
@@ -65,6 +79,7 @@ export async function rejectBillingRequest(token: string, _previous: RejectBilli
 }
 
 export async function enrollAutoChargeMandate(token: string, capValue: string, noCap: boolean, noticeDays: number) {
+  if (!await protectApprovalAction(token,"mandate-enroll")) return { ok: false, message: "This request could not be validated. Wait a moment, reload, and try again." };
   const capText = capValue.trim();
   if (!noCap && !/^\d{1,7}(\.\d{1,2})?$/.test(capText)) return { ok: false, message: "Enter a valid monthly maximum." };
   if (!Number.isInteger(noticeDays) || noticeDays < 1 || noticeDays > 14) return { ok: false, message: "Choose a valid advance-notice period." };
@@ -96,6 +111,7 @@ export async function enrollAutoChargeMandate(token: string, capValue: string, n
 }
 
 export async function revokeAutoChargeMandate(token: string) {
+  if (!await protectApprovalAction(token,"mandate-revoke")) return { ok: false, message: "This request could not be validated. Wait a moment, reload, and try again." };
   const requestHeaders = await headers();
   const fingerprint = (value: string) => createHash("sha256").update(value).digest("hex");
   const admin = createAdminClient();

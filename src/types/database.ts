@@ -743,6 +743,7 @@ export type Database = {
       cancellation_policy_rules: {
         Row: {
           late_cancel_disposition: string
+          late_request_guidance: string
           max_self_service_reschedules: number | null
           must_keep_assigned_teacher: boolean
           no_show_disposition: string
@@ -752,9 +753,11 @@ export type Database = {
           student_reschedule_cutoff_hours: number
           teacher_cancel_disposition: string
           timely_cancel_disposition: string
+          timely_request_guidance: string
         }
         Insert: {
           late_cancel_disposition?: string
+          late_request_guidance?: string
           max_self_service_reschedules?: number | null
           must_keep_assigned_teacher?: boolean
           no_show_disposition?: string
@@ -764,9 +767,11 @@ export type Database = {
           student_reschedule_cutoff_hours?: number
           teacher_cancel_disposition?: string
           timely_cancel_disposition?: string
+          timely_request_guidance?: string
         }
         Update: {
           late_cancel_disposition?: string
+          late_request_guidance?: string
           max_self_service_reschedules?: number | null
           must_keep_assigned_teacher?: boolean
           no_show_disposition?: string
@@ -776,6 +781,7 @@ export type Database = {
           student_reschedule_cutoff_hours?: number
           teacher_cancel_disposition?: string
           timely_cancel_disposition?: string
+          timely_request_guidance?: string
         }
         Relationships: [
           {
@@ -830,7 +836,29 @@ export type Database = {
           school_id?: string
           source?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "domain_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "domain_events_causation_id_fkey"
+            columns: ["causation_id"]
+            isOneToOne: false
+            referencedRelation: "domain_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "domain_events_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_deliveries: {
         Row: {
@@ -1005,6 +1033,178 @@ export type Database = {
           suppressed_at?: string
         }
         Relationships: []
+      }
+      lesson_change_requests: {
+        Row: {
+          accounting_state: string
+          billing_account_id: string
+          created_at: string
+          cutoff_hours: number
+          id: string
+          lesson_event_id: string
+          lesson_starts_at_snapshot: string
+          policy_disposition: string
+          policy_guidance: string
+          policy_version_id: string
+          request_type: string
+          requested_at: string
+          requested_resolution: string
+          requester_auth_user_id: string
+          requester_email: string
+          school_id: string
+          status: string
+          updated_at: string
+          within_policy_window: boolean
+        }
+        Insert: {
+          accounting_state: string
+          billing_account_id: string
+          created_at?: string
+          cutoff_hours: number
+          id?: string
+          lesson_event_id: string
+          lesson_starts_at_snapshot: string
+          policy_disposition: string
+          policy_guidance: string
+          policy_version_id: string
+          request_type: string
+          requested_at?: string
+          requested_resolution: string
+          requester_auth_user_id: string
+          requester_email: string
+          school_id: string
+          status?: string
+          updated_at?: string
+          within_policy_window: boolean
+        }
+        Update: {
+          accounting_state?: string
+          billing_account_id?: string
+          created_at?: string
+          cutoff_hours?: number
+          id?: string
+          lesson_event_id?: string
+          lesson_starts_at_snapshot?: string
+          policy_disposition?: string
+          policy_guidance?: string
+          policy_version_id?: string
+          request_type?: string
+          requested_at?: string
+          requested_resolution?: string
+          requester_auth_user_id?: string
+          requester_email?: string
+          school_id?: string
+          status?: string
+          updated_at?: string
+          within_policy_window?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_change_requests_policy_version_id_fkey"
+            columns: ["policy_version_id"]
+            isOneToOne: false
+            referencedRelation: "school_policy_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_change_requests_school_id_billing_account_id_fkey"
+            columns: ["school_id", "billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_change_requests_school_id_lesson_event_id_fkey"
+            columns: ["school_id", "lesson_event_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_events"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
+      lesson_created_email_outbox: {
+        Row: {
+          accepted_at: string | null
+          attempt_count: number
+          claimed_at: string | null
+          created_at: string
+          delivered_at: string | null
+          entity_id: string
+          entity_type: string
+          failed_at: string | null
+          id: string
+          idempotency_key: string
+          message_text: string
+          provider_email_id: string | null
+          provider_error_code: string | null
+          provider_error_message: string | null
+          recipient_email: string
+          school_id: string
+          status: string
+          subject: string
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          attempt_count?: number
+          claimed_at?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          entity_id: string
+          entity_type: string
+          failed_at?: string | null
+          id?: string
+          idempotency_key: string
+          message_text: string
+          provider_email_id?: string | null
+          provider_error_code?: string | null
+          provider_error_message?: string | null
+          recipient_email: string
+          school_id: string
+          status?: string
+          subject: string
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          attempt_count?: number
+          claimed_at?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          failed_at?: string | null
+          id?: string
+          idempotency_key?: string
+          message_text?: string
+          provider_email_id?: string | null
+          provider_error_code?: string | null
+          provider_error_message?: string | null
+          recipient_email?: string
+          school_id?: string
+          status?: string
+          subject?: string
+          teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_created_email_outbox_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_created_email_outbox_school_id_teacher_id_fkey"
+            columns: ["school_id", "teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["school_id", "person_id"]
+          },
+        ]
       }
       lesson_event_changes: {
         Row: {
@@ -1344,6 +1544,74 @@ export type Database = {
           },
         ]
       }
+      lesson_request_email_outbox: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          delivered_at: string | null
+          failed_at: string | null
+          id: string
+          idempotency_key: string
+          message_text: string
+          provider_email_id: string | null
+          provider_error_code: string | null
+          provider_error_message: string | null
+          recipient_email: string
+          recipient_kind: string
+          request_id: string
+          school_id: string
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          failed_at?: string | null
+          id?: string
+          idempotency_key: string
+          message_text: string
+          provider_email_id?: string | null
+          provider_error_code?: string | null
+          provider_error_message?: string | null
+          recipient_email: string
+          recipient_kind: string
+          request_id: string
+          school_id: string
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          failed_at?: string | null
+          id?: string
+          idempotency_key?: string
+          message_text?: string
+          provider_email_id?: string | null
+          provider_error_code?: string | null
+          provider_error_message?: string | null
+          recipient_email?: string
+          recipient_kind?: string
+          request_id?: string
+          school_id?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_request_email_outbox_school_id_request_id_fkey"
+            columns: ["school_id", "request_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_change_requests"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
       lesson_series: {
         Row: {
           created_at: string
@@ -1519,9 +1787,9 @@ export type Database = {
           provider_email_id: string | null
           provider_error_code: string | null
           provider_error_message: string | null
+          recipient_email: string
           retry_count: number
           retry_not_before: string | null
-          recipient_email: string
           school_id: string
           status: string
           subject: string
@@ -1540,9 +1808,9 @@ export type Database = {
           provider_email_id?: string | null
           provider_error_code?: string | null
           provider_error_message?: string | null
+          recipient_email: string
           retry_count?: number
           retry_not_before?: string | null
-          recipient_email: string
           school_id: string
           status?: string
           subject: string
@@ -1561,9 +1829,9 @@ export type Database = {
           provider_email_id?: string | null
           provider_error_code?: string | null
           provider_error_message?: string | null
+          recipient_email?: string
           retry_count?: number
           retry_not_before?: string | null
-          recipient_email?: string
           school_id?: string
           status?: string
           subject?: string
@@ -1655,66 +1923,73 @@ export type Database = {
           },
         ]
       }
-      platform_support_incidents: {
+      payer_calendar_subscriptions: {
         Row: {
-          acknowledged_at: string | null
+          billing_account_id: string
           created_at: string
-          diagnostics: Json
-          failure_category: string
           id: string
-          kind: string
-          reported_by: string
-          resolved_at: string | null
+          last_accessed_at: string | null
+          revoked_at: string | null
           school_id: string
-          source_id: string
-          source_type: string
-          status: string
-          summary: string
+          token_hash: string
         }
         Insert: {
-          acknowledged_at?: string | null
+          billing_account_id: string
           created_at?: string
-          diagnostics?: Json
-          failure_category: string
           id?: string
-          kind: string
-          reported_by: string
-          resolved_at?: string | null
+          last_accessed_at?: string | null
+          revoked_at?: string | null
           school_id: string
-          source_id: string
-          source_type: string
-          status?: string
-          summary: string
+          token_hash: string
         }
         Update: {
-          acknowledged_at?: string | null
+          billing_account_id?: string
           created_at?: string
-          diagnostics?: Json
-          failure_category?: string
           id?: string
-          kind?: string
-          reported_by?: string
-          resolved_at?: string | null
+          last_accessed_at?: string | null
+          revoked_at?: string | null
           school_id?: string
-          source_id?: string
-          source_type?: string
-          status?: string
-          summary?: string
+          token_hash?: string
         }
         Relationships: [
           {
-            foreignKeyName: "platform_support_incidents_reported_by_fkey"
-            columns: ["reported_by"]
+            foreignKeyName: "payer_calendar_subscriptions_school_id_billing_account_id_fkey"
+            columns: ["school_id", "billing_account_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["school_id", "id"]
           },
+        ]
+      }
+      payer_portal_authorizations: {
+        Row: {
+          billing_account_id: string
+          created_at: string
+          normalized_email: string
+          school_id: string
+          updated_at: string
+        }
+        Insert: {
+          billing_account_id: string
+          created_at?: string
+          normalized_email: string
+          school_id: string
+          updated_at?: string
+        }
+        Update: {
+          billing_account_id?: string
+          created_at?: string
+          normalized_email?: string
+          school_id?: string
+          updated_at?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "platform_support_incidents_school_id_fkey"
-            columns: ["school_id"]
+            foreignKeyName: "payer_portal_authorizations_school_id_billing_account_id_fkey"
+            columns: ["school_id", "billing_account_id"]
             isOneToOne: false
-            referencedRelation: "schools"
-            referencedColumns: ["id"]
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["school_id", "id"]
           },
         ]
       }
@@ -2320,6 +2595,69 @@ export type Database = {
           },
         ]
       }
+      platform_support_incidents: {
+        Row: {
+          acknowledged_at: string | null
+          created_at: string
+          diagnostics: Json
+          failure_category: string
+          id: string
+          kind: string
+          reported_by: string
+          resolved_at: string | null
+          school_id: string
+          source_id: string
+          source_type: string
+          status: string
+          summary: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          created_at?: string
+          diagnostics?: Json
+          failure_category: string
+          id?: string
+          kind: string
+          reported_by: string
+          resolved_at?: string | null
+          school_id: string
+          source_id: string
+          source_type: string
+          status?: string
+          summary: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          created_at?: string
+          diagnostics?: Json
+          failure_category?: string
+          id?: string
+          kind?: string
+          reported_by?: string
+          resolved_at?: string | null
+          school_id?: string
+          source_id?: string
+          source_type?: string
+          status?: string
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_support_incidents_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_support_incidents_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_path: string | null
@@ -2403,6 +2741,44 @@ export type Database = {
             columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_instruments: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          normalized_name: string | null
+          school_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          normalized_name?: string | null
+          school_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          normalized_name?: string | null
+          school_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_instruments_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
             referencedColumns: ["id"]
           },
         ]
@@ -2665,8 +3041,8 @@ export type Database = {
           primary_color: string | null
           region: string | null
           slug: string
-          timezone: string
           theme_key: string
+          timezone: string
           updated_at: string
         }
         Insert: {
@@ -2689,8 +3065,8 @@ export type Database = {
           primary_color?: string | null
           region?: string | null
           slug: string
-          timezone: string
           theme_key?: string
+          timezone: string
           updated_at?: string
         }
         Update: {
@@ -2713,8 +3089,8 @@ export type Database = {
           primary_color?: string | null
           region?: string | null
           slug?: string
-          timezone?: string
           theme_key?: string
+          timezone?: string
           updated_at?: string
         }
         Relationships: [
@@ -2727,33 +3103,30 @@ export type Database = {
           },
         ]
       }
-      school_instruments: {
+      security_rate_limit_buckets: {
         Row: {
-          created_at: string
-          id: string
-          is_active: boolean
-          name: string
-          normalized_name: string
-          school_id: string
+          blocked_until: string | null
+          request_count: number
+          scope: string
+          subject_hash: string
           updated_at: string
+          window_started_at: string
         }
         Insert: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          name: string
-          normalized_name?: string
-          school_id: string
+          blocked_until?: string | null
+          request_count?: number
+          scope: string
+          subject_hash: string
           updated_at?: string
+          window_started_at: string
         }
         Update: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          name?: string
-          normalized_name?: string
-          school_id?: string
+          blocked_until?: string | null
+          request_count?: number
+          scope?: string
+          subject_hash?: string
           updated_at?: string
+          window_started_at?: string
         }
         Relationships: []
       }
@@ -3206,50 +3579,6 @@ export type Database = {
           },
         ]
       }
-      teachers: {
-        Row: {
-          bio: string | null
-          can_manage_own_availability: boolean
-          can_self_reschedule: boolean
-          created_at: string
-          default_lesson_minutes: number
-          person_id: string
-          scheduling_authority: string
-          school_id: string
-          updated_at: string
-        }
-        Insert: {
-          bio?: string | null
-          can_manage_own_availability?: boolean
-          can_self_reschedule?: boolean
-          created_at?: string
-          default_lesson_minutes?: number
-          person_id: string
-          scheduling_authority?: string
-          school_id: string
-          updated_at?: string
-        }
-        Update: {
-          bio?: string | null
-          can_manage_own_availability?: boolean
-          can_self_reschedule?: boolean
-          created_at?: string
-          default_lesson_minutes?: number
-          person_id?: string
-          scheduling_authority?: string
-          school_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "teachers_school_id_person_id_fkey"
-            columns: ["school_id", "person_id"]
-            isOneToOne: false
-            referencedRelation: "people"
-            referencedColumns: ["school_id", "id"]
-          },
-        ]
-      }
       teacher_instruments: {
         Row: {
           created_at: string
@@ -3269,7 +3598,22 @@ export type Database = {
           school_id?: string
           teacher_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "teacher_instruments_school_id_instrument_id_fkey"
+            columns: ["school_id", "instrument_id"]
+            isOneToOne: false
+            referencedRelation: "school_instruments"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "teacher_instruments_school_id_teacher_id_fkey"
+            columns: ["school_id", "teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["school_id", "person_id"]
+          },
+        ]
       }
       teacher_invitation_deliveries: {
         Row: {
@@ -3320,7 +3664,73 @@ export type Database = {
           status?: string
           teacher_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "teacher_invitation_deliveries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_invitation_deliveries_recipient_profile_id_fkey"
+            columns: ["recipient_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_invitation_deliveries_school_id_teacher_id_fkey"
+            columns: ["school_id", "teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["school_id", "person_id"]
+          },
+        ]
+      }
+      teachers: {
+        Row: {
+          bio: string | null
+          can_manage_own_availability: boolean
+          can_self_reschedule: boolean
+          created_at: string
+          default_lesson_minutes: number
+          person_id: string
+          scheduling_authority: string
+          school_id: string
+          updated_at: string
+        }
+        Insert: {
+          bio?: string | null
+          can_manage_own_availability?: boolean
+          can_self_reschedule?: boolean
+          created_at?: string
+          default_lesson_minutes?: number
+          person_id: string
+          scheduling_authority?: string
+          school_id: string
+          updated_at?: string
+        }
+        Update: {
+          bio?: string | null
+          can_manage_own_availability?: boolean
+          can_self_reschedule?: boolean
+          created_at?: string
+          default_lesson_minutes?: number
+          person_id?: string
+          scheduling_authority?: string
+          school_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teachers_school_id_person_id_fkey"
+            columns: ["school_id", "person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
       }
       user_view_preferences: {
         Row: {
@@ -3362,24 +3772,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      activate_my_teacher_memberships: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      create_teacher_record: {
-        Args: {
-          p_email: string
-          p_first_name: string
-          p_instrument_names?: string[]
-          p_last_name: string
-          p_school_id: string
-        }
-        Returns: string
-      }
-      set_school_instrument_catalog: {
-        Args: { p_names: string[]; p_school_id: string }
-        Returns: undefined
-      }
+      activate_my_teacher_memberships: { Args: never; Returns: number }
       add_billing_adjustment: {
         Args: {
           p_amount_cents: number
@@ -3415,6 +3808,21 @@ export type Database = {
           provider_payment_method_id: string
         }[]
       }
+      claim_lesson_created_email: {
+        Args: { p_entity_id: string; p_entity_type: string }
+        Returns: {
+          id: string
+          idempotency_key: string
+          message_text: string
+          recipient_email: string
+          school_name: string
+          subject: string
+        }[]
+      }
+      claim_owner_notification_email_retry: {
+        Args: { p_delivery_id: string }
+        Returns: string
+      }
       claim_payment_provider_event: {
         Args: { p_provider_event_id: string; p_stale_after_seconds?: number }
         Returns: {
@@ -3422,13 +3830,13 @@ export type Database = {
           processing_attempts: number
         }[]
       }
+      client_portal_email_access_state: {
+        Args: { p_email: string }
+        Returns: string
+      }
       complete_email_provider_submission: {
         Args: { p_delivery_id: string; p_provider_email_id: string }
         Returns: undefined
-      }
-      claim_owner_notification_email_retry: {
-        Args: { p_delivery_id: string }
-        Returns: string
       }
       complete_payment_method_revocation: {
         Args: { p_payment_method_id: string }
@@ -3468,6 +3876,20 @@ export type Database = {
           p_school_id: string
         }
         Returns: Json
+      }
+      consume_security_rate_limit: {
+        Args: {
+          p_block_seconds?: number
+          p_limit: number
+          p_scope: string
+          p_subject_hash: string
+          p_window_seconds: number
+        }
+        Returns: {
+          allowed: boolean
+          remaining: number
+          retry_after_seconds: number
+        }[]
       }
       create_billing_approval_email_delivery: {
         Args: {
@@ -3519,6 +3941,16 @@ export type Database = {
         }
         Returns: string
       }
+      create_teacher_record: {
+        Args: {
+          p_email: string
+          p_first_name: string
+          p_instrument_names?: string[]
+          p_last_name: string
+          p_school_id: string
+        }
+        Returns: string
+      }
       create_weekly_lesson_series: {
         Args: {
           p_allow_outside_availability?: boolean
@@ -3533,6 +3965,15 @@ export type Database = {
           p_teacher_id: string
         }
         Returns: Json
+      }
+      current_client_portal_access_state: { Args: never; Returns: string }
+      current_teacher_is_assigned_to_student: {
+        Args: { p_school_id: string; p_student_id: string }
+        Returns: boolean
+      }
+      deactivate_teacher_access: {
+        Args: { p_school_id: string; p_teacher_id: string }
+        Returns: undefined
       }
       enroll_auto_charge_mandate: {
         Args: {
@@ -3575,87 +4016,6 @@ export type Database = {
           school_name: string
         }[]
       }
-      get_client_portal_lessons: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          ends_at: string
-          lesson_id: string
-          place_name: string
-          product_name: string
-          reschedule_allowed: boolean
-          reschedule_blocked_reason: string | null
-          school_id: string
-          school_name: string
-          school_timezone: string
-          starts_at: string
-          student_id: string
-          student_name: string
-          teacher_name: string
-        }[]
-      }
-      preview_client_lesson_change_request: {
-        Args: { p_lesson_event_id: string; p_request_type: string }
-        Returns: Json
-      }
-      submit_client_lesson_change_request: {
-        Args: { p_lesson_event_id: string; p_request_type: string; p_requested_resolution: string }
-        Returns: Json
-      }
-      get_pending_lesson_request_emails: {
-        Args: { p_request_id: string }
-        Returns: { id: string; school_id: string; recipient_email: string; subject: string; message_text: string; idempotency_key: string }[]
-      }
-      record_lesson_request_email_submission: {
-        Args: { p_delivery_id: string; p_provider_email_id?: string | null; p_error_code?: string | null; p_error_message?: string | null }
-        Returns: boolean
-      }
-      get_client_portal_calendar_accounts: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          billing_account_id: string
-          school_id: string
-          school_name: string
-          school_timezone: string
-          subscription_active: boolean
-        }[]
-      }
-      rotate_client_portal_calendar_subscription: {
-        Args: { p_school_id: string }
-        Returns: string
-      }
-      revoke_client_portal_calendar_subscription: {
-        Args: { p_school_id: string }
-        Returns: boolean
-      }
-      get_payer_calendar_subscription: {
-        Args: { raw_token: string }
-        Returns: {
-          ends_at: string | null
-          event_status: string | null
-          lesson_id: string | null
-          place_name: string | null
-          product_name: string | null
-          school_id: string
-          school_name: string
-          school_timezone: string
-          starts_at: string | null
-          student_name: string | null
-          teacher_name: string | null
-          updated_at: string | null
-        }[]
-      }
-      client_portal_email_access_state: {
-        Args: { p_email: string }
-        Returns: string
-      }
-      current_client_portal_access_state: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_portal_auth_user_id_by_email: {
-        Args: { p_email: string }
-        Returns: string | null
-      }
       get_billing_approval: {
         Args: { raw_token: string }
         Returns: {
@@ -3673,6 +4033,66 @@ export type Database = {
           school_name: string
         }[]
       }
+      get_client_portal_calendar_accounts: {
+        Args: never
+        Returns: {
+          billing_account_id: string
+          school_id: string
+          school_name: string
+          school_timezone: string
+          subscription_active: boolean
+        }[]
+      }
+      get_client_portal_lessons: {
+        Args: never
+        Returns: {
+          ends_at: string
+          lesson_id: string
+          place_name: string
+          product_name: string
+          reschedule_allowed: boolean
+          reschedule_blocked_reason: string
+          school_id: string
+          school_name: string
+          school_timezone: string
+          starts_at: string
+          student_id: string
+          student_name: string
+          teacher_name: string
+        }[]
+      }
+      get_payer_calendar_subscription: {
+        Args: { raw_token: string }
+        Returns: {
+          ends_at: string
+          event_status: string
+          lesson_id: string
+          place_name: string
+          product_name: string
+          school_id: string
+          school_name: string
+          school_timezone: string
+          starts_at: string
+          student_name: string
+          teacher_name: string
+          updated_at: string
+        }[]
+      }
+      get_pending_lesson_request_emails: {
+        Args: { p_request_id: string }
+        Returns: {
+          id: string
+          idempotency_key: string
+          message_text: string
+          recipient_email: string
+          school_id: string
+          subject: string
+        }[]
+      }
+      get_portal_auth_user_id_by_email: {
+        Args: { p_email: string }
+        Returns: string
+      }
       get_sms_consent_state: {
         Args: { p_phone_e164: string; p_school_name: string }
         Returns: string
@@ -3681,14 +4101,26 @@ export type Database = {
         Args: { allowed_roles: string[]; target_school_id: string }
         Returns: boolean
       }
+      is_current_assigned_teacher: {
+        Args: { p_school_id: string; p_teacher_id: string }
+        Returns: boolean
+      }
       is_school_member: { Args: { target_school_id: string }; Returns: boolean }
       lock_family_billing_period: {
         Args: { p_billing_period_id: string; p_school_id: string }
         Returns: string
       }
       manage_my_notifications: {
-        Args: { p_action: string; p_notification_ids: string[]; p_school_id: string }
+        Args: {
+          p_action: string
+          p_notification_ids: string[]
+          p_school_id: string
+        }
         Returns: number
+      }
+      mark_lesson_created_email_reconciliation_required: {
+        Args: { p_delivery_id: string; p_error_message: string }
+        Returns: undefined
       }
       prepare_family_billing_draft: {
         Args: {
@@ -3697,75 +4129,6 @@ export type Database = {
           p_school_id: string
         }
         Returns: string
-      }
-      retry_billing_approval_email_delivery: {
-        Args: {
-          p_approval_request_id: string
-          p_body_sha256: string
-          p_expires_at: string
-          p_school_id: string
-          p_token_hash: string
-        }
-        Returns: {
-          email_delivery_id: string
-          from_address: string
-          idempotency_key: string
-          recipient_email: string
-          subject: string
-        }[]
-      }
-      report_owner_notification_email_problem: {
-        Args: { p_delivery_id: string }
-        Returns: string
-      }
-      update_billing_contact_email: {
-        Args: {
-          p_billing_account_id: string
-          p_email: string
-          p_school_id: string
-        }
-        Returns: number
-      }
-      preview_lesson_event_billing_disposition: {
-        Args: {
-          p_as_of?: string
-          p_lesson_event_id: string
-          p_school_id: string
-        }
-        Returns: Json
-      }
-      queue_payer_response_notifications: {
-        Args: {
-          p_kind: string
-          p_note?: string
-          p_request: Database["public"]["Tables"]["billing_approval_requests"]["Row"]
-        }
-        Returns: undefined
-      }
-      record_public_sms_opt_in: {
-        Args: {
-          p_full_name: string
-          p_phone_e164: string
-          p_school_name: string
-        }
-        Returns: string
-      }
-      record_lesson_outcome: {
-        Args: {
-          p_lesson_event_id: string
-          p_outcome: string
-          p_school_id: string
-          p_staff_notes?: string
-        }
-        Returns: undefined
-      }
-      report_student_reschedule_request_to_owner: {
-        Args: {
-          p_lesson_event_id: string
-          p_note?: string
-          p_school_id: string
-        }
-        Returns: undefined
       }
       prepare_teacher_invitation: {
         Args: {
@@ -3782,18 +4145,61 @@ export type Database = {
           teacher_name: string
         }[]
       }
-      deactivate_teacher_access: {
-        Args: { p_school_id: string; p_teacher_id: string }
-        Returns: undefined
+      preview_client_lesson_change_request: {
+        Args: { p_lesson_event_id: string; p_request_type: string }
+        Returns: Json
       }
-      reschedule_assigned_lesson_as_teacher: {
+      preview_lesson_event_billing_disposition: {
         Args: {
+          p_as_of?: string
           p_lesson_event_id: string
-          p_local_start: string
-          p_reason: string
           p_school_id: string
         }
         Returns: Json
+      }
+      prune_security_rate_limit_buckets: { Args: never; Returns: number }
+      queue_payer_response_notifications: {
+        Args: {
+          p_kind: string
+          p_note?: string
+          p_request: Database["public"]["Tables"]["billing_approval_requests"]["Row"]
+        }
+        Returns: undefined
+      }
+      record_lesson_created_email_submission: {
+        Args: {
+          p_delivery_id: string
+          p_error_code?: string
+          p_error_message?: string
+          p_provider_email_id?: string
+        }
+        Returns: string
+      }
+      record_lesson_outcome: {
+        Args: {
+          p_lesson_event_id: string
+          p_outcome: string
+          p_school_id: string
+          p_staff_notes?: string
+        }
+        Returns: undefined
+      }
+      record_lesson_request_email_submission: {
+        Args: {
+          p_delivery_id: string
+          p_error_code?: string
+          p_error_message?: string
+          p_provider_email_id?: string
+        }
+        Returns: boolean
+      }
+      record_public_sms_opt_in: {
+        Args: {
+          p_full_name: string
+          p_phone_e164: string
+          p_school_name: string
+        }
+        Returns: string
       }
       record_resend_delivery_event: {
         Args: {
@@ -3836,6 +4242,31 @@ export type Database = {
         }
         Returns: undefined
       }
+      replace_teacher_weekly_availability: {
+        Args: { p_blocks: Json; p_school_id: string; p_teacher_id: string }
+        Returns: undefined
+      }
+      report_owner_notification_email_problem: {
+        Args: { p_delivery_id: string }
+        Returns: string
+      }
+      report_student_reschedule_request_to_owner: {
+        Args: {
+          p_lesson_event_id: string
+          p_note?: string
+          p_school_id: string
+        }
+        Returns: undefined
+      }
+      reschedule_assigned_lesson_as_teacher: {
+        Args: {
+          p_lesson_event_id: string
+          p_local_start: string
+          p_reason: string
+          p_school_id: string
+        }
+        Returns: Json
+      }
       reschedule_lesson_as_owner: {
         Args: {
           p_allow_outside_availability?: boolean
@@ -3849,12 +4280,36 @@ export type Database = {
         }
         Returns: Json
       }
+      retry_billing_approval_email_delivery: {
+        Args: {
+          p_approval_request_id: string
+          p_body_sha256: string
+          p_expires_at: string
+          p_school_id: string
+          p_token_hash: string
+        }
+        Returns: {
+          email_delivery_id: string
+          from_address: string
+          idempotency_key: string
+          recipient_email: string
+          subject: string
+        }[]
+      }
       revise_submitted_billing_period: {
         Args: { p_billing_period_id: string; p_school_id: string }
         Returns: string
       }
       revoke_auto_charge_mandate: {
         Args: { p_evidence?: Json; raw_token: string }
+        Returns: string
+      }
+      revoke_client_portal_calendar_subscription: {
+        Args: { p_school_id: string }
+        Returns: boolean
+      }
+      rotate_client_portal_calendar_subscription: {
+        Args: { p_school_id: string }
         Returns: string
       }
       set_lesson_reschedule_permission: {
@@ -3866,8 +4321,8 @@ export type Database = {
         }
         Returns: undefined
       }
-      replace_teacher_weekly_availability: {
-        Args: { p_blocks: Json; p_school_id: string; p_teacher_id: string }
+      set_school_instrument_catalog: {
+        Args: { p_names: string[]; p_school_id: string }
         Returns: undefined
       }
       set_teacher_scheduling_settings: {
@@ -3880,20 +4335,32 @@ export type Database = {
         Returns: undefined
       }
       set_teacher_self_reschedule_permission: {
-        Args: {
-          p_allowed: boolean
-          p_school_id: string
-          p_teacher_id: string
-        }
+        Args: { p_allowed: boolean; p_school_id: string; p_teacher_id: string }
         Returns: undefined
       }
       shares_school_with: {
         Args: { target_profile_id: string }
         Returns: boolean
       }
+      submit_client_lesson_change_request: {
+        Args: {
+          p_lesson_event_id: string
+          p_request_type: string
+          p_requested_resolution: string
+        }
+        Returns: Json
+      }
       unlock_unsubmitted_billing_period: {
         Args: { p_billing_period_id: string; p_school_id: string }
         Returns: string
+      }
+      update_billing_contact_email: {
+        Args: {
+          p_billing_account_id: string
+          p_email: string
+          p_school_id: string
+        }
+        Returns: number
       }
     }
     Enums: {

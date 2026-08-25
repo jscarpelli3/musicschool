@@ -20,16 +20,19 @@ export async function dispatchLessonRequestEmails(requestId: string) {
         idempotencyKey: delivery.idempotency_key,
         messageKind: "lesson_change_request",
       });
-      await admin.rpc("record_lesson_request_email_submission", { p_delivery_id: delivery.id, p_provider_email_id: result.id });
-      accepted += 1;
+      const recorded = await admin.rpc("record_lesson_request_email_submission", { p_delivery_id: delivery.id, p_provider_email_id: result.id });
+      if (recorded.error) {
+        console.error("Lesson request email accepted but finalization failed", { deliveryId: delivery.id, providerEmailId: result.id, code: recorded.error.code });
+        failed += 1;
+      } else accepted += 1;
     } catch (caught) {
       const provider = caught instanceof ResendRequestError ? caught : null;
-      await admin.rpc("record_lesson_request_email_submission", {
+      const recorded = await admin.rpc("record_lesson_request_email_submission", {
         p_delivery_id: delivery.id,
-        p_provider_email_id: null,
         p_error_code: provider?.code ?? "request_failed",
         p_error_message: caught instanceof Error ? caught.message : "Provider request failed",
       });
+      if (recorded.error) console.error("Lesson request email failure could not be recorded", { deliveryId: delivery.id, code: recorded.error.code });
       failed += 1;
     }
   }

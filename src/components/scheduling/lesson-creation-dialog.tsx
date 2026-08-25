@@ -48,7 +48,10 @@ export function LessonCreationDialog({ schoolId, slot, options, lockTeacher, onC
           initialDate={slot.dateKey}
           initialTime={slot.time}
           compact
-          onCreated={() => router.refresh()}
+          onCreated={() => {
+            onClose();
+            router.refresh();
+          }}
         />
       </div>
     </section>

@@ -7,6 +7,13 @@ export class ResendRequestError extends Error {
   }
 }
 
+export class ResendUnknownOutcomeError extends Error {
+  constructor(message = "Resend did not answer before the request deadline; provider acceptance is unknown.") {
+    super(message);
+    this.name = "ResendUnknownOutcomeError";
+  }
+}
+
 function apiKey() {
   const value = process.env.RESEND_API_KEY?.trim();
   if (!value) throw new Error("Missing required server environment variable: RESEND_API_KEY");
@@ -21,23 +28,31 @@ export async function sendResendEmail(input: {
   text: string;
   idempotencyKey: string;
   messageKind?: string;
+  timeoutMs?: number;
 }) {
-  const response = await fetch(RESEND_EMAILS_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey()}`,
-      "Content-Type": "application/json",
-      "Idempotency-Key": input.idempotencyKey,
-    },
-    body: JSON.stringify({
-      from: input.from,
-      to: [input.to],
-      subject: input.subject,
-      html: input.html,
-      text: input.text,
-      tags: [{ name: "message_kind", value: input.messageKind ?? "billing_approval" }],
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(RESEND_EMAILS_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey()}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": input.idempotencyKey,
+      },
+      body: JSON.stringify({
+        from: input.from,
+        to: [input.to],
+        subject: input.subject,
+        html: input.html,
+        text: input.text,
+        tags: [{ name: "message_kind", value: input.messageKind ?? "billing_approval" }],
+      }),
+      signal: input.timeoutMs ? AbortSignal.timeout(input.timeoutMs) : undefined,
+    });
+  } catch (caught) {
+    if (caught instanceof DOMException && caught.name === "TimeoutError") throw new ResendUnknownOutcomeError();
+    throw caught;
+  }
 
   const result = await response.json().catch(() => null) as { id?: string; name?: string; message?: string } | null;
   if (!response.ok || !result?.id) {

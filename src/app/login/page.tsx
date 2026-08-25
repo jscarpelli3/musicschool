@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { CommonTimeLogo } from "@/components/brand/common-time-logo";
+import { requestEmailCode, verifyEmailCode } from "@/app/auth/actions";
 import { createClient } from "@/lib/supabase/client";
 
 function LoginForm() {
@@ -49,8 +50,8 @@ function LoginForm() {
     setPending(true);
     setError(null);
     const normalized = email.trim().toLowerCase();
-    const { error: authError } = await createClient().auth.signInWithOtp({ email: normalized, options: { shouldCreateUser: false } });
-    if (authError) setError("We could not send a code for that email. Ask the school to confirm your access.");
+    const result = await requestEmailCode(normalized, "account");
+    if (!result.ok) setError(result.message);
     else { setEmail(normalized); setCodeSent(true); }
     setPending(false);
   }
@@ -58,10 +59,8 @@ function LoginForm() {
   async function verifyCode() {
     setPending(true);
     setError(null);
-    const supabase = createClient();
-    const { error: authError } = await supabase.auth.verifyOtp({ email, token: code.replace(/\s/g, ""), type: "email" });
-    if (authError) { setError("That code is invalid or expired. Request a new one and try again."); setPending(false); return; }
-    await supabase.rpc("activate_my_teacher_memberships");
+    const result = await verifyEmailCode(email, code);
+    if (!result.ok) { setError(result.message); setPending(false); return; }
     window.location.assign(safeNext());
   }
 

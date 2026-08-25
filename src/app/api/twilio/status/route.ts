@@ -5,12 +5,15 @@ import { getTwilioStatusCallbackUrl, validateTwilioFormRequest } from "@/lib/twi
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const contentLength = Number(request.headers.get("content-length") ?? 0);
+  if (contentLength > 65_536) return Response.json({ error: "Payload too large." }, { status: 413 });
   const contentType = request.headers.get("content-type")?.split(";", 1)[0]?.trim();
   if (contentType !== "application/x-www-form-urlencoded") {
     return Response.json({ error: "Unsupported content type." }, { status: 415 });
   }
 
   const rawBody = await request.text();
+  if (rawBody.length > 65_536) return Response.json({ error: "Payload too large." }, { status: 413 });
   const form = new URLSearchParams(rawBody);
   const params = Object.fromEntries(form.entries());
   const signature = request.headers.get("x-twilio-signature") ?? "";

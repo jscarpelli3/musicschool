@@ -103,10 +103,15 @@ async function deliverTeacherAccess(schoolId: string, teacherId: string, email: 
       idempotencyKey: invitation.idempotency_key,
       messageKind: "teacher_invitation",
     });
-    await admin.from("teacher_invitation_deliveries").update({ status: "accepted", provider_email_id: sent.id, accepted_at: new Date().toISOString() }).eq("id", invitation.delivery_id).eq("status", "pending");
+    const recorded = await admin.from("teacher_invitation_deliveries").update({ status: "accepted", provider_email_id: sent.id, accepted_at: new Date().toISOString() }).eq("id", invitation.delivery_id).eq("status", "pending").select("id").maybeSingle();
+    if (recorded.error || !recorded.data) {
+      console.error("Teacher invitation accepted but finalization failed", { deliveryId: invitation.delivery_id, providerEmailId: sent.id, code: recorded.error?.code });
+      return "delivery-failed";
+    }
   } catch (sendError) {
     const provider = sendError instanceof ResendRequestError ? sendError : null;
-    await admin.from("teacher_invitation_deliveries").update({ status: "failed", provider_error_code: provider?.code ?? "request_failed", provider_error_message: sendError instanceof Error ? sendError.message.slice(0, 500) : "Provider request failed.", failed_at: new Date().toISOString() }).eq("id", invitation.delivery_id).eq("status", "pending");
+    const recorded = await admin.from("teacher_invitation_deliveries").update({ status: "failed", provider_error_code: provider?.code ?? "request_failed", provider_error_message: sendError instanceof Error ? sendError.message.slice(0, 500) : "Provider request failed.", failed_at: new Date().toISOString() }).eq("id", invitation.delivery_id).eq("status", "pending").select("id").maybeSingle();
+    if (recorded.error || !recorded.data) console.error("Teacher invitation failure could not be recorded", { deliveryId: invitation.delivery_id, code: recorded.error?.code });
     return "delivery-failed";
   }
   return "sent";

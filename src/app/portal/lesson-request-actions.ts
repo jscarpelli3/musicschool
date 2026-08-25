@@ -3,6 +3,7 @@
 import type { Json } from "@/types/database";
 import { createClient } from "@/lib/supabase/server";
 import { dispatchLessonRequestEmails } from "@/lib/notifications/dispatch-lesson-request-emails";
+import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
 
 type RequestType = "cancellation" | "reschedule";
 type Preview = { lesson_id: string; request_type: RequestType; lesson_starts_at: string; cutoff_hours: number; within_policy_window: boolean; policy_disposition: string; policy_guidance: string; accounting_state: string };
@@ -15,13 +16,33 @@ function parsePreview(value: Json): Preview | null {
 }
 export async function previewLessonRequest(lessonId: string, requestType: RequestType) {
   if (!UUID.test(lessonId)) return { ok: false as const, message: "That lesson could not be verified." };
-  const { data, error } = await (await createClient()).rpc("preview_client_lesson_change_request", { p_lesson_event_id: lessonId, p_request_type: requestType });
+  if (!new Set<RequestType>(["cancellation","reschedule"]).has(requestType)) return { ok: false as const, message: "That request type could not be verified." };
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId) return { ok: false as const, message: "Sign in again before requesting a lesson change." };
+  try {
+    await protectServerAction({ scope: "portal.lesson.preview", subject: `actor:${profileId}|lesson:${lessonId}`, limit: 30, windowSeconds: 600 });
+  } catch (caught) {
+    return { ok: false as const, message: caught instanceof RequestBoundaryError && caught.code === "rate_limited" ? "Too many requests were made. Wait a few minutes and try again." : "This request could not be validated. Reload and try again." };
+  }
+  const { data, error } = await supabase.rpc("preview_client_lesson_change_request", { p_lesson_event_id: lessonId, p_request_type: requestType });
   const preview = data ? parsePreview(data) : null;
   return error || !preview ? { ok: false as const, message: "This request cannot be prepared. Contact the school for help." } : { ok: true as const, preview };
 }
 export async function submitLessonRequest(lessonId: string, requestType: RequestType, resolution: "cancel" | "reschedule" | "lesson_credit") {
   if (!UUID.test(lessonId)) return { ok: false as const, message: "That lesson could not be verified." };
-  const { data, error } = await (await createClient()).rpc("submit_client_lesson_change_request", { p_lesson_event_id: lessonId, p_request_type: requestType, p_requested_resolution: resolution });
+  if (!new Set<RequestType>(["cancellation","reschedule"]).has(requestType) || !new Set(["cancel","reschedule","lesson_credit"]).has(resolution)) return { ok: false as const, message: "That request could not be verified." };
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId) return { ok: false as const, message: "Sign in again before requesting a lesson change." };
+  try {
+    await protectServerAction({ scope: "portal.lesson.submit", subject: `actor:${profileId}|lesson:${lessonId}`, limit: 5, windowSeconds: 3600, blockSeconds: 900 });
+  } catch (caught) {
+    return { ok: false as const, message: caught instanceof RequestBoundaryError && caught.code === "rate_limited" ? "Too many change requests were submitted. Wait before trying again." : "This request could not be validated. Reload and try again." };
+  }
+  const { data, error } = await supabase.rpc("submit_client_lesson_change_request", { p_lesson_event_id: lessonId, p_request_type: requestType, p_requested_resolution: resolution });
   const result = data ? object(data) : null;
   if (error || !result || typeof result.request_id !== "string") return { ok: false as const, message: "Your request was not recorded. Please try again." };
   const delivery = await dispatchLessonRequestEmails(result.request_id);

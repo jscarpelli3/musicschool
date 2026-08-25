@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { dispatchLessonCreatedEmail } from "@/lib/notifications/dispatch-lesson-created-email";
+import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
 import { createClient } from "@/lib/supabase/server";
 
 export type CreateLessonState = {
@@ -55,6 +57,11 @@ export async function createSingleLesson(
   const { data: auth } = await supabase.auth.getClaims();
   const profileId = auth?.claims?.sub;
   if (!profileId) return { status: "error", message: "Your session expired. Sign in again before creating the lesson." };
+  try {
+    await protectServerAction({ scope: "lesson.create", subject: `actor:${profileId}|school:${schoolId}`, limit: 30, windowSeconds: 600, blockSeconds: 300 });
+  } catch (caught) {
+    return { status: "error", message: caught instanceof RequestBoundaryError && caught.code === "rate_limited" ? "Too many lesson changes were submitted. Wait a few minutes and try again." : "This request could not be validated. Reload and try again." };
+  }
 
   const { data: membership, error: membershipError } = await supabase
     .from("school_members")
@@ -99,5 +106,11 @@ export async function createSingleLesson(
   const occurrenceCount = scheduleType === "weekly" && typeof createdRecord === "object" && createdRecord !== null && !Array.isArray(createdRecord)
     ? Number((createdRecord as Record<string, unknown>).occurrence_count ?? 0)
     : 1;
+  const createdId = scheduleType === "weekly" && typeof createdRecord === "object" && createdRecord !== null && !Array.isArray(createdRecord)
+    ? String((createdRecord as Record<string, unknown>).series_id ?? "")
+    : String(createdRecord);
+  if (/^[0-9a-f-]{36}$/i.test(createdId)) {
+    await dispatchLessonCreatedEmail(scheduleType === "weekly" ? "lesson_series" : "lesson_event", createdId);
+  }
   return { status: "success", message: scheduleType === "weekly" ? `${occurrenceCount} weekly lessons created and added to the calendar.` : "Lesson created and added to the calendar." };
 }

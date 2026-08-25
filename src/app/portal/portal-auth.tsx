@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CommonTimeLogo } from "@/components/brand/common-time-logo";
-import { createClient } from "@/lib/supabase/client";
+import { requestEmailCode, verifyEmailCode } from "@/app/auth/actions";
 
 export function PortalAuth() {
   const router = useRouter();
@@ -18,37 +18,25 @@ export function PortalAuth() {
     setPending(true);
     setMessage("");
     const normalizedEmail = email.trim().toLowerCase();
-    const supabase = createClient();
-    const { data: accessState, error: accessError } = await supabase.rpc("client_portal_email_access_state", { p_email: normalizedEmail });
-    if (accessError || accessState === "not_setup") {
-      setPending(false);
-      setMessage("Your family portal has not been set up yet. Check the email address or contact your school for help.");
-      return;
-    }
-    if (accessState === "ambiguous") {
-      setPending(false);
-      setMessage("More than one family account uses this email. Please contact the school for help.");
-      return;
-    }
-    const { error } = await supabase.auth.signInWithOtp({ email: normalizedEmail, options: { shouldCreateUser: false } });
+    const result = await requestEmailCode(normalizedEmail, "portal");
     setPending(false);
-    if (error) {
-      setMessage("We could not send a sign-in code. Wait a moment and try again.");
+    if (!result.ok) {
+      setMessage(result.message);
       return;
     }
     setEmail(normalizedEmail);
     setStep("code");
-    setMessage("If this email can receive portal access, a one-time code is on its way.");
+    setMessage(result.message);
   }
 
   async function verifyCode(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
     setMessage("");
-    const { error } = await createClient().auth.verifyOtp({ email, token: code.replace(/\s/g, ""), type: "email" });
+    const result = await verifyEmailCode(email, code);
     setPending(false);
-    if (error) {
-      setMessage("That code is invalid or expired. Check the code or request a new one.");
+    if (!result.ok) {
+      setMessage(result.message);
       return;
     }
     router.refresh();

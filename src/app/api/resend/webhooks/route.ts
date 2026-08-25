@@ -13,7 +13,10 @@ type ResendEvent = {
 export async function POST(request: Request) {
   const secret = process.env.RESEND_WEBHOOK_SECRET?.trim();
   if (!secret) return NextResponse.json({ error: "Webhook is not configured." }, { status: 503 });
+  const contentLength = Number(request.headers.get("content-length") ?? 0);
+  if (contentLength > 262_144) return NextResponse.json({ error: "Payload too large." }, { status: 413 });
   const rawBody = await request.text();
+  if (rawBody.length > 262_144) return NextResponse.json({ error: "Payload too large." }, { status: 413 });
   const eventId = request.headers.get("svix-id");
   const timestamp = request.headers.get("svix-timestamp");
   const signature = request.headers.get("svix-signature");
@@ -56,11 +59,21 @@ export async function POST(request: Request) {
     if (status) {
       const occurred = new Date(occurredAt).toISOString();
       const failed = ["bounced", "complained", "failed", "suppressed"].includes(status);
-      await admin.from("owner_notification_email_outbox").update({
+      const ownerUpdate = await admin.from("owner_notification_email_outbox").update({
         status,
         delivered_at: status === "delivered" ? occurred : undefined,
         failed_at: failed ? occurred : undefined,
       }).eq("provider_email_id", providerEmailId);
+      const lessonUpdate = await admin.from("lesson_created_email_outbox").update({
+        status,
+        delivered_at: status === "delivered" ? occurred : undefined,
+        failed_at: failed ? occurred : undefined,
+        updated_at: occurred,
+      }).eq("provider_email_id", providerEmailId);
+      if (ownerUpdate.error || lessonUpdate.error) {
+        console.error("Resend webhook fallback reconciliation failed", { eventId, ownerCode: ownerUpdate.error?.code, lessonCode: lessonUpdate.error?.code });
+        return NextResponse.json({ error: "Event reconciliation failed." }, { status: 500 });
+      }
     }
   }
   return NextResponse.json({ received: true, duplicate: data === "duplicate" });

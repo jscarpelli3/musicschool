@@ -3,6 +3,30 @@ import { NextResponse } from "next/server";
 import { refreshSession } from "@/lib/supabase/proxy";
 
 const MARKETING_HOSTS = new Set(["commontime.studio", "www.commontime.studio"]);
+const PROVIDER_WEBHOOK_PATHS = ["/api/stripe/webhooks", "/api/resend/webhooks", "/api/twilio/"];
+
+function appHosts() {
+  const hosts = new Set(["app.commontime.studio"]);
+  if (process.env.VERCEL_URL) hosts.add(process.env.VERCEL_URL.toLowerCase());
+  if (process.env.NODE_ENV !== "production") {
+    hosts.add("localhost");
+    hosts.add("127.0.0.1");
+  }
+  return hosts;
+}
+
+function trustedMutationOrigins() {
+  const origins = new Set(["https://app.commontime.studio"]);
+  if (process.env.APP_URL) {
+    try { origins.add(new URL(process.env.APP_URL).origin); } catch { /* invalid deployment configuration is rejected below */ }
+  }
+  if (process.env.VERCEL_URL) origins.add(`https://${process.env.VERCEL_URL}`);
+  if (process.env.NODE_ENV !== "production") {
+    origins.add("http://localhost:3000");
+    origins.add("http://127.0.0.1:3000");
+  }
+  return origins;
+}
 
 export async function proxy(request: NextRequest) {
   const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
@@ -42,6 +66,18 @@ export async function proxy(request: NextRequest) {
     const destination = request.nextUrl.clone();
     destination.pathname = "/coming-soon";
     return NextResponse.rewrite(destination);
+  }
+
+  if (!appHosts().has(hostname)) return new NextResponse("Unrecognized host", { status: 421 });
+
+  const unsafeMethod = !new Set(["GET","HEAD","OPTIONS"]).has(request.method);
+  const providerWebhook = PROVIDER_WEBHOOK_PATHS.some((path) => request.nextUrl.pathname.startsWith(path));
+  if (unsafeMethod && !providerWebhook) {
+    const origin = request.headers.get("origin");
+    const fetchSite = request.headers.get("sec-fetch-site");
+    if (fetchSite === "cross-site" || !origin || !trustedMutationOrigins().has(origin)) {
+      return NextResponse.json({ error: "Untrusted request origin." }, { status: 403 });
+    }
   }
 
   const response = await refreshSession(request);

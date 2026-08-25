@@ -27,12 +27,15 @@ function classify(form: URLSearchParams) {
 }
 
 export async function handleIncomingTwilioMessage(request: Request, validationUrl: string) {
+  const contentLength = Number(request.headers.get("content-length") ?? 0);
+  if (contentLength > 65_536) return Response.json({ error: "Payload too large." }, { status: 413 });
   const contentType = request.headers.get("content-type")?.split(";", 1)[0]?.trim();
   if (contentType !== "application/x-www-form-urlencoded") {
     return Response.json({ error: "Unsupported content type." }, { status: 415 });
   }
 
   const rawBody = await request.text();
+  if (rawBody.length > 65_536) return Response.json({ error: "Payload too large." }, { status: 413 });
   const form = new URLSearchParams(rawBody);
   const signature = request.headers.get("x-twilio-signature") ?? "";
   if (!validateTwilioFormRequest({
