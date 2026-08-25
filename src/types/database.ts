@@ -3695,6 +3695,7 @@ export type Database = {
           can_self_reschedule: boolean
           created_at: string
           default_lesson_minutes: number
+          outside_availability_policy: string
           person_id: string
           scheduling_authority: string
           school_id: string
@@ -3706,6 +3707,7 @@ export type Database = {
           can_self_reschedule?: boolean
           created_at?: string
           default_lesson_minutes?: number
+          outside_availability_policy?: string
           person_id: string
           scheduling_authority?: string
           school_id: string
@@ -3717,6 +3719,7 @@ export type Database = {
           can_self_reschedule?: boolean
           created_at?: string
           default_lesson_minutes?: number
+          outside_availability_policy?: string
           person_id?: string
           scheduling_authority?: string
           school_id?: string
