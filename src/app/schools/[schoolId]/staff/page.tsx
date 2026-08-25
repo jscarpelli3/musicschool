@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { TeacherInstrumentFields } from "@/components/staff/teacher-instrument-fields";
+import { AddTeacherDialog } from "@/components/staff/add-teacher-dialog";
 import { TeacherSchedulingSettingsForm } from "@/components/staff/teacher-scheduling-settings-form";
-import { TeacherInviteForm } from "@/components/teacher/teacher-invite-form";
 import { WeeklyAvailabilityEditor } from "@/components/scheduling/weekly-availability-editor";
 import { createClient } from "@/lib/supabase/server";
 import { createAndInviteTeacher, deactivateTeacherAccess, inviteTeacherAccess, setTeacherSchedulingSettings } from "./actions";
@@ -61,19 +60,10 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
       <header className="grid gap-5 border-b border-line pb-8 md:grid-cols-[1fr_2fr] md:items-end"><p className="text-sm text-muted">{school.name}</p><div><p className="text-sm text-brand">People and access</p><h1 className="mt-3 font-display text-5xl tracking-[-0.04em] sm:text-6xl">Staff.</h1><p className="mt-4 max-w-2xl text-sm leading-6 text-muted">Invite teachers, review access, and set each person’s scheduling boundaries.</p></div></header>
       {inviteStatus ? <div id="staff-status" role="alert" className={`scroll-mt-6 border p-4 text-sm leading-6 ${inviteStatus.tone}`}>{inviteStatus.message}</div> : null}
       {query.access ? <p role="status" className={`border-b border-line py-4 text-sm ${query.access === "disabled" ? "text-brand" : "text-danger"}`}>{query.access === "disabled" ? "Teacher access disabled for this school." : "Teacher access could not be changed."}</p> : null}
-      <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
-        <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10"><h2 className="font-display text-3xl">Add a teacher</h2><p className="mt-3 text-sm leading-6 text-muted">Create the school record, prepare passwordless access, and send the first invitation.</p></div>
-        <TeacherInviteForm action={createAndInviteTeacher.bind(null, schoolId)} disabled={instrumentNames.length === 0} className="grid gap-5 py-10 md:grid-cols-2 md:pl-10">
-          <label><span className="text-xs text-muted">First name</span><input required name="first_name" className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand" /></label>
-          <label><span className="text-xs text-muted">Last name</span><input required name="last_name" className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand" /></label>
-          <label className="md:col-span-2"><span className="text-xs text-muted">Email</span><input required type="email" name="email" className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand" /></label>
-          <TeacherInstrumentFields instruments={instrumentNames} />
-        </TeacherInviteForm>
-      </section>
       <section className="py-10">
         <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5">
           <div><p className="text-xs uppercase tracking-[0.14em] text-muted">Team</p><h2 className="mt-2 font-display text-4xl">Staff roster</h2></div>
-          <p className="text-sm text-muted">{roster.length} teaching {roster.length === 1 ? "staff member" : "staff members"}</p>
+          <div className="text-right"><AddTeacherDialog instruments={instrumentNames} action={createAndInviteTeacher.bind(null, schoolId)} /><p className="mt-3 text-sm text-muted">{roster.length} teaching {roster.length === 1 ? "staff member" : "staff members"}</p></div>
         </div>
         <div className="grid gap-6 pt-6">
           {roster.map((person) => (

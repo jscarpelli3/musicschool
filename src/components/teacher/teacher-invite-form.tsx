@@ -9,9 +9,10 @@ type TeacherInviteFormProps = {
   children: ReactNode;
   className?: string;
   disabled?: boolean;
+  onSuccess?: () => void;
 };
 
-export function TeacherInviteForm({ action, children, className, disabled = false }: TeacherInviteFormProps) {
+export function TeacherInviteForm({ action, children, className, disabled = false, onSuccess }: TeacherInviteFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
 
@@ -48,6 +49,7 @@ export function TeacherInviteForm({ action, children, className, disabled = fals
           failureMessage="The teacher invitation could not be sent. Please try again."
           disabled={disabled}
           disabledMessage="Choose and save at least one school instrument before adding a teacher."
+          onSuccess={onSuccess}
         />
       </div>
     </form>
