@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
 
 export type RescheduleProposal = {
@@ -19,9 +18,6 @@ type LessonSummary = {
   end: { minutes: number };
 };
 
-type TeacherOption = { id: string; name: string };
-type PlaceOption = Record<string, { name: string }>;
-
 export const rescheduleReasons = [
   ["family_request", "Family requested another time"],
   ["teacher_request", "Teacher requested another time"],
@@ -35,81 +31,6 @@ function clock(minutes: number) {
   const hour = Math.floor(minutes / 60);
   const minute = minutes % 60;
   return `${hour % 12 || 12}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
-}
-
-function minutes(value: string) {
-  const [hour, minute] = value.split(":").map(Number);
-  return hour * 60 + minute;
-}
-
-export function RescheduleModeBar({
-  lesson,
-  teachers,
-  places,
-  reason,
-  placeId,
-  allowOutsideAvailability,
-  onEvaluate,
-  onProposal,
-  onReason,
-  onPlace,
-  onAllowOutside,
-  onCancel,
-}: {
-  lesson: LessonSummary;
-  teachers: TeacherOption[];
-  places: PlaceOption;
-  reason: string;
-  placeId: string;
-  allowOutsideAvailability: boolean;
-  onEvaluate: (dateKey: string, teacherId: string, minutes: number) => RescheduleProposal;
-  onProposal: (proposal: RescheduleProposal) => void;
-  onReason: (reason: string) => void;
-  onPlace: (placeId: string) => void;
-  onAllowOutside: (allow: boolean) => void;
-  onCancel: () => void;
-}) {
-  const [manualOpen, setManualOpen] = useState(true);
-  const [manualDate, setManualDate] = useState(lesson.start.dateKey);
-  const [manualTime, setManualTime] = useState(`${String(Math.floor(lesson.start.minutes / 60)).padStart(2, "0")}:${String(lesson.start.minutes % 60).padStart(2, "0")}`);
-  const [manualTeacher, setManualTeacher] = useState(lesson.teacherId);
-  const [manualError, setManualError] = useState<string | null>(null);
-
-  function proposeManual(event: FormEvent) {
-    event.preventDefault();
-    const next = onEvaluate(manualDate, manualTeacher, minutes(manualTime));
-    if (!next.valid && !(allowOutsideAvailability && next.issue === "Outside this teacher’s availability.")) {
-      setManualError(next.issue);
-      return;
-    }
-    setManualError(null);
-    onProposal(next);
-  }
-
-  return (
-    <div className="reschedule-mode my-7 border border-brand px-5 py-6 md:px-7 md:py-7">
-      <div className="flex flex-wrap items-start justify-between gap-5 pl-5 md:max-w-3xl">
-        <div>
-          <p className="text-xs uppercase tracking-[0.14em] text-brand">Reschedule mode</p>
-          <p className="mt-2 text-sm"><span className="hidden md:inline">Drag the highlighted lesson to an available calendar time. </span>Dropping proposes the move; it does not save.</p>
-        </div>
-        <button type="button" onClick={onCancel} className="line-action pb-2 text-sm text-muted hover:text-ink">Cancel</button>
-      </div>
-      <details open={manualOpen} onToggle={(event) => setManualOpen(event.currentTarget.open)} className="mt-5 pl-5 md:max-w-3xl">
-        <summary className="cursor-pointer text-sm text-brand">Choose a time instead</summary>
-        <form onSubmit={proposeManual} className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <label><span className="block text-xs text-muted">Date</span><input required type="date" value={manualDate} onChange={(event) => setManualDate(event.target.value)} className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand" /></label>
-          <label><span className="block text-xs text-muted">Time</span><input required type="time" step="300" value={manualTime} onChange={(event) => setManualTime(event.target.value)} className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand" /></label>
-          <label><span className="block text-xs text-muted">Teacher</span><select value={manualTeacher} onChange={(event) => setManualTeacher(event.target.value)} className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand">{teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}</select></label>
-          <label><span className="block text-xs text-muted">Place</span><select value={placeId} onChange={(event) => onPlace(event.target.value)} className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand">{Object.entries(places).map(([id, place]) => <option key={id} value={id}>{place.name}</option>)}</select></label>
-          <ReasonField value={reason} onChange={onReason} className="sm:col-span-2 lg:col-span-3" />
-          <button className="border border-brand px-5 py-3 text-sm text-brand transition hover:bg-brand hover:text-canvas">Review this move →</button>
-          <label className="flex items-start gap-3 text-xs text-muted sm:col-span-2 lg:col-span-4"><input type="checkbox" checked={allowOutsideAvailability} onChange={(event) => onAllowOutside(event.target.checked)} className="mt-0.5 accent-[var(--color-brand)]" /><span>Owner override: permit a time outside recurring availability. A reason is required. Conflicts remain blocked.</span></label>
-          {manualError ? <p role="alert" className="text-sm text-danger sm:col-span-2 lg:col-span-4">{manualError}</p> : null}
-        </form>
-      </details>
-    </div>
-  );
 }
 
 export function RescheduleConfirmation({

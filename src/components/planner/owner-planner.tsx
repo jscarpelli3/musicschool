@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerE
 import { QuickView } from "@/components/ui/quick-view";
 import { MdHistory } from "react-icons/md";
 import { rescheduleOwnerLesson, setLessonReschedulePermission } from "@/app/schools/[schoolId]/dashboard-actions";
-import { RescheduleConfirmation, RescheduleModeBar, type RescheduleProposal } from "./lesson-reschedule-controls";
+import { RescheduleConfirmation, type RescheduleProposal } from "./lesson-reschedule-controls";
 import "./owner-planner.css";
 
 type Teacher = { id: string; name: string; isOwner: boolean };
@@ -330,29 +330,6 @@ export function OwnerPlanner({
             </div>
           ))}
         </div>
-      ) : null}
-
-      {rescheduleLesson ? (
-        <div className="reschedule-drag-badge" role="status">
-          Rescheduling{dragCandidate?.valid ? ` · ${clock(dragCandidate.minutes)}–${clock(dragCandidate.minutes + rescheduleLesson.end.minutes - rescheduleLesson.start.minutes)}` : ""}
-        </div>
-      ) : null}
-
-      {rescheduleLesson ? (
-        <RescheduleModeBar
-          lesson={{ teacherId: rescheduleLesson.teacher_id, placeId: rescheduleLesson.place_id, billingServiceDate: rescheduleLesson.billing_service_date, start: rescheduleLesson.start, end: rescheduleLesson.end }}
-          teachers={teachers}
-          places={placeDetails}
-          reason={rescheduleReason}
-          placeId={proposedPlaceId}
-          allowOutsideAvailability={allowOutsideAvailability}
-          onEvaluate={(dateKey, targetTeacherId, minutes) => evaluateProposal(dateKey, targetTeacherId, minutes, rescheduleLesson, availability, lessonDetails)}
-          onProposal={setProposal}
-          onReason={setRescheduleReason}
-          onPlace={setProposedPlaceId}
-          onAllowOutside={setAllowOutsideAvailability}
-          onCancel={cancelReschedule}
-        />
       ) : null}
 
       {view === "month" ? (

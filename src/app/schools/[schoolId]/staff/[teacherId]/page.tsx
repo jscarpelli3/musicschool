@@ -55,6 +55,8 @@ export default async function StaffTeacherPage({ params }: {
       teacher={{ id: teacherId, name: teacherName, isOwner: teacher.profile_id === profileId }}
       schedule={schedule}
       contextLabel={`${teacherName}’s schedule`}
+      canReschedule
+      currentTimeMs={now.getTime()}
     />
   </main>;
 }

@@ -8,6 +8,8 @@ export function TeacherScheduleCalendar({
   teacher,
   schedule,
   contextLabel,
+  canReschedule = false,
+  currentTimeMs,
 }: {
   schoolId: string;
   initialDate: string;
@@ -15,10 +17,12 @@ export function TeacherScheduleCalendar({
   teacher: { id: string; name: string; isOwner: boolean };
   schedule: TeacherCalendarData;
   contextLabel: string;
+  canReschedule?: boolean;
+  currentTimeMs: number;
 }) {
   return <OwnerPlanner
     schoolId={schoolId}
-    canReschedule={false}
+    canReschedule={canReschedule}
     initialDate={initialDate}
     timezone={timezone}
     teachers={[teacher]}
@@ -31,7 +35,7 @@ export function TeacherScheduleCalendar({
       ...lesson,
       teacher_id: teacher.id,
       billing_service_date: lesson.starts_at.slice(0, 10),
-      can_reschedule: false,
+      can_reschedule: canReschedule && lesson.reschedule_allowed && lesson.status === "scheduled" && new Date(lesson.starts_at).getTime() > currentTimeMs,
       can_mark_reschedule: false,
     }))}
     contextLabel={contextLabel}

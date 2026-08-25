@@ -220,28 +220,6 @@
   display: none;
 }
 
-.reschedule-drag-badge {
-  position: fixed;
-  z-index: 80;
-  top: 1rem;
-  right: 1rem;
-  padding: 0.65rem 0.9rem;
-  border: 1px solid var(--ui-brand-hover);
-  background: color-mix(in srgb, var(--ui-brand) 88%, var(--ui-canvas));
-  box-shadow: 0 0 2rem color-mix(in srgb, var(--ui-brand) 62%, transparent);
-  color: var(--ui-canvas);
-  font-size: 0.7rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  pointer-events: none;
-  animation: reschedule-badge-pulse 900ms ease-in-out infinite alternate;
-}
-
-@keyframes reschedule-badge-pulse {
-  from { opacity: 0.68; transform: scale(0.96); }
-  to { opacity: 1; transform: scale(1); }
-}
-
 .lesson-block[data-reschedule-origin="true"] {
   z-index: 31;
   opacity: 0.48;
@@ -293,15 +271,6 @@
 .lesson-drop-ghost span { font-size: 0.75rem; }
 .lesson-drop-ghost strong { font-size: 0.78rem; line-height: 1.1; }
 .lesson-drop-ghost small { margin-top: 0.15rem; font-size: 0.625rem; opacity: 0.78; }
-
-.reschedule-mode {
-  background:
-    linear-gradient(115deg, color-mix(in srgb, var(--ui-brand) 13%, var(--ui-surface)) 0%, color-mix(in srgb, var(--ui-brand) 5%, var(--ui-surface)) 72%),
-    var(--ui-surface);
-  box-shadow:
-    var(--ui-shadow-medium),
-    inset 0 0 0 1px color-mix(in srgb, var(--ui-brand) 10%, transparent);
-}
 
 .reschedule-confirm-layer {
   position: fixed;
