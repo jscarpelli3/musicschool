@@ -1,5 +1,6 @@
 import { OwnerPlanner } from "@/components/planner/owner-planner";
 import type { TeacherCalendarData } from "@/lib/scheduling/teacher-calendar";
+import type { LessonCreationOptions } from "./lesson-creation-dialog";
 
 export function TeacherScheduleCalendar({
   schoolId,
@@ -10,6 +11,7 @@ export function TeacherScheduleCalendar({
   contextLabel,
   canReschedule = false,
   currentTimeMs,
+  lessonCreationOptions,
 }: {
   schoolId: string;
   initialDate: string;
@@ -19,6 +21,7 @@ export function TeacherScheduleCalendar({
   contextLabel: string;
   canReschedule?: boolean;
   currentTimeMs: number;
+  lessonCreationOptions?: LessonCreationOptions;
 }) {
   return <OwnerPlanner
     schoolId={schoolId}
@@ -41,5 +44,6 @@ export function TeacherScheduleCalendar({
     contextLabel={contextLabel}
     showTeacherFilter={false}
     showAvailabilityLabels={false}
+    lessonCreationOptions={lessonCreationOptions}
   />;
 }

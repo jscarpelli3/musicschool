@@ -272,6 +272,18 @@
 .lesson-drop-ghost strong { font-size: 0.78rem; line-height: 1.1; }
 .lesson-drop-ghost small { margin-top: 0.15rem; font-size: 0.625rem; opacity: 0.78; }
 
+.new-lesson-slot {
+  position: absolute;
+  z-index: 12;
+  display: grid;
+  place-items: center;
+  border: 1px dashed color-mix(in srgb, var(--ui-brand) 62%, transparent);
+  background: color-mix(in srgb, var(--ui-brand) 13%, transparent);
+  color: var(--ui-brand);
+  font-size: 0.7rem;
+  pointer-events: none;
+}
+
 .reschedule-confirm-layer {
   position: fixed;
   z-index: 60;

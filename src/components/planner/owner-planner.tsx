@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { QuickView } from "@/components/ui/quick-view";
+import { LessonCreationDialog, type LessonCreationOptions } from "@/components/scheduling/lesson-creation-dialog";
 import { MdHistory } from "react-icons/md";
 import { rescheduleOwnerLesson, setLessonReschedulePermission } from "@/app/schools/[schoolId]/dashboard-actions";
 import { RescheduleConfirmation, type RescheduleProposal } from "./lesson-reschedule-controls";
@@ -74,10 +75,12 @@ type Props = {
   contextLabel?: string;
   showTeacherFilter?: boolean;
   showAvailabilityLabels?: boolean;
+  lessonCreationOptions?: LessonCreationOptions;
 };
 
 type LessonWithParts = Lesson & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> };
 type RescheduleNotice = { id: string; message: string };
+type CreationSlot = { dateKey: string; time: string; teacherId: string; minutes: number };
 
 const views = ["day", "week", "month"] as const;
 type View = (typeof views)[number];
@@ -157,6 +160,7 @@ export function OwnerPlanner({
   contextLabel = "School planner",
   showTeacherFilter = true,
   showAvailabilityLabels = true,
+  lessonCreationOptions,
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<View>("week");
@@ -171,6 +175,7 @@ export function OwnerPlanner({
   const [rescheduleReason, setRescheduleReason] = useState("");
   const [proposedPlaceId, setProposedPlaceId] = useState("");
   const [allowOutsideAvailability, setAllowOutsideAvailability] = useState(false);
+  const [creationSlot, setCreationSlot] = useState<CreationSlot | null>(null);
   const compactInitialized = useRef(false);
   const anchor = fromKey(anchorKey);
 
@@ -366,6 +371,8 @@ export function OwnerPlanner({
           showAvailabilityLabels={showAvailabilityLabels}
           onDropError={setDropError}
           onExitReschedule={cancelReschedule}
+          canCreateLesson={Boolean(lessonCreationOptions)}
+          onCreateSlot={setCreationSlot}
         />
       )}
       {selectedLesson ? (
@@ -408,6 +415,7 @@ export function OwnerPlanner({
           }}
         />
       ) : null}
+      {creationSlot && lessonCreationOptions ? <LessonCreationDialog schoolId={schoolId} slot={creationSlot} options={lessonCreationOptions} lockTeacher={!showTeacherFilter && teachers.length === 1} onClose={() => setCreationSlot(null)} /> : null}
     </section>
   );
 }
@@ -467,6 +475,8 @@ function TimelineView({
   onDropError,
   onExitReschedule,
   showAvailabilityLabels,
+  canCreateLesson,
+  onCreateSlot,
 }: {
   view: "day" | "week";
   anchor: Date;
@@ -486,9 +496,12 @@ function TimelineView({
   onDropError: (message: string | null) => void;
   onExitReschedule: () => void;
   showAvailabilityLabels: boolean;
+  canCreateLesson: boolean;
+  onCreateSlot: (slot: CreationSlot) => void;
 }) {
   const [activeTrack, setActiveTrack] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [hoverSlot, setHoverSlot] = useState<CreationSlot | null>(null);
   const scrollFrame = useRef<HTMLDivElement | null>(null);
   const pointerStart = useRef<{ x: number; y: number; offset: number } | null>(null);
   const pendingLesson = useRef<LessonWithParts | null>(null);
@@ -500,6 +513,14 @@ function TimelineView({
     ? teachers.map((teacher) => ({ date: anchor, teachers: [teacher], label: teacher.name }))
     : dates.map((date) => ({ date, teachers, label: new Intl.DateTimeFormat("en-US", { weekday: "short", day: "numeric" }).format(date) }));
   const hourCount = (timelineEnd - timelineStart) / 60;
+
+  function creationSlotFromPointer(event: { currentTarget: HTMLDivElement; clientX: number; clientY: number }, dateKey: string, columnTeachers: Teacher[]) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const teacherIndex = Math.min(columnTeachers.length - 1, Math.max(0, Math.floor(((event.clientX - rect.left) / rect.width) * columnTeachers.length)));
+    const rawMinutes = timelineStart + event.clientY - rect.top;
+    const minutes = Math.max(timelineStart, Math.min(timelineEnd - 30, Math.floor(rawMinutes / 30) * 30));
+    return { dateKey, teacherId: columnTeachers[teacherIndex].id, minutes, time: `${String(Math.floor(minutes / 60)).padStart(2,"0")}:${String(minutes % 60).padStart(2,"0")}` };
+  }
 
   function candidateFromPointer(clientX: number, clientY: number, movingLesson: LessonWithParts) {
     const column = document.elementsFromPoint(clientX, clientY)
@@ -629,8 +650,20 @@ function TimelineView({
                 className="planner-timeline relative border-l border-line"
                 data-planner-date={dateKey}
                 style={{ height: `${hourCount * 60}px` }}
-                onPointerLeave={(event) => { if (event.pointerType !== "touch") setActiveTrack(null); }}
+                onPointerMove={(event) => {
+                  if (!canCreateLesson || rescheduleLesson || dragging || event.pointerType === "touch") return;
+                  if (event.target instanceof Element && event.target.closest(".lesson-block")) { setHoverSlot(null); return; }
+                  setHoverSlot(creationSlotFromPointer(event, dateKey, column.teachers));
+                }}
+                onPointerLeave={(event) => { if (event.pointerType !== "touch") { setActiveTrack(null); setHoverSlot(null); } }}
+                onClick={(event) => {
+                  if (!canCreateLesson || rescheduleLesson || event.detail === 0) return;
+                  if (event.target instanceof Element && event.target.closest(".lesson-block")) return;
+                  onCreateSlot(creationSlotFromPointer(event, dateKey, column.teachers));
+                  setHoverSlot(null);
+                }}
               >
+                {hoverSlot?.dateKey === dateKey && column.teachers.some((teacher) => teacher.id === hoverSlot.teacherId) ? <div className="new-lesson-slot" style={lessonTrackStyle(hoverSlot.minutes, hoverSlot.minutes + 30, Math.max(0,column.teachers.findIndex((teacher) => teacher.id === hoverSlot.teacherId)), teacherCount, activeTeacherIndex)}><span>+ {clock(hoverSlot.minutes)}</span></div> : null}
                 {column.teachers.flatMap((teacher, teacherIndex) => availability
                   .filter((rule) => rule.teacher_id === teacher.id && rule.weekday === column.date.getDay() && rule.effective_from <= dateKey && (!rule.effective_until || rule.effective_until >= dateKey))
                   .map((rule) => {

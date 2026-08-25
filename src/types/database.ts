@@ -3519,6 +3519,21 @@ export type Database = {
         }
         Returns: string
       }
+      create_weekly_lesson_series: {
+        Args: {
+          p_allow_outside_availability?: boolean
+          p_ends_on: string
+          p_local_start: string
+          p_notes?: string
+          p_override_reason?: string
+          p_place_id: string
+          p_product_id: string
+          p_school_id: string
+          p_student_id: string
+          p_teacher_id: string
+        }
+        Returns: Json
+      }
       enroll_auto_charge_mandate: {
         Args: {
           p_advance_notice_days: number

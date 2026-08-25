@@ -20,6 +20,8 @@ const knownErrors: Record<string, string> = {
   invalid_student: "That student is no longer available for scheduling. Reload and choose another student.",
   invalid_place: "That lesson place is no longer available. Reload and choose another place.",
   lesson_too_far_in_past: "A new lesson cannot be created that far in the past.",
+  invalid_recurrence_end: "Choose an end date from the first lesson through one year later.",
+  standalone_lesson_requires_per_session_price: "That offering is billed as a recurring agreement. Choose Weekly instead of One time.",
   not_authorized: "Your account does not have permission to create lessons for this school.",
 };
 
@@ -34,12 +36,16 @@ export async function createSingleLesson(
   const placeId = String(formData.get("place_id") ?? "");
   const date = String(formData.get("date") ?? "");
   const time = String(formData.get("time") ?? "");
+  const scheduleType = String(formData.get("schedule_type") ?? "one_time");
+  const endsOn = String(formData.get("ends_on") ?? "");
   const notes = String(formData.get("notes") ?? "").trim() || undefined;
   const allowOutside = formData.get("allow_outside_availability") === "on";
   const overrideReason = String(formData.get("override_reason") ?? "").trim() || undefined;
 
   if (![schoolId, productId, teacherId, studentId, placeId].every((value) => /^[0-9a-f-]{36}$/i.test(value))
       || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)
+      || !["one_time", "weekly"].includes(scheduleType)
+      || (scheduleType === "weekly" && !/^\d{4}-\d{2}-\d{2}$/.test(endsOn))
       || Number(time.slice(3)) % 5 !== 0
       || (notes?.length ?? 0) > 1000 || (overrideReason?.length ?? 0) > 240) {
     return { status: "error", message: "Check the lesson details and try again." };
@@ -62,19 +68,20 @@ export async function createSingleLesson(
     return { status: "error", message: knownErrors.not_authorized };
   }
 
-  const { data: eventId, error } = await supabase.rpc("create_single_lesson", {
-    p_school_id: schoolId,
-    p_product_id: productId,
-    p_teacher_id: teacherId,
-    p_student_id: studentId,
-    p_place_id: placeId,
-    p_local_start: `${date} ${time}:00`,
-    p_notes: notes,
-    p_allow_outside_availability: allowOutside,
-    p_override_reason: overrideReason,
-  });
+  const result = scheduleType === "weekly"
+    ? await supabase.rpc("create_weekly_lesson_series", {
+        p_school_id: schoolId, p_product_id: productId, p_teacher_id: teacherId, p_student_id: studentId,
+        p_place_id: placeId, p_local_start: `${date} ${time}:00`, p_ends_on: endsOn, p_notes: notes,
+        p_allow_outside_availability: allowOutside, p_override_reason: overrideReason,
+      })
+    : await supabase.rpc("create_single_lesson", {
+        p_school_id: schoolId, p_product_id: productId, p_teacher_id: teacherId, p_student_id: studentId,
+        p_place_id: placeId, p_local_start: `${date} ${time}:00`, p_notes: notes,
+        p_allow_outside_availability: allowOutside, p_override_reason: overrideReason,
+      });
+  const { data: createdRecord, error } = result;
 
-  if (error || !eventId) {
+  if (error || !createdRecord) {
     const knownCode = Object.keys(knownErrors).find((code) => error?.message.includes(code));
     if (knownCode) return { status: "error", message: knownErrors[knownCode] };
     const reference = crypto.randomUUID().slice(0, 8).toUpperCase();
@@ -89,5 +96,8 @@ export async function createSingleLesson(
   revalidatePath(`/schools/${schoolId}`);
   revalidatePath(`/schools/${schoolId}/teacher`);
   revalidatePath(`/schools/${schoolId}/staff/${teacherId}`);
-  return { status: "success", message: "Lesson created and added to the calendar." };
+  const occurrenceCount = scheduleType === "weekly" && typeof createdRecord === "object" && createdRecord !== null && !Array.isArray(createdRecord)
+    ? Number((createdRecord as Record<string, unknown>).occurrence_count ?? 0)
+    : 1;
+  return { status: "success", message: scheduleType === "weekly" ? `${occurrenceCount} weekly lessons created and added to the calendar.` : "Lesson created and added to the calendar." };
 }

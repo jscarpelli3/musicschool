@@ -43,7 +43,7 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
       .select("id, product_id, teacher_id, student_id, starts_at, ends_at, status, cancellation_timing, notes, place_id, reschedule_allowed, reschedule_blocked_reason, reschedule_reason_code, reschedule_reason_detail")
       .eq("school_id", schoolId)
       .order("starts_at"),
-    supabase.from("service_products").select("id, name, sessions_per_interval, interval_count, interval_unit").eq("school_id", schoolId),
+    supabase.from("service_products").select("id, name, sessions_per_interval, interval_count, interval_unit, duration_minutes, price_cents, currency, status, format").eq("school_id", schoolId),
     supabase
       .from("student_contacts")
       .select("student_id, contact_person_id, relationship, is_primary, is_billing_contact")
@@ -56,7 +56,7 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
       .from("billing_accounts")
       .select("id, name, billing_contact_person_id")
       .eq("school_id", schoolId),
-    supabase.from("lesson_places").select("id, name, details").eq("school_id", schoolId),
+    supabase.from("lesson_places").select("id, name, details, status").eq("school_id", schoolId),
     supabase.from("user_view_preferences").select("settings").eq("school_id", schoolId).eq("profile_id", profileId).eq("view_key", "student_roster").maybeSingle(),
     supabase.from("lesson_event_price_snapshots").select("lesson_event_id, billing_service_date").eq("school_id", schoolId),
   ]);
@@ -251,6 +251,14 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
           can_reschedule: lesson.reschedule_allowed && lesson.status === "scheduled" && new Date(lesson.starts_at).getTime() > now,
           can_mark_reschedule: canManageSchool || currentTeacherId === lesson.teacher_id,
         }))}
+        lessonCreationOptions={canManageSchool ? {
+          students: Object.entries(studentNames).map(([id,label]) => ({ id, label })),
+          teachers: teachers.map((teacher) => ({ id: teacher.id, label: teacher.name })),
+          products: (productRows ?? []).filter((product) => product.status === "active" && product.format === "private_lesson").map((product) => ({ id: product.id, label: product.name, durationMinutes: product.duration_minutes, priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price_cents / 100) })),
+          places: (placeRows ?? []).filter((place) => place.status === "active").map((place) => ({ id: place.id, label: place.name })),
+          availability: availabilityRows ?? [],
+          today: initialDate,
+        } : undefined}
       /> : null}
     </main>
   );

@@ -28,6 +28,15 @@ export default async function StaffTeacherPage({ params }: {
   const rangeStart = new Date(now.getTime() - 14 * 86_400_000).toISOString();
   const rangeEnd = new Date(now.getTime() + 90 * 86_400_000).toISOString();
   const schedule = await loadTeacherCalendar(supabase, schoolId, teacherId, { rangeStart, rangeEnd });
+  const [studentRowsResult, peopleResult, productsResult, placesResult] = await Promise.all([
+    supabase.from("students").select("person_id").eq("school_id",schoolId).in("enrollment_status",["active","prospect"]),
+    supabase.from("people").select("id,first_name,last_name,preferred_name").eq("school_id",schoolId).eq("status","active"),
+    supabase.from("service_products").select("id,name,duration_minutes,price_cents,currency").eq("school_id",schoolId).eq("status","active").eq("format","private_lesson").order("name"),
+    supabase.from("lesson_places").select("id,name").eq("school_id",schoolId).eq("status","active").order("name"),
+  ]);
+  const creationFailure = [studentRowsResult,peopleResult,productsResult,placesResult].find((result) => result.error);
+  if (creationFailure?.error) throw new Error("Lesson creation choices could not be loaded.");
+  const peopleById = new Map((peopleResult.data ?? []).map((person) => [person.id,person]));
   const initialDate = new Intl.DateTimeFormat("sv-SE", {
     timeZone: school.timezone,
     year: "numeric",
@@ -57,6 +66,14 @@ export default async function StaffTeacherPage({ params }: {
       contextLabel={`${teacherName}’s schedule`}
       canReschedule
       currentTimeMs={now.getTime()}
+      lessonCreationOptions={{
+        students: (studentRowsResult.data ?? []).flatMap(({person_id}) => { const person=peopleById.get(person_id); return person ? [{id:person_id,label:personDisplayName(person)}] : []; }),
+        teachers: [{id:teacherId,label:teacherName}],
+        products: (productsResult.data ?? []).map((product) => ({id:product.id,label:product.name,durationMinutes:product.duration_minutes,priceLabel:new Intl.NumberFormat("en-US",{style:"currency",currency:product.currency}).format(product.price_cents/100)})),
+        places: (placesResult.data ?? []).map((place) => ({id:place.id,label:place.name})),
+        availability: schedule.availability,
+        today: initialDate,
+      }}
     />
   </main>;
 }
