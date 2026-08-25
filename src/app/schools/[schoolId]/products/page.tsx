@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { SetupHeader } from "@/components/school-setup/setup-header";
+import { FocusedModal } from "@/components/ui/focused-modal";
 import { createClient } from "@/lib/supabase/server";
 import { archiveProduct, updateSchoolBillingTiming } from "./actions";
 import { ProductForm } from "./product-form";
@@ -97,14 +98,10 @@ export default async function ProductsPage({
         </div>
       </section>
 
-      {canManage ? (
-        <section className="grid md:grid-cols-[1fr_2fr]">
-          <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">
-            <h2 className="font-display text-3xl font-normal">New lesson or class</h2>
-          </div>
-          <div className="py-10 md:pl-10"><ProductForm schoolId={schoolId} /></div>
-        </section>
-      ) : null}
+      {canManage ? <section className="flex items-center justify-between gap-6 py-10">
+        <div><h2 className="font-display text-3xl font-normal">Expand your offerings.</h2><p className="mt-2 text-sm text-muted">Define a new lesson or class in a focused form.</p></div>
+        <FocusedModal triggerLabel="Add offering +" eyebrow="Lessons and classes" title="New offering." description="Set the format, duration, cadence, and price."><ProductForm schoolId={schoolId} /></FocusedModal>
+      </section> : null}
     </main>
   );
 }

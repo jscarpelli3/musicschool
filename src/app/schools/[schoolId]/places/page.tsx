@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { SetupHeader } from "@/components/school-setup/setup-header";
+import { FocusedModal } from "@/components/ui/focused-modal";
 import { createClient } from "@/lib/supabase/server";
 import { archivePlace } from "./actions";
 import { PlaceForm } from "./place-form";
@@ -65,14 +66,10 @@ export default async function PlacesPage({
         </div>
       </section>
 
-      {canCreate ? (
-        <section className="grid md:grid-cols-[1fr_2fr]">
-          <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">
-            <h2 className="font-display text-3xl font-normal">Add a place</h2>
-          </div>
-          <div className="py-10 md:pl-10"><PlaceForm schoolId={schoolId} /></div>
-        </section>
-      ) : null}
+      {canCreate ? <section className="flex items-center justify-between gap-6 py-10">
+        <div><h2 className="font-display text-3xl font-normal">Need another space?</h2><p className="mt-2 text-sm text-muted">Add it without leaving the current list.</p></div>
+        <FocusedModal triggerLabel="Add place +" eyebrow="School spaces" title="Add a place." description="Create a room, address, stage, home, or online space."><PlaceForm schoolId={schoolId} /></FocusedModal>
+      </section> : null}
     </main>
   );
 }

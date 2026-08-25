@@ -22,8 +22,8 @@ The product should feel like a well-run independent music school: cultivated, hu
 14. Add a new visual token only when it expresses a repeated design decision. Do not turn every one-off measurement into configuration.
 15. Every feature must be intentionally designed for phone, tablet, and desktop. Responsive behavior is part of the feature definition, not cleanup after the desktop view ships.
 16. Hover may enhance an interaction but may never be the only way to discover information or perform an action. Touch and keyboard behavior must be explicit.
-17. Prefer a focused modal or sheet for substantial create/edit forms launched from a list, dashboard, roster, or calendar. Keep the document surface scannable and use inline forms only when completing that form is the page’s primary purpose. Modal workflows must preserve validation, pending/error feedback, keyboard dismissal, focus handling, and a clear success handoff.
-17. When phone or tablet behavior differs materially from desktop, record the difference and tell the user before treating the design as complete.
+17. Prefer the shared `FocusedModal` for substantial create/edit forms launched from a list, dashboard, roster, detail record, or calendar. Keep the document surface scannable and use inline forms only when completing that form is the page’s primary purpose. Successful modal actions close into a shared toast when no follow-up work remains; validation and service failures keep the modal open beside the affected fields. Modal workflows must preserve keyboard dismissal, focus handling, and a clear success handoff.
+18. When phone or tablet behavior differs materially from desktop, record the difference and tell the user before treating the design as complete.
 
 ## Responsive View Rules
 
