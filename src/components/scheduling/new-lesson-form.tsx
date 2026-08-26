@@ -6,6 +6,7 @@ import type { CreateLessonState } from "@/app/schools/[schoolId]/lessons/new/act
 import { clockTime, fiveMinuteTimeOptions, minutesFromTime } from "@/lib/scheduling/time-options";
 
 export type LessonFormOption = { id: string; label: string };
+export type LessonFormTeacher = LessonFormOption & { outsideAvailabilityPolicy?: "notify_only" | "require_approval" };
 export type LessonFormProduct = LessonFormOption & { durationMinutes: number; priceLabel: string };
 export type LessonFormAvailability = {
   id: string;
@@ -33,7 +34,7 @@ function AvailabilityContext({
   duration,
   availability,
 }: {
-  teacher: LessonFormOption | undefined;
+  teacher: LessonFormTeacher | undefined;
   date: string;
   time: string;
   duration: number | undefined;
@@ -48,6 +49,7 @@ function AvailabilityContext({
   const start = minutesFromTime(time);
   const end = duration ? start + duration : start;
   const containingBlock = duration ? blocks.find((rule) => minutesFromTime(rule.start_time) <= start && minutesFromTime(rule.end_time) >= end) : undefined;
+  const outside = Boolean(duration && !containingBlock);
   const dayLabel = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "short", day: "numeric" }).format(new Date(`${date}T12:00:00`));
 
   return <div className={`md:col-span-2 border p-4 text-sm ${containingBlock ? "border-brand/40 bg-brand/10" : "border-line bg-surface"}`}>
@@ -56,8 +58,14 @@ function AvailabilityContext({
     {duration ? <p className={`mt-3 ${containingBlock ? "text-brand" : "text-danger"}`}>
       {containingBlock
         ? `The selected ${duration}-minute lesson fits inside a saved block.`
-        : `The selected ${duration}-minute lesson does not fit completely inside a saved block. You can choose another time or explicitly override availability below.`}
+        : `The selected ${duration}-minute lesson does not fit completely inside a saved block.`}
     </p> : <p className="mt-3 text-muted">Choose a lesson offering to check whether the full lesson fits.</p>}
+    {outside ? <div className="mt-4 border-l-2 border-brand pl-4">
+      <p className="font-medium text-ink">{teacher.outsideAvailabilityPolicy === "require_approval"
+        ? "This teacher must approve lessons outside their availability. Nothing will be added until they accept."
+        : "This teacher will be notified that the lesson is outside their availability."}</p>
+      <label className="mt-3 block"><span className="text-xs text-muted">Optional note for the teacher</span><input name="outside_availability_note" maxLength={240} className={field} /></label>
+    </div> : null}
   </div>;
 }
 
@@ -80,7 +88,7 @@ export function NewLessonForm({
   action: (state: CreateLessonState, formData: FormData) => Promise<CreateLessonState>;
   initialState: CreateLessonState;
   students: LessonFormOption[];
-  teachers: LessonFormOption[];
+  teachers: LessonFormTeacher[];
   products: LessonFormProduct[];
   places: LessonFormOption[];
   availability: LessonFormAvailability[];
@@ -131,7 +139,6 @@ export function NewLessonForm({
       <AvailabilityContext teacher={teacher} date={date} time={time} duration={product?.durationMinutes} availability={availability} />
       <label className="md:col-span-2"><span className="text-xs text-muted">Place</span><select required name="place_id" defaultValue="" className={field}><option value="" disabled>Select a place</option>{places.map((place) => <option key={place.id} value={place.id}>{place.label}</option>)}</select></label>
       <label className="md:col-span-2"><span className="text-xs text-muted">Internal notes</span><textarea name="notes" maxLength={1000} rows={3} className={field} /></label>
-      <div className="md:col-span-2 border-l border-line pl-4"><label className="flex items-start gap-3 text-sm"><input name="allow_outside_availability" type="checkbox" className="mt-1 accent-[var(--color-brand)]" /><span>Allow outside this teacher’s availability</span></label><label className="mt-4 block"><span className="text-xs text-muted">Override reason, required when checked</span><input name="override_reason" maxLength={240} className={field} /></label></div>
       <div className="md:col-span-2 flex justify-end"><SubmitLessonButton /></div>
     </div>
   </form>;

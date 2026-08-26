@@ -22,7 +22,7 @@ export default async function NewLessonPage({ params, searchParams }: {
   const results = await Promise.all([
     supabase.from("schools").select("id, name, timezone").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
-    supabase.from("teachers").select("person_id").eq("school_id", schoolId),
+    supabase.from("teachers").select("person_id, outside_availability_policy").eq("school_id", schoolId),
     supabase.from("students").select("person_id").eq("school_id", schoolId).in("enrollment_status", ["active", "prospect"]),
     supabase.from("people").select("id, first_name, last_name, preferred_name").eq("school_id", schoolId).eq("status", "active"),
     supabase.from("service_products").select("id, name, duration_minutes, price_cents, currency").eq("school_id", schoolId).eq("status", "active").eq("format", "private_lesson").order("name"),
@@ -36,7 +36,7 @@ export default async function NewLessonPage({ params, searchParams }: {
   if (!school || !membership) notFound();
   if (membership.role !== "owner" && membership.role !== "admin") redirect(`/schools/${schoolId}`);
   const people = new Map((peopleResult.data ?? []).map((person) => [person.id, person]));
-  const teachers = (teachersResult.data ?? []).flatMap(({ person_id }) => people.has(person_id) ? [{ id: person_id, label: name(people.get(person_id)!) }] : []).sort((a, b) => a.label.localeCompare(b.label));
+  const teachers = (teachersResult.data ?? []).flatMap(({ person_id, outside_availability_policy }) => people.has(person_id) ? [{ id: person_id, label: name(people.get(person_id)!), outsideAvailabilityPolicy: outside_availability_policy === "require_approval" ? "require_approval" as const : "notify_only" as const }] : []).sort((a, b) => a.label.localeCompare(b.label));
   const students = (studentsResult.data ?? []).flatMap(({ person_id }) => people.has(person_id) ? [{ id: person_id, label: name(people.get(person_id)!) }] : []).sort((a, b) => a.label.localeCompare(b.label));
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: school.timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const teacherChoices = teachers.map((teacher) => ({id:teacher.id,name:teacher.label,isOwner:false}));

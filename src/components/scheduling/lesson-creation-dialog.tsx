@@ -3,11 +3,11 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createSingleLesson, type CreateLessonState } from "@/app/schools/[schoolId]/lessons/new/actions";
-import { NewLessonForm, type LessonFormAvailability, type LessonFormOption, type LessonFormProduct } from "./new-lesson-form";
+import { NewLessonForm, type LessonFormAvailability, type LessonFormOption, type LessonFormProduct, type LessonFormTeacher } from "./new-lesson-form";
 
 export type LessonCreationOptions = {
   students: LessonFormOption[];
-  teachers: LessonFormOption[];
+  teachers: LessonFormTeacher[];
   products: LessonFormProduct[];
   places: LessonFormOption[];
   availability: LessonFormAvailability[];

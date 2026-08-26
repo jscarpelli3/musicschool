@@ -31,7 +31,7 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
   if (membership.role === "teacher") redirect(`/schools/${schoolId}/teacher`);
 
   const dashboardQueries = await Promise.all([
-    supabase.from("teachers").select("person_id").eq("school_id", schoolId),
+    supabase.from("teachers").select("person_id, outside_availability_policy").eq("school_id", schoolId),
     supabase.from("students").select("person_id").eq("school_id", schoolId),
     supabase.from("people").select("id, first_name, last_name, preferred_name, profile_id, email, phone").eq("school_id", schoolId),
     supabase
@@ -80,13 +80,14 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
   ] = dashboardQueries;
 
   const people = new Map((peopleRows ?? []).map((person) => [person.id, person]));
-  const teachers = (teacherRows ?? []).flatMap(({ person_id }) => {
+  const teachers = (teacherRows ?? []).flatMap(({ person_id, outside_availability_policy }) => {
     const person = people.get(person_id);
     return person
       ? [{
           id: person.id,
           name: `${person.preferred_name || person.first_name} ${person.last_name}`,
           isOwner: person.profile_id === profileId,
+          outsideAvailabilityPolicy: outside_availability_policy === "require_approval" ? "require_approval" as const : "notify_only" as const,
         }]
       : [];
   }).sort((a, b) => Number(b.isOwner) - Number(a.isOwner) || a.name.localeCompare(b.name));
@@ -253,7 +254,7 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
         }))}
         lessonCreationOptions={canManageSchool ? {
           students: Object.entries(studentNames).map(([id,label]) => ({ id, label })),
-          teachers: teachers.map((teacher) => ({ id: teacher.id, label: teacher.name })),
+          teachers: teachers.map((teacher) => ({ id: teacher.id, label: teacher.name, outsideAvailabilityPolicy: teacher.outsideAvailabilityPolicy })),
           products: (productRows ?? []).filter((product) => product.status === "active" && product.format === "private_lesson").map((product) => ({ id: product.id, label: product.name, durationMinutes: product.duration_minutes, priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price_cents / 100) })),
           places: (placeRows ?? []).filter((place) => place.status === "active").map((place) => ({ id: place.id, label: place.name })),
           availability: availabilityRows ?? [],

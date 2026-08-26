@@ -616,14 +616,15 @@ function TimelineView({
   function endPointerDrag(event: ReactPointerEvent<HTMLButtonElement>) {
     event.stopPropagation();
     if (!pointerStart.current) return;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    const dropped = latestCandidate.current;
+    const didDrag = dragStarted.current;
     pointerStart.current = null;
     pendingLesson.current = null;
-    setDragging(false);
-    if (!dragStarted.current) return;
     dragStarted.current = false;
-    const dropped = latestCandidate.current;
     latestCandidate.current = null;
+    setDragging(false);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    if (!didDrag) return;
     if (dropped?.valid || (allowOutsideDrop && dropped?.issue === "Outside this teacher’s availability.")) onDropProposal(dropped);
     else {
       onCandidate(null);
@@ -635,13 +636,13 @@ function TimelineView({
   function cancelPointerDrag(event: ReactPointerEvent<HTMLButtonElement>) {
     event.stopPropagation();
     const wasDragging = dragStarted.current;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     pointerStart.current = null;
     pendingLesson.current = null;
     dragStarted.current = false;
     latestCandidate.current = null;
     setDragging(false);
     onCandidate(null);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     if (wasDragging) {
       onExitReschedule();
       onDropError("The drag was cancelled. Nothing changed.");
@@ -725,6 +726,20 @@ function TimelineView({
                         onPointerMove={movePointerDrag}
                         onPointerUp={endPointerDrag}
                         onPointerCancel={cancelPointerDrag}
+                        onLostPointerCapture={() => {
+                          if (!pointerStart.current) return;
+                          const wasDragging = dragStarted.current;
+                          pointerStart.current = null;
+                          pendingLesson.current = null;
+                          dragStarted.current = false;
+                          latestCandidate.current = null;
+                          setDragging(false);
+                          onCandidate(null);
+                          if (wasDragging) {
+                            onExitReschedule();
+                            onDropError("The drag ended before a destination was confirmed. Nothing changed.");
+                          }
+                        }}
                         onClick={(event) => {
                           event.stopPropagation();
                           if (suppressClick.current) {

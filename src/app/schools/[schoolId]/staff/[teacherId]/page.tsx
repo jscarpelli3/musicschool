@@ -21,7 +21,7 @@ export default async function StaffTeacherPage({ params }: {
     supabase.from("schools").select("id, name, timezone").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("people").select("id, profile_id, first_name, last_name, preferred_name, email, phone").eq("school_id", schoolId).eq("id", teacherId).eq("status", "active").maybeSingle(),
-    supabase.from("teachers").select("person_id").eq("school_id", schoolId).eq("person_id", teacherId).maybeSingle(),
+    supabase.from("teachers").select("person_id, outside_availability_policy").eq("school_id", schoolId).eq("person_id", teacherId).maybeSingle(),
   ]);
   if (!school || !membership || !teacher || !teacherRecord) notFound();
   if (membership.role !== "owner" && membership.role !== "admin") redirect(`/schools/${schoolId}`);
@@ -72,7 +72,7 @@ export default async function StaffTeacherPage({ params }: {
       currentTimeMs={now.getTime()}
       lessonCreationOptions={{
         students: (studentRowsResult.data ?? []).flatMap(({person_id}) => { const person=peopleById.get(person_id); return person ? [{id:person_id,label:personDisplayName(person)}] : []; }),
-        teachers: [{id:teacherId,label:teacherName}],
+        teachers: [{id:teacherId,label:teacherName,outsideAvailabilityPolicy:teacherRecord.outside_availability_policy === "require_approval" ? "require_approval" : "notify_only"}],
         products: (productsResult.data ?? []).map((product) => ({id:product.id,label:product.name,durationMinutes:product.duration_minutes,priceLabel:new Intl.NumberFormat("en-US",{style:"currency",currency:product.currency}).format(product.price_cents/100)})),
         places: (placesResult.data ?? []).map((place) => ({id:place.id,label:place.name})),
         availability: schedule.availability,
