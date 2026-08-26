@@ -1688,6 +1688,8 @@ export type Database = {
           id: string
           lesson_event_id: string | null
           notes: string | null
+          original_ends_at: string | null
+          original_starts_at: string | null
           place_id: string
           product_id: string
           proposed_ends_at: string
@@ -1714,6 +1716,8 @@ export type Database = {
           id?: string
           lesson_event_id?: string | null
           notes?: string | null
+          original_ends_at?: string | null
+          original_starts_at?: string | null
           place_id: string
           product_id: string
           proposed_ends_at: string
@@ -1740,6 +1744,8 @@ export type Database = {
           id?: string
           lesson_event_id?: string | null
           notes?: string | null
+          original_ends_at?: string | null
+          original_starts_at?: string | null
           place_id?: string
           product_id?: string
           proposed_ends_at?: string
@@ -4511,6 +4517,15 @@ export type Database = {
           p_school_id: string
         }
         Returns: Json
+      }
+      decide_teacher_reschedule_proposal: {
+        Args: {
+          p_decision: string
+          p_note?: string
+          p_proposal_id: string
+          p_school_id: string
+        }
+        Returns: string
       }
       reschedule_lesson_as_owner: {
         Args: {

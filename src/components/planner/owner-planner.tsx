@@ -195,6 +195,21 @@ export function OwnerPlanner({
   const rescheduleLesson = lessonDetails.find((lesson) => lesson.id === rescheduleLessonId) ?? null;
 
   useEffect(() => {
+    const reset = () => {
+      setCreationSlot(null);
+      setSelectedLessonId(null);
+      setRescheduleLessonId(null);
+      setProposal(null);
+      setDragCandidate(null);
+      setDropError(null);
+      setRescheduleReason("");
+      setAllowOutsideAvailability(false);
+    };
+    window.addEventListener("common-time:reset-planner", reset);
+    return () => window.removeEventListener("common-time:reset-planner", reset);
+  }, []);
+
+  useEffect(() => {
     if (!selectedLessonId) return;
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") setSelectedLessonId(null);
