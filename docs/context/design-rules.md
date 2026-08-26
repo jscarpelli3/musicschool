@@ -24,6 +24,7 @@ The product should feel like a well-run independent music school: cultivated, hu
 16. Hover may enhance an interaction but may never be the only way to discover information or perform an action. Touch and keyboard behavior must be explicit.
 17. Prefer the shared `FocusedModal` for substantial create/edit forms launched from a list, dashboard, roster, detail record, or calendar. Keep the document surface scannable and use inline forms only when completing that form is the page’s primary purpose. Successful modal actions close into a shared toast when no follow-up work remains; validation and service failures keep the modal open beside the affected fields. Modal workflows must preserve keyboard dismissal, focus handling, and a clear success handoff.
 18. When phone or tablet behavior differs materially from desktop, record the difference and tell the user before treating the design as complete.
+19. Whenever a lesson is identified by a human-facing date and time, include the day of the week. Prefer `Thursday, August 27 at 3:30 PM` over `August 27 at 3:30 PM`; operationally, the weekday is often the primary recognition cue. Machine fields, compact calendar axes, and date-only billing periods are exempt.
 
 ## Responsive View Rules
 

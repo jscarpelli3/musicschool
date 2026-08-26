@@ -51,7 +51,7 @@ export default async function StudentDetailPage({ params }: {
   const billingIds = new Set((billingLinksResult.data ?? []).map((row) => row.billing_account_id));
   const accounts = (accountsResult.data ?? []).filter((account) => billingIds.has(account.id));
   const dateTime = (value: string) => new Intl.DateTimeFormat("en-US", {
-    timeZone: school.timezone, month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit",
+    timeZone: school.timezone, weekday: "long", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit",
   }).format(new Date(value));
   const approvals = ["owner","admin"].includes(membership.role) ? await loadOwnerApprovals(supabase,schoolId,{studentIds:[studentId]}) : [];
 
