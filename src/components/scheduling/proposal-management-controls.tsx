@@ -1,0 +1,9 @@
+"use client";
+import { useState } from "react";
+import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
+import { manageOwnProposal } from "@/app/schools/[schoolId]/proposal-actions";
+
+export function ProposalManagementControls({schoolId,proposalId,localStart,reason}:{schoolId:string;proposalId:string;localStart:string;reason:string}){
+ const [editing,setEditing]=useState(false),[start,setStart]=useState(localStart.slice(0,16)),[note,setNote]=useState(reason);
+ return <div className="mt-3"><div className="flex flex-wrap gap-4 text-xs"><button type="button" onClick={()=>setEditing((value)=>!value)} className="text-brand hover:text-brand-hover">{editing?"Close changes":"Change proposal"}</button><HoldToConfirm action={()=>manageOwnProposal(schoolId,proposalId,"withdraw")} idleLabel="Hold to withdraw" holdingLabel="Keep holding to withdraw…" submittingLabel="Checking proposal…" successLabel="Proposal withdrawn" refreshOnSuccess/></div>{editing?<div className="mt-4 grid gap-4 border-l border-brand pl-4 sm:grid-cols-2"><label className="text-xs text-muted">Replacement date and time<input type="datetime-local" value={start} onChange={(event)=>setStart(event.target.value)} className="mt-2 w-full border-b border-line bg-transparent py-2 text-sm text-ink"/></label><label className="text-xs text-muted">Note<input value={note} onChange={(event)=>setNote(event.target.value)} maxLength={500} className="mt-2 w-full border-b border-line bg-transparent py-2 text-sm text-ink"/></label><div className="sm:col-span-2"><HoldToConfirm action={()=>manageOwnProposal(schoolId,proposalId,"replace",start,note)} idleLabel="Hold to replace proposal" holdingLabel="Keep holding to replace…" submittingLabel="Checking current proposal…" successLabel="Proposal replaced" refreshOnSuccess/></div></div>:null}</div>;
+}

@@ -4,6 +4,7 @@ import { TeacherScheduleCalendar } from "@/components/scheduling/teacher-schedul
 import { TeacherRescheduleControls } from "@/components/teacher/teacher-reschedule-controls";
 import { LessonProposalControls } from "@/components/teacher/lesson-proposal-controls";
 import { WeeklyAvailabilityEditor } from "@/components/scheduling/weekly-availability-editor";
+import { ProposalManagementControls } from "@/components/scheduling/proposal-management-controls";
 import { loadTeacherCalendar, personDisplayName } from "@/lib/scheduling/teacher-calendar";
 import { createClient } from "@/lib/supabase/server";
 import { saveTeacherWeeklyAvailability } from "../availability-actions";
@@ -96,6 +97,7 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
         }}
         currentTimeMs={nowMs}
       />
+      {schedule.pendingProposals.some((proposal)=>proposal.status==="pending_owner"&&proposal.created_by===profileId)?<section id="my-pending-proposals" className="border-b border-line py-10"><h2 className="font-display text-3xl">Your pending proposals</h2><div className="mt-5 divide-y divide-line border-y border-line">{schedule.pendingProposals.filter((proposal)=>proposal.status==="pending_owner"&&proposal.created_by===profileId).map((proposal)=><div key={proposal.id} className="py-5"><p className="font-medium">{studentById.get(proposal.student_id)??"Student"} · {dateTime.format(new Date(proposal.proposed_starts_at))}</p><p className="mt-2 text-sm text-muted">Waiting for the owner. The original lesson remains scheduled.</p><ProposalManagementControls schoolId={schoolId} proposalId={proposal.id} localStart={proposal.proposed_local_start} reason={proposal.reason}/></div>)}</div></section>:null}
       <section className="border-b border-line py-10"><h2 className="font-display text-3xl">Weekly availability</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-muted">Record every recurring block when lessons normally fit. Availability guides scheduling; changing it never moves an existing lesson.</p><div className="mt-6">{teacherSettings.can_manage_own_availability ? <WeeklyAvailabilityEditor initialBlocks={currentAvailability} action={saveTeacherWeeklyAvailability.bind(null,schoolId,teacherPerson.id)} /> : <p className="border border-line p-4 text-sm text-muted">The school owner manages your availability. Ask them to update these blocks.</p>}</div></section>
       <section className="py-10"><div className="flex items-baseline justify-between gap-4"><h2 className="font-display text-3xl">Upcoming</h2><span className="text-sm text-muted">{upcoming.length}</span></div><div className="mt-6">{lessonList(upcoming)}</div></section>
       <section className="border-t border-line py-10"><div className="flex items-baseline justify-between gap-4"><h2 className="font-display text-3xl">Recent and ready to log</h2><span className="text-sm text-muted">{recent.length}</span></div><div className="mt-6">{lessonList(recent)}</div></section>

@@ -74,6 +74,8 @@ export async function decideLessonProposal(schoolId: string, proposalId: string,
   const supabase=await createClient();
   const {data,error}=await supabase.rpc("decide_outside_availability_lesson_proposal",{p_school_id:schoolId,p_proposal_id:proposalId,p_decision:decision});
   if(error) return {ok:false,message:error.message.includes("conflict")?"That time now conflicts with another lesson. Nothing changed.":"The proposal could not be updated. Try again."};
+  if(data==="withdrawn")return{ok:false,message:"This proposal was withdrawn while you were reviewing it. Nothing changed."};
+  if(data==="superseded")return{ok:false,message:"This proposal was replaced while you were reviewing it. Nothing changed; reload to review the new time."};
   revalidatePath(`/schools/${schoolId}/teacher`); revalidatePath(`/schools/${schoolId}`);
   return {ok:true,message:data==="applied"?"Lesson accepted and added to the calendar.":"Proposal declined."};
 }

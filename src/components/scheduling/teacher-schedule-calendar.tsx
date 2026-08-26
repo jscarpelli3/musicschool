@@ -47,7 +47,7 @@ export function TeacherScheduleCalendar({
       can_reschedule: canReschedule && lesson.reschedule_allowed && lesson.status === "scheduled" && new Date(lesson.starts_at).getTime() > currentTimeMs,
       can_mark_reschedule: false,
     }))}
-    pendingProposals={schedule.pendingProposals.map((item) => ({ ...item, href: proposalHref ?? (item.status === "pending_teacher" ? `/schools/${schoolId}/teacher#lesson-proposals` : `/schools/${schoolId}/teacher`) }))}
+    pendingProposals={schedule.pendingProposals.map((item) => ({ ...item, href: proposalHref ?? (item.status === "pending_teacher" ? `/schools/${schoolId}/teacher#lesson-proposals` : `/schools/${schoolId}/teacher#my-pending-proposals`) }))}
     contextLabel={contextLabel}
     showTeacherFilter={false}
     showAvailabilityLabels={false}

@@ -38,6 +38,8 @@ export type TeacherCalendarData = {
     proposal_kind: string;
     schedule_type: string;
     reason: string;
+    proposed_local_start: string;
+    created_by: string;
   }>;
   studentNames: Record<string, string>;
   productNames: Record<string, string>;
@@ -78,7 +80,7 @@ export async function loadTeacherCalendar(
       .order("start_time"),
     lessonQuery.order("starts_at"),
     supabase.from("lesson_schedule_proposals")
-      .select("id,teacher_id,student_id,proposed_starts_at,proposed_ends_at,status,proposal_kind,schedule_type,reason")
+      .select("id,teacher_id,student_id,proposed_starts_at,proposed_ends_at,status,proposal_kind,schedule_type,reason,proposed_local_start,created_by")
       .eq("school_id", schoolId).eq("teacher_id", teacherId).in("status", ["pending_teacher", "pending_owner"]),
   ]);
   if (availabilityResult.error) throw new Error("Teacher availability could not be loaded.");

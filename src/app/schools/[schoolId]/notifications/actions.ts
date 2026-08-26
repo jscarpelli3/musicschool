@@ -12,6 +12,8 @@ export async function decideTeacherRescheduleProposal(schoolId:string,proposalId
  if(!UUID.test(schoolId)||!UUID.test(proposalId)||!new Set(["accept","decline"]).has(decision))return{ok:false,message:"That proposal could not be verified."};
  const {data,error}=await(await createClient()).rpc("decide_teacher_reschedule_proposal",{p_school_id:schoolId,p_proposal_id:proposalId,p_decision:decision});
  if(error){const message=error.message.includes("proposal_stale")?"The original lesson changed after this proposal was sent. Nothing moved; ask the teacher to submit a fresh proposal.":error.message.includes("lesson_conflict")?"That proposed time now conflicts with another lesson. Nothing moved.":"The proposal could not be updated. Nothing moved.";return{ok:false,message};}
+ if(data==="withdrawn")return{ok:false,message:"This proposal was withdrawn while you were reviewing it. Nothing moved."};
+ if(data==="superseded")return{ok:false,message:"This proposal was replaced while you were reviewing it. Nothing moved; reload to review the new time."};
  revalidatePath(`/schools/${schoolId}/notifications`);revalidatePath(`/schools/${schoolId}`);revalidatePath(`/schools/${schoolId}/teacher`);
  return{ok:true,message:data==="applied"?"Proposal approved. The lesson has moved and the teacher was notified.":"Proposal declined. The original lesson remains scheduled."};
 }
