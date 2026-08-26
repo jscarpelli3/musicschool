@@ -44,6 +44,7 @@ export function RescheduleConfirmation({
   action,
   onClose,
   onSuccess,
+  mode = "apply",
 }: {
   lesson: LessonSummary;
   proposal: RescheduleProposal;
@@ -55,6 +56,7 @@ export function RescheduleConfirmation({
   action: () => Promise<{ ok: boolean; message: string }>;
   onClose: () => void;
   onSuccess: () => void;
+  mode?: "apply" | "propose";
 }) {
   const duration = lesson.end.minutes - lesson.start.minutes;
   const [reasonCode = "", reasonDetail = ""] = reason.split("::", 2);
@@ -64,7 +66,7 @@ export function RescheduleConfirmation({
       <button type="button" aria-label="Return to calendar" className="lesson-sheet-backdrop" onClick={onClose} />
       <section className="reschedule-confirm-panel">
         <div className="flex items-start justify-between gap-5 border-b border-line pb-6">
-          <div><p className="text-xs uppercase tracking-[0.14em] text-brand">Proposed move</p><h3 id="reschedule-confirm-title" className="mt-3 font-display text-4xl">Confirm the new time.</h3></div>
+          <div><p className="text-xs uppercase tracking-[0.14em] text-brand">Proposed move</p><h3 id="reschedule-confirm-title" className="mt-3 font-display text-4xl">{mode === "propose" ? "Send this proposed time." : "Confirm the new time."}</h3></div>
           <button type="button" onClick={onClose} className="line-action pb-2 text-sm text-muted">Back</button>
         </div>
         <div className="grid gap-6 border-b border-line py-7 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
@@ -73,10 +75,10 @@ export function RescheduleConfirmation({
           <div><p className="text-xs text-muted">To</p><p className="mt-2 text-sm">{proposal.dateKey}</p><p className="mt-1 text-lg">{clock(proposal.minutes)}–{clock(proposal.minutes + duration)}</p></div>
         </div>
         <dl className="divide-y divide-line border-b border-line"><Detail label="Teacher" value={teacherName} /><Detail label="Place" value={placeName} /><Detail label="Billing" value={`Remains anchored to ${lesson.billingServiceDate.slice(0, 7)}`} /></dl>
-        {!proposal.valid ? <p className="mt-6 border-l-2 border-danger pl-4 text-sm text-danger">{proposal.issue}{allowOutsideAvailability && proposal.issue === "Outside this teacher’s availability." ? " Owner override selected." : ""}</p> : null}
+        {!proposal.valid ? <p className="mt-6 border-l-2 border-danger pl-4 text-sm text-danger">{proposal.issue}{mode === "propose" && proposal.issue === "Outside this teacher’s availability." ? " You may still propose it." : allowOutsideAvailability && proposal.issue === "Outside this teacher’s availability." ? " Owner override selected." : ""}</p> : null}
         <div className="mt-6 border border-brand px-4 py-3 text-sm text-brand"><span aria-hidden="true" className="mr-2">!</span>A reason is required before this lesson can be rescheduled.</div>
         <ReasonField value={reason} onChange={onReason} className="mt-5" autoFocus />
-        <div className="mt-7"><HoldToConfirm action={action} idleLabel="Hold to reschedule" holdingLabel="Keep holding to move the lesson…" duration={1400} disabled={!reasonComplete} disabledMessage="Select a rescheduling reason to continue." onSuccess={onSuccess} /></div>
+        <div className="mt-7"><HoldToConfirm action={action} idleLabel={mode === "propose" ? "Hold to send proposal" : "Hold to reschedule"} holdingLabel={mode === "propose" ? "Keep holding to send…" : "Keep holding to move the lesson…"} successLabel={mode === "propose" ? "Proposal sent" : "Lesson rescheduled"} duration={1400} disabled={!reasonComplete} disabledMessage="Select a rescheduling reason to continue." onSuccess={onSuccess} /></div>
       </section>
     </div>
   );

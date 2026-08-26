@@ -1686,12 +1686,14 @@ export type Database = {
           decision_note: string | null
           ends_on: string | null
           id: string
+          lesson_event_id: string | null
           notes: string | null
           place_id: string
           product_id: string
           proposed_ends_at: string
           proposed_local_start: string
           proposed_starts_at: string
+          proposal_kind: string
           reason: string
           schedule_type: string
           school_id: string
@@ -1710,12 +1712,14 @@ export type Database = {
           decision_note?: string | null
           ends_on?: string | null
           id?: string
+          lesson_event_id?: string | null
           notes?: string | null
           place_id: string
           product_id: string
           proposed_ends_at: string
           proposed_local_start: string
           proposed_starts_at: string
+          proposal_kind?: string
           reason: string
           schedule_type: string
           school_id: string
@@ -1734,12 +1738,14 @@ export type Database = {
           decision_note?: string | null
           ends_on?: string | null
           id?: string
+          lesson_event_id?: string | null
           notes?: string | null
           place_id?: string
           product_id?: string
           proposed_ends_at?: string
           proposed_local_start?: string
           proposed_starts_at?: string
+          proposal_kind?: string
           reason?: string
           schedule_type?: string
           school_id?: string
@@ -1769,6 +1775,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "schools"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_schedule_proposals_school_id_lesson_event_id_fkey"
+            columns: ["school_id", "lesson_event_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_events"
+            referencedColumns: ["school_id", "id"]
           },
           {
             foreignKeyName: "lesson_schedule_proposals_school_id_place_id_fkey"
@@ -4482,6 +4495,15 @@ export type Database = {
         Returns: undefined
       }
       reschedule_assigned_lesson_as_teacher: {
+        Args: {
+          p_lesson_event_id: string
+          p_local_start: string
+          p_reason: string
+          p_school_id: string
+        }
+        Returns: Json
+      }
+      propose_or_reschedule_assigned_lesson_as_teacher: {
         Args: {
           p_lesson_event_id: string
           p_local_start: string

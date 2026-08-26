@@ -12,6 +12,8 @@ export function TeacherScheduleCalendar({
   canReschedule = false,
   currentTimeMs,
   lessonCreationOptions,
+  rescheduleMode,
+  rescheduleAction,
 }: {
   schoolId: string;
   initialDate: string;
@@ -22,6 +24,8 @@ export function TeacherScheduleCalendar({
   canReschedule?: boolean;
   currentTimeMs: number;
   lessonCreationOptions?: LessonCreationOptions;
+  rescheduleMode?: "apply" | "propose";
+  rescheduleAction?: (input: { lessonId: string; localStart: string; reason: string }) => Promise<{ ok: boolean; message: string }>;
 }) {
   return <OwnerPlanner
     schoolId={schoolId}
@@ -45,5 +49,7 @@ export function TeacherScheduleCalendar({
     showTeacherFilter={false}
     showAvailabilityLabels={false}
     lessonCreationOptions={lessonCreationOptions}
+    rescheduleMode={rescheduleMode}
+    rescheduleAction={rescheduleAction}
   />;
 }

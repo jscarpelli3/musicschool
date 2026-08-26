@@ -78,6 +78,8 @@ type Props = {
   lessonCreationOptions?: LessonCreationOptions;
   initialTeacherId?: string;
   allowAllTeachers?: boolean;
+  rescheduleMode?: "apply" | "propose";
+  rescheduleAction?: (input: { lessonId: string; localStart: string; reason: string }) => Promise<{ ok: boolean; message: string }>;
 };
 
 type LessonWithParts = Lesson & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> };
@@ -165,6 +167,8 @@ export function OwnerPlanner({
   lessonCreationOptions,
   initialTeacherId = "all",
   allowAllTeachers = true,
+  rescheduleMode = "apply",
+  rescheduleAction,
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<View>("week");
@@ -266,18 +270,20 @@ export function OwnerPlanner({
 
   function submitReschedule() {
     if (!rescheduleLesson || !proposal) return Promise.resolve({ ok: false, message: "Choose a destination first." });
-    if (!proposal.valid && !(allowOutsideAvailability && proposal.issue === "Outside this teacher’s availability.")) {
+    if (!proposal.valid && !(rescheduleAction && proposal.issue === "Outside this teacher’s availability.") && !(allowOutsideAvailability && proposal.issue === "Outside this teacher’s availability.")) {
       return Promise.resolve({ ok: false, message: proposal.issue ?? "Choose an available time." });
     }
     const [reasonCode, reasonDetail = ""] = rescheduleReason.split("::", 2);
     if (!reasonCode || (reasonCode === "other" && !reasonDetail.trim())) {
       return Promise.resolve({ ok: false, message: "Select a reason for the change." });
     }
+    const localStart = `${proposal.dateKey}T${String(Math.floor(proposal.minutes / 60)).padStart(2, "0")}:${String(proposal.minutes % 60).padStart(2, "0")}`;
+    if (rescheduleAction) return rescheduleAction({ lessonId: rescheduleLesson.id, localStart, reason: rescheduleReason });
     return rescheduleOwnerLesson(schoolId, {
       lessonId: rescheduleLesson.id,
       teacherId: proposal.teacherId,
       placeId: proposedPlaceId || rescheduleLesson.place_id,
-      localStart: `${proposal.dateKey}T${String(Math.floor(proposal.minutes / 60)).padStart(2, "0")}:${String(proposal.minutes % 60).padStart(2, "0")}`,
+      localStart,
       reason: rescheduleReason,
       allowOutsideAvailability,
     });
@@ -376,6 +382,7 @@ export function OwnerPlanner({
           showAvailabilityLabels={showAvailabilityLabels}
           onDropError={setDropError}
           onExitReschedule={cancelReschedule}
+          allowOutsideDrop={Boolean(rescheduleAction)}
           canCreateLesson={Boolean(lessonCreationOptions)}
           onCreateSlot={setCreationSlot}
         />
@@ -407,13 +414,17 @@ export function OwnerPlanner({
           reason={rescheduleReason}
           onReason={setRescheduleReason}
           allowOutsideAvailability={allowOutsideAvailability}
+          mode={rescheduleMode}
           action={submitReschedule}
           onClose={cancelReschedule}
           onSuccess={() => {
             const reason = rescheduleReasonLabel(...rescheduleReason.split("::", 2) as [string, string]);
             const oldDate = formatCalendarDate(rescheduleLesson.start.dateKey);
             const newDate = formatCalendarDate(proposal.dateKey);
-            const message = `${studentNames[rescheduleLesson.student_id] ?? "Student"} rescheduled ${productNames[rescheduleLesson.product_id] ?? "lesson"} from ${oldDate} at ${clock(rescheduleLesson.start.minutes)} to ${newDate} at ${clock(proposal.minutes)} due to ${reason}.`;
+            const subject = `${studentNames[rescheduleLesson.student_id] ?? "Student"} ${productNames[rescheduleLesson.product_id] ?? "lesson"}`;
+            const message = rescheduleMode === "propose"
+              ? `Proposed moving ${subject} from ${oldDate} at ${clock(rescheduleLesson.start.minutes)} to ${newDate} at ${clock(proposal.minutes)} due to ${reason}. The original time remains until an owner approves it.`
+              : `${subject} rescheduled from ${oldDate} at ${clock(rescheduleLesson.start.minutes)} to ${newDate} at ${clock(proposal.minutes)} due to ${reason}.`;
             cancelReschedule();
             setRescheduleNotices((current) => [{ id: `${rescheduleLesson.id}-${Date.now()}`, message }, ...current]);
             router.refresh();
@@ -482,6 +493,7 @@ function TimelineView({
   showAvailabilityLabels,
   canCreateLesson,
   onCreateSlot,
+  allowOutsideDrop,
 }: {
   view: "day" | "week";
   anchor: Date;
@@ -503,6 +515,7 @@ function TimelineView({
   showAvailabilityLabels: boolean;
   canCreateLesson: boolean;
   onCreateSlot: (slot: CreationSlot) => void;
+  allowOutsideDrop: boolean;
 }) {
   const [dragging, setDragging] = useState(false);
   const [hoverSlot, setHoverSlot] = useState<CreationSlot | null>(null);
@@ -596,7 +609,7 @@ function TimelineView({
     dragStarted.current = false;
     const dropped = latestCandidate.current;
     latestCandidate.current = null;
-    if (dropped?.valid) onDropProposal(dropped);
+    if (dropped?.valid || (allowOutsideDrop && dropped?.issue === "Outside this teacher’s availability.")) onDropProposal(dropped);
     else {
       onCandidate(null);
       onExitReschedule();

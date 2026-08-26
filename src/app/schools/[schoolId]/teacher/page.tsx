@@ -7,7 +7,7 @@ import { WeeklyAvailabilityEditor } from "@/components/scheduling/weekly-availab
 import { loadTeacherCalendar, personDisplayName } from "@/lib/scheduling/teacher-calendar";
 import { createClient } from "@/lib/supabase/server";
 import { saveTeacherWeeklyAvailability } from "../availability-actions";
-import { decideLessonProposal, recordTeacherLessonOutcome, reportStudentRescheduleRequest, rescheduleTeacherLesson } from "./actions";
+import { decideLessonProposal, recordTeacherLessonOutcome, rescheduleTeacherLesson } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -68,7 +68,7 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
             <div className="pb-7 sm:pl-40">
               <p className="text-sm text-muted">{place?.name ?? "Place not assigned"}{place?.details ? ` · ${place.details}` : ""}</p>
               {lesson.staff_notes ? <p className="mt-4 border-l border-line pl-4 text-sm leading-6">{lesson.staff_notes}</p> : null}
-              {lesson.status === "scheduled" && new Date(lesson.starts_at).getTime() > nowMs ? <TeacherRescheduleControls canSelfReschedule={teacherSettings.scheduling_authority === "manage_assigned_lessons"} earliestLocal={earliestLocal} rescheduleAction={rescheduleTeacherLesson.bind(null, schoolId, lesson.id)} requestAction={reportStudentRescheduleRequest.bind(null, schoolId, lesson.id)} /> : null}
+              {lesson.status === "scheduled" && new Date(lesson.starts_at).getTime() > nowMs ? <TeacherRescheduleControls canSelfReschedule={teacherSettings.scheduling_authority === "manage_assigned_lessons"} earliestLocal={earliestLocal} rescheduleAction={rescheduleTeacherLesson.bind(null, schoolId, lesson.id)} /> : null}
               {canLog ? <LessonOutcomeForm action={recordTeacherLessonOutcome.bind(null, schoolId, lesson.id)} /> : null}
             </div>
           </details>
@@ -88,6 +88,12 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
         teacher={{ id: teacherPerson.id, name: personDisplayName(teacherPerson), isOwner: false }}
         schedule={schedule}
         contextLabel="My schedule"
+        canReschedule
+        rescheduleMode={teacherSettings.scheduling_authority === "manage_assigned_lessons" ? "apply" : "propose"}
+        rescheduleAction={async ({ lessonId, localStart, reason }) => {
+          "use server";
+          return rescheduleTeacherLesson(schoolId, lessonId, localStart, reason);
+        }}
         currentTimeMs={nowMs}
       />
       <section className="border-b border-line py-10"><h2 className="font-display text-3xl">Weekly availability</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-muted">Record every recurring block when lessons normally fit. Availability guides scheduling; changing it never moves an existing lesson.</p><div className="mt-6">{teacherSettings.can_manage_own_availability ? <WeeklyAvailabilityEditor initialBlocks={currentAvailability} action={saveTeacherWeeklyAvailability.bind(null,schoolId,teacherPerson.id)} /> : <p className="border border-line p-4 text-sm text-muted">The school owner manages your availability. Ask them to update these blocks.</p>}</div></section>
