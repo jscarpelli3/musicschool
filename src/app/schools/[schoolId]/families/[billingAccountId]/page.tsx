@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { DetailHeader, DetailSection, EmptyDetail } from "@/components/people/detail-shell";
+import { ApprovalList } from "@/components/approvals/approval-list";
+import { loadOwnerApprovals } from "@/lib/approvals/owner-approvals";
 import { normalizeE164 } from "@/lib/phone";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -80,6 +82,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     return totals;
   }, {});
   const canManagePayments = ["owner", "admin"].includes(membership.role);
+  const approvals = canManagePayments ? await loadOwnerApprovals(supabase,schoolId,{studentIds:students.map(student=>student.id)}) : [];
   const stripeReady = connectionResult.data?.status === "enabled" && connectionResult.data.charges_enabled;
   const currentMonth = new Intl.DateTimeFormat("en-CA", { timeZone: school.timezone, year: "numeric", month: "2-digit" }).format(new Date());
   const billingMessages: Record<string, string> = {
@@ -108,6 +111,8 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
       <DetailHeader eyebrow={`${school.name} · Family account`} title={account.name} meta={`${account.status} billing relationship · ${students.length} ${students.length === 1 ? "student" : "students"}`} />
+
+      {approvals.length?<DetailSection title="Needs approval" description="Pending owner decisions involving students in this family."><ApprovalList schoolId={schoolId} items={approvals} timezone={school.timezone} compact/></DetailSection>:null}
 
       <DetailSection title="Primary payer" description="The person currently responsible for this billing account.">
         {contact ? <div><p className="font-display text-3xl">{name(contact)}</p><p className="mt-3 text-xs uppercase tracking-[0.14em] text-brand">{contact.status}</p>{canManagePayments ? <><BillingContactEmail schoolId={schoolId} billingAccountId={billingAccountId} email={contact.email ?? ""} hasPendingApproval={(approvalRequestsResult.data ?? []).some((request) => request.approval_status === "pending")} /><BillingContactPhone schoolId={schoolId} schoolName={school.name} billingAccountId={billingAccountId} phone={contact.phone ?? ""} consentState={smsConsentState ?? "not_enrolled"} /></> : <><p className="mt-3 text-sm text-muted">{contact.email || "No email recorded"}</p><p className="mt-3 text-sm text-muted">{contact.phone || "No mobile number recorded"}</p></>}</div> : <EmptyDetail>The billing contact record is unavailable.</EmptyDetail>}

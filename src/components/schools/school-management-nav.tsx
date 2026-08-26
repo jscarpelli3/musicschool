@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { OwnerNotifications } from "@/components/notifications/owner-notifications";
 
-export function SchoolManagementNav({ schoolId, role }: { schoolId: string; role: string }) {
+export function SchoolManagementNav({ schoolId, role, approvalCount = 0 }: { schoolId: string; role: string; approvalCount?: number }) {
   const pathname = usePathname();
   const base = `/schools/${schoolId}`;
   const dashboardHref = role === "teacher" ? `${base}/teacher` : base;
@@ -14,6 +14,7 @@ export function SchoolManagementNav({ schoolId, role }: { schoolId: string; role
         { label: "Dashboard", href: dashboardHref, active: pathname === dashboardHref },
         { label: "Students", href: `${base}/students`, active: pathname.startsWith(`${base}/students`) },
         { label: "Families", href: `${base}/families`, active: pathname.startsWith(`${base}/families`) },
+        { label: `Approvals${approvalCount ? ` (${approvalCount})` : ""}`, href: `${base}/approvals`, active: pathname.startsWith(`${base}/approvals`) },
         ...(role === "owner" ? [{ label: "Staff", href: `${base}/staff`, active: pathname.startsWith(`${base}/staff`) }] : []),
       ];
   const canManage = role === "owner" || role === "admin";

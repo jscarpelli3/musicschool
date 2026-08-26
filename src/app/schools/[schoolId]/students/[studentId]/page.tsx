@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { DetailHeader, DetailSection, EmptyDetail } from "@/components/people/detail-shell";
+import { ApprovalList } from "@/components/approvals/approval-list";
+import { loadOwnerApprovals } from "@/lib/approvals/owner-approvals";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -51,10 +53,13 @@ export default async function StudentDetailPage({ params }: {
   const dateTime = (value: string) => new Intl.DateTimeFormat("en-US", {
     timeZone: school.timezone, month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit",
   }).format(new Date(value));
+  const approvals = ["owner","admin"].includes(membership.role) ? await loadOwnerApprovals(supabase,schoolId,{studentIds:[studentId]}) : [];
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
       <DetailHeader eyebrow={`${school.name} · Student`} title={displayName(person)} meta={`${student.enrollment_status} enrollment · ${person.status} record`} />
+
+      {approvals.length?<DetailSection title="Needs approval" description="Pending owner decisions involving this student. Resolving one here removes it from every active approval list."><ApprovalList schoolId={schoolId} items={approvals} timezone={school.timezone} compact/></DetailSection>:null}
 
       <DetailSection title="Student record" description="School-facing identity and enrollment information.">
         <dl className="grid gap-x-8 gap-y-6 sm:grid-cols-2">

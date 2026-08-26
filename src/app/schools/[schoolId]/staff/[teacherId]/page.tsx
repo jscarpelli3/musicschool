@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { TeacherScheduleCalendar } from "@/components/scheduling/teacher-schedule-calendar";
+import { ApprovalList } from "@/components/approvals/approval-list";
+import { loadOwnerApprovals } from "@/lib/approvals/owner-approvals";
 import { createClient } from "@/lib/supabase/server";
 import { loadTeacherCalendar, personDisplayName } from "@/lib/scheduling/teacher-calendar";
 
@@ -44,6 +46,7 @@ export default async function StaffTeacherPage({ params }: {
     day: "2-digit",
   }).format(now);
   const teacherName = personDisplayName(teacher);
+  const approvals = await loadOwnerApprovals(supabase,schoolId,{teacherId});
 
   return <main className="mx-auto min-h-screen max-w-7xl px-6 py-section">
     <header className="flex flex-wrap items-end justify-between gap-6 border-b border-line pb-8">
@@ -57,6 +60,7 @@ export default async function StaffTeacherPage({ params }: {
         <Link href={`/schools/${schoolId}/staff`} className="text-muted hover:text-ink">All staff</Link>
       </div>
     </header>
+    {approvals.length?<section className="border-b border-line py-8"><div className="mb-5 flex items-baseline justify-between gap-4"><div><p className="text-xs uppercase tracking-[0.14em] text-brand">Needs attention</p><h2 className="mt-2 font-display text-3xl">{teacherName}’s pending approvals</h2></div><Link href={`/schools/${schoolId}/approvals`} className="text-sm text-muted hover:text-brand">View all →</Link></div><ApprovalList schoolId={schoolId} items={approvals} timezone={school.timezone} compact/></section>:null}
     <TeacherScheduleCalendar
       schoolId={schoolId}
       initialDate={initialDate}
