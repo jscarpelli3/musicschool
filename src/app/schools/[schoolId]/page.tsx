@@ -59,6 +59,7 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
     supabase.from("lesson_places").select("id, name, details, status").eq("school_id", schoolId),
     supabase.from("user_view_preferences").select("settings").eq("school_id", schoolId).eq("profile_id", profileId).eq("view_key", "student_roster").maybeSingle(),
     supabase.from("lesson_event_price_snapshots").select("lesson_event_id, billing_service_date").eq("school_id", schoolId),
+    supabase.from("lesson_schedule_proposals").select("id,teacher_id,student_id,proposed_starts_at,proposed_ends_at,status,proposal_kind,schedule_type").eq("school_id",schoolId).in("status",["pending_teacher","pending_owner"]),
   ]);
 
   const failedDashboardQuery = dashboardQueries.find((result) => result.error);
@@ -77,6 +78,7 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
     { data: placeRows },
     { data: rosterPreference },
     { data: lessonPriceSnapshots },
+    { data: pendingProposalRows },
   ] = dashboardQueries;
 
   const people = new Map((peopleRows ?? []).map((person) => [person.id, person]));
@@ -251,6 +253,11 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
           billing_service_date: billingDates.get(lesson.id) ?? lesson.starts_at.slice(0, 10),
           can_reschedule: lesson.reschedule_allowed && lesson.status === "scheduled" && new Date(lesson.starts_at).getTime() > now,
           can_mark_reschedule: canManageSchool || currentTeacherId === lesson.teacher_id,
+        }))}
+        pendingProposals={(pendingProposalRows ?? []).map((item) => ({
+          ...item,
+          status: item.status === "pending_owner" ? "pending_owner" as const : "pending_teacher" as const,
+          href: item.status === "pending_owner" ? `/schools/${schoolId}/approvals?proposal=${item.id}` : `/schools/${schoolId}/staff/${item.teacher_id}`,
         }))}
         lessonCreationOptions={canManageSchool ? {
           students: Object.entries(studentNames).map(([id,label]) => ({ id, label })),

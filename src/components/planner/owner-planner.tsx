@@ -38,6 +38,18 @@ type Lesson = {
   reschedule_reason_detail: string | null;
 };
 
+export type CalendarProposal = {
+  id: string;
+  teacher_id: string;
+  student_id: string;
+  proposed_starts_at: string;
+  proposed_ends_at: string;
+  status: "pending_teacher" | "pending_owner";
+  proposal_kind: string;
+  schedule_type: string;
+  href: string;
+};
+
 type StudentDetail = {
   name: string;
   email: string | null;
@@ -72,6 +84,7 @@ type Props = {
   placeDetails: Record<string, { name: string; details: string | null }>;
   availability: Availability[];
   lessons: Lesson[];
+  pendingProposals?: CalendarProposal[];
   contextLabel?: string;
   showTeacherFilter?: boolean;
   showAvailabilityLabels?: boolean;
@@ -161,6 +174,7 @@ export function OwnerPlanner({
   placeDetails,
   availability,
   lessons,
+  pendingProposals = [],
   contextLabel = "School planner",
   showTeacherFilter = true,
   showAvailabilityLabels = true,
@@ -190,6 +204,10 @@ export function OwnerPlanner({
   const lessonDetails = useMemo(
     () => lessons.map((lesson) => ({ ...lesson, start: zonedParts(lesson.starts_at, timezone), end: zonedParts(lesson.ends_at, timezone) })),
     [lessons, timezone],
+  );
+  const proposalDetails = useMemo(
+    () => pendingProposals.map((item) => ({ ...item, start: zonedParts(item.proposed_starts_at, timezone), end: zonedParts(item.proposed_ends_at, timezone) })),
+    [pendingProposals, timezone],
   );
   const selectedLesson = lessonDetails.find((lesson) => lesson.id === selectedLessonId) ?? null;
   const rescheduleLesson = lessonDetails.find((lesson) => lesson.id === rescheduleLessonId) ?? null;
@@ -369,6 +387,7 @@ export function OwnerPlanner({
           activeTeacherIds={activeTeacherIds}
           availability={availability}
           lessons={lessonDetails}
+          proposals={proposalDetails}
           studentNames={studentNames}
           onSelectLesson={setSelectedLessonId}
           onOpenDay={(dateKey) => {
@@ -384,9 +403,11 @@ export function OwnerPlanner({
           teachers={visibleTeachers}
           availability={availability}
           lessons={lessonDetails}
+          proposals={proposalDetails}
           studentNames={studentNames}
           placeDetails={placeDetails}
           onSelectLesson={setSelectedLessonId}
+          onOpenProposal={(href) => router.push(href)}
           rescheduleLesson={rescheduleLesson}
           canReschedule={canReschedule}
           candidate={dragCandidate}
@@ -493,9 +514,11 @@ function TimelineView({
   teachers,
   availability,
   lessons,
+  proposals,
   studentNames,
   placeDetails,
   onSelectLesson,
+  onOpenProposal,
   rescheduleLesson,
   canReschedule,
   candidate,
@@ -515,9 +538,11 @@ function TimelineView({
   teachers: Teacher[];
   availability: Availability[];
   lessons: LessonWithParts[];
+  proposals: Array<CalendarProposal & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> }>;
   studentNames: Record<string, string>;
   placeDetails: Record<string, { name: string; details: string | null }>;
   onSelectLesson: (lessonId: string) => void;
+  onOpenProposal: (href: string) => void;
   rescheduleLesson: LessonWithParts | null;
   canReschedule: boolean;
   candidate: RescheduleProposal | null;
@@ -775,6 +800,16 @@ function TimelineView({
                       </button>
                     );
                   })}
+                {proposals
+                  .filter((item) => item.start.dateKey === dateKey && column.teachers.some((teacher) => teacher.id === item.teacher_id))
+                  .map((item) => {
+                    const teacherIndex = Math.max(0, column.teachers.findIndex((teacher) => teacher.id === item.teacher_id));
+                    return <button key={item.id} type="button" className="proposal-block text-left" style={lessonTrackStyle(item.start.minutes, item.end.minutes, teacherIndex, teacherCount, activeTeacherIndex)} onClick={(event) => { event.stopPropagation(); onOpenProposal(item.href); }} aria-label={`Pending proposal for ${studentNames[item.student_id] ?? "student"} at ${clock(item.start.minutes)}`}>
+                      <span className="proposal-label">Pending</span>
+                      <span className="proposal-student">{studentNames[item.student_id] ?? "Student"}</span>
+                      <QuickView><span className="block text-sm font-medium">Proposed · {clock(item.start.minutes)}–{clock(item.end.minutes)}</span><span className="mt-1 block text-xs opacity-65">{item.status === "pending_teacher" ? "Waiting for teacher" : "Waiting for owner"}{item.schedule_type === "weekly" ? " · Weekly" : ""}</span></QuickView>
+                    </button>;
+                  })}
                 {candidate && rescheduleLesson && candidate.dateKey === dateKey && column.teachers.some((teacher) => teacher.id === candidate.teacherId) ? (() => {
                   const destinationTime = `${clock(candidate.minutes)}–${clock(candidate.minutes + rescheduleLesson.end.minutes - rescheduleLesson.start.minutes)}`;
                   return <div className="lesson-drop-ghost" data-valid={candidate.valid} style={lessonTrackStyle(candidate.minutes, candidate.minutes + rescheduleLesson.end.minutes - rescheduleLesson.start.minutes, 0, 1, -1)}><strong>{destinationTime}</strong><span>{studentNames[rescheduleLesson.student_id]}</span><small>{candidate.issue ?? "Valid time · release to review"}</small></div>;
@@ -869,6 +904,7 @@ function MonthView({
   activeTeacherIds,
   availability,
   lessons,
+  proposals,
   studentNames,
   onSelectLesson,
   onOpenDay,
@@ -877,6 +913,7 @@ function MonthView({
   activeTeacherIds: Set<string>;
   availability: Availability[];
   lessons: Array<Lesson & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> }>;
+  proposals: Array<CalendarProposal & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> }>;
   studentNames: Record<string, string>;
   onSelectLesson: (lessonId: string) => void;
   onOpenDay: (dateKey: string) => void;
@@ -891,6 +928,7 @@ function MonthView({
         {dates.map((date) => {
           const dateKey = key(date);
           const dayLessons = lessons.filter((lesson) => lesson.status !== "cancelled" && lesson.start.dateKey === dateKey && activeTeacherIds.has(lesson.teacher_id));
+          const dayProposals = proposals.filter((item) => item.start.dateKey === dateKey && activeTeacherIds.has(item.teacher_id));
           const dayRules = availability.filter((rule) => activeTeacherIds.has(rule.teacher_id) && rule.weekday === date.getDay() && rule.effective_from <= dateKey && (!rule.effective_until || rule.effective_until >= dateKey));
           const availableMinutes = dayRules.reduce((total, rule) => total + timeMinutes(rule.end_time) - timeMinutes(rule.start_time), 0);
           const bookedMinutes = dayLessons.reduce((total, lesson) => total + lesson.end.minutes - lesson.start.minutes, 0);
@@ -914,6 +952,7 @@ function MonthView({
                   </button>
                 ))}
                 {dayLessons.length > 2 ? <p className="text-[10px] text-brand">+{dayLessons.length - 2} more</p> : null}
+                {dayProposals.length ? <button type="button" onClick={() => onOpenDay(dateKey)} className="block text-left text-[10px] font-medium text-brand">{dayProposals.length} pending {dayProposals.length === 1 ? "proposal" : "proposals"}</button> : null}
               </div>
               <button type="button" onClick={() => onOpenDay(dateKey)} className="month-touch-count mt-3 w-full text-left text-[10px] text-brand">{dayLessons.length} {dayLessons.length === 1 ? "lesson" : "lessons"}</button>
               {availableMinutes ? (

@@ -158,6 +158,45 @@
   cursor: grab;
 }
 
+.proposal-block {
+  position: absolute;
+  z-index: 3;
+  overflow: visible;
+  border: 1px dashed var(--ui-brand);
+  background: color-mix(in srgb, var(--ui-brand) 10%, var(--ui-canvas));
+  color: var(--ui-ink);
+  padding: 0.25rem 0.4rem;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.proposal-block:hover,
+.proposal-block:focus-visible {
+  z-index: 28;
+  border-style: solid;
+  background: color-mix(in srgb, var(--ui-brand) 20%, var(--ui-canvas));
+  outline: none;
+}
+
+.proposal-label {
+  display: block;
+  color: var(--ui-brand-hover);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.proposal-student {
+  display: block;
+  margin-top: 0.18rem;
+  overflow: hidden;
+  font-size: 0.65rem;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .lesson-reschedule-icon {
   position: absolute;
   z-index: 2;

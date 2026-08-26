@@ -39,7 +39,7 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
   const today = new Intl.DateTimeFormat("sv-SE", { timeZone: school.timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
   const currentAvailability = schedule.availability.filter((rule) => rule.effective_from <= today && (!rule.effective_until || rule.effective_until >= today)).map((rule) => ({ weekday: rule.weekday, start_time: rule.start_time.slice(0,5), end_time: rule.end_time.slice(0,5) }));
   const lessons = schedule.lessons;
-  const { data: proposals } = await supabase.from("lesson_schedule_proposals").select("id,student_id,proposed_starts_at,proposed_ends_at,reason,schedule_type").eq("school_id",schoolId).eq("teacher_id",teacherPerson.id).eq("status","pending_teacher").order("created_at");
+  const proposals = schedule.pendingProposals.filter((proposal) => proposal.status === "pending_teacher");
   const studentById = new Map(Object.entries(schedule.studentNames));
   const productById = new Map(Object.entries(schedule.productNames));
   const placeById = new Map(Object.entries(schedule.placeDetails));

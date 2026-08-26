@@ -14,6 +14,7 @@ export function TeacherScheduleCalendar({
   lessonCreationOptions,
   rescheduleMode,
   rescheduleAction,
+  proposalHref,
 }: {
   schoolId: string;
   initialDate: string;
@@ -26,6 +27,7 @@ export function TeacherScheduleCalendar({
   lessonCreationOptions?: LessonCreationOptions;
   rescheduleMode?: "apply" | "propose";
   rescheduleAction?: (input: { lessonId: string; localStart: string; reason: string }) => Promise<{ ok: boolean; message: string }>;
+  proposalHref?: string;
 }) {
   return <OwnerPlanner
     schoolId={schoolId}
@@ -45,6 +47,7 @@ export function TeacherScheduleCalendar({
       can_reschedule: canReschedule && lesson.reschedule_allowed && lesson.status === "scheduled" && new Date(lesson.starts_at).getTime() > currentTimeMs,
       can_mark_reschedule: false,
     }))}
+    pendingProposals={schedule.pendingProposals.map((item) => ({ ...item, href: proposalHref ?? (item.status === "pending_teacher" ? `/schools/${schoolId}/teacher#lesson-proposals` : `/schools/${schoolId}/teacher`) }))}
     contextLabel={contextLabel}
     showTeacherFilter={false}
     showAvailabilityLabels={false}
