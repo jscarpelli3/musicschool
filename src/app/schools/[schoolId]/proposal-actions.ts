@@ -10,7 +10,7 @@ export async function manageOwnProposal(schoolId:string,proposalId:string,action
  const reference=crypto.randomUUID().slice(0,8).toUpperCase();
  try{
   const supabase=await createClient();
-  const rpc=supabase.rpc as unknown as (name:string,args:Record<string,unknown>)=>Promise<{data:Record<string,unknown>|null;error:{message:string;code?:string}|null}>;
+  const rpc=supabase.rpc.bind(supabase) as unknown as (name:string,args:Record<string,unknown>)=>Promise<{data:Record<string,unknown>|null;error:{message:string;code?:string}|null}>;
   const {data,error}=await rpc("manage_own_lesson_schedule_proposal",{p_school_id:schoolId,p_proposal_id:proposalId,p_action:action,p_local_start:localStart?`${localStart.replace("T"," ")}:00`:null,p_reason:reason?.trim()||null});
   if(error){console.error("Proposal lifecycle RPC rejected",{reference,schoolId,proposalId,action,code:error.code,message:error.message});return{ok:false,message:error.message.includes("not_authorized")?"Only the person who proposed this time can change it.":`The proposal could not be changed. Nothing was changed, so it is safe to try again. Reference ${reference}.`};}
   if(data?.outcome==="stale")return{ok:false,message:data.status==="superseded"?"This proposal was already replaced. Reload to review the current proposal.":`This proposal is already ${String(data?.status??"resolved").replaceAll("_"," ")}.`};
