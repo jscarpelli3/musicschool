@@ -4585,6 +4585,18 @@ export type Database = {
         Args: { p_billing_period_id: string; p_school_id: string }
         Returns: string
       }
+      resolve_owner_lesson_change_request: {
+        Args: {
+          p_adjustment_amount_cents: number
+          p_adjustment_kind: string | null
+          p_decision: string
+          p_lesson_resolution: string | null
+          p_reason: string | null
+          p_request_id: string
+          p_school_id: string
+        }
+        Returns: Json
+      }
       revoke_auto_charge_mandate: {
         Args: { p_evidence?: Json; raw_token: string }
         Returns: string
