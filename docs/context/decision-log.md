@@ -13,6 +13,13 @@ Use one entry per meaningful technical or product decision.
 
 ## Entries
 
+### 2026-08-28: Policies guide the process; authorized people decide individual outcomes
+
+- Status: accepted
+- Context: Small music schools operate through ongoing human relationships, including conversations and agreements that happen outside the app. Published policies are important for consistency, expectation-setting, and automation, but they must not trap an owner, teacher, payer, or student in an inappropriate outcome.
+- Decision: Treat every policy evaluation as a recommended default, not an irreversible command. The owner—and appropriately authorized school admins—can make a documented exception or correction to lesson service status, cancellation disposition, reschedule entitlement, family credit, fee, refund, or related account outcome. Review UI must show both what the policy normally produces and the actual disposition the owner is choosing. Manual decisions record the actor, time, reason, policy snapshot, before/after values, and related records, and notify affected people using the final human-approved outcome.
+- Consequences: Owner-facing lesson, request, family-account, credit, and billing records need clear `Make an exception`, `Correct`, or `Reverse` controls rather than hidden database workarounds. Changes append durable decision and adjustment history instead of erasing prior facts; settled financial records use linked compensating adjustments rather than destructive rewrites. Security authorization, tenant isolation, required legal consent, provider integrity, and preservation of audit evidence remain non-overridable boundaries.
+
 ### 2026-08-24: Separate teacher availability from scheduling authority
 
 - Status: accepted

@@ -8,6 +8,7 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 
 ## Active Focus
 
+0. Complete and rehearse the human-centered cancellation workflow: the versioned default-policy schema and family late-fee preview are deployed; application publication, owner request resolution, reschedule-entitlement creation, fee posting, and case-specific override controls remain.
 1. Rehearse the newly deployed owner-adjustment, unlock/revise, payer rejection, and automatic-payment consent flows.
 2. Keep the owner planner and payment surfaces reliable on phone, touch-only tablet, keyboard, and desktop.
 3. Finish approval replacement, mandate safety checks, and email failure tests before implementing any Stripe charge execution.

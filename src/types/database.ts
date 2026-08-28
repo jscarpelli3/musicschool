@@ -743,7 +743,10 @@ export type Database = {
       cancellation_policy_rules: {
         Row: {
           late_cancel_disposition: string
+          late_fee_timing: string
+          late_lesson_resolution: string
           late_request_guidance: string
+          late_reschedule_fee_cents: number
           max_self_service_reschedules: number | null
           must_keep_assigned_teacher: boolean
           no_show_disposition: string
@@ -757,7 +760,10 @@ export type Database = {
         }
         Insert: {
           late_cancel_disposition?: string
+          late_fee_timing?: string
+          late_lesson_resolution?: string
           late_request_guidance?: string
+          late_reschedule_fee_cents?: number
           max_self_service_reschedules?: number | null
           must_keep_assigned_teacher?: boolean
           no_show_disposition?: string
@@ -771,7 +777,10 @@ export type Database = {
         }
         Update: {
           late_cancel_disposition?: string
+          late_fee_timing?: string
+          late_lesson_resolution?: string
           late_request_guidance?: string
+          late_reschedule_fee_cents?: number
           max_self_service_reschedules?: number | null
           must_keep_assigned_teacher?: boolean
           no_show_disposition?: string
@@ -4386,6 +4395,22 @@ export type Database = {
           school_name: string
           teacher_name: string
         }[]
+      }
+      publish_default_cancellation_policy: {
+        Args: {
+          p_cancel_cutoff_hours: number
+          p_late_guidance: string
+          p_late_lesson_resolution: string
+          p_late_reschedule_fee_cents: number
+          p_must_keep_assigned_teacher: boolean
+          p_name: string
+          p_replacement_window_days: number
+          p_reschedule_cutoff_hours: number
+          p_school_id: string
+          p_timely_disposition: string
+          p_timely_guidance: string
+        }
+        Returns: string
       }
       preview_client_lesson_change_request: {
         Args: { p_lesson_event_id: string; p_request_type: string }
