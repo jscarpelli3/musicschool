@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { CommonTimeLogo } from "@/components/brand/common-time-logo";
+import { EarlyAccessForm } from "./early-access-form";
 
 export const metadata: Metadata = {
   title: "Common Time · Music school operations, in tune",
@@ -30,6 +31,7 @@ export default function ComingSoonPage() {
         <div className="border-t border-brand pt-5 text-sm leading-6 text-muted lg:mb-3">
           <p>Scheduling, billing, and family communication—built together for the particular rhythm of music lessons.</p>
           <p className="mt-8 text-ink">Common Time is currently in private development.</p>
+          <EarlyAccessForm />
         </div>
       </section>
 

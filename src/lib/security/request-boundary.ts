@@ -49,6 +49,19 @@ export async function assertTrustedServerActionRequest() {
   return requestHeaders;
 }
 
+export async function assertTrustedMarketingServerActionRequest() {
+  const requestHeaders = await headers();
+  const origin = requestHeaders.get("origin");
+  const fetchSite = requestHeaders.get("sec-fetch-site");
+  const allowed = new Set(["https://www.commontime.studio", "https://commontime.studio"]);
+  if (process.env.NODE_ENV !== "production") {
+    allowed.add("http://localhost:3000");
+    allowed.add("http://127.0.0.1:3000");
+  }
+  if (fetchSite === "cross-site" || !origin || !allowed.has(origin)) throw new RequestBoundaryError("untrusted_origin");
+  return requestHeaders;
+}
+
 function rateLimitSecret() {
   const secret = process.env.SECURITY_RATE_LIMIT_SECRET?.trim() || process.env.SUPABASE_SECRET_KEY?.trim();
   if (!secret) throw new Error("A server rate-limit secret is required.");
