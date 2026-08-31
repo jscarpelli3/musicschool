@@ -2,6 +2,12 @@
 
 Use this file for short chronological notes about meaningful work.
 
+## 2026-08-31 — orthogonal cancellation outcomes
+
+- Implemented the first compatibility phase of the cancellation redesign locally. Published legacy rules now derive seven uniform scenario/timing recipes whose calendar action, service truth, original charge treatment, replacement service, and fee/credit action are independent. Existing policies and decisions remain intact.
+- Added an append-only decision-revision record, a current-revision pointer/view, immutable policy-outcome rows, RLS/select boundaries, revoked direct mutations, backfill adapters, automatic adapters for the existing owner resolver, and migration assertions. The existing owner UI continues to use the legacy transaction while producing the new evidence automatically.
+- TypeScript, ESLint, and diff checks pass. Database execution remains unverified because the local Postgres service is unavailable and the Supabase CLI intentionally has no saved Keychain token; deployment requires a session-only `SUPABASE_ACCESS_TOKEN`.
+
 ## 2026-08-24 — teacher availability and autonomy
 
 - Added owner and teacher weekly availability editors backed by effective-dated multi-block rules; per-teacher scheduling authority and separate self-availability permission; atomic replacement with rollback-safe errors; and append-only domain-event plus audit evidence. Existing lessons are never moved by an availability edit. Durable lesson proposals and outside-block acceptance remain the next active slice.

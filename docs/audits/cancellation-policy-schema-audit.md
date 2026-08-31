@@ -11,6 +11,7 @@ This document is an engineering and product audit. A proposed model is not live 
 | Run | Date | Environment / commit | Evidence | Result |
 | --- | --- | --- | --- | --- |
 | CPS-001 | 2026-08-31 | Production schema through `20260828151000`; application through `90711be` | Source inspection of policy, portal request, owner resolution, entitlement, billing disposition, adjustment, refund, notification, RLS, and audit paths | Baseline complete; redesign required before expanding owner resolution UI |
+| CPS-002 | 2026-08-31 | Local migrations `20260831120000` and `20260831121000` | Static review, migration assertions, TypeScript, ESLint, and diff checks; database execution pending | Vocabulary/compatibility and decision-revision schema implemented locally; not deployed |
 
 ## Product invariants
 
