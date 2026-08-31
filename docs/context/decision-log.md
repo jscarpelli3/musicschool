@@ -13,6 +13,13 @@ Use one entry per meaningful technical or product decision.
 
 ## Entries
 
+### 2026-08-31: Separate cancellation decisions into orthogonal outcomes
+
+- Status: proposed
+- Context: The current three owner-resolution options safely apply a decision but each option couples calendar state, service truth, original billing treatment, and replacement entitlement. That limits reasonable owner exceptions and uses “count as serviced” as an internal decision even when the lesson did not occur.
+- Decision: Replace coupled cancellation outcomes with independent calendar action, service truth, original charge treatment, replacement-service entitlement, account adjustments, and collected-money remedy. Present common combinations as simple policy recipes while allowing an authorized owner to make a documented exception. Make decisions revisionable through append-only supersession and compensating actions.
+- Consequences: The policy editor and owner modal can remain simple without narrowing the durable model. Refund remains distinct from account credit, replacement lessons gain allocation/transfer history, and internal reporting no longer misstates cancelled lessons as serviced. Implementation follows the phased contract in `docs/audits/cancellation-policy-schema-audit.md`.
+
 ### 2026-08-28: Policies guide the process; authorized people decide individual outcomes
 
 - Status: accepted

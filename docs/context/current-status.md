@@ -8,10 +8,11 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 
 ## Active Focus
 
-0. Rehearse and extend the human-centered cancellation workflow: versioned policies, family late-fee preview, atomic owner request decisions, lesson accounting overrides, the `Lessons to Schedule` entitlement foundation, and durable fee/credit adjustments are deployed at the database layer and implemented in the application. Pending adjustments now enter an existing editable period or wait idempotently for the next one. Production application publication and live acceptance remain; next expose the deployed manual entitlement-status correction controls in student/family UI and add compensating adjustment reversal controls.
-1. Rehearse the newly deployed owner-adjustment, unlock/revise, payer rejection, and automatic-payment consent flows.
-2. Keep the owner planner and payment surfaces reliable on phone, touch-only tablet, keyboard, and desktop.
-3. Finish approval replacement, mandate safety checks, and email failure tests before implementing any Stripe charge execution.
+0. Redesign cancellation policy and owner resolution around the audited orthogonal outcome model in [`../audits/cancellation-policy-schema-audit.md`](../audits/cancellation-policy-schema-audit.md). Complete vocabulary/compatibility and revisionable-decision phases before expanding or restyling the current three-option owner UI.
+1. Rehearse the deployed human-centered cancellation workflow: versioned policies, family late-fee preview, atomic owner request decisions, lesson accounting overrides, the `Lessons to Schedule` entitlement foundation, and durable fee/credit adjustments. Pending adjustments enter an existing editable period or wait idempotently for the next one.
+2. Rehearse the newly deployed owner-adjustment, unlock/revise, payer rejection, and automatic-payment consent flows.
+3. Keep the owner planner and payment surfaces reliable on phone, touch-only tablet, keyboard, and desktop.
+4. Finish approval replacement, mandate safety checks, and email failure tests before implementing any Stripe charge execution.
 
 ## Provider State
 
