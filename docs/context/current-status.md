@@ -8,7 +8,7 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 
 ## Active Focus
 
-0. Redesign cancellation policy and owner resolution around the audited orthogonal outcome model in [`../audits/cancellation-policy-schema-audit.md`](../audits/cancellation-policy-schema-audit.md). The vocabulary/compatibility and append-only decision-revision schema are implemented locally in migrations `20260831120000` and `20260831121000`; database migration, generated types, and live evidence remain before expanding or restyling the current three-option owner UI.
+0. Redesign cancellation policy and owner resolution around the audited orthogonal outcome model in [`../audits/cancellation-policy-schema-audit.md`](../audits/cancellation-policy-schema-audit.md). The vocabulary/compatibility and append-only decision-revision schema in migrations `20260831120000` and `20260831121000` is deployed, migration assertions passed, and generated types match the live schema. A live owner-decision rehearsal remains before expanding or restyling the current three-option owner UI.
 1. Rehearse the deployed human-centered cancellation workflow: versioned policies, family late-fee preview, atomic owner request decisions, lesson accounting overrides, the `Lessons to Schedule` entitlement foundation, and durable fee/credit adjustments. Pending adjustments enter an existing editable period or wait idempotently for the next one.
 2. Rehearse the newly deployed owner-adjustment, unlock/revise, payer rejection, and automatic-payment consent flows.
 3. Keep the owner planner and payment surfaces reliable on phone, touch-only tablet, keyboard, and desktop.
@@ -16,7 +16,7 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 
 ## Provider State
 
-- **Supabase:** linked project, but the CLI currently has no saved access token by design. Tenant, people, scheduling, billing, policy, approval, SMS-consent, and provider-event foundations through `20260828151000` are deployed with RLS and server authorization. The local orthogonal cancellation migrations cannot be deployed until a session-only `SUPABASE_ACCESS_TOKEN` is supplied.
+- **Supabase:** linked and migrated through `20260831121000`; tenant, people, scheduling, billing, orthogonal policy outcomes, append-only decision revisions, approval, SMS-consent, and provider-event foundations are deployed with RLS and server authorization. Linked lint reports only the two pre-existing unused-variable warnings in `queue_payer_response_notifications` and `submit_client_lesson_change_request`.
 - **Vercel/domain:** `commontime.studio`, `www.commontime.studio`, and `app.commontime.studio` are valid on Vercel. Apex redirects to the indexable `www` Coming Soon page; `app` and the legacy application hostname are explicitly noindex. Production `APP_URL`, Supabase Site URL, Google/Supabase callback behavior, Stripe test destinations, and the legacy Twilio callbacks have passed the custom-domain cutover.
 - **Google:** Google OAuth through Supabase is working locally and on the deployed app after correcting provider redirect configuration.
 - **Stripe:** Connect is configured in test mode. The first school completed hosted onboarding; test card setup, attachment, detachment, Connect synchronization, and signed webhook intake have been exercised.

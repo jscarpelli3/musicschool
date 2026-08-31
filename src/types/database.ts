@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.5"
   }
   graphql_public: {
     Tables: {
@@ -80,6 +80,94 @@ export type Database = {
           },
           {
             foreignKeyName: "audit_log_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_account_pending_adjustments: {
+        Row: {
+          amount_cents: number
+          billing_account_id: string
+          billing_line_item_id: string | null
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          kind: string
+          school_id: string
+          source_request_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          billing_account_id: string
+          billing_line_item_id?: string | null
+          created_at?: string
+          created_by: string
+          description: string
+          id?: string
+          kind: string
+          school_id: string
+          source_request_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          billing_account_id?: string
+          billing_line_item_id?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          kind?: string
+          school_id?: string
+          source_request_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_account_pending_adjus_school_id_billing_account_id_fkey"
+            columns: ["school_id", "billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "billing_account_pending_adjust_school_id_source_request_id_fkey"
+            columns: ["school_id", "source_request_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_change_current_decisions"
+            referencedColumns: ["school_id", "request_id"]
+          },
+          {
+            foreignKeyName: "billing_account_pending_adjust_school_id_source_request_id_fkey"
+            columns: ["school_id", "source_request_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_change_requests"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "billing_account_pending_adjustments_billing_line_item_id_fkey"
+            columns: ["billing_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "billing_line_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_account_pending_adjustments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_account_pending_adjustments_school_id_fkey"
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "schools"
@@ -740,6 +828,83 @@ export type Database = {
           },
         ]
       }
+      cancellation_policy_outcomes: {
+        Row: {
+          adjustment_amount_cents: number
+          adjustment_kind: string
+          calendar_action: string
+          created_at: string
+          expiration_anchor: string | null
+          expiration_days: number | null
+          family_guidance: string
+          fixed_replacement_minutes: number | null
+          id: string
+          original_charge_treatment: string
+          owner_review_required: boolean
+          policy_version_id: string
+          replacement_kind: string
+          replacement_minutes_rule: string | null
+          scenario: string
+          school_id: string
+          service_outcome: string
+          teacher_constraint: string
+          timing_bucket: string
+          transferable_within_account: boolean
+        }
+        Insert: {
+          adjustment_amount_cents?: number
+          adjustment_kind?: string
+          calendar_action: string
+          created_at?: string
+          expiration_anchor?: string | null
+          expiration_days?: number | null
+          family_guidance: string
+          fixed_replacement_minutes?: number | null
+          id?: string
+          original_charge_treatment: string
+          owner_review_required?: boolean
+          policy_version_id: string
+          replacement_kind: string
+          replacement_minutes_rule?: string | null
+          scenario: string
+          school_id: string
+          service_outcome: string
+          teacher_constraint?: string
+          timing_bucket: string
+          transferable_within_account?: boolean
+        }
+        Update: {
+          adjustment_amount_cents?: number
+          adjustment_kind?: string
+          calendar_action?: string
+          created_at?: string
+          expiration_anchor?: string | null
+          expiration_days?: number | null
+          family_guidance?: string
+          fixed_replacement_minutes?: number | null
+          id?: string
+          original_charge_treatment?: string
+          owner_review_required?: boolean
+          policy_version_id?: string
+          replacement_kind?: string
+          replacement_minutes_rule?: string | null
+          scenario?: string
+          school_id?: string
+          service_outcome?: string
+          teacher_constraint?: string
+          timing_bucket?: string
+          transferable_within_account?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cancellation_policy_outcomes_school_id_policy_version_id_fkey"
+            columns: ["school_id", "policy_version_id"]
+            isOneToOne: false
+            referencedRelation: "school_policy_versions"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
       cancellation_policy_rules: {
         Row: {
           late_cancel_disposition: string
@@ -868,6 +1033,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      early_access_signups: {
+        Row: {
+          consented_at: string
+          created_at: string
+          email: string
+          id: string
+          name: string | null
+          school_name: string | null
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          consented_at?: string
+          created_at?: string
+          email: string
+          id?: string
+          name?: string | null
+          school_name?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          consented_at?: string
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string | null
+          school_name?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       email_deliveries: {
         Row: {
@@ -1043,11 +1244,287 @@ export type Database = {
         }
         Relationships: []
       }
+      lesson_accounting_overrides: {
+        Row: {
+          created_at: string
+          disposition: string
+          lesson_event_id: string
+          reason_code: string
+          request_decision_id: string
+          school_id: string
+        }
+        Insert: {
+          created_at?: string
+          disposition: string
+          lesson_event_id: string
+          reason_code?: string
+          request_decision_id: string
+          school_id: string
+        }
+        Update: {
+          created_at?: string
+          disposition?: string
+          lesson_event_id?: string
+          reason_code?: string
+          request_decision_id?: string
+          school_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_accounting_overrides_request_decision_id_fkey"
+            columns: ["request_decision_id"]
+            isOneToOne: true
+            referencedRelation: "lesson_change_request_decisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_accounting_overrides_school_id_lesson_event_id_fkey"
+            columns: ["school_id", "lesson_event_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_events"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
+      lesson_change_decision_revisions: {
+        Row: {
+          actual_outcome_snapshot: Json
+          adjustment_actions: Json
+          beneficiary_student_id: string | null
+          calendar_action: string
+          correlation_id: string
+          created_at: string
+          decided_at: string
+          decided_by: string
+          expires_at: string | null
+          id: string
+          internal_reason: string | null
+          is_policy_override: boolean
+          legacy_decision_id: string | null
+          original_charge_treatment: string
+          payer_summary: string
+          policy_outcome_id: string | null
+          policy_snapshot: Json
+          refund_action: string
+          replacement_kind: string
+          replacement_minutes: number | null
+          replacement_teacher_id: string | null
+          request_disposition: string
+          request_id: string
+          revision_number: number
+          school_id: string
+          service_outcome: string
+          supersedes_revision_id: string | null
+          teacher_constraint: string
+          transferable_within_account: boolean
+        }
+        Insert: {
+          actual_outcome_snapshot?: Json
+          adjustment_actions?: Json
+          beneficiary_student_id?: string | null
+          calendar_action: string
+          correlation_id?: string
+          created_at?: string
+          decided_at: string
+          decided_by: string
+          expires_at?: string | null
+          id?: string
+          internal_reason?: string | null
+          is_policy_override?: boolean
+          legacy_decision_id?: string | null
+          original_charge_treatment: string
+          payer_summary: string
+          policy_outcome_id?: string | null
+          policy_snapshot?: Json
+          refund_action?: string
+          replacement_kind: string
+          replacement_minutes?: number | null
+          replacement_teacher_id?: string | null
+          request_disposition: string
+          request_id: string
+          revision_number: number
+          school_id: string
+          service_outcome: string
+          supersedes_revision_id?: string | null
+          teacher_constraint?: string
+          transferable_within_account?: boolean
+        }
+        Update: {
+          actual_outcome_snapshot?: Json
+          adjustment_actions?: Json
+          beneficiary_student_id?: string | null
+          calendar_action?: string
+          correlation_id?: string
+          created_at?: string
+          decided_at?: string
+          decided_by?: string
+          expires_at?: string | null
+          id?: string
+          internal_reason?: string | null
+          is_policy_override?: boolean
+          legacy_decision_id?: string | null
+          original_charge_treatment?: string
+          payer_summary?: string
+          policy_outcome_id?: string | null
+          policy_snapshot?: Json
+          refund_action?: string
+          replacement_kind?: string
+          replacement_minutes?: number | null
+          replacement_teacher_id?: string | null
+          request_disposition?: string
+          request_id?: string
+          revision_number?: number
+          school_id?: string
+          service_outcome?: string
+          supersedes_revision_id?: string | null
+          teacher_constraint?: string
+          transferable_within_account?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_change_decision_revisi_school_id_beneficiary_studen_fkey"
+            columns: ["school_id", "beneficiary_student_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_change_decision_revisi_school_id_replacement_teache_fkey"
+            columns: ["school_id", "replacement_teacher_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_change_decision_revisi_school_id_supersedes_revisio_fkey"
+            columns: ["school_id", "supersedes_revision_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_change_decision_revisions"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_change_decision_revisio_school_id_policy_outcome_id_fkey"
+            columns: ["school_id", "policy_outcome_id"]
+            isOneToOne: false
+            referencedRelation: "cancellation_policy_outcomes"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_change_decision_revisions_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_change_decision_revisions_legacy_decision_id_fkey"
+            columns: ["legacy_decision_id"]
+            isOneToOne: true
+            referencedRelation: "lesson_change_request_decisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_change_decision_revisions_school_id_request_id_fkey"
+            columns: ["school_id", "request_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_change_current_decisions"
+            referencedColumns: ["school_id", "request_id"]
+          },
+          {
+            foreignKeyName: "lesson_change_decision_revisions_school_id_request_id_fkey"
+            columns: ["school_id", "request_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_change_requests"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
+      lesson_change_request_decisions: {
+        Row: {
+          accounting_disposition: string | null
+          adjustment_amount_cents: number
+          adjustment_kind: string | null
+          decided_at: string
+          decided_by: string
+          decision: string
+          id: string
+          is_policy_override: boolean
+          lesson_resolution: string | null
+          policy_adjustment_amount_cents: number
+          policy_lesson_resolution: string | null
+          reason: string | null
+          request_id: string
+          school_id: string
+        }
+        Insert: {
+          accounting_disposition?: string | null
+          adjustment_amount_cents?: number
+          adjustment_kind?: string | null
+          decided_at?: string
+          decided_by: string
+          decision: string
+          id?: string
+          is_policy_override?: boolean
+          lesson_resolution?: string | null
+          policy_adjustment_amount_cents?: number
+          policy_lesson_resolution?: string | null
+          reason?: string | null
+          request_id: string
+          school_id: string
+        }
+        Update: {
+          accounting_disposition?: string | null
+          adjustment_amount_cents?: number
+          adjustment_kind?: string | null
+          decided_at?: string
+          decided_by?: string
+          decision?: string
+          id?: string
+          is_policy_override?: boolean
+          lesson_resolution?: string | null
+          policy_adjustment_amount_cents?: number
+          policy_lesson_resolution?: string | null
+          reason?: string | null
+          request_id?: string
+          school_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_change_request_decisions_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_change_request_decisions_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: true
+            referencedRelation: "lesson_change_current_decisions"
+            referencedColumns: ["request_id"]
+          },
+          {
+            foreignKeyName: "lesson_change_request_decisions_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: true
+            referencedRelation: "lesson_change_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_change_request_decisions_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lesson_change_requests: {
         Row: {
           accounting_state: string
           billing_account_id: string
           created_at: string
+          current_decision_revision_id: string | null
           cutoff_hours: number
           id: string
           lesson_event_id: string
@@ -1069,6 +1546,7 @@ export type Database = {
           accounting_state: string
           billing_account_id: string
           created_at?: string
+          current_decision_revision_id?: string | null
           cutoff_hours: number
           id?: string
           lesson_event_id: string
@@ -1090,6 +1568,7 @@ export type Database = {
           accounting_state?: string
           billing_account_id?: string
           created_at?: string
+          current_decision_revision_id?: string | null
           cutoff_hours?: number
           id?: string
           lesson_event_id?: string
@@ -1108,6 +1587,13 @@ export type Database = {
           within_policy_window?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "lesson_change_requests_current_revision_fk"
+            columns: ["school_id", "current_decision_revision_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_change_decision_revisions"
+            referencedColumns: ["school_id", "id"]
+          },
           {
             foreignKeyName: "lesson_change_requests_policy_version_id_fkey"
             columns: ["policy_version_id"]
@@ -1679,6 +2165,13 @@ export type Database = {
             foreignKeyName: "lesson_request_email_outbox_school_id_request_id_fkey"
             columns: ["school_id", "request_id"]
             isOneToOne: false
+            referencedRelation: "lesson_change_current_decisions"
+            referencedColumns: ["school_id", "request_id"]
+          },
+          {
+            foreignKeyName: "lesson_request_email_outbox_school_id_request_id_fkey"
+            columns: ["school_id", "request_id"]
+            isOneToOne: false
             referencedRelation: "lesson_change_requests"
             referencedColumns: ["school_id", "id"]
           },
@@ -1701,15 +2194,17 @@ export type Database = {
           original_starts_at: string | null
           place_id: string
           product_id: string
+          proposal_kind: string
           proposed_ends_at: string
           proposed_local_start: string
           proposed_starts_at: string
-          proposal_kind: string
           reason: string
+          replaces_proposal_id: string | null
           schedule_type: string
           school_id: string
           status: string
           student_id: string
+          superseded_by_proposal_id: string | null
           teacher_id: string
           updated_at: string
         }
@@ -1729,15 +2224,17 @@ export type Database = {
           original_starts_at?: string | null
           place_id: string
           product_id: string
+          proposal_kind?: string
           proposed_ends_at: string
           proposed_local_start: string
           proposed_starts_at: string
-          proposal_kind?: string
           reason: string
+          replaces_proposal_id?: string | null
           schedule_type: string
           school_id: string
           status?: string
           student_id: string
+          superseded_by_proposal_id?: string | null
           teacher_id: string
           updated_at?: string
         }
@@ -1757,15 +2254,17 @@ export type Database = {
           original_starts_at?: string | null
           place_id?: string
           product_id?: string
+          proposal_kind?: string
           proposed_ends_at?: string
           proposed_local_start?: string
           proposed_starts_at?: string
-          proposal_kind?: string
           reason?: string
+          replaces_proposal_id?: string | null
           schedule_type?: string
           school_id?: string
           status?: string
           student_id?: string
+          superseded_by_proposal_id?: string | null
           teacher_id?: string
           updated_at?: string
         }
@@ -1782,6 +2281,13 @@ export type Database = {
             columns: ["decided_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_schedule_proposals_replaces_proposal_id_fkey"
+            columns: ["replaces_proposal_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_schedule_proposals"
             referencedColumns: ["id"]
           },
           {
@@ -1825,6 +2331,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "teachers"
             referencedColumns: ["school_id", "person_id"]
+          },
+          {
+            foreignKeyName: "lesson_schedule_proposals_superseded_by_proposal_id_fkey"
+            columns: ["superseded_by_proposal_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_schedule_proposals"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1985,6 +2498,111 @@ export type Database = {
             columns: ["school_id", "source_product_id"]
             isOneToOne: false
             referencedRelation: "service_products"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
+      lesson_service_entitlements: {
+        Row: {
+          assigned_teacher_id: string | null
+          billing_account_id: string
+          created_at: string
+          created_by: string
+          duration_minutes: number
+          expires_at: string | null
+          id: string
+          school_id: string
+          source_lesson_event_id: string
+          source_request_id: string
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_teacher_id?: string | null
+          billing_account_id: string
+          created_at?: string
+          created_by: string
+          duration_minutes: number
+          expires_at?: string | null
+          id?: string
+          school_id: string
+          source_lesson_event_id: string
+          source_request_id: string
+          status?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_teacher_id?: string | null
+          billing_account_id?: string
+          created_at?: string
+          created_by?: string
+          duration_minutes?: number
+          expires_at?: string | null
+          id?: string
+          school_id?: string
+          source_lesson_event_id?: string
+          source_request_id?: string
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_service_entitlements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_service_entitlements_school_id_assigned_teacher_id_fkey"
+            columns: ["school_id", "assigned_teacher_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_service_entitlements_school_id_billing_account_id_fkey"
+            columns: ["school_id", "billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_service_entitlements_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_service_entitlements_school_id_source_lesson_event__fkey"
+            columns: ["school_id", "source_lesson_event_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_events"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_service_entitlements_school_id_source_request_id_fkey"
+            columns: ["school_id", "source_request_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_change_current_decisions"
+            referencedColumns: ["school_id", "request_id"]
+          },
+          {
+            foreignKeyName: "lesson_service_entitlements_school_id_source_request_id_fkey"
+            columns: ["school_id", "source_request_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_change_requests"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_service_entitlements_school_id_student_id_fkey"
+            columns: ["school_id", "student_id"]
+            isOneToOne: false
+            referencedRelation: "people"
             referencedColumns: ["school_id", "id"]
           },
         ]
@@ -2807,6 +3425,45 @@ export type Database = {
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_admins: {
+        Row: {
+          granted_at: string
+          granted_by: string | null
+          notes: string | null
+          profile_id: string
+          status: string
+        }
+        Insert: {
+          granted_at?: string
+          granted_by?: string | null
+          notes?: string | null
+          profile_id: string
+          status?: string
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string | null
+          notes?: string | null
+          profile_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_admins_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_admins_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -3988,7 +4645,50 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      lesson_change_current_decisions: {
+        Row: {
+          adjustment_actions: Json | null
+          beneficiary_student_id: string | null
+          calendar_action: string | null
+          correlation_id: string | null
+          current_decision_revision_id: string | null
+          decided_at: string | null
+          decided_by: string | null
+          expires_at: string | null
+          internal_reason: string | null
+          is_policy_override: boolean | null
+          original_charge_treatment: string | null
+          payer_summary: string | null
+          policy_outcome_id: string | null
+          refund_action: string | null
+          replacement_kind: string | null
+          replacement_minutes: number | null
+          replacement_teacher_id: string | null
+          request_disposition: string | null
+          request_id: string | null
+          revision_number: number | null
+          school_id: string | null
+          service_outcome: string | null
+          teacher_constraint: string | null
+          transferable_within_account: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_change_decision_revisions_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_change_requests_current_revision_fk"
+            columns: ["school_id", "current_decision_revision_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_change_decision_revisions"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
     }
     Functions: {
       activate_my_teacher_memberships: { Args: never; Returns: number }
@@ -4010,6 +4710,15 @@ export type Database = {
           p_occurred_at: string
         }
         Returns: undefined
+      }
+      apply_pending_account_adjustments_to_period: {
+        Args: {
+          p_actor_id: string
+          p_billing_account_id: string
+          p_billing_period_id: string
+          p_school_id: string
+        }
+        Returns: number
       }
       apply_sms_delivery_status: {
         Args: {
@@ -4104,6 +4813,14 @@ export type Database = {
         }
         Returns: Json
       }
+      compute_policy_lesson_event_billing_disposition: {
+        Args: {
+          p_as_of?: string
+          p_lesson_event_id: string
+          p_school_id: string
+        }
+        Returns: Json
+      }
       consume_security_rate_limit: {
         Args: {
           p_block_seconds?: number
@@ -4149,6 +4866,10 @@ export type Database = {
           approval_request_id: string
           sms_delivery_id: string
         }[]
+      }
+      create_orthogonal_revision_for_legacy_decision: {
+        Args: { p_decision_id: string }
+        Returns: string
       }
       create_outside_availability_lesson_proposal: {
         Args: {
@@ -4218,6 +4939,15 @@ export type Database = {
         Returns: undefined
       }
       decide_outside_availability_lesson_proposal: {
+        Args: {
+          p_decision: string
+          p_note?: string
+          p_proposal_id: string
+          p_school_id: string
+        }
+        Returns: string
+      }
+      decide_teacher_reschedule_proposal: {
         Args: {
           p_decision: string
           p_note?: string
@@ -4356,6 +5086,7 @@ export type Database = {
         Args: { p_school_id: string; p_teacher_id: string }
         Returns: boolean
       }
+      is_platform_admin: { Args: never; Returns: boolean }
       is_school_member: { Args: { target_school_id: string }; Returns: boolean }
       lock_family_billing_period: {
         Args: { p_billing_period_id: string; p_school_id: string }
@@ -4368,6 +5099,16 @@ export type Database = {
           p_school_id: string
         }
         Returns: number
+      }
+      manage_own_lesson_schedule_proposal: {
+        Args: {
+          p_action: string
+          p_local_start?: string
+          p_proposal_id: string
+          p_reason?: string
+          p_school_id: string
+        }
+        Returns: Json
       }
       mark_lesson_created_email_reconciliation_required: {
         Args: { p_delivery_id: string; p_error_message: string }
@@ -4396,6 +5137,28 @@ export type Database = {
           teacher_name: string
         }[]
       }
+      preview_client_lesson_change_request: {
+        Args: { p_lesson_event_id: string; p_request_type: string }
+        Returns: Json
+      }
+      preview_lesson_event_billing_disposition: {
+        Args: {
+          p_as_of?: string
+          p_lesson_event_id: string
+          p_school_id: string
+        }
+        Returns: Json
+      }
+      propose_or_reschedule_assigned_lesson_as_teacher: {
+        Args: {
+          p_lesson_event_id: string
+          p_local_start: string
+          p_reason: string
+          p_school_id: string
+        }
+        Returns: Json
+      }
+      prune_security_rate_limit_buckets: { Args: never; Returns: number }
       publish_default_cancellation_policy: {
         Args: {
           p_cancel_cutoff_hours: number
@@ -4412,25 +5175,16 @@ export type Database = {
         }
         Returns: string
       }
-      preview_client_lesson_change_request: {
-        Args: { p_lesson_event_id: string; p_request_type: string }
-        Returns: Json
-      }
-      preview_lesson_event_billing_disposition: {
-        Args: {
-          p_as_of?: string
-          p_lesson_event_id: string
-          p_school_id: string
-        }
-        Returns: Json
-      }
-      prune_security_rate_limit_buckets: { Args: never; Returns: number }
       queue_payer_response_notifications: {
         Args: {
           p_kind: string
           p_note?: string
           p_request: Database["public"]["Tables"]["billing_approval_requests"]["Row"]
         }
+        Returns: undefined
+      }
+      record_early_access_signup: {
+        Args: { p_email: string; p_name?: string; p_school_name?: string }
         Returns: undefined
       }
       record_lesson_created_email_submission: {
@@ -4534,24 +5288,6 @@ export type Database = {
         }
         Returns: Json
       }
-      propose_or_reschedule_assigned_lesson_as_teacher: {
-        Args: {
-          p_lesson_event_id: string
-          p_local_start: string
-          p_reason: string
-          p_school_id: string
-        }
-        Returns: Json
-      }
-      decide_teacher_reschedule_proposal: {
-        Args: {
-          p_decision: string
-          p_note?: string
-          p_proposal_id: string
-          p_school_id: string
-        }
-        Returns: string
-      }
       reschedule_lesson_as_owner: {
         Args: {
           p_allow_outside_availability?: boolean
@@ -4562,6 +5298,18 @@ export type Database = {
           p_school_id: string
           p_source: string
           p_teacher_id: string
+        }
+        Returns: Json
+      }
+      resolve_owner_lesson_change_request: {
+        Args: {
+          p_adjustment_amount_cents: number
+          p_adjustment_kind: string | null
+          p_decision: string
+          p_lesson_resolution: string | null
+          p_reason: string | null
+          p_request_id: string
+          p_school_id: string
         }
         Returns: Json
       }
@@ -4585,18 +5333,6 @@ export type Database = {
         Args: { p_billing_period_id: string; p_school_id: string }
         Returns: string
       }
-      resolve_owner_lesson_change_request: {
-        Args: {
-          p_adjustment_amount_cents: number
-          p_adjustment_kind: string | null
-          p_decision: string
-          p_lesson_resolution: string | null
-          p_reason: string | null
-          p_request_id: string
-          p_school_id: string
-        }
-        Returns: Json
-      }
       revoke_auto_charge_mandate: {
         Args: { p_evidence?: Json; raw_token: string }
         Returns: string
@@ -4615,6 +5351,15 @@ export type Database = {
           p_blocked_reason?: string
           p_lesson_event_id: string
           p_school_id: string
+        }
+        Returns: undefined
+      }
+      set_lesson_service_entitlement_status: {
+        Args: {
+          p_entitlement_id: string
+          p_reason: string
+          p_school_id: string
+          p_status: string
         }
         Returns: undefined
       }
@@ -4657,6 +5402,10 @@ export type Database = {
           p_requested_resolution: string
         }
         Returns: Json
+      }
+      sync_cancellation_policy_outcomes_from_rules: {
+        Args: { p_policy_version_id: string }
+        Returns: undefined
       }
       unlock_unsubmitted_billing_period: {
         Args: { p_billing_period_id: string; p_school_id: string }
