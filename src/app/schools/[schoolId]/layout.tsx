@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { SchoolManagementNav } from "@/components/schools/school-management-nav";
 import { createClient } from "@/lib/supabase/server";
+import { AppSignOut } from "@/components/auth/app-sign-out";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ export default async function SchoolLayout({ children, params }: { children: Rea
           {logo?.signedUrl ? <img /* eslint-disable-line @next/next/no-img-element */ src={logo.signedUrl} alt={`${school.name} logo`} className="h-14 w-14 shrink-0 rounded-card border border-line bg-surface object-contain p-2" /> : <span className="grid h-14 w-14 shrink-0 place-items-center rounded-card border border-line bg-surface text-xl font-semibold text-brand">{school.name.slice(0,1).toUpperCase()}</span>}
           <span className="min-w-0"><span className="block text-xs capitalize text-muted">{membership.role}</span><span className="mt-2 block truncate font-display text-3xl sm:text-4xl">{school.name}</span><span className="mt-1 hidden text-xs text-muted sm:block">{school.timezone} · {school.family_billing_mode.replaceAll("_"," ")}</span></span>
         </Link>
-        <div className="flex shrink-0 items-center gap-3"><Link href="/profile" aria-label="Profile settings" className="flex items-center gap-3 text-sm text-muted hover:text-ink">{avatarUrl ? <img /* eslint-disable-line @next/next/no-img-element */ src={avatarUrl} alt="Your avatar" className="h-10 w-10 rounded-full border border-line object-cover" /> : null}<span className="hidden sm:inline">Profile</span></Link><form action="/auth/signout" method="post"><button className="rounded-control border border-line px-4 py-control text-sm text-muted hover:text-ink">Sign out</button></form></div>
+        <div className="flex shrink-0 items-start gap-3"><Link href="/profile" aria-label="Profile settings" className="flex items-center gap-3 py-control text-sm text-muted hover:text-ink">{avatarUrl ? <img /* eslint-disable-line @next/next/no-img-element */ src={avatarUrl} alt="Your avatar" className="h-10 w-10 rounded-full border border-line object-cover" /> : null}<span className="hidden sm:inline">Profile</span></Link><AppSignOut /></div>
       </header>
       <SchoolManagementNav schoolId={schoolId} role={membership.role} approvalCount={approvalCountResult.count??0} />
     </div>

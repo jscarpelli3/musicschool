@@ -1,9 +1,5 @@
-"use client";
-
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { AppSignOut } from "@/components/auth/app-sign-out";
 
 export function PortalSignOut({ label = "Sign out" }: { label?: string }) {
-  const router = useRouter();
-  return <button type="button" onClick={async () => { await createClient().auth.signOut({ scope: "local" }); router.refresh(); }} className="text-sm text-muted hover:text-ink">{label}</button>;
+  return <AppSignOut label={label} destination="/portal" className="text-sm text-muted transition hover:text-ink" />;
 }

@@ -8,6 +8,7 @@ export async function POST(request: NextRequest) {
     throw caught;
   }
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut({ scope: "local" });
+  if (error) return NextResponse.json({ error: "Sign out could not be completed." }, { status: 502 });
   return NextResponse.redirect(new URL("/login", request.url), { status: 303 });
 }

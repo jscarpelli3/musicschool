@@ -5,6 +5,7 @@ import { Suspense, useState } from "react";
 import { CommonTimeLogo } from "@/components/brand/common-time-logo";
 import { requestEmailCode, verifyEmailCode } from "@/app/auth/actions";
 import { createClient } from "@/lib/supabase/client";
+import { PendingActionStatus } from "@/components/ui/pending-action-status";
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -50,7 +51,9 @@ function LoginForm() {
     setPending(true);
     setError(null);
     const normalized = email.trim().toLowerCase();
-    const result = await requestEmailCode(normalized, "account");
+    let result;
+    try { result = await requestEmailCode(normalized, "account"); }
+    catch { setError("The request did not finish. Check your connection and try again."); setPending(false); return; }
     if (!result.ok) setError(result.message);
     else { setEmail(normalized); setCodeSent(true); }
     setPending(false);
@@ -59,7 +62,9 @@ function LoginForm() {
   async function verifyCode() {
     setPending(true);
     setError(null);
-    const result = await verifyEmailCode(email, code);
+    let result;
+    try { result = await verifyEmailCode(email, code, "account"); }
+    catch { setError("Sign-in did not finish. Your code is still safe to try again."); setPending(false); return; }
     if (!result.ok) { setError(result.message); setPending(false); return; }
     window.location.assign(safeNext());
   }
@@ -84,7 +89,7 @@ function LoginForm() {
           {pending ? "Redirecting…" : "Continue with Google"}
         </button>
         <div className="my-7 flex w-full items-center gap-3 text-xs text-muted"><span className="h-px flex-1 bg-line" /><span>or use email</span><span className="h-px flex-1 bg-line" /></div>
-        {!codeSent ? <div className="w-full text-left"><label><span className="text-xs text-muted">Email address</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 w-full border-b border-line bg-transparent py-3 outline-none focus:border-brand" /></label><button type="button" onClick={sendCode} disabled={pending || !email.trim()} className="mt-5 w-full border border-brand px-4 py-3 text-sm text-brand disabled:opacity-50">{pending ? "Sending…" : "Email me a code"}</button></div> : <div className="w-full text-left"><p className="text-sm text-muted">Code sent to {email}</p><label className="mt-4 block"><span className="text-xs text-muted">Sign-in code</span><input inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(event) => setCode(event.target.value)} className="mt-2 w-full border-b border-line bg-transparent py-3 text-center text-2xl tracking-[0.35em] outline-none focus:border-brand" /></label><button type="button" onClick={verifyCode} disabled={pending || code.replace(/\s/g, "").length < 6} className="mt-5 w-full border border-brand px-4 py-3 text-sm text-brand disabled:opacity-50">{pending ? "Checking…" : "Continue"}</button><button type="button" onClick={() => { setCodeSent(false); setCode(""); setError(null); }} className="mt-3 w-full py-2 text-sm text-muted">Use a different email</button></div>}
+        {!codeSent ? <div className="w-full text-left"><label><span className="text-xs text-muted">Email address</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 w-full border-b border-line bg-transparent py-3 outline-none focus:border-brand" /></label><button type="button" onClick={sendCode} disabled={pending || !email.trim()} className="mt-5 w-full border border-brand px-4 py-3 text-sm text-brand disabled:cursor-wait disabled:opacity-50">{pending ? "Requesting code…" : "Email me a code"}</button><PendingActionStatus pending={pending} label="Requesting the sign-in email…" /></div> : <div className="w-full text-left"><p className="text-sm text-muted">Code sent to {email}</p><label className="mt-4 block"><span className="text-xs text-muted">Sign-in code</span><input inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(event) => setCode(event.target.value)} className="mt-2 w-full border-b border-line bg-transparent py-3 text-center text-2xl tracking-[0.35em] outline-none focus:border-brand" /></label><button type="button" onClick={verifyCode} disabled={pending || code.replace(/\s/g, "").length < 6} className="mt-5 w-full border border-brand px-4 py-3 text-sm text-brand disabled:cursor-wait disabled:opacity-50">{pending ? "Opening account…" : "Continue"}</button><PendingActionStatus pending={pending} label="Verifying the code securely…"/><button type="button" onClick={() => { setCodeSent(false); setCode(""); setError(null); }} className="mt-3 w-full py-2 text-sm text-muted">Use a different email</button></div>}
       </section>
     </main>
   );
