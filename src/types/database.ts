@@ -87,6 +87,63 @@ export type Database = {
           },
         ]
       }
+      billing_account_cancellation_overrides: {
+        Row: {
+          billing_account_id: string
+          created_at: string
+          created_by: string
+          effective_from: string
+          effective_until: string | null
+          id: string
+          private_reason: string
+          refund_portal_mode: string | null
+          school_id: string
+          status: string
+          timely_approval_mode: string | null
+        }
+        Insert: {
+          billing_account_id: string
+          created_at?: string
+          created_by: string
+          effective_from?: string
+          effective_until?: string | null
+          id?: string
+          private_reason: string
+          refund_portal_mode?: string | null
+          school_id: string
+          status?: string
+          timely_approval_mode?: string | null
+        }
+        Update: {
+          billing_account_id?: string
+          created_at?: string
+          created_by?: string
+          effective_from?: string
+          effective_until?: string | null
+          id?: string
+          private_reason?: string
+          refund_portal_mode?: string | null
+          school_id?: string
+          status?: string
+          timely_approval_mode?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_account_cancellation__school_id_billing_account_id_fkey"
+            columns: ["school_id", "billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "billing_account_cancellation_overrides_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_account_pending_adjustments: {
         Row: {
           amount_cents: number
@@ -3618,6 +3675,48 @@ export type Database = {
           },
         ]
       }
+      school_family_cancellation_settings: {
+        Row: {
+          created_at: string
+          refund_portal_mode: string
+          school_id: string
+          timely_approval_mode: string
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          created_at?: string
+          refund_portal_mode?: string
+          school_id: string
+          timely_approval_mode?: string
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          created_at?: string
+          refund_portal_mode?: string
+          school_id?: string
+          timely_approval_mode?: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_family_cancellation_settings_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: true
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "school_family_cancellation_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       school_instruments: {
         Row: {
           created_at: string
@@ -5137,6 +5236,10 @@ export type Database = {
           teacher_name: string
         }[]
       }
+      preview_client_lesson_change_policy_base: {
+        Args: { p_lesson_event_id: string; p_request_type: string }
+        Returns: Json
+      }
       preview_client_lesson_change_request: {
         Args: { p_lesson_event_id: string; p_request_type: string }
         Returns: Json
@@ -5345,6 +5448,17 @@ export type Database = {
         Args: { p_school_id: string }
         Returns: string
       }
+      set_billing_account_cancellation_override: {
+        Args: {
+          p_billing_account_id: string
+          p_effective_until?: string
+          p_private_reason: string
+          p_refund_portal_mode: string
+          p_school_id: string
+          p_timely_approval_mode: string
+        }
+        Returns: string
+      }
       set_lesson_reschedule_permission: {
         Args: {
           p_allowed: boolean
@@ -5362,6 +5476,14 @@ export type Database = {
           p_status: string
         }
         Returns: undefined
+      }
+      set_school_family_cancellation_settings: {
+        Args: {
+          p_refund_portal_mode: string
+          p_school_id: string
+          p_timely_approval_mode: string
+        }
+        Returns: Json
       }
       set_school_instrument_catalog: {
         Args: { p_names: string[]; p_school_id: string }

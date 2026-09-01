@@ -1,8 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { SetupHeader } from "@/components/school-setup/setup-header";
 import { CancellationPolicyForm } from "@/components/school-setup/cancellation-policy-form";
+import { FamilyCancellationAccessForm } from "@/components/school-setup/family-cancellation-access-form";
 import { createClient } from "@/lib/supabase/server";
-import { publishCancellationPolicy } from "./actions";
+import { publishCancellationPolicy,saveFamilyCancellationAccess } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -12,10 +13,11 @@ export default async function PoliciesPage({ params }: { params: Promise<{ schoo
   const { data: auth } = await supabase.auth.getClaims();
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/policies`);
-  const [{ data: school }, { data: membership }, { data: policies }] = await Promise.all([
+  const [{ data: school }, { data: membership }, { data: policies },{data:familyAccess}] = await Promise.all([
     supabase.from("schools").select("id, name").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("school_policies").select("id, name, school_policy_versions(id, version_number, published_at, cancellation_policy_rules(*))").eq("school_id", schoolId).eq("kind", "cancellation").eq("status", "active").eq("is_default", true).maybeSingle(),
+    supabase.from("school_family_cancellation_settings").select("timely_approval_mode,refund_portal_mode").eq("school_id",schoolId).maybeSingle(),
   ]);
   if (!school || !membership) notFound();
   if (membership.role !== "owner" && membership.role !== "admin") redirect(`/schools/${schoolId}`);
@@ -50,6 +52,10 @@ export default async function PoliciesPage({ params }: { params: Promise<{ schoo
           <CancellationPolicyForm initial={initial} action={publishCancellationPolicy.bind(null, schoolId)} />
           {latestVersion ? <p className="mt-8 border-t border-line pt-5 text-xs text-muted">Currently published: version {latestVersion.version_number} · {new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Chicago" }).format(new Date(latestVersion.published_at!))}</p> : null}
         </div>
+      </section>
+      <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
+        <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10"><h2 className="font-display text-3xl">Family cancellation access</h2><p className="mt-3 text-sm leading-6 text-muted">Control when families can act immediately and how refund choices appear. Individual payer exceptions remain private and audited.</p></div>
+        <div className="py-10 md:pl-10"><FamilyCancellationAccessForm initial={{timelyApprovalMode:familyAccess?.timely_approval_mode??"owner_review",refundPortalMode:familyAccess?.refund_portal_mode??"contact_school"}} action={saveFamilyCancellationAccess.bind(null,schoolId)}/></div>
       </section>
       <section className="grid md:grid-cols-[1fr_2fr]">
         <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">

@@ -63,3 +63,18 @@ export async function publishCancellationPolicy(
   revalidatePath(`/schools/${schoolId}/policies`);
   return { ok: true, message: "Cancellation policy published. Future requests will use this version." };
 }
+
+export async function saveFamilyCancellationAccess(
+  schoolId:string,_previous:CancellationPolicyState,formData:FormData,
+):Promise<CancellationPolicyState>{
+  const timelyApprovalMode=String(formData.get("timely_approval_mode")??"");
+  const refundPortalMode=String(formData.get("refund_portal_mode")??"");
+  if(timelyApprovalMode!=="owner_review"||!["contact_school","not_offered"].includes(refundPortalMode))return{ok:false,message:"That setting is not available until its complete transaction and notification workflow is active."};
+  const supabase=await createClient();
+  const {data:auth}=await supabase.auth.getClaims();
+  if(!auth?.claims?.sub)return{ok:false,message:"Your session expired. Sign in and try again."};
+  const {error}=await supabase.rpc("set_school_family_cancellation_settings",{p_school_id:schoolId,p_timely_approval_mode:timelyApprovalMode,p_refund_portal_mode:refundPortalMode});
+  if(error){console.error("save_family_cancellation_access_failed",{schoolId,code:error.code});return{ok:false,message:"These family cancellation settings were not saved. Nothing changed, so it is safe to try again."};}
+  revalidatePath(`/schools/${schoolId}/policies`);revalidatePath("/portal");
+  return{ok:true,message:"Family cancellation access updated."};
+}

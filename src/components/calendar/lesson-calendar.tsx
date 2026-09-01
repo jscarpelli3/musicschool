@@ -37,6 +37,7 @@ export function LessonCalendar({ id, lessons, rangeStart, rangeEnd, timeZone }: 
     closeButtonRef.current?.focus();
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        if (document.querySelector("[data-nested-modal]")) return;
         setSelectedLesson(null);
         requestAnimationFrame(() => openerRef.current?.focus());
       }

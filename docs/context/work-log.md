@@ -8,6 +8,12 @@ Use this file for short chronological notes about meaningful work.
 - Added an append-only decision-revision record, a current-revision pointer/view, immutable policy-outcome rows, RLS/select boundaries, revoked direct mutations, backfill adapters, automatic adapters for the existing owner resolver, and migration assertions. The existing owner UI continues to use the legacy transaction while producing the new evidence automatically.
 - Deployed migrations `20260831120000` and `20260831121000`; all embedded backfill, pointer, RLS, and grant assertions passed, and local/remote migration histories match. Regenerated the checked-in TypeScript database contract from the live schema. Linked lint reports no new issue; its two warnings are pre-existing unused variables in unrelated notification/request functions.
 
+## 2026-09-01 — family cancellation rules matrix foundation
+
+- Deployed school-level timely-approval and refund-presentation settings plus append-only, effective-dated payer overrides with private reasons, owner/admin-only RLS, direct-write revocation, audited mutation RPCs, and a portal preview adapter that resolves school defaults and active payer overrides server-side.
+- Replaced the portal’s misleading preparatory cancellation button with immediate policy evaluation and clear reschedule/account-credit choices. The one consequential action now occurs in a focused hold-to-confirm dialog with Escape handling, focus containment, and explicit scheduled-until-reviewed language.
+- Automatic cancellation and portal refund requests are intentionally disabled in both UI and server action until their full atomic business transactions exist. TypeScript, ESLint, diff checks, and the production build pass.
+
 ## 2026-08-24 — teacher availability and autonomy
 
 - Added owner and teacher weekly availability editors backed by effective-dated multi-block rules; per-teacher scheduling authority and separate self-availability permission; atomic replacement with rollback-safe errors; and append-only domain-event plus audit evidence. Existing lessons are never moved by an availability edit. Durable lesson proposals and outside-block acceptance remain the next active slice.
