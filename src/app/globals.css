@@ -26,6 +26,7 @@
   --ui-space-card: 1.5rem;
   --ui-space-section: 3.5rem;
   --ui-shadow-panel: none;
+  --ui-disabled-opacity: 0.52;
   --ui-font-sans: var(--font-sans), "Helvetica Neue", Arial, sans-serif;
   --ui-font-display: var(--font-display), Georgia, serif;
 }
@@ -237,6 +238,12 @@ select {
 button,
 a {
   -webkit-tap-highlight-color: transparent;
+}
+
+button:disabled:not([data-state="success"]) {
+  cursor: not-allowed;
+  color: var(--ui-muted);
+  opacity: var(--ui-disabled-opacity);
 }
 
 button:not(:disabled),
