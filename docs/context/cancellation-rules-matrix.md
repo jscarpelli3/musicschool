@@ -72,10 +72,11 @@ Expected behavior:
 | Immediate server-authoritative policy preview | **Live** |
 | Owner-reviewed cancellation and reschedule requests | **Live** |
 | Single hold-to-confirm submission modal | **Live** |
-| School timely-approval setting | **Foundation live** |
+| School timely-reschedule approval setting | **Live** |
 | School refund-presentation setting | **Foundation live** |
 | Effective-dated payer overrides with private reasons | **Foundation live** |
-| Automatically apply eligible cancellations | **Planned** |
+| Automatically return eligible timely reschedules to the unscheduled lesson pool | **Live** |
+| Automatically apply account-credit cancellations | **Planned** pending allocation-safe credit accounting |
 | Portal refund request and owner resolution lifecycle | **Planned** |
 | Payer-override owner UI | **Planned** |
 

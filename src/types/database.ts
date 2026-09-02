@@ -1304,26 +1304,29 @@ export type Database = {
       lesson_accounting_overrides: {
         Row: {
           created_at: string
+          decision_revision_id: string | null
           disposition: string
           lesson_event_id: string
           reason_code: string
-          request_decision_id: string
+          request_decision_id: string | null
           school_id: string
         }
         Insert: {
           created_at?: string
+          decision_revision_id?: string | null
           disposition: string
           lesson_event_id: string
           reason_code?: string
-          request_decision_id: string
+          request_decision_id?: string | null
           school_id: string
         }
         Update: {
           created_at?: string
+          decision_revision_id?: string | null
           disposition?: string
           lesson_event_id?: string
           reason_code?: string
-          request_decision_id?: string
+          request_decision_id?: string | null
           school_id?: string
         }
         Relationships: [
@@ -1333,6 +1336,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "lesson_change_request_decisions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_accounting_overrides_school_id_decision_revision_id_fkey"
+            columns: ["school_id", "decision_revision_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_change_decision_revisions"
+            referencedColumns: ["school_id", "id"]
           },
           {
             foreignKeyName: "lesson_accounting_overrides_school_id_lesson_event_id_fkey"
@@ -1352,9 +1362,11 @@ export type Database = {
           correlation_id: string
           created_at: string
           decided_at: string
-          decided_by: string
+          decided_by: string | null
+          decision_source: string
           expires_at: string | null
           id: string
+          initiated_by_auth_user_id: string | null
           internal_reason: string | null
           is_policy_override: boolean
           legacy_decision_id: string | null
@@ -1383,9 +1395,11 @@ export type Database = {
           correlation_id?: string
           created_at?: string
           decided_at: string
-          decided_by: string
+          decided_by?: string | null
+          decision_source?: string
           expires_at?: string | null
           id?: string
+          initiated_by_auth_user_id?: string | null
           internal_reason?: string | null
           is_policy_override?: boolean
           legacy_decision_id?: string | null
@@ -1414,9 +1428,11 @@ export type Database = {
           correlation_id?: string
           created_at?: string
           decided_at?: string
-          decided_by?: string
+          decided_by?: string | null
+          decision_source?: string
           expires_at?: string | null
           id?: string
+          initiated_by_auth_user_id?: string | null
           internal_reason?: string | null
           is_policy_override?: boolean
           legacy_decision_id?: string | null
@@ -2564,10 +2580,12 @@ export type Database = {
           assigned_teacher_id: string | null
           billing_account_id: string
           created_at: string
-          created_by: string
+          created_by: string | null
+          creation_source: string
           duration_minutes: number
           expires_at: string | null
           id: string
+          initiated_by_auth_user_id: string | null
           school_id: string
           source_lesson_event_id: string
           source_request_id: string
@@ -2579,10 +2597,12 @@ export type Database = {
           assigned_teacher_id?: string | null
           billing_account_id: string
           created_at?: string
-          created_by: string
+          created_by?: string | null
+          creation_source?: string
           duration_minutes: number
           expires_at?: string | null
           id?: string
+          initiated_by_auth_user_id?: string | null
           school_id: string
           source_lesson_event_id: string
           source_request_id: string
@@ -2594,10 +2614,12 @@ export type Database = {
           assigned_teacher_id?: string | null
           billing_account_id?: string
           created_at?: string
-          created_by?: string
+          created_by?: string | null
+          creation_source?: string
           duration_minutes?: number
           expires_at?: string | null
           id?: string
+          initiated_by_auth_user_id?: string | null
           school_id?: string
           source_lesson_event_id?: string
           source_request_id?: string
@@ -4802,6 +4824,10 @@ export type Database = {
         }
         Returns: string
       }
+      apply_automatic_family_timely_reschedule: {
+        Args: { p_lesson_event_id: string }
+        Returns: Json
+      }
       apply_email_delivery_status: {
         Args: {
           p_delivery_id: string
@@ -5517,6 +5543,14 @@ export type Database = {
         Args: { target_profile_id: string }
         Returns: boolean
       }
+      submit_client_lesson_change_action: {
+        Args: {
+          p_lesson_event_id: string
+          p_request_type: string
+          p_requested_resolution: string
+        }
+        Returns: Json
+      }
       submit_client_lesson_change_request: {
         Args: {
           p_lesson_event_id: string
@@ -5559,12 +5593,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5588,11 +5622,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5613,11 +5647,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5638,11 +5672,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5655,11 +5689,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

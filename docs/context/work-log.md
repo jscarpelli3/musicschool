@@ -12,7 +12,8 @@ Use this file for short chronological notes about meaningful work.
 
 - Deployed school-level timely-approval and refund-presentation settings plus append-only, effective-dated payer overrides with private reasons, owner/admin-only RLS, direct-write revocation, audited mutation RPCs, and a portal preview adapter that resolves school defaults and active payer overrides server-side.
 - Replaced the portal’s misleading preparatory cancellation button with immediate policy evaluation and clear reschedule/account-credit choices. The one consequential action now occurs in a focused hold-to-confirm dialog with Escape handling, focus containment, and explicit scheduled-until-reviewed language.
-- Automatic cancellation and portal refund requests are intentionally disabled in both UI and server action until their full atomic business transactions exist. TypeScript, ESLint, diff checks, and the production build pass.
+- At the initial access-settings checkpoint, automatic cancellation and portal refund requests remained disabled in both UI and server action pending their complete business transactions. TypeScript, ESLint, diff checks, and the production build passed.
+- Deployed the first safe automatic path in `20260902120000`: a timely family reschedule may atomically cancel the occurrence, preserve not-serviced truth, waive the original occurrence for accounting, create equivalent unscheduled service, record the payer Auth user as initiator and `system_policy` as decision source, and queue owner/teacher/family notifications. Account-credit cancellations and refunds remain owner-reviewed. The setting is now available in the policy UI.
 
 ## 2026-08-24 — teacher availability and autonomy
 

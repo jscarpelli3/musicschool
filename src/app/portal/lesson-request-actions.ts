@@ -42,7 +42,7 @@ export async function submitLessonRequest(lessonId: string, requestType: Request
   } catch (caught) {
     return { ok: false as const, message: caught instanceof RequestBoundaryError && caught.code === "rate_limited" ? "Too many change requests were submitted. Wait before trying again." : "This request could not be validated. Reload and try again." };
   }
-  const { data, error } = await supabase.rpc("submit_client_lesson_change_request", { p_lesson_event_id: lessonId, p_request_type: requestType, p_requested_resolution: resolution });
+  const { data, error } = await supabase.rpc("submit_client_lesson_change_action", { p_lesson_event_id: lessonId, p_request_type: requestType, p_requested_resolution: resolution });
   const result = data ? object(data) : null;
   if (error || !result || typeof result.request_id !== "string") return { ok: false as const, message: "Your request was not recorded. Please try again." };
   const delivery = await dispatchLessonRequestEmails(result.request_id);

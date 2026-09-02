@@ -13,6 +13,7 @@ This document is an engineering and product audit. A proposed model is not live 
 | CPS-001 | 2026-08-31 | Production schema through `20260828151000`; application through `90711be` | Source inspection of policy, portal request, owner resolution, entitlement, billing disposition, adjustment, refund, notification, RLS, and audit paths | Baseline complete; redesign required before expanding owner resolution UI |
 | CPS-002 | 2026-08-31 | Production migrations `20260831120000` and `20260831121000`; application schema types generated from linked database | Backfill/pointer/RLS/grant migration assertions, matching local/remote history, linked lint, TypeScript, ESLint, and diff checks | Vocabulary/compatibility and decision-revision schema deployed; live owner-decision rehearsal pending |
 | CPS-003 | 2026-09-01 | Production migration `20260901110000`; family policy and portal application changes local | Migration assertions, server-authoritative preview inspection, TypeScript, ESLint, diff checks, production build | Rules-matrix access foundation deployed; automatic decisions and refunds remain fail-closed pending complete transaction paths |
+| CPS-004 | 2026-09-02 | Production migration `20260902120000`; automatic timely-reschedule application changes local | Truthful actor constraints, composite tenant FKs, authenticated-only RPC grants, linked lint, generated types, TypeScript, ESLint, and diff checks | Automatic timely reschedule deployed at the database boundary; live family rehearsal pending |
 
 ## Product invariants
 

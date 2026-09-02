@@ -69,7 +69,7 @@ export async function saveFamilyCancellationAccess(
 ):Promise<CancellationPolicyState>{
   const timelyApprovalMode=String(formData.get("timely_approval_mode")??"");
   const refundPortalMode=String(formData.get("refund_portal_mode")??"");
-  if(timelyApprovalMode!=="owner_review"||!["contact_school","not_offered"].includes(refundPortalMode))return{ok:false,message:"That setting is not available until its complete transaction and notification workflow is active."};
+  if(!["owner_review","automatic"].includes(timelyApprovalMode)||!["contact_school","not_offered"].includes(refundPortalMode))return{ok:false,message:"That setting is not available until its complete transaction and notification workflow is active."};
   const supabase=await createClient();
   const {data:auth}=await supabase.auth.getClaims();
   if(!auth?.claims?.sub)return{ok:false,message:"Your session expired. Sign in and try again."};
