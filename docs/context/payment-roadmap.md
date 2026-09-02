@@ -16,6 +16,8 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 - Verified, idempotent Stripe webhooks establish provider truth.
 - Every retryable provider mutation uses a stable idempotency key.
 - No enabled control may imply success before durable persistence succeeds.
+- A chargeable offering must reference a Product and immutable Price in the school's own connected Stripe account. Browser-supplied and locally cached amounts are never charge authority.
+- Service entitlements remain in Common Time's lesson ledger. Monetary credits for Stripe-backed payers are posted to Stripe Customer invoice balance and linked to an immutable local reconciliation record.
 
 ## Review gate used before every step
 
@@ -140,6 +142,7 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 - Durable attempt record created before the Stripe call.
 - Stable idempotency key and duplicate-charge prevention.
 - Decline and customer-authentication recovery.
+- Resolve the exact connected-account Stripe Price and verify product, currency, amount, and active state before constructing every provider charge; do not use a browser amount or `service_products.price_cents` alone.
 
 ### 10. Settlement, receipts, and operations — PENDING
 

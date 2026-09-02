@@ -4188,6 +4188,10 @@ export type Database = {
           school_id: string
           sessions_per_interval: number
           status: string
+          stripe_account_id: string | null
+          stripe_price_id: string | null
+          stripe_product_id: string | null
+          stripe_sync_status: string
           updated_at: string
         }
         Insert: {
@@ -4208,6 +4212,10 @@ export type Database = {
           school_id: string
           sessions_per_interval?: number
           status?: string
+          stripe_account_id?: string | null
+          stripe_price_id?: string | null
+          stripe_product_id?: string | null
+          stripe_sync_status?: string
           updated_at?: string
         }
         Update: {
@@ -4228,6 +4236,10 @@ export type Database = {
           school_id?: string
           sessions_per_interval?: number
           status?: string
+          stripe_account_id?: string | null
+          stripe_price_id?: string | null
+          stripe_product_id?: string | null
+          stripe_sync_status?: string
           updated_at?: string
         }
         Relationships: [
@@ -4432,6 +4444,82 @@ export type Database = {
           source?: string
         }
         Relationships: []
+      }
+      stripe_catalog_operations: {
+        Row: {
+          actor_profile_id: string
+          completed_at: string | null
+          created_at: string
+          error_class: string | null
+          error_message: string | null
+          id: string
+          operation: string
+          provider_account_id: string
+          provider_price_id: string | null
+          provider_product_id: string | null
+          request_snapshot: Json
+          school_id: string
+          service_product_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          actor_profile_id: string
+          completed_at?: string | null
+          created_at?: string
+          error_class?: string | null
+          error_message?: string | null
+          id?: string
+          operation: string
+          provider_account_id: string
+          provider_price_id?: string | null
+          provider_product_id?: string | null
+          request_snapshot: Json
+          school_id: string
+          service_product_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          actor_profile_id?: string
+          completed_at?: string | null
+          created_at?: string
+          error_class?: string | null
+          error_message?: string | null
+          id?: string
+          operation?: string
+          provider_account_id?: string
+          provider_price_id?: string | null
+          provider_product_id?: string | null
+          request_snapshot?: Json
+          school_id?: string
+          service_product_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stripe_catalog_operations_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stripe_catalog_operations_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stripe_catalog_operations_service_product_id_fkey"
+            columns: ["service_product_id"]
+            isOneToOne: false
+            referencedRelation: "service_products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       student_contacts: {
         Row: {

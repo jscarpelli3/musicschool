@@ -41,7 +41,7 @@ export default async function ProductsPage({
   const [{ data: school }, { data: membership }, { data: products }] = await Promise.all([
     supabase.from("schools").select("id, name, billing_timing_default, billing_day, payer_review_days, intended_charge_day").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
-    supabase.from("service_products").select("id, name, format, duration_minutes, sessions_per_interval, interval_count, interval_unit, pricing_model, price_cents, currency, capacity, status, billing_timing_override").eq("school_id", schoolId).order("status").order("name"),
+    supabase.from("service_products").select("id, name, format, duration_minutes, sessions_per_interval, interval_count, interval_unit, pricing_model, price_cents, currency, capacity, status, billing_timing_override, stripe_sync_status").eq("school_id", schoolId).order("status").order("name"),
   ]);
 
   if (!school || !membership) notFound();
@@ -86,6 +86,9 @@ export default async function ProductsPage({
                   {money.format(product.price_cents / 100)} per lesson
                 </p>
                 <p className="mt-1 text-xs text-muted">{product.billing_timing_override === "before_service" ? "Billed before service" : product.billing_timing_override === "after_service" ? "Billed after service" : `Uses school default: ${school.billing_timing_default === "before_service" ? "before service" : "after service"}`}</p>
+                <p className={`mt-1 text-xs ${product.stripe_sync_status === "synced" ? "text-brand" : "text-danger"}`}>
+                  {product.stripe_sync_status === "synced" ? "Price verified in Stripe" : "Legacy price · must be synchronized before future live billing"}
+                </p>
                 <p className="mt-1 text-xs text-muted">About {money.format(fourWeekEstimate(product) / 100)} across a four-week schedule; the calendar month total follows its actual lesson count.</p>
               </div>
               {canManage && product.status === "active" ? (

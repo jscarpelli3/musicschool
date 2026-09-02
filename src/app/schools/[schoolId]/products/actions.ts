@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { getStripe, getStripeMode } from "@/lib/stripe/server";
 
 export type ProductState = { error: string | null };
 
@@ -51,32 +53,99 @@ export async function createProduct(
   const profileId = authData?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/products`);
 
-  const { data: school } = await supabase
-    .from("schools")
-    .select("currency")
-    .eq("id", schoolId)
-    .maybeSingle();
-  if (!school) return { error: "School not found or you do not have access." };
+  const livemode = getStripeMode() === "live";
+  const [{ data: school }, { data: membership }, { data: connection }] = await Promise.all([
+    supabase.from("schools").select("currency").eq("id", schoolId).maybeSingle(),
+    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
+    supabase.from("school_payment_connections").select("provider_account_id,status,charges_enabled")
+      .eq("school_id", schoolId).eq("provider", "stripe").eq("livemode", livemode).maybeSingle(),
+  ]);
+  if (!school || !membership || !["owner", "admin"].includes(membership.role)) {
+    return { error: "School not found or you do not have access." };
+  }
+  if (!connection?.provider_account_id || connection.status !== "enabled" || !connection.charges_enabled) {
+    return { error: "Finish connecting Stripe before creating a priced offering." };
+  }
 
-  const { error } = await supabase.from("service_products").insert({
-    school_id: schoolId,
-    name,
-    description,
-    format,
-    duration_minutes: durationMinutes,
-    sessions_per_interval: sessionsPerInterval,
-    interval_count: intervalCount,
-    interval_unit: intervalUnit,
-    pricing_model: pricingModel,
+  const admin = createAdminClient();
+  const requestSnapshot = {
+    name, description, format, duration_minutes: durationMinutes,
+    sessions_per_interval: sessionsPerInterval, interval_count: intervalCount,
+    interval_unit: intervalUnit, pricing_model: pricingModel,
     billing_timing_override: billingTiming === "school_default" ? null : billingTiming,
-    price_cents: priceCents,
-    currency: school.currency,
-    capacity,
-    created_by: profileId,
-  });
+    requested_price_cents: priceCents, currency: school.currency, capacity,
+  };
+  const { data: operation, error: operationError } = await admin.from("stripe_catalog_operations").insert({
+    school_id: schoolId,
+    actor_profile_id: profileId,
+    operation: "create_offering",
+    status: "prepared",
+    request_snapshot: requestSnapshot,
+    provider_account_id: connection.provider_account_id,
+  }).select("id").single();
+  if (operationError || !operation) return { error: "The offering could not be prepared. Nothing was sent to Stripe." };
 
-  if (error) {
-    return { error: error.code === "23505" ? "An offering with this name already exists." : error.message };
+  const stripe = getStripe();
+  let providerProductId: string | null = null;
+  let providerPriceId: string | null = null;
+  try {
+    await admin.from("stripe_catalog_operations").update({ status: "submitting" }).eq("id", operation.id);
+    const providerProduct = await stripe.products.create({
+      name,
+      description: description ?? undefined,
+      metadata: { commontime_school_id: schoolId, commontime_operation_id: operation.id },
+    }, { stripeAccount: connection.provider_account_id, idempotencyKey: `catalog-product-${operation.id}` });
+    providerProductId = providerProduct.id;
+    const providerPrice = await stripe.prices.create({
+      product: providerProduct.id,
+      currency: school.currency.toLowerCase(),
+      unit_amount: priceCents,
+      metadata: { commontime_school_id: schoolId, commontime_operation_id: operation.id },
+    }, { stripeAccount: connection.provider_account_id, idempotencyKey: `catalog-price-${operation.id}` });
+    if (providerPrice.unit_amount !== priceCents || providerPrice.currency.toUpperCase() !== school.currency) {
+      throw new Error("Stripe returned a price that did not match the authorized request.");
+    }
+    providerPriceId = providerPrice.id;
+
+    const { data: localProduct, error: localError } = await admin.from("service_products").insert({
+      school_id: schoolId,
+      name,
+      description,
+      format,
+      duration_minutes: durationMinutes,
+      sessions_per_interval: sessionsPerInterval,
+      interval_count: intervalCount,
+      interval_unit: intervalUnit,
+      pricing_model: pricingModel,
+      billing_timing_override: billingTiming === "school_default" ? null : billingTiming,
+      currency: school.currency,
+      capacity,
+      price_cents: providerPrice.unit_amount,
+      created_by: profileId,
+      stripe_account_id: connection.provider_account_id,
+      stripe_product_id: providerProduct.id,
+      stripe_price_id: providerPrice.id,
+      stripe_sync_status: "synced",
+    }).select("id").single();
+    if (localError || !localProduct) throw localError ?? new Error("The Stripe offering was not finalized locally.");
+    const { error: finalizeError } = await admin.from("stripe_catalog_operations").update({
+      status: "succeeded", provider_product_id: providerProduct.id, provider_price_id: providerPrice.id,
+      service_product_id: localProduct.id, completed_at: new Date().toISOString(),
+    }).eq("id", operation.id);
+    if (finalizeError) throw finalizeError;
+  } catch (error) {
+    const providerMayHaveAccepted = Boolean(providerProductId || providerPriceId);
+    await admin.from("stripe_catalog_operations").update({
+      status: providerMayHaveAccepted ? "reconciliation_required" : "failed",
+      provider_product_id: providerProductId,
+      provider_price_id: providerPriceId,
+      error_class: providerMayHaveAccepted ? "provider_state_ambiguous" : "provider_rejected",
+      error_message: error instanceof Error ? error.message.slice(0, 500) : "Unknown catalog error",
+      completed_at: new Date().toISOString(),
+    }).eq("id", operation.id);
+    return { error: providerMayHaveAccepted
+      ? `Stripe may have received this offering, but Common Time could not finish saving it. Do not retry yet. Reference ${operation.id.slice(0, 8).toUpperCase()}.`
+      : "Stripe did not create the offering. Nothing was saved, so it is safe to try again." };
   }
 
   revalidatePath(`/schools/${schoolId}/products`);
@@ -113,15 +182,48 @@ export async function archiveProduct(schoolId: string, productId: string) {
   const { data } = await supabase.auth.getClaims();
   if (!data?.claims?.sub) redirect(`/login?next=/schools/${schoolId}/products`);
 
-  const { data: archived, error } = await supabase
-    .from("service_products")
-    .update({ status: "archived" })
-    .eq("id", productId)
-    .eq("school_id", schoolId)
-    .select("id")
-    .maybeSingle();
+  const [{ data: membership }, { data: product }] = await Promise.all([
+    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", data.claims.sub).eq("status", "active").maybeSingle(),
+    supabase.from("service_products").select("id,name,status,stripe_account_id,stripe_product_id,stripe_price_id,stripe_sync_status")
+      .eq("id", productId).eq("school_id", schoolId).maybeSingle(),
+  ]);
+  if (!membership || !["owner", "admin"].includes(membership.role) || !product || product.status !== "active") {
+    redirect(`/schools/${schoolId}/products?error=archive`);
+  }
 
-  if (error || !archived) redirect(`/schools/${schoolId}/products?error=archive`);
+  const admin = createAdminClient();
+  if (product.stripe_sync_status === "synced" && product.stripe_account_id && product.stripe_product_id && product.stripe_price_id) {
+    const { data: operation, error: prepareError } = await admin.from("stripe_catalog_operations").insert({
+      school_id: schoolId, actor_profile_id: data.claims.sub, operation: "archive_offering", status: "prepared",
+      request_snapshot: { service_product_id: product.id, name: product.name },
+      provider_account_id: product.stripe_account_id, provider_product_id: product.stripe_product_id,
+      provider_price_id: product.stripe_price_id, service_product_id: product.id,
+    }).select("id").single();
+    if (prepareError || !operation) redirect(`/schools/${schoolId}/products?error=archive`);
+    try {
+      await admin.from("stripe_catalog_operations").update({ status: "submitting" }).eq("id", operation.id);
+      await getStripe().prices.update(product.stripe_price_id, { active: false }, { stripeAccount: product.stripe_account_id });
+      await getStripe().products.update(product.stripe_product_id, { active: false }, { stripeAccount: product.stripe_account_id });
+      const { data: archived, error } = await admin.from("service_products").update({ status: "archived" })
+        .eq("id", product.id).eq("school_id", schoolId).select("id").maybeSingle();
+      if (error || !archived) throw error ?? new Error("Local archive did not finish.");
+      const { error: finalizeError } = await admin.from("stripe_catalog_operations").update({
+        status: "succeeded", completed_at: new Date().toISOString(),
+      }).eq("id", operation.id);
+      if (finalizeError) throw finalizeError;
+    } catch (error) {
+      await admin.from("stripe_catalog_operations").update({
+        status: "reconciliation_required", error_class: "provider_state_ambiguous",
+        error_message: error instanceof Error ? error.message.slice(0, 500) : "Unknown archive error",
+        completed_at: new Date().toISOString(),
+      }).eq("id", operation.id);
+      redirect(`/schools/${schoolId}/products?error=reconcile&reference=${operation.id.slice(0, 8).toUpperCase()}`);
+    }
+  } else {
+    const { data: archived, error } = await admin.from("service_products").update({ status: "archived" })
+      .eq("id", product.id).eq("school_id", schoolId).select("id").maybeSingle();
+    if (error || !archived) redirect(`/schools/${schoolId}/products?error=archive`);
+  }
 
   revalidatePath(`/schools/${schoolId}/products`);
   redirect(`/schools/${schoolId}/products?archived=1`);

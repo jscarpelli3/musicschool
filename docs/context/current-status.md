@@ -14,6 +14,7 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 2. Rehearse the newly deployed owner-adjustment, unlock/revise, payer rejection, and automatic-payment consent flows.
 3. Keep the owner planner and payment surfaces reliable on phone, touch-only tablet, keyboard, and desktop.
 4. Finish approval replacement, mandate safety checks, and email failure tests before implementing any Stripe charge execution.
+5. Complete the Stripe catalog/credit authority work in [`../audits/stripe-catalog-and-credit-authority.md`](../audits/stripe-catalog-and-credit-authority.md): deploy the provider-backed offering boundary, backfill or retire legacy unsynced offerings, verify Price objects again at charge construction, and post real monetary credits to the connected Customer balance with durable local reconciliation. Lesson/service entitlements remain in Common Time because they represent scheduling obligations rather than money.
 
 ## Provider State
 
