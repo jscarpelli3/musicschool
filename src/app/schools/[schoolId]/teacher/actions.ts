@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { dispatchLessonCreatedEmail } from "@/lib/notifications/dispatch-lesson-created-email";
+import { dispatchLessonRequestEmails } from "@/lib/notifications/dispatch-lesson-request-emails";
 import { createClient } from "@/lib/supabase/server";
 
 const outcomes = new Set(["completed", "no_show"]);
@@ -76,6 +78,14 @@ export async function decideLessonProposal(schoolId: string, proposalId: string,
   if(error) return {ok:false,message:error.message.includes("conflict")?"That time now conflicts with another lesson. Nothing changed.":"The proposal could not be updated. Try again."};
   if(data==="withdrawn")return{ok:false,message:"This proposal was withdrawn while you were reviewing it. Nothing changed."};
   if(data==="superseded")return{ok:false,message:"This proposal was replaced while you were reviewing it. Nothing changed; reload to review the new time."};
+  if(data==="applied"){
+    const {data:proposal}=await supabase.from("lesson_schedule_proposals").select("applied_entity_id,service_entitlement_id").eq("school_id",schoolId).eq("id",proposalId).maybeSingle();
+    if(proposal?.applied_entity_id)await dispatchLessonCreatedEmail("lesson_event",proposal.applied_entity_id);
+    if(proposal?.service_entitlement_id){
+      const {data:entitlement}=await supabase.from("lesson_service_entitlements").select("source_request_id").eq("school_id",schoolId).eq("id",proposal.service_entitlement_id).maybeSingle();
+      if(entitlement?.source_request_id)await dispatchLessonRequestEmails(entitlement.source_request_id);
+    }
+  }
   revalidatePath(`/schools/${schoolId}/teacher`); revalidatePath(`/schools/${schoolId}`);
   return {ok:true,message:data==="applied"?"Lesson accepted and added to the calendar.":"Proposal declined."};
 }

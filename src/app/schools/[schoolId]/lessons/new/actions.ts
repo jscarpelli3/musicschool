@@ -33,6 +33,7 @@ const knownErrors: Record<string, string> = {
   entitlement_expired: "That replacement lesson’s scheduling window has expired. Review it with the family before continuing.",
   entitlement_teacher_required: "This replacement lesson must remain with its assigned teacher.",
   entitlement_duration_mismatch: "The original offering’s duration changed. Review the entitlement before scheduling it.",
+  entitlement_proposal_pending: "This replacement lesson already has a proposal waiting for a decision.",
 };
 
 export async function createSingleLesson(
@@ -105,12 +106,16 @@ export async function createSingleLesson(
   const overrideReason = allowOutside ? outsideNote ?? "Owner scheduled outside the teacher’s saved availability." : undefined;
 
   if (allowOutside && teacherPolicy.outside_availability_policy === "require_approval") {
-    if (entitlementId) return { status: "error", message: "This replacement time is outside the teacher’s availability and requires approval. Choose an available time for now; replacement-time approval is the next scheduling extension." };
-    const { data: proposalId, error: proposalError } = await supabase.rpc("create_outside_availability_lesson_proposal", {
-      p_school_id: schoolId, p_product_id: productId, p_teacher_id: teacherId, p_student_id: studentId, p_place_id: placeId,
-      p_local_start: `${date} ${time}:00`, p_schedule_type: scheduleType, p_ends_on: scheduleType === "weekly" ? endsOn : date,
-      p_notes: notes ?? "", p_reason: overrideReason!,
-    });
+    const { data: proposalId, error: proposalError } = entitlementId
+      ? await supabase.rpc("create_outside_availability_entitlement_proposal", {
+          p_school_id: schoolId, p_entitlement_id: entitlementId, p_teacher_id: teacherId, p_place_id: placeId,
+          p_local_start: `${date} ${time}:00`, p_notes: notes ?? "", p_reason: overrideReason!,
+        })
+      : await supabase.rpc("create_outside_availability_lesson_proposal", {
+          p_school_id: schoolId, p_product_id: productId, p_teacher_id: teacherId, p_student_id: studentId, p_place_id: placeId,
+          p_local_start: `${date} ${time}:00`, p_schedule_type: scheduleType, p_ends_on: scheduleType === "weekly" ? endsOn : date,
+          p_notes: notes ?? "", p_reason: overrideReason!,
+        });
     if (proposalError || !proposalId) {
       const knownCode = Object.keys(knownErrors).find((code) => proposalError?.message.includes(code));
       const reference = crypto.randomUUID().slice(0, 8).toUpperCase();

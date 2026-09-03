@@ -2285,6 +2285,7 @@ export type Database = {
           replaces_proposal_id: string | null
           schedule_type: string
           school_id: string
+          service_entitlement_id: string | null
           status: string
           student_id: string
           superseded_by_proposal_id: string | null
@@ -2315,6 +2316,7 @@ export type Database = {
           replaces_proposal_id?: string | null
           schedule_type: string
           school_id: string
+          service_entitlement_id?: string | null
           status?: string
           student_id: string
           superseded_by_proposal_id?: string | null
@@ -2345,6 +2347,7 @@ export type Database = {
           replaces_proposal_id?: string | null
           schedule_type?: string
           school_id?: string
+          service_entitlement_id?: string | null
           status?: string
           student_id?: string
           superseded_by_proposal_id?: string | null
@@ -2399,6 +2402,13 @@ export type Database = {
             columns: ["school_id", "product_id"]
             isOneToOne: false
             referencedRelation: "service_products"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_schedule_proposals_school_id_service_entitlement_id_fkey"
+            columns: ["school_id", "service_entitlement_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_service_entitlements"
             referencedColumns: ["school_id", "id"]
           },
           {
@@ -5105,6 +5115,18 @@ export type Database = {
       }
       create_orthogonal_revision_for_legacy_decision: {
         Args: { p_decision_id: string }
+        Returns: string
+      }
+      create_outside_availability_entitlement_proposal: {
+        Args: {
+          p_entitlement_id: string
+          p_local_start: string
+          p_notes: string
+          p_place_id: string
+          p_reason: string
+          p_school_id: string
+          p_teacher_id: string
+        }
         Returns: string
       }
       create_outside_availability_lesson_proposal: {
