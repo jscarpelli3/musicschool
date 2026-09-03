@@ -1,3 +1,5 @@
+import "server-only";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { enforceRateLimit, requestIp, RequestBoundaryError } from "@/lib/security/request-boundary";
 import { buildLessonCalendar } from "@/lib/calendar/icalendar";

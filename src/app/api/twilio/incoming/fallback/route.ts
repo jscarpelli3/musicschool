@@ -1,3 +1,5 @@
+import "server-only";
+
 import { getTwilioIncomingFallbackUrl } from "@/lib/twilio/server";
 import { handleIncomingTwilioMessage } from "../handler";
 

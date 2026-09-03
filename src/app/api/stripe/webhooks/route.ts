@@ -1,3 +1,5 @@
+import "server-only";
+
 import type Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { synchronizeStripeConnection } from "@/lib/stripe/connections";

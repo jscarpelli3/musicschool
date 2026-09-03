@@ -1,3 +1,5 @@
+import "server-only";
+
 import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTwilioMessagingServiceSid, validateTwilioFormRequest } from "@/lib/twilio/server";

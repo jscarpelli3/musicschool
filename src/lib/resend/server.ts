@@ -1,3 +1,5 @@
+import "server-only";
+
 const RESEND_EMAILS_URL = "https://api.resend.com/emails";
 
 export class ResendRequestError extends Error {
