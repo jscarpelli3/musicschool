@@ -1,7 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { OwnerPlanner } from "@/components/planner/owner-planner";
+import { LessonsToSchedule } from "@/components/scheduling/lessons-to-schedule";
 import { StudentRosterTable, type LessonOutcome, type RosterViewSettings, type StudentRosterRow } from "@/components/students/student-roster-table";
 import { createClient } from "@/lib/supabase/server";
+import { loadServiceEntitlements } from "@/lib/scheduling/service-entitlements";
 import { saveStudentRosterView } from "./dashboard-actions";
 
 export const dynamic = "force-dynamic";
@@ -228,6 +230,7 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
   const currentTeacherId = membership.role === "teacher"
     ? (peopleRows ?? []).find((person) => person.profile_id === profileId)?.id ?? null
     : null;
+  const entitlements = view === "dashboard" && canManageSchool ? await loadServiceEntitlements(supabase, schoolId) : [];
 
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-6 py-section">
@@ -237,6 +240,7 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
         initialView={rosterPreference?.settings as Partial<RosterViewSettings> | null}
         saveView={saveStudentRosterView.bind(null, schoolId)}
       /> : null}
+      {view === "dashboard" && entitlements.length ? <section className="mb-10 border-b border-line pb-10"><p className="text-xs uppercase tracking-[0.14em] text-brand">Needs scheduling</p><h2 className="mt-2 font-display text-3xl">Paid lessons waiting for a time</h2><p className="mt-2 mb-5 text-sm text-muted">These lessons are already funded. Scheduling one consumes its entitlement and will not create another charge.</p><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} /></section> : null}
       {view === "dashboard" ? <OwnerPlanner
         schoolId={schoolId}
         canReschedule={canManageSchool}

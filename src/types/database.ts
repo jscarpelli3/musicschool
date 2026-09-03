@@ -1940,6 +1940,7 @@ export type Database = {
           reschedule_reason_detail: string | null
           rescheduled_to_event_id: string | null
           school_id: string
+          service_entitlement_id: string | null
           staff_notes: string | null
           starts_at: string
           status: string
@@ -1969,6 +1970,7 @@ export type Database = {
           reschedule_reason_detail?: string | null
           rescheduled_to_event_id?: string | null
           school_id: string
+          service_entitlement_id?: string | null
           staff_notes?: string | null
           starts_at: string
           status?: string
@@ -1998,6 +2000,7 @@ export type Database = {
           reschedule_reason_detail?: string | null
           rescheduled_to_event_id?: string | null
           school_id?: string
+          service_entitlement_id?: string | null
           staff_notes?: string | null
           starts_at?: string
           status?: string
@@ -2039,6 +2042,13 @@ export type Database = {
             columns: ["school_id", "product_id"]
             isOneToOne: false
             referencedRelation: "service_products"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_events_school_id_service_entitlement_id_fkey"
+            columns: ["school_id", "service_entitlement_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_service_entitlements"
             referencedColumns: ["school_id", "id"]
           },
           {
@@ -2586,6 +2596,8 @@ export type Database = {
           expires_at: string | null
           id: string
           initiated_by_auth_user_id: string | null
+          scheduled_at: string | null
+          scheduled_lesson_event_id: string | null
           school_id: string
           source_lesson_event_id: string
           source_request_id: string
@@ -2603,6 +2615,8 @@ export type Database = {
           expires_at?: string | null
           id?: string
           initiated_by_auth_user_id?: string | null
+          scheduled_at?: string | null
+          scheduled_lesson_event_id?: string | null
           school_id: string
           source_lesson_event_id: string
           source_request_id: string
@@ -2620,6 +2634,8 @@ export type Database = {
           expires_at?: string | null
           id?: string
           initiated_by_auth_user_id?: string | null
+          scheduled_at?: string | null
+          scheduled_lesson_event_id?: string | null
           school_id?: string
           source_lesson_event_id?: string
           source_request_id?: string
@@ -2655,6 +2671,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "schools"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_service_entitlements_school_id_scheduled_lesson_eve_fkey"
+            columns: ["school_id", "scheduled_lesson_event_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_events"
+            referencedColumns: ["school_id", "id"]
           },
           {
             foreignKeyName: "lesson_service_entitlements_school_id_source_lesson_event__fkey"
@@ -5560,6 +5583,19 @@ export type Database = {
       }
       rotate_client_portal_calendar_subscription: {
         Args: { p_school_id: string }
+        Returns: string
+      }
+      schedule_service_entitlement: {
+        Args: {
+          p_allow_outside_availability?: boolean
+          p_entitlement_id: string
+          p_local_start: string
+          p_notes?: string
+          p_override_reason?: string
+          p_place_id: string
+          p_school_id: string
+          p_teacher_id: string
+        }
         Returns: string
       }
       set_billing_account_cancellation_override: {

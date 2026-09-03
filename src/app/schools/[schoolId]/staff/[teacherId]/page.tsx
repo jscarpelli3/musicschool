@@ -3,9 +3,11 @@ import { notFound, redirect } from "next/navigation";
 import { TeacherScheduleCalendar } from "@/components/scheduling/teacher-schedule-calendar";
 import { ProposalManagementControls } from "@/components/scheduling/proposal-management-controls";
 import { ApprovalList } from "@/components/approvals/approval-list";
+import { LessonsToSchedule } from "@/components/scheduling/lessons-to-schedule";
 import { loadOwnerApprovals } from "@/lib/approvals/owner-approvals";
 import { createClient } from "@/lib/supabase/server";
 import { loadTeacherCalendar, personDisplayName } from "@/lib/scheduling/teacher-calendar";
+import { loadServiceEntitlements } from "@/lib/scheduling/service-entitlements";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +50,7 @@ export default async function StaffTeacherPage({ params }: {
   }).format(now);
   const teacherName = personDisplayName(teacher);
   const approvals = await loadOwnerApprovals(supabase,schoolId,{teacherId});
+  const entitlements = await loadServiceEntitlements(supabase,schoolId,{teacherId});
 
   return <main className="mx-auto min-h-screen max-w-7xl px-6 py-section">
     <header className="flex flex-wrap items-end justify-between gap-6 border-b border-line pb-8">
@@ -62,6 +65,7 @@ export default async function StaffTeacherPage({ params }: {
       </div>
     </header>
     {approvals.length?<section className="border-b border-line py-8"><div className="mb-5 flex items-baseline justify-between gap-4"><div><p className="text-xs uppercase tracking-[0.14em] text-brand">Needs attention</p><h2 className="mt-2 font-display text-3xl">{teacherName}’s pending approvals</h2></div><Link href={`/schools/${schoolId}/approvals`} className="text-sm text-muted hover:text-brand">View all →</Link></div><ApprovalList schoolId={schoolId} items={approvals} timezone={school.timezone} compact/></section>:null}
+    {entitlements.length?<section className="border-b border-line py-8"><p className="text-xs uppercase tracking-[0.14em] text-brand">Needs scheduling</p><h2 className="mt-2 mb-5 font-display text-3xl">Paid lessons assigned to {teacherName}</h2><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} compact/></section>:null}
     {schedule.pendingProposals.length ? <section id="pending-schedule-proposals" className="scroll-mt-24 border-b border-line py-8"><p className="text-xs uppercase tracking-[0.14em] text-brand">Proposed calendar times</p><h2 className="mt-2 font-display text-3xl">Waiting for a decision</h2><div className="mt-5 divide-y divide-line border-y border-line">{schedule.pendingProposals.map((proposal) => <div key={proposal.id} className="grid gap-2 py-4 sm:grid-cols-[1fr_auto] sm:items-start"><div><p className="font-medium">{peopleById.has(proposal.student_id) ? personDisplayName(peopleById.get(proposal.student_id)!) : "Student"}</p><p className="mt-1 text-sm text-muted">{new Intl.DateTimeFormat("en-US",{timeZone:school.timezone,weekday:"long",month:"long",day:"numeric",hour:"numeric",minute:"2-digit"}).format(new Date(proposal.proposed_starts_at))} · {proposal.schedule_type === "weekly" ? "Weekly" : "One time"}</p>{proposal.created_by===profileId?<ProposalManagementControls schoolId={schoolId} proposalId={proposal.id} localStart={proposal.proposed_local_start} reason={proposal.reason}/>:null}</div><span className="text-xs text-brand">{proposal.status === "pending_teacher" ? "Waiting for teacher" : "Waiting for owner"}</span></div>)}</div></section> : null}
     <TeacherScheduleCalendar
       schoolId={schoolId}

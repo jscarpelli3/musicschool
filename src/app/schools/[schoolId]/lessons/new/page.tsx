@@ -10,7 +10,7 @@ function name(person: { first_name: string; last_name: string; preferred_name: s
 
 export default async function NewLessonPage({ params, searchParams }: {
   params: Promise<{ schoolId: string }>;
-  searchParams: Promise<{ teacher?: string }>;
+  searchParams: Promise<{ teacher?: string; entitlement?: string }>;
 }) {
   const { schoolId } = await params;
   const query = await searchParams;
@@ -44,6 +44,16 @@ export default async function NewLessonPage({ params, searchParams }: {
   const productNames = Object.fromEntries((productsResult.data ?? []).map((product) => [product.id,product.name]));
   const placeDetails = Object.fromEntries((placesResult.data ?? []).map((place) => [place.id,{name:place.name,details:null}]));
   const selectedTeacher = teachers.some((teacher) => teacher.id === query.teacher) ? query.teacher : "";
+  const { data: entitlement } = query.entitlement && /^[0-9a-f-]{36}$/i.test(query.entitlement)
+    ? await supabase.from("lesson_service_entitlements").select("id,student_id,assigned_teacher_id,duration_minutes,status,source_lesson_event_id")
+      .eq("school_id",schoolId).eq("id",query.entitlement).eq("status","waiting_to_schedule").maybeSingle()
+    : { data: null };
+  const { data: sourceLesson } = entitlement
+    ? await supabase.from("lesson_events").select("product_id").eq("school_id",schoolId).eq("id",entitlement.source_lesson_event_id).maybeSingle()
+    : { data: null };
+  const entitlementTeacher = entitlement?.assigned_teacher_id && teachers.some((teacher) => teacher.id === entitlement.assigned_teacher_id) ? entitlement.assigned_teacher_id : "";
+  const visibleTeacherChoices = entitlementTeacher ? teacherChoices.filter((teacher) => teacher.id === entitlementTeacher) : teacherChoices;
+  const visibleTeachers = entitlementTeacher ? teachers.filter((teacher) => teacher.id === entitlementTeacher) : teachers;
 
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-6 py-section">
@@ -54,18 +64,19 @@ export default async function NewLessonPage({ params, searchParams }: {
         schoolId={schoolId}
         canReschedule={false}
         initialDate={today}
-        initialTeacherId={selectedTeacher}
+        initialTeacherId={entitlementTeacher || selectedTeacher}
         allowAllTeachers={false}
         timezone={school.timezone}
-        teachers={teacherChoices}
+        teachers={visibleTeacherChoices}
         studentNames={studentNames}
         studentDetails={Object.fromEntries(students.map((student) => [student.id,{name:student.label,email:null,phone:null,contacts:[],payers:[]}]))}
         productNames={productNames}
         placeDetails={placeDetails}
         availability={availabilityResult.data ?? []}
         lessons={(lessonsResult.data ?? []).map((lesson) => ({...lesson,billing_service_date:lesson.starts_at.slice(0,10),can_reschedule:false,can_mark_reschedule:false}))}
-        contextLabel="Choose a teacher, then a time"
-        lessonCreationOptions={{students,teachers,products:(productsResult.data ?? []).map((product) => ({id:product.id,label:product.name,durationMinutes:product.duration_minutes,priceLabel:new Intl.NumberFormat("en-US",{style:"currency",currency:product.currency}).format(product.price_cents/100)})),places:(placesResult.data ?? []).map((place) => ({id:place.id,label:place.name})),availability:availabilityResult.data ?? [],today}}
+        contextLabel={entitlement ? "Choose a time for this paid replacement lesson" : "Choose a teacher, then a time"}
+        lessonCreationOptions={{students,teachers:visibleTeachers,products:(productsResult.data ?? []).map((product) => ({id:product.id,label:product.name,durationMinutes:product.duration_minutes,priceLabel:new Intl.NumberFormat("en-US",{style:"currency",currency:product.currency}).format(product.price_cents/100)})),places:(placesResult.data ?? []).map((place) => ({id:place.id,label:place.name})),availability:availabilityResult.data ?? [],today,
+          entitlement: entitlement && sourceLesson ? {id:entitlement.id,studentId:entitlement.student_id,productId:sourceLesson.product_id,teacherId:entitlement.assigned_teacher_id,durationMinutes:entitlement.duration_minutes} : undefined}}
       />
     </main>
   );

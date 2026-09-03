@@ -12,6 +12,7 @@ export type LessonCreationOptions = {
   places: LessonFormOption[];
   availability: LessonFormAvailability[];
   today: string;
+  entitlement?: { id: string; studentId: string; productId: string; teacherId: string | null; durationMinutes: number };
 };
 
 const initialState: CreateLessonState = { status: "idle", message: "" };
@@ -47,12 +48,13 @@ export function LessonCreationDialog({ schoolId, slot, options, lockTeacher, onC
           lockedTeacherId={lockTeacher ? slot.teacherId : undefined}
           initialDate={slot.dateKey}
           initialTime={slot.time}
+          entitlement={options.entitlement}
           compact
           onCreated={(result) => {
             onClose();
             window.dispatchEvent(new CustomEvent("common-time:toast", { detail: {
-              title: result.outcome === "pending_teacher" ? "Teacher approval requested" : "Lesson created",
-              message: result.outcome === "pending_teacher" ? "Nothing was added to the calendar yet. The teacher must accept the outside-hours proposal." : "The calendar was updated and the teacher notification was queued for delivery.",
+              title: result.outcome === "pending_teacher" ? "Teacher approval requested" : options.entitlement ? "Replacement lesson scheduled" : "Lesson created",
+              message: result.outcome === "pending_teacher" ? "Nothing was added to the calendar yet. The teacher must accept the outside-hours proposal." : options.entitlement ? "The paid lesson was scheduled without creating another charge. Family and teacher notifications were queued." : "The calendar was updated and the teacher notification was queued for delivery.",
               href: `/schools/${schoolId}/staff/${slot.teacherId}`,
             } }));
             router.refresh();

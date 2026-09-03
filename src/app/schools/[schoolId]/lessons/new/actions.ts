@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { dispatchLessonCreatedEmail } from "@/lib/notifications/dispatch-lesson-created-email";
+import { dispatchLessonRequestEmails } from "@/lib/notifications/dispatch-lesson-request-emails";
 import { dispatchLessonProposalEmail } from "@/lib/notifications/dispatch-lesson-proposal-email";
 import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
 import { createClient } from "@/lib/supabase/server";
@@ -27,6 +28,11 @@ const knownErrors: Record<string, string> = {
   invalid_recurrence_end: "Choose an end date from the first lesson through one year later.",
   standalone_lesson_requires_per_session_price: "That offering is billed as a recurring agreement. Choose Weekly instead of One time.",
   not_authorized: "Your account does not have permission to create lessons for this school.",
+  entitlement_not_found: "That replacement lesson is no longer available.",
+  entitlement_already_used: "That replacement lesson has already been scheduled or resolved.",
+  entitlement_expired: "That replacement lesson’s scheduling window has expired. Review it with the family before continuing.",
+  entitlement_teacher_required: "This replacement lesson must remain with its assigned teacher.",
+  entitlement_duration_mismatch: "The original offering’s duration changed. Review the entitlement before scheduling it.",
 };
 
 export async function createSingleLesson(
@@ -44,12 +50,15 @@ export async function createSingleLesson(
   const endsOn = String(formData.get("ends_on") ?? "");
   const notes = String(formData.get("notes") ?? "").trim() || undefined;
   const outsideNote = String(formData.get("outside_availability_note") ?? "").trim() || undefined;
+  const entitlementId = String(formData.get("entitlement_id") ?? "").trim() || undefined;
 
   if (![schoolId, productId, teacherId, studentId, placeId].every((value) => /^[0-9a-f-]{36}$/i.test(value))
       || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)
       || !["one_time", "weekly"].includes(scheduleType)
       || (scheduleType === "weekly" && !/^\d{4}-\d{2}-\d{2}$/.test(endsOn))
       || Number(time.slice(3)) % 5 !== 0
+      || (entitlementId !== undefined && !/^[0-9a-f-]{36}$/i.test(entitlementId))
+      || (entitlementId !== undefined && scheduleType !== "one_time")
       || (notes?.length ?? 0) > 1000 || (outsideNote?.length ?? 0) > 240) {
     return { status: "error", message: "Check the lesson details and try again." };
   }
@@ -96,6 +105,7 @@ export async function createSingleLesson(
   const overrideReason = allowOutside ? outsideNote ?? "Owner scheduled outside the teacher’s saved availability." : undefined;
 
   if (allowOutside && teacherPolicy.outside_availability_policy === "require_approval") {
+    if (entitlementId) return { status: "error", message: "This replacement time is outside the teacher’s availability and requires approval. Choose an available time for now; replacement-time approval is the next scheduling extension." };
     const { data: proposalId, error: proposalError } = await supabase.rpc("create_outside_availability_lesson_proposal", {
       p_school_id: schoolId, p_product_id: productId, p_teacher_id: teacherId, p_student_id: studentId, p_place_id: placeId,
       p_local_start: `${date} ${time}:00`, p_schedule_type: scheduleType, p_ends_on: scheduleType === "weekly" ? endsOn : date,
@@ -112,7 +122,13 @@ export async function createSingleLesson(
     return { status: "success", outcome: "pending_teacher", message: "Approval requested. The lesson will be added only if the teacher accepts." };
   }
 
-  const result = scheduleType === "weekly"
+  const result = entitlementId
+    ? await supabase.rpc("schedule_service_entitlement", {
+        p_school_id: schoolId, p_entitlement_id: entitlementId, p_teacher_id: teacherId, p_place_id: placeId,
+        p_local_start: `${date} ${time}:00`, p_notes: notes,
+        p_allow_outside_availability: allowOutside, p_override_reason: overrideReason,
+      })
+    : scheduleType === "weekly"
     ? await supabase.rpc("create_weekly_lesson_series", {
         p_school_id: schoolId, p_product_id: productId, p_teacher_id: teacherId, p_student_id: studentId,
         p_place_id: placeId, p_local_start: `${date} ${time}:00`, p_ends_on: endsOn, p_notes: notes,
@@ -140,6 +156,7 @@ export async function createSingleLesson(
   revalidatePath(`/schools/${schoolId}`);
   revalidatePath(`/schools/${schoolId}/teacher`);
   revalidatePath(`/schools/${schoolId}/staff/${teacherId}`);
+  revalidatePath(`/schools/${schoolId}/students/${studentId}`);
   const occurrenceCount = scheduleType === "weekly" && typeof createdRecord === "object" && createdRecord !== null && !Array.isArray(createdRecord)
     ? Number((createdRecord as Record<string, unknown>).occurrence_count ?? 0)
     : 1;
@@ -149,5 +166,9 @@ export async function createSingleLesson(
   if (/^[0-9a-f-]{36}$/i.test(createdId)) {
     await dispatchLessonCreatedEmail(scheduleType === "weekly" ? "lesson_series" : "lesson_event", createdId);
   }
-  return { status: "success", outcome: "created", message: scheduleType === "weekly" ? `${occurrenceCount} weekly lessons created and added to the calendar.` : "Lesson created and added to the calendar." };
+  if (entitlementId) {
+    const { data: entitlement } = await supabase.from("lesson_service_entitlements").select("source_request_id").eq("school_id", schoolId).eq("id", entitlementId).maybeSingle();
+    if (entitlement?.source_request_id) await dispatchLessonRequestEmails(entitlement.source_request_id);
+  }
+  return { status: "success", outcome: "created", message: entitlementId ? "Replacement lesson scheduled. This entitlement cannot be used again." : scheduleType === "weekly" ? `${occurrenceCount} weekly lessons created and added to the calendar.` : "Lesson created and added to the calendar." };
 }

@@ -2,8 +2,10 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { DetailHeader, DetailSection, EmptyDetail } from "@/components/people/detail-shell";
 import { ApprovalList } from "@/components/approvals/approval-list";
+import { LessonsToSchedule } from "@/components/scheduling/lessons-to-schedule";
 import { loadOwnerApprovals } from "@/lib/approvals/owner-approvals";
 import { createClient } from "@/lib/supabase/server";
+import { loadServiceEntitlements } from "@/lib/scheduling/service-entitlements";
 
 export const dynamic = "force-dynamic";
 
@@ -54,12 +56,14 @@ export default async function StudentDetailPage({ params }: {
     timeZone: school.timezone, weekday: "long", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit",
   }).format(new Date(value));
   const approvals = ["owner","admin"].includes(membership.role) ? await loadOwnerApprovals(supabase,schoolId,{studentIds:[studentId]}) : [];
+  const entitlements = ["owner","admin"].includes(membership.role) ? await loadServiceEntitlements(supabase,schoolId,{studentIds:[studentId]}) : [];
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
       <DetailHeader eyebrow={`${school.name} · Student`} title={displayName(person)} meta={`${student.enrollment_status} enrollment · ${person.status} record`} />
 
       {approvals.length?<DetailSection title="Needs approval" description="Pending owner decisions involving this student. Resolving one here removes it from every active approval list."><ApprovalList schoolId={schoolId} items={approvals} timezone={school.timezone} compact/></DetailSection>:null}
+      {entitlements.length?<DetailSection title="Lessons to schedule" description="Paid replacement lessons still owed to this student."><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} compact/></DetailSection>:null}
 
       <DetailSection title="Student record" description="School-facing identity and enrollment information.">
         <dl className="grid gap-x-8 gap-y-6 sm:grid-cols-2">
