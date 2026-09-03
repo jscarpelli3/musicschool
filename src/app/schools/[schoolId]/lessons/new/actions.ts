@@ -12,6 +12,7 @@ export type CreateLessonState = {
   message: string;
   reference?: string;
   outcome?: "created" | "pending_teacher";
+  scheduledForToday?: boolean;
 };
 
 const knownErrors: Record<string, string> = {
@@ -25,6 +26,8 @@ const knownErrors: Record<string, string> = {
   invalid_student: "That student is no longer available for scheduling. Reload and choose another student.",
   invalid_place: "That lesson place is no longer available. Reload and choose another place.",
   lesson_too_far_in_past: "A new lesson cannot be created that far in the past.",
+  lesson_start_must_be_future: "Choose a start time in the future. Earlier times today cannot be scheduled.",
+  new_lesson_time_must_be_future: "Choose a start time in the future. Earlier times today cannot be scheduled.",
   invalid_recurrence_end: "Choose an end date from the first lesson through one year later.",
   standalone_lesson_requires_per_session_price: "That offering is billed as a recurring agreement. Choose Weekly instead of One time.",
   not_authorized: "Your account does not have permission to create lessons for this school.",
@@ -103,6 +106,8 @@ export async function createSingleLesson(
       && ruleStart <= startMinutes && ruleEnd >= endMinutes;
   });
   const allowOutside = !fitsAvailability;
+  const schoolToday = new Intl.DateTimeFormat("en-CA", { timeZone: school.timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const scheduledForToday = date === schoolToday;
   const overrideReason = allowOutside ? outsideNote ?? "Owner scheduled outside the teacher’s saved availability." : undefined;
 
   if (allowOutside && teacherPolicy.outside_availability_policy === "require_approval") {
@@ -124,7 +129,7 @@ export async function createSingleLesson(
     }
     await dispatchLessonProposalEmail(proposalId);
     revalidatePath(`/schools/${schoolId}/teacher`);
-    return { status: "success", outcome: "pending_teacher", message: "Approval requested. The lesson will be added only if the teacher accepts." };
+    return { status: "success", outcome: "pending_teacher", scheduledForToday, message: scheduledForToday ? "Approval requested for a lesson later today. It will be added only if the teacher accepts." : "Approval requested. The lesson will be added only if the teacher accepts." };
   }
 
   const result = entitlementId
@@ -175,5 +180,5 @@ export async function createSingleLesson(
     const { data: entitlement } = await supabase.from("lesson_service_entitlements").select("source_request_id").eq("school_id", schoolId).eq("id", entitlementId).maybeSingle();
     if (entitlement?.source_request_id) await dispatchLessonRequestEmails(entitlement.source_request_id);
   }
-  return { status: "success", outcome: "created", message: entitlementId ? "Replacement lesson scheduled. This entitlement cannot be used again." : scheduleType === "weekly" ? `${occurrenceCount} weekly lessons created and added to the calendar.` : "Lesson created and added to the calendar." };
+  return { status: "success", outcome: "created", scheduledForToday, message: entitlementId ? "Replacement lesson scheduled. This entitlement cannot be used again." : scheduleType === "weekly" ? `${occurrenceCount} weekly lessons created and added to the calendar.` : scheduledForToday ? "Lesson created for later today. Confirm the teacher and family expect this short-notice addition." : "Lesson created and added to the calendar." };
 }

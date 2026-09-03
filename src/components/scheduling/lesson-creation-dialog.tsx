@@ -54,7 +54,7 @@ export function LessonCreationDialog({ schoolId, slot, options, lockTeacher, onC
             onClose();
             window.dispatchEvent(new CustomEvent("common-time:toast", { detail: {
               title: result.outcome === "pending_teacher" ? "Teacher approval requested" : options.entitlement ? "Replacement lesson scheduled" : "Lesson created",
-              message: result.outcome === "pending_teacher" ? "Nothing was added to the calendar yet. The teacher must accept the outside-hours proposal." : options.entitlement ? "The paid lesson was scheduled without creating another charge. Family and teacher notifications were queued." : "The calendar was updated and the teacher notification was queued for delivery.",
+              message: result.outcome === "pending_teacher" ? (result.scheduledForToday ? "This proposal is for later today. Nothing was added yet; the teacher must accept it." : "Nothing was added to the calendar yet. The teacher must accept the outside-hours proposal.") : options.entitlement ? (result.scheduledForToday ? "The paid replacement was scheduled for later today. Confirm everyone expects it; notifications were queued." : "The paid lesson was scheduled without creating another charge. Family and teacher notifications were queued.") : result.scheduledForToday ? "This lesson is later today. Confirm the teacher and family expect it; notifications were queued." : "The calendar was updated and the teacher notification was queued for delivery.",
               href: `/schools/${schoolId}/staff/${slot.teacherId}`,
             } }));
             router.refresh();
