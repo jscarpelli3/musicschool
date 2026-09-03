@@ -12,6 +12,7 @@ export type LessonCreationOptions = {
   places: LessonFormOption[];
   availability: LessonFormAvailability[];
   today: string;
+  minimumTimeToday?: string;
   entitlement?: { id: string; studentId: string; productId: string; teacherId: string | null; durationMinutes: number };
 };
 
@@ -49,6 +50,7 @@ export function LessonCreationDialog({ schoolId, slot, options, lockTeacher, onC
           initialDate={slot.dateKey}
           initialTime={slot.time}
           entitlement={options.entitlement}
+          minimumTimeToday={options.minimumTimeToday}
           compact
           onCreated={(result) => {
             onClose();

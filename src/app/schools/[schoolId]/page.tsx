@@ -147,6 +147,7 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
   }).formatToParts(new Date());
   const todayPart = (type: string) => todayParts.find((part) => part.type === type)?.value;
   const initialDate = `${todayPart("year")}-${todayPart("month")}-${todayPart("day")}`;
+  const minimumTimeToday = new Intl.DateTimeFormat("en-GB", { timeZone: school.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
   const monthKey = initialDate.slice(0, 7);
   const monthLabel = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: school.timezone }).format(new Date());
   const teacherNames = new Map(teachers.map((teacher) => [teacher.id, teacher.name]));
@@ -270,6 +271,7 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
           places: (placeRows ?? []).filter((place) => place.status === "active").map((place) => ({ id: place.id, label: place.name })),
           availability: availabilityRows ?? [],
           today: initialDate,
+          minimumTimeToday,
         } : undefined}
       /> : null}
     </main>

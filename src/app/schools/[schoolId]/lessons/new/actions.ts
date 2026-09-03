@@ -13,6 +13,7 @@ export type CreateLessonState = {
   reference?: string;
   outcome?: "created" | "pending_teacher";
   scheduledForToday?: boolean;
+  field?: "time";
 };
 
 const knownErrors: Record<string, string> = {
@@ -125,7 +126,7 @@ export async function createSingleLesson(
       const knownCode = Object.keys(knownErrors).find((code) => proposalError?.message.includes(code));
       const reference = crypto.randomUUID().slice(0, 8).toUpperCase();
       console.error("Lesson approval proposal failure", { reference, schoolId, teacherId, code: proposalError?.code, message: proposalError?.message });
-      return { status: "error", message: knownCode ? knownErrors[knownCode] : `The approval request could not be created. Nothing was added, so it is safe to try again. Reference ${reference}.`, reference };
+      return { status: "error", message: knownCode ? knownErrors[knownCode] : `The approval request could not be created. Nothing was added, so it is safe to try again. Reference ${reference}.`, reference, field: knownCode?.includes("future") ? "time" : undefined };
     }
     await dispatchLessonProposalEmail(proposalId);
     revalidatePath(`/schools/${schoolId}/teacher`);
@@ -153,7 +154,7 @@ export async function createSingleLesson(
 
   if (error || !createdRecord) {
     const knownCode = Object.keys(knownErrors).find((code) => error?.message.includes(code));
-    if (knownCode) return { status: "error", message: knownErrors[knownCode] };
+    if (knownCode) return { status: "error", message: knownErrors[knownCode], field: knownCode.includes("future") || knownCode.includes("lesson_start") ? "time" : undefined };
     const reference = crypto.randomUUID().slice(0, 8).toUpperCase();
     console.error("Unexpected lesson creation failure", { reference, schoolId, teacherId, code: error?.code });
     return {

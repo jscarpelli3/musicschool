@@ -39,6 +39,7 @@ export default async function NewLessonPage({ params, searchParams }: {
   const teachers = (teachersResult.data ?? []).flatMap(({ person_id, outside_availability_policy }) => people.has(person_id) ? [{ id: person_id, label: name(people.get(person_id)!), outsideAvailabilityPolicy: outside_availability_policy === "require_approval" ? "require_approval" as const : "notify_only" as const }] : []).sort((a, b) => a.label.localeCompare(b.label));
   const students = (studentsResult.data ?? []).flatMap(({ person_id }) => people.has(person_id) ? [{ id: person_id, label: name(people.get(person_id)!) }] : []).sort((a, b) => a.label.localeCompare(b.label));
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: school.timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const minimumTimeToday = new Intl.DateTimeFormat("en-GB", { timeZone: school.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
   const teacherChoices = teachers.map((teacher) => ({id:teacher.id,name:teacher.label,isOwner:false}));
   const studentNames = Object.fromEntries(students.map((student) => [student.id,student.label]));
   const productNames = Object.fromEntries((productsResult.data ?? []).map((product) => [product.id,product.name]));
@@ -75,7 +76,7 @@ export default async function NewLessonPage({ params, searchParams }: {
         availability={availabilityResult.data ?? []}
         lessons={(lessonsResult.data ?? []).map((lesson) => ({...lesson,billing_service_date:lesson.starts_at.slice(0,10),can_reschedule:false,can_mark_reschedule:false}))}
         contextLabel={entitlement ? "Choose a time for this paid replacement lesson" : "Choose a teacher, then a time"}
-        lessonCreationOptions={{students,teachers:visibleTeachers,products:(productsResult.data ?? []).map((product) => ({id:product.id,label:product.name,durationMinutes:product.duration_minutes,priceLabel:new Intl.NumberFormat("en-US",{style:"currency",currency:product.currency}).format(product.price_cents/100)})),places:(placesResult.data ?? []).map((place) => ({id:place.id,label:place.name})),availability:availabilityResult.data ?? [],today,
+        lessonCreationOptions={{students,teachers:visibleTeachers,products:(productsResult.data ?? []).map((product) => ({id:product.id,label:product.name,durationMinutes:product.duration_minutes,priceLabel:new Intl.NumberFormat("en-US",{style:"currency",currency:product.currency}).format(product.price_cents/100)})),places:(placesResult.data ?? []).map((place) => ({id:place.id,label:place.name})),availability:availabilityResult.data ?? [],today,minimumTimeToday,
           entitlement: entitlement && sourceLesson ? {id:entitlement.id,studentId:entitlement.student_id,productId:sourceLesson.product_id,teacherId:entitlement.assigned_teacher_id,durationMinutes:entitlement.duration_minutes} : undefined}}
       />
     </main>

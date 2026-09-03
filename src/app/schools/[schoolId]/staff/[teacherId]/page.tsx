@@ -48,6 +48,7 @@ export default async function StaffTeacherPage({ params }: {
     month: "2-digit",
     day: "2-digit",
   }).format(now);
+  const minimumTimeToday = new Intl.DateTimeFormat("en-GB", { timeZone: school.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(now);
   const teacherName = personDisplayName(teacher);
   const approvals = await loadOwnerApprovals(supabase,schoolId,{teacherId});
   const entitlements = await loadServiceEntitlements(supabase,schoolId,{teacherId});
@@ -84,6 +85,7 @@ export default async function StaffTeacherPage({ params }: {
         places: (placesResult.data ?? []).map((place) => ({id:place.id,label:place.name})),
         availability: schedule.availability,
         today: initialDate,
+        minimumTimeToday,
       }}
     />
   </main>;
