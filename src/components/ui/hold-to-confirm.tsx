@@ -14,6 +14,7 @@ type HoldToConfirmProps = {
   disabled?: boolean;
   disabledMessage?: string;
   failureMessage?: string;
+  onBusyChange?: (busy: boolean) => void;
   onSuccess?: () => void;
   refreshOnSuccess?: boolean;
 };
@@ -28,6 +29,7 @@ export function HoldToConfirm({
   disabled = false,
   disabledMessage = "Complete the required information first.",
   failureMessage = "We could not complete this action. Please try again.",
+  onBusyChange,
   onSuccess,
   refreshOnSuccess = false,
 }: HoldToConfirmProps) {
@@ -50,6 +52,7 @@ export function HoldToConfirm({
     holdTimer.current = setTimeout(async () => {
       holdTimer.current = null;
       setState("submitting");
+      onBusyChange?.(true);
       try {
         const result = await action();
         setMessage(result.message);
@@ -57,10 +60,13 @@ export function HoldToConfirm({
         if (result.ok) {
           onSuccess?.();
           if (refreshOnSuccess) router.refresh();
+        } else {
+          onBusyChange?.(false);
         }
       } catch {
         setMessage(failureMessage);
         setState("error");
+        onBusyChange?.(false);
       }
     }, duration);
   }

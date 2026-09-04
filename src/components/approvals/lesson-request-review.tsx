@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { resolveLessonChangeRequest } from "@/app/schools/[schoolId]/approvals/actions";
@@ -40,6 +39,7 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
   const [amount, setAmount] = useState(item.policyFeeCents / 100);
   const [reason, setReason] = useState("");
   const [showDecline, setShowDecline] = useState(false);
+  const [resolving, setResolving] = useState(false);
   const format = useMemo(() => new Intl.DateTimeFormat("en-US", { timeZone: timezone, weekday: "long", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }), [timezone]);
   const money = useMemo(() => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }), []);
   const amountCents = Math.round(Number.isFinite(amount) ? amount * 100 : 0);
@@ -50,11 +50,11 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
 
   useEffect(() => {
     const previous = document.body.style.overflow;
-    const close = (event: KeyboardEvent) => { if (event.key === "Escape") router.push(closeHref); };
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape" && !resolving) router.push(closeHref); };
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", close);
     return () => { document.body.style.overflow = previous; window.removeEventListener("keydown", close); };
-  }, [router, closeHref]);
+  }, [router, closeHref, resolving]);
 
   async function submit(decision: "approved" | "declined") {
     const result = await resolveLessonChangeRequest(schoolId, item.id, { decision, lessonResolution: decision === "approved" ? resolution : null, adjustmentKind: decision === "approved" && adjustmentKind !== "none" ? adjustmentKind : null, adjustmentAmountCents: decision === "approved" ? amountCents : 0, reason });
@@ -74,11 +74,11 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
 
   return (
     <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-labelledby="lesson-request-title">
-      <Link href={closeHref} aria-label="Close request review" className="fixed inset-0 bg-[var(--ui-overlay)]" />
+      <button type="button" aria-label="Close request review" disabled={resolving} onClick={() => router.push(closeHref)} className="fixed inset-0 bg-[var(--ui-overlay)] disabled:cursor-wait" />
       <section className="fixed left-1/2 top-1/2 z-[101] max-h-[calc(100dvh-2rem)] w-[min(50rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto border border-brand bg-canvas p-5 shadow-xl sm:p-8">
         <div className="flex items-start justify-between gap-5">
           <div><p className="text-xs uppercase tracking-[0.14em] text-brand">{requestName}</p><h2 id="lesson-request-title" className="mt-3 font-display text-4xl">{item.student}’s family wants to {item.requestType === "reschedule" ? "reschedule" : "cancel"}.</h2><p className="mt-3 text-sm leading-6 text-muted">Teacher: {item.teacher}</p></div>
-          <Link href={closeHref} className="text-sm text-muted transition hover:text-ink">Close</Link>
+          <button type="button" disabled={resolving} onClick={() => router.push(closeHref)} className="text-sm text-muted transition hover:text-ink disabled:cursor-wait disabled:opacity-40">Close</button>
         </div>
 
         <dl className="mt-7 grid gap-px bg-line sm:grid-cols-2">
@@ -93,7 +93,7 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
           <p className="mt-2 text-sm leading-6 text-muted">{item.policyGuidance}</p>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
             <p className="text-sm"><span className="text-muted">Policy recommends: </span>{recommendationName(item.policyLessonResolution)}{item.policyFeeCents > 0 ? ` plus a ${money.format(item.policyFeeCents / 100)} late fee` : ""}.</p>
-            {recommendedResolution && isOverride ? <button type="button" onClick={usePolicyRecommendation} className="text-sm text-brand underline-offset-4 transition hover:underline">Use recommendation</button> : null}
+            {recommendedResolution && isOverride ? <button type="button" disabled={resolving} onClick={usePolicyRecommendation} className="text-sm text-brand underline-offset-4 transition hover:underline disabled:cursor-wait disabled:opacity-40">Use recommendation</button> : null}
           </div>
         </section>
 
@@ -104,7 +104,7 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
             <div className="mt-4 grid gap-3" role="radiogroup">
               {outcomeOptions.map((option) => {
                 const selected = resolution === option.value;
-                return <button key={option.value} type="button" role="radio" aria-checked={selected} onClick={() => setResolution(option.value)} className={`p-4 text-left transition ${selected ? "bg-brand text-canvas" : "border border-line bg-canvas hover:border-brand"}`}><span className="block text-sm font-medium">{option.title}</span><span className={`mt-2 block text-sm leading-6 ${selected ? "text-canvas/80" : "text-muted"}`}>{option.description}</span></button>;
+                return <button key={option.value} type="button" role="radio" aria-checked={selected} disabled={resolving} onClick={() => setResolution(option.value)} className={`p-4 text-left transition disabled:cursor-wait disabled:opacity-50 ${selected ? "bg-brand text-canvas" : "border border-line bg-canvas hover:border-brand"}`}><span className="block text-sm font-medium">{option.title}</span><span className={`mt-2 block text-sm leading-6 ${selected ? "text-canvas/80" : "text-muted"}`}>{option.description}</span></button>;
               })}
             </div>
           </fieldset>
@@ -112,12 +112,12 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
           <fieldset className="mt-7">
             <legend className="text-sm font-medium">Add a separate account adjustment?</legend>
             <div className="mt-3 flex flex-wrap gap-2">
-              {(["none", "fee", "credit"] as const).map((kind) => <button key={kind} type="button" onClick={() => setAdjustmentKind(kind)} className={`border px-4 py-2 text-sm capitalize transition ${adjustmentKind === kind ? "border-brand bg-brand text-canvas" : "border-line hover:border-brand"}`}>{kind === "none" ? "No adjustment" : `Add ${kind}`}</button>)}
+              {(["none", "fee", "credit"] as const).map((kind) => <button key={kind} type="button" disabled={resolving} onClick={() => setAdjustmentKind(kind)} className={`border px-4 py-2 text-sm capitalize transition disabled:cursor-wait disabled:opacity-50 ${adjustmentKind === kind ? "border-brand bg-brand text-canvas" : "border-line hover:border-brand"}`}>{kind === "none" ? "No adjustment" : `Add ${kind}`}</button>)}
             </div>
-            {adjustmentKind !== "none" ? <label className="mt-4 block max-w-xs"><span className="text-sm font-medium">{adjustmentKind === "fee" ? "Fee" : "Credit"} amount</span><span className="relative block"><span className="absolute left-0 top-5 text-muted">$</span><input type="number" min="0.01" max="10000" step="0.01" value={amount} onChange={(event) => setAmount(Number(event.target.value))} className="mt-2 w-full border-b border-line bg-transparent py-3 pl-5 outline-none focus:border-brand" /></span></label> : null}
+            {adjustmentKind !== "none" ? <label className="mt-4 block max-w-xs"><span className="text-sm font-medium">{adjustmentKind === "fee" ? "Fee" : "Credit"} amount</span><span className="relative block"><span className="absolute left-0 top-5 text-muted">$</span><input type="number" min="0.01" max="10000" step="0.01" value={amount} disabled={resolving} onChange={(event) => setAmount(Number(event.target.value))} className="mt-2 w-full border-b border-line bg-transparent py-3 pl-5 outline-none focus:border-brand disabled:cursor-wait disabled:opacity-50" /></span></label> : null}
           </fieldset>
 
-          <label className="mt-7 block"><span className="text-sm font-medium">Internal decision note {isOverride ? "· required for this exception" : "· optional"}</span><textarea value={reason} onChange={(event) => setReason(event.target.value)} maxLength={1000} rows={3} className="mt-2 w-full border border-line bg-transparent p-3 outline-none focus:border-brand" placeholder="What did you agree on with the family?" /></label>
+          <label className="mt-7 block"><span className="text-sm font-medium">Internal decision note {isOverride ? "· required for this exception" : "· optional"}</span><textarea value={reason} disabled={resolving} onChange={(event) => setReason(event.target.value)} maxLength={1000} rows={3} className="mt-2 w-full border border-line bg-transparent p-3 outline-none focus:border-brand disabled:cursor-wait disabled:opacity-50" placeholder="What did you agree on with the family?" /></label>
 
           <aside className="mt-7 border border-brand bg-surface-raised p-5">
             <p className="text-xs uppercase tracking-[0.12em] text-brand">What will happen</p><p className="mt-3 text-base font-medium">{selectedOutcome.title}</p>
@@ -126,8 +126,8 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
           </aside>
 
           <div className="mt-7">
-            <HoldToConfirm action={() => submit("approved")} disabled={(isOverride && !reason.trim()) || (adjustmentKind !== "none" && amountCents <= 0)} idleLabel="Hold to apply this outcome" holdingLabel="Keep holding to resolve…" submittingLabel="Applying lesson and account changes…" successLabel="Request resolved" />
-            {!showDecline ? <button type="button" onClick={() => setShowDecline(true)} className="mt-2 text-sm text-muted underline-offset-4 transition hover:text-danger hover:underline">Decline this request instead</button> : <section className="mt-5 border-t border-line pt-5"><p className="text-sm font-medium">Decline the family’s request?</p><p className="mt-2 text-sm leading-6 text-muted">None of the outcome choices above will be applied. The lesson will remain scheduled at its current time.</p><div className="mt-4 max-w-md"><HoldToConfirm action={() => submit("declined")} idleLabel="Hold to decline and keep scheduled" holdingLabel="Keep holding to decline…" submittingLabel="Declining request…" successLabel="Request declined" /></div><button type="button" onClick={() => setShowDecline(false)} className="mt-2 text-sm text-muted transition hover:text-ink">Never mind</button></section>}
+            <HoldToConfirm action={() => submit("approved")} disabled={resolving || (isOverride && !reason.trim()) || (adjustmentKind !== "none" && amountCents <= 0)} onBusyChange={setResolving} idleLabel="Hold to apply this outcome" holdingLabel="Keep holding to resolve…" submittingLabel="Applying lesson and account changes…" successLabel="Request resolved" />
+            {!showDecline ? <button type="button" disabled={resolving} onClick={() => setShowDecline(true)} className="mt-2 text-sm text-muted underline-offset-4 transition hover:text-danger hover:underline disabled:cursor-wait disabled:text-muted/40 disabled:no-underline">Decline this request instead</button> : <section className="mt-5 border-t border-line pt-5"><p className="text-sm font-medium">Decline the family’s request?</p><p className="mt-2 text-sm leading-6 text-muted">None of the outcome choices above will be applied. The lesson will remain scheduled at its current time.</p><div className="mt-4 max-w-md"><HoldToConfirm action={() => submit("declined")} disabled={resolving} onBusyChange={setResolving} idleLabel="Hold to decline and keep scheduled" holdingLabel="Keep holding to decline…" submittingLabel="Declining request…" successLabel="Request declined" /></div><button type="button" disabled={resolving} onClick={() => setShowDecline(false)} className="mt-2 text-sm text-muted transition hover:text-ink disabled:cursor-wait disabled:opacity-40">Never mind</button></section>}
           </div>
         </> : <p className="mt-7 text-sm capitalize text-muted">This request is {item.status.replaceAll("_", " ")}.</p>}
       </section>
