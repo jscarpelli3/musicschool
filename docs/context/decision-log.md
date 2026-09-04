@@ -1,5 +1,11 @@
 # Decision Log
 
+## 2026-09-04 — Teachers receive billing context without billing authority
+
+- Decision: Give teachers a read-only summary and recent history of payment state for only their assigned students and the related payer accounts. Surface uninvoiced lessons, statements awaiting approval or payment, paid statements, available lesson/account credits, and owner-action-needed states in plain language.
+- Boundary: Teachers cannot send or revise invoices, initiate charges, view saved payment-method details, issue refunds or credits, write off balances, or see unrelated students, payers, internal financial notes, or provider diagnostics. Server authorization, assignment-scoped queries, and RLS must agree; client filtering is never the security boundary.
+- Rationale: Teachers and payers commonly discuss account status around lesson time. The teacher needs reliable facts and a clear handoff to the owner, without inheriting financial authority or sensitive payment access.
+
 Use one entry per meaningful technical or product decision.
 
 ## Template

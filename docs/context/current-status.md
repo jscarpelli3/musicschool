@@ -57,6 +57,7 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 
 ## Next Steps
 
+- **Teacher billing context:** Add a read-only view for assigned students and their payer accounts. Teachers need concise current state and recent history—uninvoiced lessons, statements awaiting approval or payment, paid statements, available lesson/account credits, and owner-action-needed states—so they can answer ordinary payer questions before or after lessons. Enforce assignment-scoped server authorization and RLS; do not expose payment-method details, unrelated family data, internal financial notes, or any invoice, charge, refund, credit, write-off, or collection controls.
 0. Complete the teacher flow now underway: assigned schedule, outcome entry, and self-rescheduling are live; owner-driven passwordless invitation/account linking is implemented locally. Next run teacher invitation/access acceptance, add teacher-cancellation remedy review, reconcile invitation delivery webhooks/cooldowns, and complete the teacher-specific authorization/RLS matrix.
 1. Rehearse the deployed read-only `/portal` email-code and verified-contact authorization foundation documented in [`client-scheduling-portal.md`](client-scheduling-portal.md); configure the Supabase email template to show the OTP before live acceptance.
 2. Implement policy-bound client cancellation, multi-recipient notifications, and the `Lessons to schedule` entitlement pool before adding within-family transfers or reschedule/credit follow-up choices.

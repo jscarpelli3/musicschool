@@ -2124,7 +2124,10 @@ export type Database = {
       }
       lesson_proposal_email_outbox: {
         Row: {
+          accepted_at: string | null
           created_at: string
+          delivered_at: string | null
+          failed_at: string | null
           id: string
           idempotency_key: string
           message_text: string
@@ -2139,7 +2142,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accepted_at?: string | null
           created_at?: string
+          delivered_at?: string | null
+          failed_at?: string | null
           id?: string
           idempotency_key: string
           message_text: string
@@ -2154,7 +2160,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accepted_at?: string | null
           created_at?: string
+          delivered_at?: string | null
+          failed_at?: string | null
           id?: string
           idempotency_key?: string
           message_text?: string
@@ -4735,6 +4744,7 @@ export type Database = {
           accepted_at: string | null
           created_at: string
           created_by: string
+          delivered_at: string | null
           failed_at: string | null
           id: string
           idempotency_key: string
@@ -4746,11 +4756,13 @@ export type Database = {
           school_id: string
           status: string
           teacher_id: string
+          updated_at: string
         }
         Insert: {
           accepted_at?: string | null
           created_at?: string
           created_by: string
+          delivered_at?: string | null
           failed_at?: string | null
           id?: string
           idempotency_key: string
@@ -4762,11 +4774,13 @@ export type Database = {
           school_id: string
           status?: string
           teacher_id: string
+          updated_at?: string
         }
         Update: {
           accepted_at?: string | null
           created_at?: string
           created_by?: string
+          delivered_at?: string | null
           failed_at?: string | null
           id?: string
           idempotency_key?: string
@@ -4778,6 +4792,7 @@ export type Database = {
           school_id?: string
           status?: string
           teacher_id?: string
+          updated_at?: string
         }
         Relationships: [
           {

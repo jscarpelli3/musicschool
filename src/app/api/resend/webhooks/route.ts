@@ -53,29 +53,28 @@ export async function POST(request: Request) {
     console.error("Resend webhook reconciliation failed", { code: error.code, eventId });
     return NextResponse.json({ error: "Event intake failed." }, { status: 500 });
   }
-  if (data === "pending_reconciliation") {
-    const status = ({
-      "email.sent": "sent", "email.delivered": "delivered", "email.delivery_delayed": "delayed",
-      "email.bounced": "bounced", "email.complained": "complained", "email.failed": "failed", "email.suppressed": "suppressed",
-    } as Record<string, string>)[event.type];
-    if (status) {
-      const occurred = new Date(occurredAt).toISOString();
-      const failed = ["bounced", "complained", "failed", "suppressed"].includes(status);
-      const ownerUpdate = await admin.from("owner_notification_email_outbox").update({
-        status,
-        delivered_at: status === "delivered" ? occurred : undefined,
-        failed_at: failed ? occurred : undefined,
-      }).eq("provider_email_id", providerEmailId);
-      const lessonUpdate = await admin.from("lesson_created_email_outbox").update({
-        status,
-        delivered_at: status === "delivered" ? occurred : undefined,
-        failed_at: failed ? occurred : undefined,
-        updated_at: occurred,
-      }).eq("provider_email_id", providerEmailId);
-      if (ownerUpdate.error || lessonUpdate.error) {
-        console.error("Resend webhook fallback reconciliation failed", { eventId, ownerCode: ownerUpdate.error?.code, lessonCode: lessonUpdate.error?.code });
-        return NextResponse.json({ error: "Event reconciliation failed." }, { status: 500 });
-      }
+  const status = ({
+    "email.sent": "sent", "email.delivered": "delivered", "email.delivery_delayed": "delayed",
+    "email.bounced": "bounced", "email.complained": "complained", "email.failed": "failed", "email.suppressed": "suppressed",
+  } as Record<string, string>)[event.type];
+  if (status) {
+    const occurred = new Date(occurredAt).toISOString();
+    const failed = ["bounced", "complained", "failed", "suppressed"].includes(status);
+    const eligible = status === "sent" ? ["accepted", "sent"]
+      : status === "delayed" ? ["accepted", "sent", "delayed"]
+        : status === "delivered" ? ["accepted", "sent", "delayed", "delivered"]
+          : ["accepted", "sent", "delayed", "delivered", "failed", "bounced", "complained", "suppressed"];
+    const updates = await Promise.all([
+      admin.from("owner_notification_email_outbox").update({ status, delivered_at: status === "delivered" ? occurred : undefined, failed_at: failed ? occurred : undefined, updated_at: occurred }).eq("provider_email_id", providerEmailId).in("status", eligible),
+      admin.from("lesson_created_email_outbox").update({ status, delivered_at: status === "delivered" ? occurred : undefined, failed_at: failed ? occurred : undefined, updated_at: occurred }).eq("provider_email_id", providerEmailId).in("status", eligible),
+      admin.from("lesson_request_email_outbox").update({ status, delivered_at: status === "delivered" ? occurred : undefined, failed_at: failed ? occurred : undefined, updated_at: occurred }).eq("provider_email_id", providerEmailId).in("status", eligible),
+      admin.from("teacher_invitation_deliveries").update({ status, delivered_at: status === "delivered" ? occurred : undefined, failed_at: failed ? occurred : undefined, updated_at: occurred }).eq("provider_email_id", providerEmailId).in("status", eligible),
+      admin.from("lesson_proposal_email_outbox").update({ status, delivered_at: status === "delivered" ? occurred : undefined, failed_at: failed ? occurred : undefined, updated_at: occurred }).eq("provider_email_id", providerEmailId).in("status", eligible),
+    ]);
+    const failure = updates.find((update) => update.error)?.error;
+    if (failure) {
+      console.error("Resend outbox reconciliation failed", { eventId, code: failure.code });
+      return NextResponse.json({ error: "Event reconciliation failed." }, { status: 500 });
     }
   }
   return NextResponse.json({ received: true, duplicate: data === "duplicate" });
