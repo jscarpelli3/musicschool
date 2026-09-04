@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ensurePortalAuthIdentity } from "@/lib/portal/auth-identities";
-import { sendResendEmail, ResendRequestError } from "@/lib/resend/server";
+import { sendResendEmail, ResendRequestError, ResendUnknownOutcomeError } from "@/lib/resend/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { teacherInvitationEmail } from "@/lib/teachers/invitation-email";
@@ -103,6 +103,7 @@ async function deliverTeacherAccess(schoolId: string, teacherId: string, email: 
       html: message.html,
       idempotencyKey: invitation.idempotency_key,
       messageKind: "teacher_invitation",
+      timeoutMs: 10_000,
     });
     const recorded = await admin.from("teacher_invitation_deliveries").update({ status: "accepted", provider_email_id: sent.id, accepted_at: new Date().toISOString() }).eq("id", invitation.delivery_id).eq("status", "pending").select("id").maybeSingle();
     if (recorded.error || !recorded.data) {
@@ -110,6 +111,11 @@ async function deliverTeacherAccess(schoolId: string, teacherId: string, email: 
       return "delivery-failed";
     }
   } catch (sendError) {
+    if (sendError instanceof ResendUnknownOutcomeError) {
+      const marked = await admin.from("teacher_invitation_deliveries").update({ status: "reconciliation_required", provider_error_code: "provider_outcome_unknown", provider_error_message: sendError.message.slice(0, 500), updated_at: new Date().toISOString() }).eq("id", invitation.delivery_id).eq("status", "pending").select("id").maybeSingle();
+      if (marked.error || !marked.data) console.error("Teacher invitation unknown outcome could not be recorded", { deliveryId: invitation.delivery_id, code: marked.error?.code });
+      return "delivery-failed";
+    }
     const provider = sendError instanceof ResendRequestError ? sendError : null;
     const recorded = await admin.from("teacher_invitation_deliveries").update({ status: "failed", provider_error_code: provider?.code ?? "request_failed", provider_error_message: sendError instanceof Error ? sendError.message.slice(0, 500) : "Provider request failed.", failed_at: new Date().toISOString() }).eq("id", invitation.delivery_id).eq("status", "pending").select("id").maybeSingle();
     if (recorded.error || !recorded.data) console.error("Teacher invitation failure could not be recorded", { deliveryId: invitation.delivery_id, code: recorded.error?.code });

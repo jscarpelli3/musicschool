@@ -2,7 +2,7 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ResendRequestError, sendResendEmail } from "@/lib/resend/server";
+import { ResendRequestError, ResendUnknownOutcomeError, sendResendEmail } from "@/lib/resend/server";
 
 const escape = (value: string) => value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
@@ -36,6 +36,7 @@ export async function dispatchOwnerNotificationEmail(deliveryId: string) {
       html: `<h1>${escape(delivery.subject)}</h1><p>${escape(delivery.message_text)}</p>`,
       idempotencyKey: delivery.idempotency_key,
       messageKind: "owner_payer_response",
+      timeoutMs: 10_000,
     });
     const { error } = await admin.from("owner_notification_email_outbox").update({
       status: "accepted", provider_email_id: result.id, accepted_at: new Date().toISOString(),
@@ -44,6 +45,14 @@ export async function dispatchOwnerNotificationEmail(deliveryId: string) {
     }).eq("id", delivery.id).eq("status", "pending");
     return error ? { ok: false as const, reason: "state_update_failed" as const } : { ok: true as const };
   } catch (error) {
+    if (error instanceof ResendUnknownOutcomeError) {
+      const marked = await admin.from("owner_notification_email_outbox").update({
+        status: "reconciliation_required", provider_error_code: "provider_outcome_unknown",
+        provider_error_message: error.message.slice(0, 500), updated_at: new Date().toISOString(),
+      }).eq("id", delivery.id).eq("status", "pending");
+      if (marked.error) console.error("Owner notification email unknown outcome could not be recorded", { deliveryId: delivery.id, code: marked.error.code });
+      return { ok: false as const, reason: "reconciliation_required" as const };
+    }
     const provider = error instanceof ResendRequestError ? error : null;
     await admin.from("owner_notification_email_outbox").update({
       status: "failed", provider_error_code: provider?.code ?? "request_failed",

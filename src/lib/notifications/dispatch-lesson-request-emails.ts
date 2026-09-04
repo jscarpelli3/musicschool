@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ResendRequestError, sendResendEmail } from "@/lib/resend/server";
+import { ResendRequestError, ResendUnknownOutcomeError, sendResendEmail } from "@/lib/resend/server";
 
 const escape = (value: string) => value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!);
 
@@ -21,6 +21,7 @@ export async function dispatchLessonRequestEmails(requestId: string) {
         html: `<div style="font-family:Arial,sans-serif;line-height:1.65"><h1>${escape(delivery.subject)}</h1><p>${escape(delivery.message_text)}</p></div>`,
         idempotencyKey: delivery.idempotency_key,
         messageKind: "lesson_change_request",
+        timeoutMs: 10_000,
       });
       const recorded = await admin.rpc("record_lesson_request_email_submission", { p_delivery_id: delivery.id, p_provider_email_id: result.id });
       if (recorded.error) {
@@ -28,6 +29,12 @@ export async function dispatchLessonRequestEmails(requestId: string) {
         failed += 1;
       } else accepted += 1;
     } catch (caught) {
+      if (caught instanceof ResendUnknownOutcomeError) {
+        const marked = await admin.from("lesson_request_email_outbox").update({ status: "reconciliation_required", provider_error_code: "provider_outcome_unknown", provider_error_message: caught.message.slice(0, 500), updated_at: new Date().toISOString() }).eq("id", delivery.id).eq("status", "pending").select("id").maybeSingle();
+        if (marked.error || !marked.data) console.error("Lesson request email unknown outcome could not be recorded", { deliveryId: delivery.id, code: marked.error?.code });
+        failed += 1;
+        continue;
+      }
       const provider = caught instanceof ResendRequestError ? caught : null;
       const recorded = await admin.rpc("record_lesson_request_email_submission", {
         p_delivery_id: delivery.id,
