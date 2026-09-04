@@ -39,6 +39,7 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
   const [adjustmentKind, setAdjustmentKind] = useState<AdjustmentKind>(recommendedAdjustment);
   const [amount, setAmount] = useState(item.policyFeeCents / 100);
   const [reason, setReason] = useState("");
+  const [showDecline, setShowDecline] = useState(false);
   const format = useMemo(() => new Intl.DateTimeFormat("en-US", { timeZone: timezone, weekday: "long", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }), [timezone]);
   const money = useMemo(() => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }), []);
   const amountCents = Math.round(Number.isFinite(amount) ? amount * 100 : 0);
@@ -124,9 +125,9 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
             {isOverride ? <p className="mt-4 text-xs text-brand">This differs from the published policy and will be recorded as an owner exception.</p> : null}
           </aside>
 
-          <div className="mt-7 grid gap-4 sm:grid-cols-2">
+          <div className="mt-7">
             <HoldToConfirm action={() => submit("approved")} disabled={(isOverride && !reason.trim()) || (adjustmentKind !== "none" && amountCents <= 0)} idleLabel="Hold to apply this outcome" holdingLabel="Keep holding to resolve…" submittingLabel="Applying lesson and account changes…" successLabel="Request resolved" />
-            <HoldToConfirm action={() => submit("declined")} idleLabel="Hold to decline; keep lesson scheduled" holdingLabel="Keep holding to decline…" submittingLabel="Declining request…" successLabel="Request declined" />
+            {!showDecline ? <button type="button" onClick={() => setShowDecline(true)} className="mt-2 text-sm text-muted underline-offset-4 transition hover:text-danger hover:underline">Decline this request instead</button> : <section className="mt-5 border-t border-line pt-5"><p className="text-sm font-medium">Decline the family’s request?</p><p className="mt-2 text-sm leading-6 text-muted">None of the outcome choices above will be applied. The lesson will remain scheduled at its current time.</p><div className="mt-4 max-w-md"><HoldToConfirm action={() => submit("declined")} idleLabel="Hold to decline and keep scheduled" holdingLabel="Keep holding to decline…" submittingLabel="Declining request…" successLabel="Request declined" /></div><button type="button" onClick={() => setShowDecline(false)} className="mt-2 text-sm text-muted transition hover:text-ink">Never mind</button></section>}
           </div>
         </> : <p className="mt-7 text-sm capitalize text-muted">This request is {item.status.replaceAll("_", " ")}.</p>}
       </section>
