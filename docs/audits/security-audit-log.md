@@ -297,6 +297,12 @@ Decision: pass / conditional pass / fail / not completed
 - Linked database lint initially identified an ambiguous PL/pgSQL teacher identifier in the previously deployed self-reschedule function. Follow-up migration `20260821141000` renamed and qualified that identifier; the repeated lint contains no teacher-flow error.
 - The remaining lint warnings are the two pre-existing unused variables in payer/lesson-request notification functions. Teacher invitation delivery and login still require live owner/teacher acceptance.
 
+#### Status update — 2026-09-04 delivery reconciliation and throttling
+
+- Signed Resend events now reconcile teacher invitation attempts through sent, delayed, delivered, bounced, complained, failed, and suppressed states. Provider calls use a bounded deadline and preserve ambiguous timeout results as `reconciliation_required` rather than declaring a safe retry.
+- Teacher invitation Server Actions now enforce an atomic one-minute per-target cooldown and a ten-per-hour owner/school ceiling through the durable security rate-limit ledger. A rejected create-and-invite request returns before creating the teacher record, and the roster gives the owner explicit wait guidance.
+- Provider reconciliation and resend cooldown are locally complete. Live owner-to-teacher invitation/login acceptance, Auth identity orphan cleanup, simultaneous email-change rehearsal, and the remaining adversarial authorization matrix are still open.
+
 ### SEC-AUDIT-2026-08-24-001 — Owner, teacher, and payer row separation
 
 - **Date:** 2026-08-24.

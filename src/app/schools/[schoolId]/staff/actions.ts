@@ -4,12 +4,37 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ensurePortalAuthIdentity } from "@/lib/portal/auth-identities";
 import { sendResendEmail, ResendRequestError, ResendUnknownOutcomeError } from "@/lib/resend/server";
+import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { teacherInvitationEmail } from "@/lib/teachers/invitation-email";
 import { normalizeInstrumentNames } from "@/lib/schools/instruments";
 
 type TeacherInviteResult = { ok: boolean; message: string };
+
+async function protectTeacherInvitation(profileId: string, schoolId: string, subject: string) {
+  try {
+    await protectServerAction({
+      scope: "teacher.invitation.send",
+      subject: `actor:${profileId}|school:${schoolId}|target:${subject}`,
+      limit: 1,
+      windowSeconds: 60,
+      blockSeconds: 60,
+    });
+    await protectServerAction({
+      scope: "teacher.invitation.send.hourly",
+      subject: `actor:${profileId}|school:${schoolId}`,
+      limit: 10,
+      windowSeconds: 3_600,
+      blockSeconds: 900,
+    });
+    return null;
+  } catch (caught) {
+    return caught instanceof RequestBoundaryError && caught.code === "rate_limited"
+      ? "Wait before sending another invitation. The previous request may still be processing."
+      : "This invitation request could not be validated. Reload and try again.";
+  }
+}
 
 export async function setTeacherSelfReschedulePermission(schoolId: string, teacherId: string, formData: FormData) {
   const allowed = formData.get("allowed") === "true";
@@ -46,6 +71,11 @@ export async function createAndInviteTeacher(schoolId: string, formData: FormDat
   const instruments = normalizeInstrumentNames(formData.getAll("instrument").map(String));
   if (!firstName || !lastName || instruments.length === 0) return { ok: false, message: "Complete the teacher details and choose at least one instrument." };
   const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId) return { ok: false, message: "Your session expired. Sign in again before inviting a teacher." };
+  const boundaryMessage = await protectTeacherInvitation(profileId, schoolId, email);
+  if (boundaryMessage) return { ok: false, message: boundaryMessage };
   const { data: teacherId, error } = await supabase.rpc("create_teacher_record", {
     p_school_id: schoolId,
     p_first_name: firstName,
@@ -126,6 +156,12 @@ async function deliverTeacherAccess(schoolId: string, teacherId: string, email: 
 
 export async function inviteTeacherAccess(schoolId: string, teacherId: string, formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId) redirect(`/login?next=/schools/${schoolId}/staff`);
+  const boundaryMessage = await protectTeacherInvitation(profileId, schoolId, teacherId);
+  if (boundaryMessage) redirect(`/schools/${schoolId}/staff?invite=rate-limited#staff-status`);
   const result = await deliverTeacherAccess(schoolId, teacherId, email);
   if (result === "invalid") redirect(`/schools/${schoolId}/staff?invite=invalid#staff-status`);
   if (result === "identity-error") redirect(`/schools/${schoolId}/staff?invite=identity-error#staff-status`);

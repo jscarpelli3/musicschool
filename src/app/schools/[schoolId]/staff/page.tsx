@@ -50,6 +50,8 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
       ? { tone: "text-danger border-danger/40 bg-danger/10", message: "The teacher was created and access was prepared, but the invitation email was not sent. Find the teacher in the staff roster and resend the invitation after the email-provider problem is corrected." }
       : query.invite === "duplicate"
         ? { tone: "text-danger border-danger/40 bg-danger/10", message: "That email is already used by another teacher at this school." }
+        : query.invite === "rate-limited"
+          ? { tone: "text-danger border-danger/40 bg-danger/10", message: "Wait before sending another invitation. The previous request may still be processing." }
         : query.invite === "identity-error"
           ? { tone: "text-danger border-danger/40 bg-danger/10", message: "The teacher identity could not be prepared. Nothing was linked." }
           : query.invite
