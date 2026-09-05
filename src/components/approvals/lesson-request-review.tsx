@@ -27,6 +27,13 @@ function accountingName(value: string) {
   return names[value] ?? value.replaceAll("_", " ");
 }
 
+function scenarioPresentation(item: LessonRequestApproval) {
+  if (item.scenario === "teacher_cancellation") return { eyebrow: "Teacher cancellation", title: `${item.teacher} reported a cancellation for ${item.student}.`, askedLabel: "Teacher reported", note: "What remedy did the school decide?", audience: "the teacher and family", decline: "Dismiss this report", declineEffect: "No remedy will be applied. The lesson record will remain unchanged." };
+  if (item.scenario === "school_cancellation") return { eyebrow: "School cancellation", title: `${item.student}’s lesson needs a school cancellation decision.`, askedLabel: "School action", note: "Why is the school applying this remedy?", audience: "the teacher and family", decline: "Dismiss this review", declineEffect: "No remedy will be applied. The lesson record will remain unchanged." };
+  if (item.scenario === "student_no_show") return { eyebrow: "No-show review", title: `${item.student}’s lesson needs a no-show decision.`, askedLabel: "Reported event", note: "What did the school confirm?", audience: "the family and assigned teacher", decline: "Dismiss this review", declineEffect: "No remedy will be applied. The lesson record will remain unchanged." };
+  return { eyebrow: item.requestType === "reschedule" ? "Reschedule request" : "Cancellation request", title: `${item.student}’s family wants to ${item.requestType === "reschedule" ? "reschedule" : "cancel"}.`, askedLabel: "Family asked to", note: "What did you agree on with the family?", audience: "the family and assigned teacher", decline: "Decline this request", declineEffect: "None of the outcome choices above will be applied. The lesson will remain scheduled at its current time." };
+}
+
 export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { schoolId: string; item: LessonRequestApproval; timezone: string; closeHref: string }) {
   const router = useRouter();
   const pending = ["pending", "in_progress"].includes(item.status);
@@ -44,8 +51,13 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
   const money = useMemo(() => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }), []);
   const amountCents = Math.round(Number.isFinite(amount) ? amount * 100 : 0);
   const isOverride = !policyRequiresJudgment && (resolution !== recommendedResolution || adjustmentKind !== recommendedAdjustment || amountCents !== item.policyFeeCents);
-  const requestName = item.requestType === "reschedule" ? "Reschedule request" : "Cancellation request";
-  const requestedAction = item.requestedResolution === "reschedule" ? "Keep this lesson and arrange a new time" : item.requestedResolution === "lesson_credit" ? "Cancel this lesson and apply its value to the family account" : "Cancel this lesson without retaining it for later";
+  const presentation = scenarioPresentation(item);
+  const requestedAction = item.scenario === "teacher_cancellation" ? "The assigned teacher cannot provide this lesson; choose the service and accounting remedy"
+    : item.scenario === "school_cancellation" ? "The school cannot provide this lesson; choose the service and accounting remedy"
+      : item.scenario === "student_no_show" ? "The student did not attend; apply the effective no-show policy"
+        : item.requestedResolution === "reschedule" ? "Keep this lesson and arrange a new time"
+          : item.requestedResolution === "lesson_credit" ? "Cancel this lesson and apply its value to the family account"
+            : "Cancel this lesson without retaining it for later";
   const selectedOutcome = outcomeOptions.find((option) => option.value === resolution)!;
 
   useEffect(() => {
@@ -77,14 +89,14 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
       <button type="button" aria-label="Close request review" disabled={resolving} onClick={() => router.push(closeHref)} className="fixed inset-0 bg-[var(--ui-overlay)] disabled:cursor-wait" />
       <section className="fixed left-1/2 top-1/2 z-[101] max-h-[calc(100dvh-2rem)] w-[min(50rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto border border-brand bg-canvas p-5 shadow-xl sm:p-8">
         <div className="flex items-start justify-between gap-5">
-          <div><p className="text-xs uppercase tracking-[0.14em] text-brand">{requestName}</p><h2 id="lesson-request-title" className="mt-3 font-display text-4xl">{item.student}’s family wants to {item.requestType === "reschedule" ? "reschedule" : "cancel"}.</h2><p className="mt-3 text-sm leading-6 text-muted">Teacher: {item.teacher}</p></div>
+          <div><p className="text-xs uppercase tracking-[0.14em] text-brand">{presentation.eyebrow}</p><h2 id="lesson-request-title" className="mt-3 font-display text-4xl">{presentation.title}</h2><p className="mt-3 text-sm leading-6 text-muted">Teacher: {item.teacher}</p></div>
           <button type="button" disabled={resolving} onClick={() => router.push(closeHref)} className="text-sm text-muted transition hover:text-ink disabled:cursor-wait disabled:opacity-40">Close</button>
         </div>
 
         <dl className="mt-7 grid gap-px bg-line sm:grid-cols-2">
           <div className="bg-canvas p-5"><dt className="text-xs text-muted">Lesson</dt><dd className="mt-2 text-sm font-medium">{format.format(new Date(item.lessonAt))}</dd></div>
           <div className="bg-canvas p-5"><dt className="text-xs text-muted">Request recorded</dt><dd className="mt-2 text-sm font-medium">{format.format(new Date(item.requestedAt))}</dd></div>
-          <div className="bg-canvas p-5"><dt className="text-xs text-muted">Family asked to</dt><dd className="mt-2 text-sm">{requestedAction}.</dd></div>
+          <div className="bg-canvas p-5"><dt className="text-xs text-muted">{presentation.askedLabel}</dt><dd className="mt-2 text-sm">{requestedAction}.</dd></div>
           <div className="bg-canvas p-5"><dt className="text-xs text-muted">Current accounting</dt><dd className="mt-2 text-sm capitalize">{accountingName(item.accountingState)}</dd></div>
         </dl>
 
@@ -117,17 +129,17 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
             {adjustmentKind !== "none" ? <label className="mt-4 block max-w-xs"><span className="text-sm font-medium">{adjustmentKind === "fee" ? "Fee" : "Credit"} amount</span><span className="relative block"><span className="absolute left-0 top-5 text-muted">$</span><input type="number" min="0.01" max="10000" step="0.01" value={amount} disabled={resolving} onChange={(event) => setAmount(Number(event.target.value))} className="mt-2 w-full border-b border-line bg-transparent py-3 pl-5 outline-none focus:border-brand disabled:cursor-wait disabled:opacity-50" /></span></label> : null}
           </fieldset>
 
-          <label className="mt-7 block"><span className="text-sm font-medium">Internal decision note {isOverride ? "· required for this exception" : "· optional"}</span><textarea value={reason} disabled={resolving} onChange={(event) => setReason(event.target.value)} maxLength={1000} rows={3} className="mt-2 w-full border border-line bg-transparent p-3 outline-none focus:border-brand disabled:cursor-wait disabled:opacity-50" placeholder="What did you agree on with the family?" /></label>
+          <label className="mt-7 block"><span className="text-sm font-medium">Internal decision note {isOverride ? "· required for this exception" : "· optional"}</span><textarea value={reason} disabled={resolving} onChange={(event) => setReason(event.target.value)} maxLength={1000} rows={3} className="mt-2 w-full border border-line bg-transparent p-3 outline-none focus:border-brand disabled:cursor-wait disabled:opacity-50" placeholder={presentation.note} /></label>
 
           <aside className="mt-7 border border-brand bg-surface-raised p-5">
             <p className="text-xs uppercase tracking-[0.12em] text-brand">What will happen</p><p className="mt-3 text-base font-medium">{selectedOutcome.title}</p>
-            <ul className="mt-3 space-y-2 text-sm leading-6 text-muted"><li>• The scheduled calendar event will be cancelled.</li><li>• {selectedOutcome.description}</li><li>• {adjustmentKind === "none" || amountCents <= 0 ? "No separate account fee or credit will be added." : `A ${money.format(amountCents / 100)} ${adjustmentKind} will be recorded.`}</li><li>• The family and assigned teacher will be notified of the owner’s decision.</li></ul>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-muted"><li>• The scheduled calendar event will be cancelled.</li><li>• {selectedOutcome.description}</li><li>• {adjustmentKind === "none" || amountCents <= 0 ? "No separate account fee or credit will be added." : `A ${money.format(amountCents / 100)} ${adjustmentKind} will be recorded.`}</li><li>• {presentation.audience} will be notified of the owner’s decision.</li></ul>
             {isOverride ? <p className="mt-4 text-xs text-brand">This differs from the published policy and will be recorded as an owner exception.</p> : null}
           </aside>
 
           <div className="mt-7">
             <HoldToConfirm action={() => submit("approved")} disabled={resolving || (isOverride && !reason.trim()) || (adjustmentKind !== "none" && amountCents <= 0)} onBusyChange={setResolving} idleLabel="Hold to apply this outcome" holdingLabel="Keep holding to resolve…" submittingLabel="Applying lesson and account changes…" successLabel="Request resolved" />
-            {!showDecline ? <button type="button" disabled={resolving} onClick={() => setShowDecline(true)} className="mt-2 text-sm text-muted underline-offset-4 transition hover:text-danger hover:underline disabled:cursor-wait disabled:text-muted/40 disabled:no-underline">Decline this request instead</button> : <section className="mt-5 border-t border-line pt-5"><p className="text-sm font-medium">Decline the family’s request?</p><p className="mt-2 text-sm leading-6 text-muted">None of the outcome choices above will be applied. The lesson will remain scheduled at its current time.</p><div className="mt-4 max-w-md"><HoldToConfirm action={() => submit("declined")} disabled={resolving} onBusyChange={setResolving} idleLabel="Hold to decline and keep scheduled" holdingLabel="Keep holding to decline…" submittingLabel="Declining request…" successLabel="Request declined" /></div><button type="button" disabled={resolving} onClick={() => setShowDecline(false)} className="mt-2 text-sm text-muted transition hover:text-ink disabled:cursor-wait disabled:opacity-40">Never mind</button></section>}
+            {!showDecline ? <button type="button" disabled={resolving} onClick={() => setShowDecline(true)} className="mt-2 text-sm text-muted underline-offset-4 transition hover:text-danger hover:underline disabled:cursor-wait disabled:text-muted/40 disabled:no-underline">{presentation.decline}</button> : <section className="mt-5 border-t border-line pt-5"><p className="text-sm font-medium">{presentation.decline}?</p><p className="mt-2 text-sm leading-6 text-muted">{presentation.declineEffect}</p><div className="mt-4 max-w-md"><HoldToConfirm action={() => submit("declined")} disabled={resolving} onBusyChange={setResolving} idleLabel="Hold to confirm" holdingLabel="Keep holding…" submittingLabel="Recording decision…" successLabel="Decision recorded" /></div><button type="button" disabled={resolving} onClick={() => setShowDecline(false)} className="mt-2 text-sm text-muted transition hover:text-ink disabled:cursor-wait disabled:opacity-40">Never mind</button></section>}
           </div>
         </> : <p className="mt-7 text-sm capitalize text-muted">This request is {item.status.replaceAll("_", " ")}.</p>}
       </section>
