@@ -1602,10 +1602,12 @@ export type Database = {
           id: string
           lesson_event_id: string
           lesson_starts_at_snapshot: string
+          origin_kind: string
           policy_disposition: string
           policy_guidance: string
           policy_version_id: string
           request_type: string
+          scenario: string
           requested_at: string
           requested_resolution: string
           requester_auth_user_id: string
@@ -1624,10 +1626,12 @@ export type Database = {
           id?: string
           lesson_event_id: string
           lesson_starts_at_snapshot: string
+          origin_kind?: string
           policy_disposition: string
           policy_guidance: string
           policy_version_id: string
           request_type: string
+          scenario?: string
           requested_at?: string
           requested_resolution: string
           requester_auth_user_id: string
@@ -1646,10 +1650,12 @@ export type Database = {
           id?: string
           lesson_event_id?: string
           lesson_starts_at_snapshot?: string
+          origin_kind?: string
           policy_disposition?: string
           policy_guidance?: string
           policy_version_id?: string
           request_type?: string
+          scenario?: string
           requested_at?: string
           requested_resolution?: string
           requester_auth_user_id?: string
