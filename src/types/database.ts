@@ -5596,6 +5596,16 @@ export type Database = {
         }
         Returns: Json
       }
+      resolve_lesson_change_request: {
+        Args: {
+          p_actual_outcome?: Json | null
+          p_internal_reason?: string | null
+          p_request_disposition: string
+          p_request_id: string
+          p_school_id: string
+        }
+        Returns: Json
+      }
       retry_billing_approval_email_delivery: {
         Args: {
           p_approval_request_id: string

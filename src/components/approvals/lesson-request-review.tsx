@@ -51,6 +51,7 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
   const money = useMemo(() => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }), []);
   const amountCents = Math.round(Number.isFinite(amount) ? amount * 100 : 0);
   const isOverride = !policyRequiresJudgment && (resolution !== recommendedResolution || adjustmentKind !== recommendedAdjustment || amountCents !== item.policyFeeCents);
+  const requiresReason = policyRequiresJudgment || isOverride;
   const presentation = scenarioPresentation(item);
   const requestedAction = item.scenario === "teacher_cancellation" ? "The assigned teacher cannot provide this lesson; choose the service and accounting remedy"
     : item.scenario === "school_cancellation" ? "The school cannot provide this lesson; choose the service and accounting remedy"
@@ -129,7 +130,7 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
             {adjustmentKind !== "none" ? <label className="mt-4 block max-w-xs"><span className="text-sm font-medium">{adjustmentKind === "fee" ? "Fee" : "Credit"} amount</span><span className="relative block"><span className="absolute left-0 top-5 text-muted">$</span><input type="number" min="0.01" max="10000" step="0.01" value={amount} disabled={resolving} onChange={(event) => setAmount(Number(event.target.value))} className="mt-2 w-full border-b border-line bg-transparent py-3 pl-5 outline-none focus:border-brand disabled:cursor-wait disabled:opacity-50" /></span></label> : null}
           </fieldset>
 
-          <label className="mt-7 block"><span className="text-sm font-medium">Internal decision note {isOverride ? "· required for this exception" : "· optional"}</span><textarea value={reason} disabled={resolving} onChange={(event) => setReason(event.target.value)} maxLength={1000} rows={3} className="mt-2 w-full border border-line bg-transparent p-3 outline-none focus:border-brand disabled:cursor-wait disabled:opacity-50" placeholder={presentation.note} /></label>
+          <label className="mt-7 block"><span className="text-sm font-medium">Internal decision note {requiresReason ? `· required ${isOverride ? "for this exception" : "because policy requires judgment"}` : "· optional"}</span><textarea value={reason} disabled={resolving} onChange={(event) => setReason(event.target.value)} maxLength={1000} rows={3} className="mt-2 w-full border border-line bg-transparent p-3 outline-none focus:border-brand disabled:cursor-wait disabled:opacity-50" placeholder={presentation.note} /></label>
 
           <aside className="mt-7 border border-brand bg-surface-raised p-5">
             <p className="text-xs uppercase tracking-[0.12em] text-brand">What will happen</p><p className="mt-3 text-base font-medium">{selectedOutcome.title}</p>
@@ -138,7 +139,7 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
           </aside>
 
           <div className="mt-7">
-            <HoldToConfirm action={() => submit("approved")} disabled={resolving || (isOverride && !reason.trim()) || (adjustmentKind !== "none" && amountCents <= 0)} onBusyChange={setResolving} idleLabel="Hold to apply this outcome" holdingLabel="Keep holding to resolve…" submittingLabel="Applying lesson and account changes…" successLabel="Request resolved" />
+            <HoldToConfirm action={() => submit("approved")} disabled={resolving || (requiresReason && !reason.trim()) || (adjustmentKind !== "none" && amountCents <= 0)} onBusyChange={setResolving} idleLabel="Hold to apply this outcome" holdingLabel="Keep holding to resolve…" submittingLabel="Applying lesson and account changes…" successLabel="Request resolved" />
             {!showDecline ? <button type="button" disabled={resolving} onClick={() => setShowDecline(true)} className="mt-2 text-sm text-muted underline-offset-4 transition hover:text-danger hover:underline disabled:cursor-wait disabled:text-muted/40 disabled:no-underline">{presentation.decline}</button> : <section className="mt-5 border-t border-line pt-5"><p className="text-sm font-medium">{presentation.decline}?</p><p className="mt-2 text-sm leading-6 text-muted">{presentation.declineEffect}</p><div className="mt-4 max-w-md"><HoldToConfirm action={() => submit("declined")} disabled={resolving} onBusyChange={setResolving} idleLabel="Hold to confirm" holdingLabel="Keep holding…" submittingLabel="Recording decision…" successLabel="Decision recorded" /></div><button type="button" disabled={resolving} onClick={() => setShowDecline(false)} className="mt-2 text-sm text-muted transition hover:text-ink disabled:cursor-wait disabled:opacity-40">Never mind</button></section>}
           </div>
         </> : <p className="mt-7 text-sm capitalize text-muted">This request is {item.status.replaceAll("_", " ")}.</p>}
