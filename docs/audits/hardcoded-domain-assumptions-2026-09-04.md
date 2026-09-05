@@ -26,3 +26,5 @@ Scope: database transactions, Server Actions/provider workflows, and interaction
 ## Immediate correction
 
 Migration `20260904131000_stop_inferring_scenario_from_origin.sql` removes origin-based scenario inference introduced in the preceding foundation migration. Only the existing family compatibility path may derive student cancellation versus reschedule from its explicit request action. Teacher, owner, and system callers must provide scenario explicitly.
+
+Migration `20260904132000_gate_legacy_student_resolution.sql` renames the existing implementation as an internal student-only compatibility function and places a scenario-aware authorization gate at the public RPC signature. Any teacher-cancellation, school-cancellation, or no-show request now fails closed before the legacy transaction can write student service truth or trigger its student-only history adapter. This contains the release blocker; it does not make the legacy resolver generic.
