@@ -9,12 +9,6 @@ import type { LessonRequestApproval } from "@/lib/approvals/owner-approvals";
 type LessonResolution = "count_as_serviced" | "retain_for_reschedule" | "waive";
 type AdjustmentKind = "none" | "fee" | "credit";
 
-const outcomeOptions: Array<{ value: LessonResolution; title: string; description: string }> = [
-  { value: "retain_for_reschedule", title: "Keep a lesson to schedule later", description: "Remove this calendar event and return one lesson to the student’s Lessons to Schedule pool." },
-  { value: "count_as_serviced", title: "Keep the original charge; no replacement", description: "Record that the lesson did not happen, while leaving its original charge intact and creating no replacement lesson." },
-  { value: "waive", title: "Cancel without a replacement or charge", description: "Remove the calendar event, create no replacement lesson, and do not count this occurrence toward billing." },
-];
-
 function recommendationName(value: string) {
   if (value === "retain_for_reschedule") return "Keep a lesson to schedule later";
   if (value === "count_as_serviced") return "Keep the original charge; no replacement";
@@ -39,7 +33,8 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
   const pending = ["pending", "in_progress"].includes(item.status);
   const policyRequiresJudgment = item.policyLessonResolution === "manual_review";
   const recommendedResolution = policyRequiresJudgment ? null : item.policyLessonResolution as LessonResolution;
-  const initialResolution: LessonResolution = recommendedResolution ?? (item.requestedResolution === "reschedule" ? "retain_for_reschedule" : "waive");
+  const fallbackResolution = item.resolutionChoices[0]?.value;
+  const initialResolution: LessonResolution = recommendedResolution && item.resolutionChoices.some((choice) => choice.value === recommendedResolution) ? recommendedResolution : fallbackResolution;
   const recommendedAdjustment: AdjustmentKind = item.policyFeeCents > 0 ? "fee" : "none";
   const [resolution, setResolution] = useState<LessonResolution>(initialResolution);
   const [adjustmentKind, setAdjustmentKind] = useState<AdjustmentKind>(recommendedAdjustment);
@@ -59,7 +54,7 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
         : item.requestedResolution === "reschedule" ? "Keep this lesson and arrange a new time"
           : item.requestedResolution === "lesson_credit" ? "Cancel this lesson and apply its value to the family account"
             : "Cancel this lesson without retaining it for later";
-  const selectedOutcome = outcomeOptions.find((option) => option.value === resolution)!;
+  const selectedOutcome = item.resolutionChoices.find((option) => option.value === resolution)!;
 
   useEffect(() => {
     const previous = document.body.style.overflow;
@@ -115,7 +110,7 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
             <legend className="text-lg font-medium">Choose the outcome</legend>
             <p className="mt-1 text-sm text-muted">The policy guides this choice. You can make a different call when the situation calls for it.</p>
             <div className="mt-4 grid gap-3" role="radiogroup">
-              {outcomeOptions.map((option) => {
+              {item.resolutionChoices.map((option) => {
                 const selected = resolution === option.value;
                 return <button key={option.value} type="button" role="radio" aria-checked={selected} disabled={resolving} onClick={() => setResolution(option.value)} className={`p-4 text-left transition disabled:cursor-wait disabled:opacity-50 ${selected ? "bg-brand text-canvas" : "border border-line bg-canvas hover:border-brand"}`}><span className="block text-sm font-medium">{option.title}</span><span className={`mt-2 block text-sm leading-6 ${selected ? "text-canvas/80" : "text-muted"}`}>{option.description}</span></button>;
               })}
@@ -125,7 +120,7 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
           <fieldset className="mt-7">
             <legend className="text-sm font-medium">Add a separate account adjustment?</legend>
             <div className="mt-3 flex flex-wrap gap-2">
-              {(["none", "fee", "credit"] as const).map((kind) => <button key={kind} type="button" disabled={resolving} onClick={() => setAdjustmentKind(kind)} className={`border px-4 py-2 text-sm capitalize transition disabled:cursor-wait disabled:opacity-50 ${adjustmentKind === kind ? "border-brand bg-brand text-canvas" : "border-line hover:border-brand"}`}>{kind === "none" ? "No adjustment" : `Add ${kind}`}</button>)}
+              {(["none", ...item.allowedAdjustmentKinds] as const).map((kind) => <button key={kind} type="button" disabled={resolving} onClick={() => setAdjustmentKind(kind)} className={`border px-4 py-2 text-sm capitalize transition disabled:cursor-wait disabled:opacity-50 ${adjustmentKind === kind ? "border-brand bg-brand text-canvas" : "border-line hover:border-brand"}`}>{kind === "none" ? "No adjustment" : `Add ${kind}`}</button>)}
             </div>
             {adjustmentKind !== "none" ? <label className="mt-4 block max-w-xs"><span className="text-sm font-medium">{adjustmentKind === "fee" ? "Fee" : "Credit"} amount</span><span className="relative block"><span className="absolute left-0 top-5 text-muted">$</span><input type="number" min="0.01" max="10000" step="0.01" value={amount} disabled={resolving} onChange={(event) => setAmount(Number(event.target.value))} className="mt-2 w-full border-b border-line bg-transparent py-3 pl-5 outline-none focus:border-brand disabled:cursor-wait disabled:opacity-50" /></span></label> : null}
           </fieldset>
