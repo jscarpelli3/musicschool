@@ -5753,6 +5753,10 @@ export type Database = {
         Args: { p_lesson_event_id: string; p_request_note?: string; p_school_id: string }
         Returns: Json
       }
+      submit_school_cancellation: {
+        Args: { p_lesson_event_id: string; p_request_note: string; p_school_id: string }
+        Returns: Json
+      }
       sync_cancellation_policy_outcomes_from_rules: {
         Args: { p_policy_version_id: string }
         Returns: undefined

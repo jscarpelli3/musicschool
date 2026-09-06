@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { Column, RosterViewSettings } from "@/components/students/student-roster-table";
+import { dispatchLessonRequestEmails } from "@/lib/notifications/dispatch-lesson-request-emails";
+import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
 
 const columns: Column[] = ["family", "student", "parent", "day", "time", "teacher", "place", "month"];
 const modeCounts: Record<Column, number> = {
@@ -48,6 +50,53 @@ export type OwnerRescheduleInput = {
   reason: string;
   allowOutsideAvailability: boolean;
 };
+
+export async function reportSchoolCancellation(schoolId: string, lessonId: string, note: string) {
+  if (![schoolId, lessonId].every((value) => /^[0-9a-f-]{36}$/i.test(value)) || !note.trim() || note.trim().length > 1000) {
+    return { ok: false, message: "Explain briefly why the school cannot provide this lesson." };
+  }
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId) return { ok: false, message: "Sign in again before reporting this cancellation." };
+  try {
+    await protectServerAction({
+      scope: "school.lesson_cancellation.report",
+      subject: `actor:${profileId}|school:${schoolId}|lesson:${lessonId}`,
+      limit: 5,
+      windowSeconds: 3600,
+      blockSeconds: 900,
+    });
+  } catch (caught) {
+    return {
+      ok: false,
+      message: caught instanceof RequestBoundaryError && caught.code === "rate_limited"
+        ? "This cancellation was already submitted or too many attempts were made. Reload before trying again."
+        : "This report could not be validated. Reload and try again.",
+    };
+  }
+  const { data, error } = await supabase.rpc("submit_school_cancellation", {
+    p_school_id: schoolId,
+    p_lesson_event_id: lessonId,
+    p_request_note: note.trim(),
+  });
+  if (error) {
+    const message = error.message.includes("not_authorized")
+      ? "Only an owner or administrator can report a school cancellation."
+      : error.message.includes("lesson_not_available")
+        ? "This lesson is no longer scheduled."
+        : "The school cancellation could not be recorded. Nothing changed.";
+    return { ok: false, message };
+  }
+  const requestId = data && typeof data === "object" && "request_id" in data && typeof data.request_id === "string"
+    ? data.request_id
+    : null;
+  if (requestId) await dispatchLessonRequestEmails(requestId);
+  revalidatePath(`/schools/${schoolId}`);
+  revalidatePath(`/schools/${schoolId}/approvals`);
+  revalidatePath(`/schools/${schoolId}/teacher`);
+  return { ok: true, message: "School cancellation sent for scenario-specific remedy review." };
+}
 
 export async function setLessonReschedulePermission(schoolId: string, lessonId: string, allowed: boolean, blockedReason: string) {
   if (![schoolId, lessonId].every((value) => /^[0-9a-f-]{36}$/i.test(value))

@@ -5,7 +5,8 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerE
 import { QuickView } from "@/components/ui/quick-view";
 import { LessonCreationDialog, type LessonCreationOptions } from "@/components/scheduling/lesson-creation-dialog";
 import { MdHistory } from "react-icons/md";
-import { rescheduleOwnerLesson, setLessonReschedulePermission } from "@/app/schools/[schoolId]/dashboard-actions";
+import { reportSchoolCancellation, rescheduleOwnerLesson, setLessonReschedulePermission } from "@/app/schools/[schoolId]/dashboard-actions";
+import { LessonChangeReport } from "@/components/lessons/lesson-change-report";
 import { RescheduleConfirmation, type RescheduleProposal } from "./lesson-reschedule-controls";
 import "./owner-planner.css";
 
@@ -438,6 +439,7 @@ export function OwnerPlanner({
             if (result.ok) router.refresh();
             return result;
           }}
+          onSchoolCancellation={reportSchoolCancellation.bind(null, schoolId, selectedLesson.id)}
           onClose={() => setSelectedLessonId(null)}
         />
       ) : null}
@@ -979,6 +981,7 @@ function LessonSheet({
   canMarkReschedule,
   onReschedule,
   onPermissionChange,
+  onSchoolCancellation,
   onClose,
 }: {
   lesson: Lesson & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> };
@@ -990,6 +993,7 @@ function LessonSheet({
   canMarkReschedule: boolean;
   onReschedule: () => void;
   onPermissionChange: (allowed: boolean, reason: string) => Promise<{ ok: boolean; message: string }>;
+  onSchoolCancellation: (note: string) => Promise<{ ok: boolean; message: string }>;
   onClose: () => void;
 }) {
   const duration = lesson.end.minutes - lesson.start.minutes;
@@ -1029,6 +1033,19 @@ function LessonSheet({
           canManage={canMarkReschedule}
           onChange={onPermissionChange}
         />
+
+        {canReschedule && lesson.status === "scheduled" ? (
+          <section className="border-b border-line py-8">
+            <h3 className="font-display text-2xl font-normal">School cancellation</h3>
+            <LessonChangeReport
+              action={onSchoolCancellation}
+              buttonLabel="The school can’t provide this lesson"
+              title="Report a school cancellation"
+              description="This records the school-origin scenario for review. The lesson and all financial treatment remain unchanged until the remedy is confirmed."
+              fieldLabel="Why can’t the school provide this lesson?"
+            />
+          </section>
+        ) : null}
 
         <section className="border-b border-line py-8">
           <h3 className="font-display text-2xl font-normal">Student</h3>
