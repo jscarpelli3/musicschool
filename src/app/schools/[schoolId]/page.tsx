@@ -4,6 +4,7 @@ import { LessonsToSchedule } from "@/components/scheduling/lessons-to-schedule";
 import { StudentRosterTable, type LessonOutcome, type RosterViewSettings, type StudentRosterRow } from "@/components/students/student-roster-table";
 import { createClient } from "@/lib/supabase/server";
 import { loadServiceEntitlements } from "@/lib/scheduling/service-entitlements";
+import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 import { saveStudentRosterView } from "./dashboard-actions";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
   const profileId = authData?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}`);
 
-  const [{ data: school }, { data: membership }] = await Promise.all([
+  const [{ data: school }, { data: membership }, capabilities] = await Promise.all([
     supabase
       .from("schools")
       .select("id, name, slug, timezone")
@@ -27,10 +28,11 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
       .eq("profile_id", profileId)
       .eq("status", "active")
       .maybeSingle(),
+    loadMySchoolCapabilities(schoolId),
   ]);
 
   if (!school || !membership) notFound();
-  if (membership.role === "teacher") redirect(`/schools/${schoolId}/teacher`);
+  if (!capabilities.has("school.workspace.view") && capabilities.has("teacher.workspace.use")) redirect(`/schools/${schoolId}/teacher`);
 
   const dashboardQueries = await Promise.all([
     supabase.from("teachers").select("person_id, outside_availability_policy").eq("school_id", schoolId),
@@ -227,10 +229,7 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
     }];
   }).sort((a, b) => a.family.localeCompare(b.family) || a.student.localeCompare(b.student));
 
-  const canManageSchool = membership.role === "owner" || membership.role === "admin";
-  const currentTeacherId = membership.role === "teacher"
-    ? (peopleRows ?? []).find((person) => person.profile_id === profileId)?.id ?? null
-    : null;
+  const canManageSchool = capabilities.has("school.lessons.manage");
   const entitlements = view === "dashboard" && canManageSchool ? await loadServiceEntitlements(supabase, schoolId) : [];
 
   return (
@@ -257,7 +256,7 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
           ...lesson,
           billing_service_date: billingDates.get(lesson.id) ?? lesson.starts_at.slice(0, 10),
           can_reschedule: lesson.reschedule_allowed && lesson.status === "scheduled" && new Date(lesson.starts_at).getTime() > now,
-          can_mark_reschedule: canManageSchool || currentTeacherId === lesson.teacher_id,
+          can_mark_reschedule: canManageSchool,
         }))}
         pendingProposals={(pendingProposalRows ?? []).map((item) => ({
           ...item,

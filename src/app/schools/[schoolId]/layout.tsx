@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { SchoolManagementNav } from "@/components/schools/school-management-nav";
 import { createClient } from "@/lib/supabase/server";
 import { AppSignOut } from "@/components/auth/app-sign-out";
+import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 
 export const dynamic = "force-dynamic";
 
@@ -13,11 +14,12 @@ export default async function SchoolLayout({ children, params }: { children: Rea
   const { data: auth } = await supabase.auth.getClaims();
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}`);
-  const [{ data: school }, { data: membership }, { data: profile }, approvalCountResult] = await Promise.all([
+  const [{ data: school }, { data: membership }, { data: profile }, approvalCountResult, capabilities] = await Promise.all([
     supabase.from("schools").select("id, name, timezone, family_billing_mode, logo_path, theme_key").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("profiles").select("avatar_url, avatar_path").eq("id", profileId).maybeSingle(),
     supabase.from("lesson_schedule_proposals").select("id",{count:"exact",head:true}).eq("school_id",schoolId).eq("proposal_kind","reschedule").eq("status","pending_owner"),
+    loadMySchoolCapabilities(schoolId),
   ]);
   if (!school || !membership) notFound();
   const [{ data: avatar }, { data: logo }] = await Promise.all([
@@ -34,7 +36,7 @@ export default async function SchoolLayout({ children, params }: { children: Rea
         </Link>
         <div className="flex shrink-0 items-start gap-3"><Link href="/profile" aria-label="Profile settings" className="flex items-center gap-3 py-control text-sm text-muted hover:text-ink">{avatarUrl ? <img /* eslint-disable-line @next/next/no-img-element */ src={avatarUrl} alt="Your avatar" className="h-10 w-10 rounded-full border border-line object-cover" /> : null}<span className="hidden sm:inline">Profile</span></Link><AppSignOut /></div>
       </header>
-      <SchoolManagementNav schoolId={schoolId} role={membership.role} approvalCount={approvalCountResult.count??0} />
+      <SchoolManagementNav schoolId={schoolId} capabilities={[...capabilities]} approvalCount={approvalCountResult.count??0} />
     </div>
     {children}
   </div>;

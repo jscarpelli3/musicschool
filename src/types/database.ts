@@ -5753,6 +5753,14 @@ export type Database = {
         Args: { p_lesson_event_id: string; p_request_note?: string; p_school_id: string }
         Returns: Json
       }
+      get_my_school_capabilities: {
+        Args: { p_school_id: string }
+        Returns: string[]
+      }
+      has_school_capability: {
+        Args: { p_capability: string; p_school_id: string }
+        Returns: boolean
+      }
       submit_school_cancellation: {
         Args: { p_lesson_event_id: string; p_request_note: string; p_school_id: string }
         Returns: Json
