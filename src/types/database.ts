@@ -1605,7 +1605,9 @@ export type Database = {
           origin_kind: string
           policy_disposition: string
           policy_guidance: string
+          policy_outcome_id: string
           policy_version_id: string
+          request_note: string | null
           request_type: string
           scenario: string
           requested_at: string
@@ -1629,7 +1631,9 @@ export type Database = {
           origin_kind?: string
           policy_disposition: string
           policy_guidance: string
+          policy_outcome_id?: string
           policy_version_id: string
+          request_note?: string | null
           request_type: string
           scenario?: string
           requested_at?: string
@@ -1653,7 +1657,9 @@ export type Database = {
           origin_kind?: string
           policy_disposition?: string
           policy_guidance?: string
+          policy_outcome_id?: string
           policy_version_id?: string
+          request_note?: string | null
           request_type?: string
           scenario?: string
           requested_at?: string
@@ -1671,6 +1677,13 @@ export type Database = {
             columns: ["school_id", "current_decision_revision_id"]
             isOneToOne: false
             referencedRelation: "lesson_change_decision_revisions"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_change_requests_policy_outcome_fk"
+            columns: ["school_id", "policy_outcome_id"]
+            isOneToOne: false
+            referencedRelation: "cancellation_policy_outcomes"
             referencedColumns: ["school_id", "id"]
           },
           {
@@ -5734,6 +5747,10 @@ export type Database = {
           p_request_type: string
           p_requested_resolution: string
         }
+        Returns: Json
+      }
+      submit_assigned_teacher_cancellation: {
+        Args: { p_lesson_event_id: string; p_request_note?: string; p_school_id: string }
         Returns: Json
       }
       sync_cancellation_policy_outcomes_from_rules: {

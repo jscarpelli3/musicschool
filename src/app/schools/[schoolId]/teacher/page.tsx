@@ -2,13 +2,14 @@ import { notFound, redirect } from "next/navigation";
 import { LessonOutcomeForm } from "@/components/teacher/lesson-outcome-form";
 import { TeacherScheduleCalendar } from "@/components/scheduling/teacher-schedule-calendar";
 import { TeacherRescheduleControls } from "@/components/teacher/teacher-reschedule-controls";
+import { TeacherCancellationReport } from "@/components/teacher/teacher-cancellation-report";
 import { LessonProposalControls } from "@/components/teacher/lesson-proposal-controls";
 import { WeeklyAvailabilityEditor } from "@/components/scheduling/weekly-availability-editor";
 import { ProposalManagementControls } from "@/components/scheduling/proposal-management-controls";
 import { loadTeacherCalendar, personDisplayName } from "@/lib/scheduling/teacher-calendar";
 import { createClient } from "@/lib/supabase/server";
 import { saveTeacherWeeklyAvailability } from "../availability-actions";
-import { decideLessonProposal, recordTeacherLessonOutcome, rescheduleTeacherLesson } from "./actions";
+import { decideLessonProposal, recordTeacherLessonOutcome, reportTeacherCancellation, rescheduleTeacherLesson } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +71,7 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
               <p className="text-sm text-muted">{place?.name ?? "Place not assigned"}{place?.details ? ` · ${place.details}` : ""}</p>
               {lesson.staff_notes ? <p className="mt-4 border-l border-line pl-4 text-sm leading-6">{lesson.staff_notes}</p> : null}
               {lesson.status === "scheduled" && new Date(lesson.starts_at).getTime() > nowMs ? <TeacherRescheduleControls canSelfReschedule={teacherSettings.scheduling_authority === "manage_assigned_lessons"} earliestLocal={earliestLocal} rescheduleAction={rescheduleTeacherLesson.bind(null, schoolId, lesson.id)} /> : null}
+              {lesson.status === "scheduled" && new Date(lesson.starts_at).getTime() > nowMs ? <TeacherCancellationReport action={reportTeacherCancellation.bind(null, schoolId, lesson.id)} /> : null}
               {canLog ? <LessonOutcomeForm action={recordTeacherLessonOutcome.bind(null, schoolId, lesson.id)} /> : null}
             </div>
           </details>

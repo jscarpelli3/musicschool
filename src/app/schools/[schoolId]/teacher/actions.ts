@@ -3,9 +3,57 @@
 import { revalidatePath } from "next/cache";
 import { dispatchLessonCreatedEmail } from "@/lib/notifications/dispatch-lesson-created-email";
 import { dispatchLessonRequestEmails } from "@/lib/notifications/dispatch-lesson-request-emails";
+import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
 import { createClient } from "@/lib/supabase/server";
 
 const outcomes = new Set(["completed", "no_show"]);
+
+export async function reportTeacherCancellation(schoolId: string, lessonId: string, reason: string) {
+  if (![schoolId, lessonId].every((value) => /^[0-9a-f-]{36}$/i.test(value)) || !reason.trim() || reason.trim().length > 1000) {
+    return { ok: false, message: "Explain briefly why you cannot provide this lesson." };
+  }
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId) return { ok: false, message: "Sign in again before reporting this cancellation." };
+  try {
+    await protectServerAction({
+      scope: "teacher.lesson_cancellation.report",
+      subject: `actor:${profileId}|school:${schoolId}|lesson:${lessonId}`,
+      limit: 3,
+      windowSeconds: 3600,
+      blockSeconds: 900,
+    });
+  } catch (caught) {
+    return {
+      ok: false,
+      message: caught instanceof RequestBoundaryError && caught.code === "rate_limited"
+        ? "This cancellation was already submitted or too many attempts were made. Reload before trying again."
+        : "This report could not be validated. Reload and try again.",
+    };
+  }
+  const { data, error } = await supabase.rpc("submit_assigned_teacher_cancellation", {
+    p_school_id: schoolId,
+    p_lesson_event_id: lessonId,
+    p_request_note: reason.trim(),
+  });
+  if (error) {
+    const message = error.message.includes("not_assigned_teacher")
+      ? "Only the assigned teacher can report this cancellation."
+      : error.message.includes("lesson_not_available")
+        ? "This lesson is no longer scheduled."
+        : "The cancellation could not be recorded. Nothing changed.";
+    return { ok: false, message };
+  }
+  const requestId = data && typeof data === "object" && "request_id" in data && typeof data.request_id === "string"
+    ? data.request_id
+    : null;
+  if (requestId) await dispatchLessonRequestEmails(requestId);
+  revalidatePath(`/schools/${schoolId}/teacher`);
+  revalidatePath(`/schools/${schoolId}/approvals`);
+  revalidatePath(`/schools/${schoolId}`);
+  return { ok: true, message: "Teacher cancellation sent to the owner for remedy review." };
+}
 
 export async function recordTeacherLessonOutcome(
   schoolId: string,
