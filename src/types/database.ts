@@ -5454,6 +5454,16 @@ export type Database = {
         }
         Returns: Json
       }
+      propose_or_reschedule_assigned_lesson_as_teacher_v2: {
+        Args: {
+          p_lesson_event_id: string
+          p_local_start: string
+          p_reason_code: string
+          p_reason_detail?: string | null
+          p_school_id: string
+        }
+        Returns: Json
+      }
       prune_security_rate_limit_buckets: { Args: never; Returns: number }
       publish_default_cancellation_policy: {
         Args: {
@@ -5591,6 +5601,20 @@ export type Database = {
           p_local_start: string
           p_place_id: string
           p_reason: string
+          p_school_id: string
+          p_source: string
+          p_teacher_id: string
+        }
+        Returns: Json
+      }
+      reschedule_lesson_as_owner_v2: {
+        Args: {
+          p_allow_outside_availability?: boolean
+          p_lesson_event_id: string
+          p_local_start: string
+          p_place_id: string
+          p_reason_code: string
+          p_reason_detail?: string | null
           p_school_id: string
           p_source: string
           p_teacher_id: string

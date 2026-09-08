@@ -23,6 +23,12 @@ export function rescheduleReasonLabel(code: string, detail: string | null) {
   return rescheduleReasonLabels.get(code)!;
 }
 
+export function parseRescheduleReason(value: string) {
+  const [code, detail = ""] = value.split("::", 2);
+  if (!isRescheduleReasonCode(code) || (code === "other" && !detail.trim())) return null;
+  return { code, detail: detail.trim() || null };
+}
+
 export const lessonRequestTypes = ["cancellation", "reschedule"] as const;
 export type LessonRequestType = typeof lessonRequestTypes[number];
 

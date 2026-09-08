@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { isRescheduleReasonCode } from "@/lib/scheduling/lesson-domain-contracts";
+import { parseRescheduleReason } from "@/lib/scheduling/lesson-domain-contracts";
 import type { Column, RosterViewSettings } from "@/components/students/student-roster-table";
 import { dispatchLessonRequestEmails } from "@/lib/notifications/dispatch-lesson-request-emails";
 import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
@@ -117,10 +117,10 @@ export async function setLessonReschedulePermission(schoolId: string, lessonId: 
 }
 
 export async function rescheduleOwnerLesson(schoolId: string, input: OwnerRescheduleInput) {
-  const [reasonCode, reasonDetail = ""] = input.reason.split("::", 2);
+  const reason = parseRescheduleReason(input.reason);
   if (![input.lessonId, input.teacherId, input.placeId].every((value) => /^[0-9a-f-]{36}$/i.test(value))
     || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(input.localStart)
-    || !isRescheduleReasonCode(reasonCode) || (reasonCode === "other" && !reasonDetail.trim())
+    || !reason
     || input.reason.trim().length > 500) {
     return { ok: false, message: "Check the proposed lesson details and record a reason." };
   }
@@ -129,14 +129,15 @@ export async function rescheduleOwnerLesson(schoolId: string, input: OwnerResche
   const { data: auth } = await supabase.auth.getClaims();
   if (!auth?.claims?.sub) return { ok: false, message: "Sign in again before rescheduling." };
 
-  const { error } = await supabase.rpc("reschedule_lesson_as_owner", {
+  const { error } = await supabase.rpc("reschedule_lesson_as_owner_v2", {
     p_school_id: schoolId,
     p_lesson_event_id: input.lessonId,
     p_teacher_id: input.teacherId,
     p_place_id: input.placeId,
     p_local_start: input.localStart.replace("T", " ") + ":00",
     p_source: "calendar",
-    p_reason: input.reason.trim(),
+    p_reason_code: reason.code,
+    p_reason_detail: reason.detail,
     p_allow_outside_availability: input.allowOutsideAvailability,
   });
 

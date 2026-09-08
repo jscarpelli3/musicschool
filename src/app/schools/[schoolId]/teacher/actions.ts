@@ -5,6 +5,7 @@ import { dispatchLessonCreatedEmail } from "@/lib/notifications/dispatch-lesson-
 import { dispatchLessonRequestEmails } from "@/lib/notifications/dispatch-lesson-request-emails";
 import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
 import { createClient } from "@/lib/supabase/server";
+import { parseRescheduleReason } from "@/lib/scheduling/lesson-domain-contracts";
 
 const outcomes = new Set(["completed", "no_show"]);
 
@@ -92,15 +93,17 @@ export async function recordTeacherLessonOutcome(
 }
 
 export async function rescheduleTeacherLesson(schoolId: string, lessonId: string, localStart: string, reason: string) {
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(localStart) || !reason.trim() || reason.trim().length > 500) {
+  const parsedReason = parseRescheduleReason(reason);
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(localStart) || !parsedReason || reason.trim().length > 500) {
     return { ok: false, message: "Choose a new date and time and give a short reason." };
   }
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("propose_or_reschedule_assigned_lesson_as_teacher", {
+  const { data, error } = await supabase.rpc("propose_or_reschedule_assigned_lesson_as_teacher_v2", {
     p_school_id: schoolId,
     p_lesson_event_id: lessonId,
     p_local_start: `${localStart.replace("T", " ")}:00`,
-    p_reason: reason.trim(),
+    p_reason_code: parsedReason.code,
+    p_reason_detail: parsedReason.detail,
   });
   if (error) {
     const known: Array<[string, string]> = [
