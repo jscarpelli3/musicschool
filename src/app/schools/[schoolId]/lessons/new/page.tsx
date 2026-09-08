@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { OwnerPlanner } from "@/components/planner/owner-planner";
+import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -29,12 +30,14 @@ export default async function NewLessonPage({ params, searchParams }: {
     supabase.from("lesson_places").select("id, name").eq("school_id", schoolId).eq("status", "active").order("name"),
     supabase.from("teacher_availability_rules").select("id, teacher_id, weekday, start_time, end_time, effective_from, effective_until").eq("school_id", schoolId).order("weekday").order("start_time"),
     supabase.from("lesson_events").select("id, product_id, teacher_id, student_id, starts_at, ends_at, status, notes, place_id, reschedule_allowed, reschedule_blocked_reason, reschedule_reason_code, reschedule_reason_detail").eq("school_id",schoolId).order("starts_at"),
+    loadMySchoolCapabilities(schoolId),
   ]);
-  const failed = results.find((result) => result.error);
+  const [{ data: school }, { data: membership }, teachersResult, studentsResult, peopleResult, productsResult, placesResult, availabilityResult, lessonsResult, capabilities] = results;
+  const failed = [results[0], results[1], teachersResult, studentsResult, peopleResult, productsResult, placesResult, availabilityResult, lessonsResult]
+    .find((result) => result.error);
   if (failed?.error) throw new Error(`New lesson setup could not load: ${failed.error.message}`);
-  const [{ data: school }, { data: membership }, teachersResult, studentsResult, peopleResult, productsResult, placesResult, availabilityResult, lessonsResult] = results;
   if (!school || !membership) notFound();
-  if (membership.role !== "owner" && membership.role !== "admin") redirect(`/schools/${schoolId}`);
+  if (!capabilities.has("school.lessons.manage")) redirect(`/schools/${schoolId}`);
   const people = new Map((peopleResult.data ?? []).map((person) => [person.id, person]));
   const teachers = (teachersResult.data ?? []).flatMap(({ person_id, outside_availability_policy }) => people.has(person_id) ? [{ id: person_id, label: name(people.get(person_id)!), outsideAvailabilityPolicy: outside_availability_policy === "require_approval" ? "require_approval" as const : "notify_only" as const }] : []).sort((a, b) => a.label.localeCompare(b.label));
   const students = (studentsResult.data ?? []).flatMap(({ person_id }) => people.has(person_id) ? [{ id: person_id, label: name(people.get(person_id)!) }] : []).sort((a, b) => a.label.localeCompare(b.label));

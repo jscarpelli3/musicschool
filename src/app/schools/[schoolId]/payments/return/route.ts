@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
 import { synchronizeStripeConnection } from "@/lib/stripe/connections";
 import { getStripeMode } from "@/lib/stripe/server";
 import { createClient } from "@/lib/supabase/server";
@@ -11,11 +12,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ scho
   const profileId = auth?.claims?.sub;
   if (!profileId) return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(target.pathname)}`, request.url));
 
-  const [{ data: membership }, { data: connection, error }] = await Promise.all([
-    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
+  const [{ data: connection, error }, canManage] = await Promise.all([
     supabase.from("school_payment_connections").select("provider_account_id").eq("school_id", schoolId).eq("provider", "stripe").eq("livemode", getStripeMode() === "live").maybeSingle(),
+    checkSchoolCapability(supabase, schoolId, "school.billing.manage"),
   ]);
-  if (!membership || !["owner", "admin"].includes(membership.role)) return NextResponse.redirect(new URL(`/schools/${schoolId}`, request.url));
+  if (!canManage) return NextResponse.redirect(new URL(`/schools/${schoolId}`, request.url));
 
   try {
     if (error || !connection?.provider_account_id) throw error ?? new Error("No Stripe connection exists.");

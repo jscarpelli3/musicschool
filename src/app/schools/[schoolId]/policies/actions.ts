@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
 import { createClient } from "@/lib/supabase/server";
 
 export type CancellationPolicyState = { ok: boolean; message: string };
@@ -40,8 +41,7 @@ export async function publishCancellationPolicy(
   const { data: auth } = await supabase.auth.getClaims();
   const profileId = auth?.claims?.sub;
   if (!profileId) return { ok: false, message: "Your session expired. Sign in and try again." };
-  const { data: membership } = await supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle();
-  if (!membership || !["owner", "admin"].includes(membership.role)) return { ok: false, message: "You do not have permission to publish this policy." };
+  if (!await checkSchoolCapability(supabase, schoolId, "school.policies.manage")) return { ok: false, message: "You do not have permission to publish this policy." };
 
   const { error } = await supabase.rpc("publish_default_cancellation_policy", {
     p_school_id: schoolId,
@@ -73,6 +73,7 @@ export async function saveFamilyCancellationAccess(
   const supabase=await createClient();
   const {data:auth}=await supabase.auth.getClaims();
   if(!auth?.claims?.sub)return{ok:false,message:"Your session expired. Sign in and try again."};
+  if(!await checkSchoolCapability(supabase,schoolId,"school.policies.manage"))return{ok:false,message:"You do not have permission to update these settings."};
   const {error}=await supabase.rpc("set_school_family_cancellation_settings",{p_school_id:schoolId,p_timely_approval_mode:timelyApprovalMode,p_refund_portal_mode:refundPortalMode});
   if(error){console.error("save_family_cancellation_access_failed",{schoolId,code:error.code});return{ok:false,message:"These family cancellation settings were not saved. Nothing changed, so it is safe to try again."};}
   revalidatePath(`/schools/${schoolId}/policies`);revalidatePath("/portal");

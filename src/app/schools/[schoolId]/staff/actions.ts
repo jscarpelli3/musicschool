@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
 import { ensurePortalAuthIdentity } from "@/lib/portal/auth-identities";
 import { sendResendEmail, ResendRequestError, ResendUnknownOutcomeError } from "@/lib/resend/server";
 import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
@@ -100,8 +101,7 @@ async function deliverTeacherAccess(schoolId: string, teacherId: string, email: 
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
   const profileId = auth?.claims?.sub;
-  const { data: membership } = profileId ? await supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle() : { data: null };
-  if (membership?.role !== "owner") return "error";
+  if (!profileId || !await checkSchoolCapability(supabase, schoolId, "school.staff.directory_manage")) return "error";
   let authProfileId: string;
   try {
     authProfileId = await ensurePortalAuthIdentity(email);

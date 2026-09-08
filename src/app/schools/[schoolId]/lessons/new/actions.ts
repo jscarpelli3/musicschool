@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
 import { dispatchLessonCreatedEmail } from "@/lib/notifications/dispatch-lesson-created-email";
 import { dispatchLessonRequestEmails } from "@/lib/notifications/dispatch-lesson-request-emails";
 import { dispatchLessonProposalEmail } from "@/lib/notifications/dispatch-lesson-proposal-email";
@@ -78,15 +79,7 @@ export async function createSingleLesson(
     return { status: "error", message: caught instanceof RequestBoundaryError && caught.code === "rate_limited" ? "Too many lesson changes were submitted. Wait a few minutes and try again." : "This request could not be validated. Reload and try again." };
   }
 
-  const { data: membership, error: membershipError } = await supabase
-    .from("school_members")
-    .select("role")
-    .eq("school_id", schoolId)
-    .eq("profile_id", profileId)
-    .eq("status", "active")
-    .maybeSingle();
-  if (membershipError) return { status: "error", message: "School access could not be verified. Nothing was added; try again." };
-  if (membership?.role !== "owner" && membership?.role !== "admin") {
+  if (!await checkSchoolCapability(supabase, schoolId, "school.lessons.manage")) {
     return { status: "error", message: knownErrors.not_authorized };
   }
 

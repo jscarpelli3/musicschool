@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
 import { createClient } from "@/lib/supabase/server";
 import { isSchoolThemeKey } from "@/lib/ui/school-themes";
 
@@ -13,8 +14,7 @@ export async function updateSchoolTheme(schoolId: string, formData: FormData) {
   const { data: auth } = await supabase.auth.getClaims();
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/appearance`);
-  const { data: membership } = await supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle();
-  if (membership?.role !== "owner") redirect(`/schools/${schoolId}`);
+  if (!await checkSchoolCapability(supabase, schoolId, "school.appearance.palette_manage")) redirect(`/schools/${schoolId}`);
 
   const { data: updated, error } = await supabase.from("schools").update({ theme_key: themeKey }).eq("id", schoolId).select("id").maybeSingle();
   if (error || !updated) redirect(`/schools/${schoolId}/appearance?status=error`);
@@ -40,6 +40,7 @@ export async function updateSchoolInfo(schoolId: string, formData: FormData) {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   if (!data?.claims?.sub) redirect(`/login?next=/schools/${schoolId}/setup`);
+  if (!await checkSchoolCapability(supabase, schoolId, "school.setup.manage")) redirect(`/schools/${schoolId}`);
 
   const { data: updated, error } = await supabase.from("schools").update({
     name,

@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import type Stripe from "stripe";
+import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
 import { synchronizeStripeConnection } from "@/lib/stripe/connections";
 import { getStripe, getStripeMode } from "@/lib/stripe/server";
 import { createClient } from "@/lib/supabase/server";
@@ -33,12 +34,12 @@ async function requireSchoolAdmin(schoolId: string) {
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=${paymentsPath(schoolId)}`);
 
-  const [{ data: school, error: schoolError }, { data: membership, error: membershipError }] = await Promise.all([
+  const [{ data: school, error: schoolError }, canManage] = await Promise.all([
     supabase.from("schools").select("id, name").eq("id", schoolId).maybeSingle(),
-    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
+    checkSchoolCapability(supabase, schoolId, "school.billing.manage"),
   ]);
 
-  if (schoolError || membershipError || !school || !membership || !["owner", "admin"].includes(membership.role)) {
+  if (schoolError || !school || !canManage) {
     redirect(`/schools/${schoolId}`);
   }
 

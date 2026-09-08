@@ -1,6 +1,8 @@
 import "server-only";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/database";
 
 export const schoolCapabilities = [
   "school.workspace.view",
@@ -21,6 +23,19 @@ export const schoolCapabilities = [
 ] as const;
 
 export type SchoolCapability = typeof schoolCapabilities[number];
+
+export async function checkSchoolCapability(
+  supabase: SupabaseClient<Database>,
+  schoolId: string,
+  capability: SchoolCapability,
+) {
+  const { data, error } = await supabase.rpc("has_school_capability", {
+    p_school_id: schoolId,
+    p_capability: capability,
+  });
+  if (error) throw new Error("School capability could not be checked.");
+  return data === true;
+}
 
 export async function loadMySchoolCapabilities(schoolId: string) {
   const supabase = await createClient();

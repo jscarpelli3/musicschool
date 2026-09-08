@@ -5,10 +5,11 @@ import { loadOwnerApprovals } from "@/lib/approvals/owner-approvals";
 import { createClient } from "@/lib/supabase/server";
 import { ProposalReview } from "../notifications/proposal-review";
 import { LessonRequestReview } from "@/components/approvals/lesson-request-review";
+import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 export const dynamic="force-dynamic";
 export default async function ApprovalsPage({params,searchParams}:{params:Promise<{schoolId:string}>;searchParams:Promise<{proposal?:string;request?:string;view?:string}>}){
  const {schoolId}=await params,{proposal:proposalId,request:requestId,view}=await searchParams,supabase=await createClient(),{data:auth}=await supabase.auth.getClaims(),profileId=auth?.claims?.sub;if(!profileId)redirect(`/login?next=/schools/${schoolId}/approvals`);
- const [{data:school},{data:membership}]=await Promise.all([supabase.from("schools").select("name,timezone").eq("id",schoolId).maybeSingle(),supabase.from("school_members").select("role").eq("school_id",schoolId).eq("profile_id",profileId).eq("status","active").maybeSingle()]);if(!school||!membership||!["owner","admin"].includes(membership.role))notFound();
+ const [{data:school},{data:membership},capabilities]=await Promise.all([supabase.from("schools").select("name,timezone").eq("id",schoolId).maybeSingle(),supabase.from("school_members").select("role").eq("school_id",schoolId).eq("profile_id",profileId).eq("status","active").maybeSingle(),loadMySchoolCapabilities(schoolId)]);if(!school||!membership||!capabilities.has("school.approvals.review"))notFound();
  const history=view==="history",items=await loadOwnerApprovals(supabase,schoolId,{history}),allSelected=(proposalId||requestId)?[...items,...await loadOwnerApprovals(supabase,schoolId,{history:!history})]:[],selected=allSelected.find(item=>item.id===(proposalId??requestId)),selectedProposal=selected?.kind==="schedule_proposal"?selected:null,selectedRequest=selected?.kind==="lesson_change_request"?selected:null;
  const format=new Intl.DateTimeFormat("en-US",{timeZone:school.timezone,weekday:"long",month:"long",day:"numeric",hour:"numeric",minute:"2-digit"});
  const closeHref=`/schools/${schoolId}/approvals${history?"?view=history":""}`;

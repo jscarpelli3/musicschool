@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { SetupHeader } from "@/components/school-setup/setup-header";
 import { FocusedModal } from "@/components/ui/focused-modal";
+import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 import { createClient } from "@/lib/supabase/server";
 import { archivePlace } from "./actions";
 import { PlaceForm } from "./place-form";
@@ -21,15 +22,16 @@ export default async function PlacesPage({
   const profileId = authData?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/places`);
 
-  const [{ data: school }, { data: membership }, { data: places }] = await Promise.all([
+  const [{ data: school }, { data: membership }, { data: places }, capabilities] = await Promise.all([
     supabase.from("schools").select("id, name").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("lesson_places").select("id, name, details, status, created_by").eq("school_id", schoolId).order("status").order("name"),
+    loadMySchoolCapabilities(schoolId),
   ]);
 
   if (!school || !membership) notFound();
-  const canCreate = ["owner", "admin", "teacher"].includes(membership.role);
-  const canManageAll = membership.role === "owner" || membership.role === "admin";
+  const canCreate = capabilities.has("school.places.create");
+  const canManageAll = capabilities.has("school.places.manage");
 
   return (
     <main className="mx-auto min-h-screen max-w-5xl px-6 py-section">

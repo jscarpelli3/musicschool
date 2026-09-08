@@ -3,6 +3,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
 import { createFamilyCardSetup } from "@/lib/stripe/payment-methods";
 import { getStripe } from "@/lib/stripe/server";
 import { normalizeE164 } from "@/lib/phone";
@@ -179,13 +180,13 @@ export async function sendBillingApprovalSms(
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=${path}`);
 
-  const [{ data: membership }, { data: school }, { data: account }, { data: period }] = await Promise.all([
-    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
+  const [{ data: school }, { data: account }, { data: period }, canManage] = await Promise.all([
     supabase.from("schools").select("name").eq("id", schoolId).maybeSingle(),
     supabase.from("billing_accounts").select("billing_contact_person_id").eq("school_id", schoolId).eq("id", billingAccountId).maybeSingle(),
     supabase.from("billing_periods").select("label, amount_due_cents, currency, status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", billingPeriodId).maybeSingle(),
+    checkSchoolCapability(supabase, schoolId, "school.billing.manage"),
   ]);
-  if (!membership || !["owner", "admin"].includes(membership.role) || !school || !account || !period) {
+  if (!canManage || !school || !account || !period) {
     return { ok: false, message: "You do not have permission to send this approval request." };
   }
   if (!["locked", "approval_pending"].includes(period.status) || period.amount_due_cents <= 0) {
@@ -270,13 +271,13 @@ export async function sendBillingApprovalEmail(
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=${path}`);
 
-  const [{ data: membership }, { data: school }, { data: account }, { data: period }] = await Promise.all([
-    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
+  const [{ data: school }, { data: account }, { data: period }, canManage] = await Promise.all([
     supabase.from("schools").select("name").eq("id", schoolId).maybeSingle(),
     supabase.from("billing_accounts").select("billing_contact_person_id").eq("school_id", schoolId).eq("id", billingAccountId).maybeSingle(),
     supabase.from("billing_periods").select("label, amount_due_cents, currency, status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", billingPeriodId).maybeSingle(),
+    checkSchoolCapability(supabase, schoolId, "school.billing.manage"),
   ]);
-  if (!membership || !["owner", "admin"].includes(membership.role) || !school || !account || !period) {
+  if (!canManage || !school || !account || !period) {
     return { ok: false, message: "You do not have permission to send this approval request." };
   }
   if (!["locked", "approval_pending"].includes(period.status) || period.amount_due_cents <= 0) {
@@ -352,15 +353,15 @@ export async function retryBillingApprovalEmail(
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=${path}`);
 
-  const [{ data: membership }, { data: school }, { data: account }, { data: request }] = await Promise.all([
-    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
+  const [{ data: school }, { data: account }, { data: request }, canManage] = await Promise.all([
     supabase.from("schools").select("name").eq("id", schoolId).maybeSingle(),
     supabase.from("billing_accounts").select("billing_contact_person_id").eq("school_id", schoolId).eq("id", billingAccountId).maybeSingle(),
     supabase.from("billing_approval_requests").select("id, period_label, amount_cents, currency, approval_status")
       .eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("billing_period_id", billingPeriodId)
       .order("request_version", { ascending: false }).limit(1).maybeSingle(),
+    checkSchoolCapability(supabase, schoolId, "school.billing.manage"),
   ]);
-  if (!membership || !["owner", "admin"].includes(membership.role) || !school || !account || !request) {
+  if (!canManage || !school || !account || !request) {
     return { ok: false, message: "You do not have permission to retry this approval email." };
   }
   if (request.approval_status !== "pending") return { ok: false, message: "This approval request is no longer pending." };
@@ -426,11 +427,11 @@ export async function updateBillingContactPhone(
   const { data: auth } = await supabase.auth.getClaims();
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=${path}`);
-  const [{ data: membership }, { data: account }] = await Promise.all([
-    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
+  const [{ data: account }, canManage] = await Promise.all([
     supabase.from("billing_accounts").select("billing_contact_person_id").eq("school_id", schoolId).eq("id", billingAccountId).maybeSingle(),
+    checkSchoolCapability(supabase, schoolId, "school.billing.manage"),
   ]);
-  if (!membership || !["owner", "admin"].includes(membership.role) || !account) {
+  if (!canManage || !account) {
     return { ok: false, message: "You do not have permission to update this payer." };
   }
 
@@ -455,11 +456,11 @@ export async function updateBillingContactEmail(
   const { data: auth } = await supabase.auth.getClaims();
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=${path}`);
-  const [{ data: membership }, { data: account }] = await Promise.all([
-    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
+  const [{ data: account }, canManage] = await Promise.all([
     supabase.from("billing_accounts").select("id").eq("school_id", schoolId).eq("id", billingAccountId).maybeSingle(),
+    checkSchoolCapability(supabase, schoolId, "school.billing.manage"),
   ]);
-  if (!membership || !["owner", "admin"].includes(membership.role) || !account) {
+  if (!canManage || !account) {
     return { ok: false, message: "You do not have permission to update this payer." };
   }
 
@@ -496,9 +497,7 @@ export async function generateFamilyCardSetupLink(
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=${path}`);
 
-  const { data: membership, error } = await supabase.from("school_members").select("role")
-    .eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle();
-  if (error || !membership || !["owner", "admin"].includes(membership.role)) {
+  if (!await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) {
     return { url: null, error: "You do not have permission to create a setup link." };
   }
 
@@ -517,11 +516,11 @@ export async function removeFamilyPaymentMethod(schoolId: string, billingAccount
   const profileId = auth?.claims?.sub;
   if (!profileId) return { ok: false, message: "Sign in again before removing this card." };
 
-  const [{ data: membership }, { data: method }] = await Promise.all([
-    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
+  const [{ data: method }, canManage] = await Promise.all([
     supabase.from("billing_payment_methods").select("id, status").eq("id", paymentMethodId).eq("school_id", schoolId).eq("billing_account_id", billingAccountId).maybeSingle(),
+    checkSchoolCapability(supabase, schoolId, "school.billing.manage"),
   ]);
-  if (!membership || !["owner", "admin"].includes(membership.role) || !method || method.status === "detached") {
+  if (!canManage || !method || method.status === "detached") {
     return { ok: false, message: "This payment method cannot be removed." };
   }
 

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { uploadSchoolLogo } from "../media-actions";
 import { updateSchoolInfo } from "./actions";
 import { updateSchoolInstrumentCatalog } from "./instrument-actions";
+import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 
 export const dynamic = "force-dynamic";
 const field = "w-full border-b border-line bg-transparent py-3 outline-none transition focus:border-brand";
@@ -20,13 +21,14 @@ export default async function SchoolInfoPage({ params, searchParams }: {
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/setup`);
 
-  const [{ data: school }, { data: membership }, { data: instruments }] = await Promise.all([
+  const [{ data: school }, { data: membership }, { data: instruments },capabilities] = await Promise.all([
     supabase.from("schools").select("id, name, logo_path, phone, address_line_1, address_line_2, city, region, postal_code, timezone").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("school_instruments").select("name").eq("school_id", schoolId).eq("is_active", true).order("name"),
+    loadMySchoolCapabilities(schoolId),
   ]);
   if (!school || !membership) notFound();
-  if (membership.role !== "owner" && membership.role !== "admin") redirect(`/schools/${schoolId}`);
+  if (!capabilities.has("school.setup.manage")) redirect(`/schools/${schoolId}`);
 
   const { data: logo } = school.logo_path
     ? await supabase.storage.from("school-logos").createSignedUrl(school.logo_path, 3600)

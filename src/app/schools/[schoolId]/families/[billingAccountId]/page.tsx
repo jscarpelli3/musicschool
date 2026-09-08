@@ -4,6 +4,7 @@ import { DetailHeader, DetailSection, EmptyDetail } from "@/components/people/de
 import { ApprovalList } from "@/components/approvals/approval-list";
 import { LessonsToSchedule } from "@/components/scheduling/lessons-to-schedule";
 import { loadOwnerApprovals } from "@/lib/approvals/owner-approvals";
+import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 import { normalizeE164 } from "@/lib/phone";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -83,7 +84,8 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     totals[attempt.billing_period_id] = (totals[attempt.billing_period_id] ?? 0) + attempt.amount_cents;
     return totals;
   }, {});
-  const canManagePayments = ["owner", "admin"].includes(membership.role);
+  const capabilities = await loadMySchoolCapabilities(schoolId);
+  const canManagePayments = capabilities.has("school.billing.manage");
   const approvals = canManagePayments ? await loadOwnerApprovals(supabase,schoolId,{studentIds:students.map(student=>student.id)}) : [];
   const entitlements = canManagePayments ? await loadServiceEntitlements(supabase,schoolId,{studentIds:students.map(student=>student.id)}) : [];
   const stripeReady = connectionResult.data?.status === "enabled" && connectionResult.data.charges_enabled;

@@ -5,6 +5,7 @@ import { ProposalManagementControls } from "@/components/scheduling/proposal-man
 import { ApprovalList } from "@/components/approvals/approval-list";
 import { LessonsToSchedule } from "@/components/scheduling/lessons-to-schedule";
 import { loadOwnerApprovals } from "@/lib/approvals/owner-approvals";
+import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 import { createClient } from "@/lib/supabase/server";
 import { loadTeacherCalendar, personDisplayName } from "@/lib/scheduling/teacher-calendar";
 import { loadServiceEntitlements } from "@/lib/scheduling/service-entitlements";
@@ -20,14 +21,15 @@ export default async function StaffTeacherPage({ params }: {
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/staff/${teacherId}`);
 
-  const [{ data: school }, { data: membership }, { data: teacher }, { data: teacherRecord }] = await Promise.all([
+  const [{ data: school }, { data: membership }, { data: teacher }, { data: teacherRecord }, capabilities] = await Promise.all([
     supabase.from("schools").select("id, name, timezone").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("people").select("id, profile_id, first_name, last_name, preferred_name, email, phone").eq("school_id", schoolId).eq("id", teacherId).eq("status", "active").maybeSingle(),
     supabase.from("teachers").select("person_id, outside_availability_policy").eq("school_id", schoolId).eq("person_id", teacherId).maybeSingle(),
+    loadMySchoolCapabilities(schoolId),
   ]);
   if (!school || !membership || !teacher || !teacherRecord) notFound();
-  if (membership.role !== "owner" && membership.role !== "admin") redirect(`/schools/${schoolId}`);
+  if (!capabilities.has("school.teacher_records.manage")) redirect(`/schools/${schoolId}`);
 
   const now = new Date();
   const rangeStart = new Date(now.getTime() - 14 * 86_400_000).toISOString();

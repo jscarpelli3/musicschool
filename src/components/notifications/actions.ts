@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
 import { dispatchOwnerNotificationEmail } from "@/lib/notifications/dispatch-owner-notifications";
 import { createClient } from "@/lib/supabase/server";
 
@@ -17,9 +18,9 @@ export async function retryOwnerNotificationEmail(deliveryId: string) {
     .maybeSingle();
   if (!delivery) return { ok: false, message: "This email is no longer eligible for retry." };
 
-  const { data: membership } = await supabase.from("school_members").select("role")
-    .eq("school_id", delivery.school_id).eq("profile_id", profileId).eq("status", "active").maybeSingle();
-  if (!membership || !["owner", "admin"].includes(membership.role)) return { ok: false, message: "Only an owner or admin can retry this email." };
+  if (!await checkSchoolCapability(supabase, delivery.school_id, "school.approvals.review")) {
+    return { ok: false, message: "You do not have permission to retry this email." };
+  }
 
   const { data: claim } = await supabase.rpc("claim_owner_notification_email_retry", { p_delivery_id: delivery.id });
   if (claim !== "claimed") return { ok: false, message: claim === "cooldown"

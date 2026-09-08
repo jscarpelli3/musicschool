@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { SetupHeader } from "@/components/school-setup/setup-header";
 import { ThemeSelector } from "@/components/school-setup/theme-selector";
+import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 import { createClient } from "@/lib/supabase/server";
 import { isSchoolThemeKey } from "@/lib/ui/school-themes";
 import { updateSchoolTheme } from "../setup/actions";
@@ -21,7 +22,7 @@ export default async function AppearancePage({
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/appearance`);
 
-  const [{ data: school }, { data: membership }] = await Promise.all([
+  const [{ data: school }, { data: membership }, capabilities] = await Promise.all([
     supabase.from("schools").select("id, name, theme_key").eq("id", schoolId).maybeSingle(),
     supabase
       .from("school_members")
@@ -30,9 +31,10 @@ export default async function AppearancePage({
       .eq("profile_id", profileId)
       .eq("status", "active")
       .maybeSingle(),
+    loadMySchoolCapabilities(schoolId),
   ]);
   if (!school || !membership) notFound();
-  if (membership.role !== "owner" && membership.role !== "admin") redirect(`/schools/${schoolId}`);
+  if (!capabilities.has("school.appearance.manage")) redirect(`/schools/${schoolId}`);
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
@@ -52,7 +54,7 @@ export default async function AppearancePage({
             </p>
           ) : null}
         </div>
-        {membership.role === "owner" ? (
+        {capabilities.has("school.appearance.palette_manage") ? (
           <ThemeSelector
             currentTheme={isSchoolThemeKey(school.theme_key) ? school.theme_key : "midnight"}
             action={updateSchoolTheme.bind(null, schoolId)}

@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { SetupHeader } from "@/components/school-setup/setup-header";
 import { createClient } from "@/lib/supabase/server";
 import { startStripeOnboarding, syncStripeConnection } from "./actions";
+import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 
 export const dynamic = "force-dynamic";
 
@@ -51,13 +52,14 @@ export default async function SchoolPaymentsPage({ params, searchParams }: {
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/payments`);
 
-  const [{ data: school }, { data: membership }, { data: connection, error: connectionError }] = await Promise.all([
+  const [{ data: school }, { data: membership }, { data: connection, error: connectionError },capabilities] = await Promise.all([
     supabase.from("schools").select("id, name").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("school_payment_connections").select("status, details_submitted, charges_enabled, payouts_enabled, disabled_reason, currently_due, past_due, pending_verification, requirement_errors, requirements_deadline, last_synced_at").eq("school_id", schoolId).eq("provider", "stripe").eq("livemode", false).maybeSingle(),
+    loadMySchoolCapabilities(schoolId),
   ]);
   if (!school || !membership) notFound();
-  if (membership.role !== "owner" && membership.role !== "admin") redirect(`/schools/${schoolId}`);
+  if (!capabilities.has("school.billing.manage")) redirect(`/schools/${schoolId}`);
   if (connectionError) throw connectionError;
 
   const message = query.stripe ? messages[query.stripe] : undefined;

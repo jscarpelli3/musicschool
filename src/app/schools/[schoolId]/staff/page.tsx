@@ -4,6 +4,7 @@ import { AddTeacherDialog } from "@/components/staff/add-teacher-dialog";
 import { TeacherSchedulingSettingsForm } from "@/components/staff/teacher-scheduling-settings-form";
 import { WeeklyAvailabilityEditor } from "@/components/scheduling/weekly-availability-editor";
 import { FocusedModal } from "@/components/ui/focused-modal";
+import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 import { createClient } from "@/lib/supabase/server";
 import { createAndInviteTeacher, deactivateTeacherAccess, inviteTeacherAccess, setTeacherSchedulingSettings } from "./actions";
 import { saveTeacherWeeklyAvailability } from "../availability-actions";
@@ -18,7 +19,7 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/staff`);
 
-  const [{ data: school }, { data: membership }, { data: teachers }, { data: people }, { data: members }, { data: deliveries }, { data: instruments }, { data: availability, error: availabilityError }] = await Promise.all([
+  const [{ data: school }, { data: membership }, { data: teachers }, { data: people }, { data: members }, { data: deliveries }, { data: instruments }, { data: availability, error: availabilityError }, capabilities] = await Promise.all([
     supabase.from("schools").select("id, name, timezone").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("teachers").select("person_id, default_lesson_minutes, scheduling_authority, can_manage_own_availability, outside_availability_policy").eq("school_id", schoolId),
@@ -27,9 +28,10 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
     supabase.from("teacher_invitation_deliveries").select("teacher_id, recipient_email, status, created_at").eq("school_id", schoolId).order("created_at", { ascending: false }),
     supabase.from("school_instruments").select("name").eq("school_id", schoolId).eq("is_active", true).order("name"),
     supabase.from("teacher_availability_rules").select("teacher_id, weekday, start_time, end_time, effective_from, effective_until").eq("school_id", schoolId).order("weekday").order("start_time"),
+    loadMySchoolCapabilities(schoolId),
   ]);
   if (!school || !membership) notFound();
-  if (membership.role !== "owner") redirect(`/schools/${schoolId}`);
+  if (!capabilities.has("school.staff.directory_manage")) redirect(`/schools/${schoolId}`);
 
   const personById = new Map((people ?? []).map((person) => [person.id, person]));
   const today = new Intl.DateTimeFormat("sv-SE", { timeZone: school.timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());

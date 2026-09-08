@@ -4,6 +4,7 @@ import { CancellationPolicyForm } from "@/components/school-setup/cancellation-p
 import { FamilyCancellationAccessForm } from "@/components/school-setup/family-cancellation-access-form";
 import { createClient } from "@/lib/supabase/server";
 import { publishCancellationPolicy,saveFamilyCancellationAccess } from "./actions";
+import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 
 export const dynamic = "force-dynamic";
 
@@ -13,14 +14,15 @@ export default async function PoliciesPage({ params }: { params: Promise<{ schoo
   const { data: auth } = await supabase.auth.getClaims();
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/policies`);
-  const [{ data: school }, { data: membership }, { data: policies },{data:familyAccess}] = await Promise.all([
+  const [{ data: school }, { data: membership }, { data: policies },{data:familyAccess},capabilities] = await Promise.all([
     supabase.from("schools").select("id, name").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("school_policies").select("id, name, school_policy_versions(id, version_number, published_at, cancellation_policy_rules(*))").eq("school_id", schoolId).eq("kind", "cancellation").eq("status", "active").eq("is_default", true).maybeSingle(),
     supabase.from("school_family_cancellation_settings").select("timely_approval_mode,refund_portal_mode").eq("school_id",schoolId).maybeSingle(),
+    loadMySchoolCapabilities(schoolId),
   ]);
   if (!school || !membership) notFound();
-  if (membership.role !== "owner" && membership.role !== "admin") redirect(`/schools/${schoolId}`);
+  if (!capabilities.has("school.policies.manage")) redirect(`/schools/${schoolId}`);
 
   const versions = policies?.school_policy_versions ?? [];
   const latestVersion = [...versions].filter((version) => version.published_at).sort((a, b) => b.version_number - a.version_number)[0];

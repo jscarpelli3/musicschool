@@ -4,6 +4,7 @@ import { DetailHeader, DetailSection, EmptyDetail } from "@/components/people/de
 import { ApprovalList } from "@/components/approvals/approval-list";
 import { LessonsToSchedule } from "@/components/scheduling/lessons-to-schedule";
 import { loadOwnerApprovals } from "@/lib/approvals/owner-approvals";
+import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 import { createClient } from "@/lib/supabase/server";
 import { loadServiceEntitlements } from "@/lib/scheduling/service-entitlements";
 
@@ -55,8 +56,10 @@ export default async function StudentDetailPage({ params }: {
   const dateTime = (value: string) => new Intl.DateTimeFormat("en-US", {
     timeZone: school.timezone, weekday: "long", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit",
   }).format(new Date(value));
-  const approvals = ["owner","admin"].includes(membership.role) ? await loadOwnerApprovals(supabase,schoolId,{studentIds:[studentId]}) : [];
-  const entitlements = ["owner","admin"].includes(membership.role) ? await loadServiceEntitlements(supabase,schoolId,{studentIds:[studentId]}) : [];
+  const capabilities = await loadMySchoolCapabilities(schoolId);
+  const canViewSupport = capabilities.has("school.student_support.view");
+  const approvals = canViewSupport ? await loadOwnerApprovals(supabase,schoolId,{studentIds:[studentId]}) : [];
+  const entitlements = canViewSupport ? await loadServiceEntitlements(supabase,schoolId,{studentIds:[studentId]}) : [];
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">

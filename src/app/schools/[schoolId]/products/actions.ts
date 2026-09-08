@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getStripe, getStripeMode } from "@/lib/stripe/server";
@@ -54,13 +55,13 @@ export async function createProduct(
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/products`);
 
   const livemode = getStripeMode() === "live";
-  const [{ data: school }, { data: membership }, { data: connection }] = await Promise.all([
+  const [{ data: school }, { data: connection }, canManage] = await Promise.all([
     supabase.from("schools").select("currency").eq("id", schoolId).maybeSingle(),
-    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("school_payment_connections").select("provider_account_id,status,charges_enabled")
       .eq("school_id", schoolId).eq("provider", "stripe").eq("livemode", livemode).maybeSingle(),
+    checkSchoolCapability(supabase, schoolId, "school.products.manage"),
   ]);
-  if (!school || !membership || !["owner", "admin"].includes(membership.role)) {
+  if (!school || !canManage) {
     return { error: "School not found or you do not have access." };
   }
   if (!connection?.provider_account_id || connection.status !== "enabled" || !connection.charges_enabled) {
@@ -166,6 +167,7 @@ export async function updateSchoolBillingTiming(schoolId: string, formData: Form
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   if (!data?.claims?.sub) redirect(`/login?next=/schools/${schoolId}/products`);
+  if (!await checkSchoolCapability(supabase, schoolId, "school.products.manage")) redirect(`/schools/${schoolId}`);
   const { data: updated, error } = await supabase.from("schools").update({
     billing_timing_default: timing,
     billing_day: billingDay,
@@ -182,12 +184,12 @@ export async function archiveProduct(schoolId: string, productId: string) {
   const { data } = await supabase.auth.getClaims();
   if (!data?.claims?.sub) redirect(`/login?next=/schools/${schoolId}/products`);
 
-  const [{ data: membership }, { data: product }] = await Promise.all([
-    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", data.claims.sub).eq("status", "active").maybeSingle(),
+  const [{ data: product }, canManage] = await Promise.all([
     supabase.from("service_products").select("id,name,status,stripe_account_id,stripe_product_id,stripe_price_id,stripe_sync_status")
       .eq("id", productId).eq("school_id", schoolId).maybeSingle(),
+    checkSchoolCapability(supabase, schoolId, "school.products.manage"),
   ]);
-  if (!membership || !["owner", "admin"].includes(membership.role) || !product || product.status !== "active") {
+  if (!canManage || !product || product.status !== "active") {
     redirect(`/schools/${schoolId}/products?error=archive`);
   }
 

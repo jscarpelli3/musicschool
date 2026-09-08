@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { SetupHeader } from "@/components/school-setup/setup-header";
 import { FocusedModal } from "@/components/ui/focused-modal";
+import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 import { createClient } from "@/lib/supabase/server";
 import { archiveProduct, updateSchoolBillingTiming } from "./actions";
 import { ProductForm } from "./product-form";
@@ -38,14 +39,15 @@ export default async function ProductsPage({
   const profileId = authData?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/products`);
 
-  const [{ data: school }, { data: membership }, { data: products }] = await Promise.all([
+  const [{ data: school }, { data: membership }, { data: products }, capabilities] = await Promise.all([
     supabase.from("schools").select("id, name, billing_timing_default, billing_day, payer_review_days, intended_charge_day").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("service_products").select("id, name, format, duration_minutes, sessions_per_interval, interval_count, interval_unit, pricing_model, price_cents, currency, capacity, status, billing_timing_override, stripe_sync_status").eq("school_id", schoolId).order("status").order("name"),
+    loadMySchoolCapabilities(schoolId),
   ]);
 
   if (!school || !membership) notFound();
-  const canManage = membership.role === "owner" || membership.role === "admin";
+  const canManage = capabilities.has("school.products.manage");
   const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
   return (

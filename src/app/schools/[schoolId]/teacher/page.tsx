@@ -7,6 +7,7 @@ import { LessonProposalControls } from "@/components/teacher/lesson-proposal-con
 import { WeeklyAvailabilityEditor } from "@/components/scheduling/weekly-availability-editor";
 import { ProposalManagementControls } from "@/components/scheduling/proposal-management-controls";
 import { loadTeacherCalendar, personDisplayName } from "@/lib/scheduling/teacher-calendar";
+import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 import { createClient } from "@/lib/supabase/server";
 import { saveTeacherWeeklyAvailability } from "../availability-actions";
 import { decideLessonProposal, recordTeacherLessonOutcome, reportTeacherCancellation, rescheduleTeacherLesson } from "./actions";
@@ -20,13 +21,14 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/teacher`);
 
-  const [{ data: school }, { data: membership }, { data: teacherPerson }] = await Promise.all([
+  const [{ data: school }, { data: membership }, { data: teacherPerson }, capabilities] = await Promise.all([
     supabase.from("schools").select("id, name, timezone").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("people").select("id, first_name, last_name, preferred_name").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
+    loadMySchoolCapabilities(schoolId),
   ]);
   if (!school || !membership) notFound();
-  if (!new Set(["teacher","owner","admin"]).has(membership.role)) redirect(`/schools/${schoolId}`);
+  if (!capabilities.has("teacher.workspace.use")) redirect(`/schools/${schoolId}`);
   if (!teacherPerson) {
     return <main className="mx-auto min-h-screen max-w-5xl px-5 py-12 sm:px-8"><h1 className="font-display text-5xl">Teacher setup needed.</h1><p className="mt-5 max-w-xl text-sm leading-6 text-muted">Your login is active, but it is not linked to a teacher record at this school. Ask the school owner to finish your staff setup.</p></main>;
   }
