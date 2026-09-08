@@ -4,19 +4,20 @@ import type { Json } from "@/types/database";
 import { createClient } from "@/lib/supabase/server";
 import { dispatchLessonRequestEmails } from "@/lib/notifications/dispatch-lesson-request-emails";
 import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
+import { isLessonRequestedResolution, isLessonRequestType, type LessonRequestedResolution, type LessonRequestType } from "@/lib/scheduling/lesson-domain-contracts";
 
-type RequestType = "cancellation" | "reschedule";
-type Preview = { lesson_id: string; request_type: RequestType; lesson_starts_at: string; cutoff_hours: number; within_policy_window: boolean; policy_disposition: string; policy_guidance: string; accounting_state: string; late_lesson_resolution: string | null; late_reschedule_fee_cents: number; replacement_window_days: number | null; must_keep_assigned_teacher: boolean; approval_mode: string; refund_portal_mode: string };
+type Preview = { lesson_id: string; request_type: LessonRequestType; lesson_starts_at: string; cutoff_hours: number; within_policy_window: boolean; policy_disposition: string; policy_guidance: string; accounting_state: string; late_lesson_resolution: string | null; late_reschedule_fee_cents: number; replacement_window_days: number | null; must_keep_assigned_teacher: boolean; approval_mode: string; refund_portal_mode: string };
 const UUID = /^[0-9a-f-]{36}$/i;
 function object(value: Json): Record<string, Json | undefined> | null { return value && typeof value === "object" && !Array.isArray(value) ? value : null; }
 function parsePreview(value: Json): Preview | null {
   const item = object(value);
   if (!item || typeof item.lesson_id !== "string" || typeof item.lesson_starts_at !== "string" || typeof item.cutoff_hours !== "number" || typeof item.within_policy_window !== "boolean" || typeof item.policy_guidance !== "string" || typeof item.accounting_state !== "string" || typeof item.policy_disposition !== "string") return null;
-  return { lesson_id: item.lesson_id, request_type: item.request_type as RequestType, lesson_starts_at: item.lesson_starts_at, cutoff_hours: item.cutoff_hours, within_policy_window: item.within_policy_window, policy_disposition: item.policy_disposition, policy_guidance: item.policy_guidance, accounting_state: item.accounting_state, late_lesson_resolution: typeof item.late_lesson_resolution === "string" ? item.late_lesson_resolution : null, late_reschedule_fee_cents: typeof item.late_reschedule_fee_cents === "number" ? item.late_reschedule_fee_cents : 0, replacement_window_days: typeof item.replacement_window_days === "number" ? item.replacement_window_days : null, must_keep_assigned_teacher: item.must_keep_assigned_teacher === true, approval_mode: typeof item.approval_mode === "string" ? item.approval_mode : "owner_review", refund_portal_mode: typeof item.refund_portal_mode === "string" ? item.refund_portal_mode : "contact_school" };
+  if (typeof item.request_type !== "string" || !isLessonRequestType(item.request_type)) return null;
+  return { lesson_id: item.lesson_id, request_type: item.request_type, lesson_starts_at: item.lesson_starts_at, cutoff_hours: item.cutoff_hours, within_policy_window: item.within_policy_window, policy_disposition: item.policy_disposition, policy_guidance: item.policy_guidance, accounting_state: item.accounting_state, late_lesson_resolution: typeof item.late_lesson_resolution === "string" ? item.late_lesson_resolution : null, late_reschedule_fee_cents: typeof item.late_reschedule_fee_cents === "number" ? item.late_reschedule_fee_cents : 0, replacement_window_days: typeof item.replacement_window_days === "number" ? item.replacement_window_days : null, must_keep_assigned_teacher: item.must_keep_assigned_teacher === true, approval_mode: typeof item.approval_mode === "string" ? item.approval_mode : "owner_review", refund_portal_mode: typeof item.refund_portal_mode === "string" ? item.refund_portal_mode : "contact_school" };
 }
-export async function previewLessonRequest(lessonId: string, requestType: RequestType) {
+export async function previewLessonRequest(lessonId: string, requestType: LessonRequestType) {
   if (!UUID.test(lessonId)) return { ok: false as const, message: "That lesson could not be verified." };
-  if (!new Set<RequestType>(["cancellation","reschedule"]).has(requestType)) return { ok: false as const, message: "That request type could not be verified." };
+  if (!isLessonRequestType(requestType)) return { ok: false as const, message: "That request type could not be verified." };
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
   const profileId = auth?.claims?.sub;
@@ -30,9 +31,9 @@ export async function previewLessonRequest(lessonId: string, requestType: Reques
   const preview = data ? parsePreview(data) : null;
   return error || !preview ? { ok: false as const, message: "This request cannot be prepared. Contact the school for help." } : { ok: true as const, preview };
 }
-export async function submitLessonRequest(lessonId: string, requestType: RequestType, resolution: "cancel" | "reschedule" | "lesson_credit") {
+export async function submitLessonRequest(lessonId: string, requestType: LessonRequestType, resolution: LessonRequestedResolution) {
   if (!UUID.test(lessonId)) return { ok: false as const, message: "That lesson could not be verified." };
-  if (!new Set<RequestType>(["cancellation","reschedule"]).has(requestType) || !new Set(["cancel","reschedule","lesson_credit"]).has(resolution)) return { ok: false as const, message: "That request could not be verified." };
+  if (!isLessonRequestType(requestType) || !isLessonRequestedResolution(resolution)) return { ok: false as const, message: "That request could not be verified." };
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
   const profileId = auth?.claims?.sub;

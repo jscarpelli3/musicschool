@@ -1,6 +1,7 @@
 "use client";
 
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
+import { rescheduleReasonOptions } from "@/lib/scheduling/lesson-domain-contracts";
 
 export type RescheduleProposal = {
   dateKey: string;
@@ -17,15 +18,6 @@ type LessonSummary = {
   start: { dateKey: string; minutes: number };
   end: { minutes: number };
 };
-
-export const rescheduleReasons = [
-  ["family_request", "Family requested another time"],
-  ["teacher_request", "Teacher requested another time"],
-  ["school_closure", "School closure or holiday"],
-  ["illness", "Illness"],
-  ["schedule_conflict", "Schedule conflict"],
-  ["other", "Other"],
-] as const;
 
 function clock(minutes: number) {
   const hour = Math.floor(minutes / 60);
@@ -91,7 +83,7 @@ function ReasonField({ value, onChange, className = "", autoFocus = false }: { v
       <label><span className="block text-xs text-muted">Reason recorded on this lesson <span className="text-brand">· required</span></span>
         <select autoFocus={autoFocus} required value={code} onChange={(event) => onChange(`${event.target.value}::`)} className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand">
           <option value="">Select a reason</option>
-          {rescheduleReasons.map(([reasonCode, label]) => <option key={reasonCode} value={reasonCode}>{label}</option>)}
+          {rescheduleReasonOptions.map(({ value: reasonCode, label }) => <option key={reasonCode} value={reasonCode}>{label}</option>)}
         </select>
       </label>
       {code === "other" ? <label><span className="sr-only">Other reason</span><input required maxLength={400} value={detail} onChange={(event) => onChange(`${code}::${event.target.value}`)} placeholder="Enter the reason" className="mt-3 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand" /></label> : null}

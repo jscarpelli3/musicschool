@@ -7,6 +7,7 @@ import { LessonCreationDialog, type LessonCreationOptions } from "@/components/s
 import { MdHistory } from "react-icons/md";
 import { reportSchoolCancellation, rescheduleOwnerLesson, setLessonReschedulePermission } from "@/app/schools/[schoolId]/dashboard-actions";
 import { LessonChangeReport } from "@/components/lessons/lesson-change-report";
+import { lessonEventDescriptor, rescheduleReasonLabel } from "@/lib/scheduling/lesson-domain-contracts";
 import { RescheduleConfirmation, type RescheduleProposal } from "./lesson-reschedule-controls";
 import "./owner-planner.css";
 
@@ -493,8 +494,7 @@ function evaluateProposal(
     && timeMinutes(rule.start_time) <= minutes
     && timeMinutes(rule.end_time) >= end);
   const overlaps = (candidate: LessonWithParts) => candidate.id !== lesson.id
-    && candidate.status !== "cancelled"
-    && candidate.status !== "rescheduled"
+    && lessonEventDescriptor(candidate.status).occupiesCalendar
     && candidate.start.dateKey === dateKey
     && candidate.start.minutes < end
     && candidate.end.minutes > minutes;
@@ -734,7 +734,7 @@ function TimelineView({
                     );
                   }))}
                 {lessons
-                  .filter((lesson) => lesson.status !== "cancelled" && lesson.start.dateKey === dateKey && column.teachers.some((teacher) => teacher.id === lesson.teacher_id))
+                  .filter((lesson) => lessonEventDescriptor(lesson.status).occupiesCalendar && lesson.start.dateKey === dateKey && column.teachers.some((teacher) => teacher.id === lesson.teacher_id))
                   .map((lesson) => {
                     const teacherIndex = Math.max(0, column.teachers.findIndex((teacher) => teacher.id === lesson.teacher_id));
                     const teacher = column.teachers[teacherIndex];
@@ -929,7 +929,7 @@ function MonthView({
       <div className="grid grid-cols-7">
         {dates.map((date) => {
           const dateKey = key(date);
-          const dayLessons = lessons.filter((lesson) => lesson.status !== "cancelled" && lesson.start.dateKey === dateKey && activeTeacherIds.has(lesson.teacher_id));
+          const dayLessons = lessons.filter((lesson) => lessonEventDescriptor(lesson.status).occupiesCalendar && lesson.start.dateKey === dateKey && activeTeacherIds.has(lesson.teacher_id));
           const dayProposals = proposals.filter((item) => item.start.dateKey === dateKey && activeTeacherIds.has(item.teacher_id));
           const dayRules = availability.filter((rule) => activeTeacherIds.has(rule.teacher_id) && rule.weekday === date.getDay() && rule.effective_from <= dateKey && (!rule.effective_until || rule.effective_until >= dateKey));
           const availableMinutes = dayRules.reduce((total, rule) => total + timeMinutes(rule.end_time) - timeMinutes(rule.start_time), 0);
@@ -1003,7 +1003,7 @@ function LessonSheet({
       <aside className="lesson-sheet px-7 py-8 md:px-10" role="dialog" aria-modal="true" aria-labelledby="lesson-sheet-title">
         <div className="flex items-start justify-between gap-6 border-b border-line pb-7">
           <div>
-            <p className="text-xs capitalize text-brand">{lesson.status}</p>
+            <p className="text-xs text-brand">{lessonEventDescriptor(lesson.status).label}</p>
             <h2 id="lesson-sheet-title" className="mt-4 font-display text-4xl font-normal tracking-[-0.035em]">
               {student?.name ?? "Student"}
             </h2>
@@ -1120,17 +1120,6 @@ function ReschedulePermission({ allowed, blockedReason, canManage, onChange }: {
       <p className="mt-4 text-xs leading-5 text-muted">Past or completed lessons remain ineligible even when this setting is allowed.</p>
     </section>
   );
-}
-
-function rescheduleReasonLabel(code: string, detail: string | null) {
-  if (code === "other") return detail || "Other";
-  return ({
-    family_request: "Family requested another time",
-    teacher_request: "Teacher requested another time",
-    school_closure: "School closure or holiday",
-    illness: "Illness",
-    schedule_conflict: "Schedule conflict",
-  } as Record<string, string>)[code] ?? code;
 }
 
 function formatCalendarDate(dateKey: string) {

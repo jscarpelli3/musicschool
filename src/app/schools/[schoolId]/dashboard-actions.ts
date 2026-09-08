@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { isRescheduleReasonCode } from "@/lib/scheduling/lesson-domain-contracts";
 import type { Column, RosterViewSettings } from "@/components/students/student-roster-table";
 import { dispatchLessonRequestEmails } from "@/lib/notifications/dispatch-lesson-request-emails";
 import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
@@ -117,10 +118,9 @@ export async function setLessonReschedulePermission(schoolId: string, lessonId: 
 
 export async function rescheduleOwnerLesson(schoolId: string, input: OwnerRescheduleInput) {
   const [reasonCode, reasonDetail = ""] = input.reason.split("::", 2);
-  const allowedReasons = new Set(["family_request", "teacher_request", "school_closure", "illness", "schedule_conflict", "other"]);
   if (![input.lessonId, input.teacherId, input.placeId].every((value) => /^[0-9a-f-]{36}$/i.test(value))
     || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(input.localStart)
-    || !allowedReasons.has(reasonCode) || (reasonCode === "other" && !reasonDetail.trim())
+    || !isRescheduleReasonCode(reasonCode) || (reasonCode === "other" && !reasonDetail.trim())
     || input.reason.trim().length > 500) {
     return { ok: false, message: "Check the proposed lesson details and record a reason." };
   }
