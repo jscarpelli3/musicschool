@@ -5322,6 +5322,23 @@ export type Database = {
           subscription_active: boolean
         }[]
       }
+      get_client_portal_collection_accounts: {
+        Args: never
+        Returns: {
+          accepted_at: string | null
+          advance_notice_days: number | null
+          billing_account_id: string
+          billing_account_name: string
+          currency: string | null
+          mandate_id: string | null
+          mandate_status: string | null
+          monthly_cap_cents: number | null
+          payment_method_label: string | null
+          payment_method_last_four: string | null
+          school_id: string
+          school_name: string
+        }[]
+      }
       get_client_portal_lessons: {
         Args: never
         Returns: {
@@ -5671,6 +5688,10 @@ export type Database = {
       }
       revoke_auto_charge_mandate: {
         Args: { p_evidence?: Json; raw_token: string }
+        Returns: string
+      }
+      revoke_client_portal_auto_charge_mandate: {
+        Args: { p_billing_account_id: string; p_school_id: string }
         Returns: string
       }
       revoke_client_portal_calendar_subscription: {

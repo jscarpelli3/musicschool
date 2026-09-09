@@ -647,3 +647,14 @@ Recorded on 2026-08-14.
 - Removed the always-visible shared-SMS approval action from the owner billing panel. Email is the standard path; approved periods read as ready to collect, with collection explicitly not started.
 - Migration `20260814130000` deployed after one safe atomic rollback corrected a PL/pgSQL record assignment. Linked database lint, generated types, TypeScript, and ESLint pass. Live saved-card enrollment, mandate supersession, cap, and revocation rehearsals remain.
 - Added immediate payer revocation from the same secure approval surface. Revocation changes the active mandate before any future provider attempt and appends evidence; it never detaches the card or rewrites the original consent. A durable payer access-link/portal route is still required so revocation remains available after the short approval link is no longer retained.
+
+### Step 8B checkpoint — durable payer mandate control
+
+Recorded on 2026-09-09.
+
+- Extended the existing authenticated family portal identity boundary instead of creating another bearer credential. Account visibility and mutation authority both resolve from the signed-in email through the protected, data-owned `payer_portal_authorizations` relationship.
+- The portal now lists active automatic-payment mandates with their snapshotted payment method, currency-aware cap, notice window, and acceptance date. It exposes no owner controls or inactive mandate history.
+- Payer revocation is an authenticated, account-scoped database transaction. It rechecks active portal authority, locks the active mandate, changes it before any future provider attempt, and appends payer-portal evidence without removing the saved payment method or rewriting original consent.
+- Anonymous execution is revoked for both RPCs. A verification migration asserts authenticated-only grants, portal-authorization resolution, current-access-state enforcement, and row locking.
+- Migrations `20260909110000` and `20260909111000` are deployed. TypeScript, ESLint, `git diff --check`, and the Next.js 16.3 webpack production build pass. Linked database lint reports only the two pre-existing unused-variable warnings.
+- Remaining Step 8B acceptance work is the live enrollment, supersession, cap/scope fallback, notice, and portal-revocation rehearsal.

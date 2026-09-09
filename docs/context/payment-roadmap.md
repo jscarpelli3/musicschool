@@ -122,7 +122,7 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 - Every automatic month still produces and locks an itemized statement. Send the statement before collection; amounts beyond the mandate scope or cap fall back to one-time approval.
 - Revocation takes effect before any new provider attempt. Material changes to scope, cap, cadence, or school require new payer consent; owner edits cannot broaden a mandate.
 - Exit gate: prove adjustment auditability, supersession, opt-in, revocation, cap/scope fallback, notice delivery, and zero unauthorized charge attempts.
-- Implemented foundation: owner charge/credit controls, audit-backed removal, pre-send unlock-to-revise, email-first owner state, separate mandate/enrollment/revocation records, cap and notice configuration, and structured payer proposal rejection. Live cross-flow rehearsal and long-lived payer revocation access remain.
+- Implemented foundation: owner charge/credit controls, audit-backed removal, pre-send unlock-to-revise, email-first owner state, separate mandate/enrollment/revocation records, cap and notice configuration, structured payer proposal rejection, and durable authenticated payer-portal revocation. Live enrollment, supersession, cap/scope fallback, notice, and revocation rehearsal remains.
 
 ### 8A. Per-school SMS add-on — DEFERRED / OPTIONAL
 
@@ -159,4 +159,4 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 
 ## Current next action
 
-Finish Step 8 through email first: configure the authenticated Common Time sending domain, implement durable Resend delivery and verified webhook reconciliation, then pass send/replay/bounce/supersession/approval acceptance tests. In parallel, correct the first school's business and consent materials only if it purchases the SMS add-on; Twilio approval is no longer a payment-roadmap blocker. The first live school must publish an effective cancellation policy before current-month drafts containing cancellations or no-shows can be prepared. Do not begin charge execution until the email delivery exit gate passes.
+Finish the Step 8B live cross-flow rehearsal: enroll automatic payment against an eligible saved test method, supersede the mandate, prove cap/scope fallback and statement notice, then revoke it through the durable authenticated payer portal. Reconcile the remaining Step 8 email acceptance evidence and close both gates before beginning Step 9 charge execution. Twilio remains an optional per-school add-on rather than a payment-roadmap blocker. The first live school must publish an effective cancellation policy before current-month drafts containing cancellations or no-shows can be prepared.
