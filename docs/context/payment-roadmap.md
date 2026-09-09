@@ -122,7 +122,7 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 - Every automatic month still produces and locks an itemized statement. Send the statement before collection; amounts beyond the mandate scope or cap fall back to one-time approval.
 - Revocation takes effect before any new provider attempt. Material changes to scope, cap, cadence, or school require new payer consent; owner edits cannot broaden a mandate.
 - Exit gate: prove adjustment auditability, supersession, opt-in, revocation, cap/scope fallback, notice delivery, and zero unauthorized charge attempts.
-- Implemented foundation: owner charge/credit controls, audit-backed removal, pre-send unlock-to-revise, email-first owner state, separate mandate/enrollment/revocation records, cap and notice configuration, structured payer proposal rejection, and durable authenticated payer-portal revocation. Live enrollment, supersession, minimum-cap enforcement, payer-portal visibility, and revocation are proven. Scope/monthly-cap fallback and actual statement-notice delivery remain.
+- Implemented foundation: owner charge/credit controls, audit-backed removal, pre-send unlock-to-revise, email-first owner state, separate mandate/enrollment/revocation records, cap and notice configuration, structured payer proposal rejection, and durable authenticated payer-portal revocation. Live enrollment, supersession, minimum-cap enforcement, payer-portal visibility, and revocation are proven. A data-owned category catalog, line-item and mandate category snapshots, and a server-owned readiness contract now drive scope/monthly-cap fallback. Actual statement-notice delivery remains.
 
 ### 8A. Per-school SMS add-on — DEFERRED / OPTIONAL
 
@@ -159,4 +159,4 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 
 ## Current next action
 
-Finish the Step 8B gate by defining and proving scope/monthly-cap fallback against a locked statement and delivering its advance notice through the established email pipeline. Reconcile the remaining Step 8 email acceptance evidence and close both gates before beginning Step 9 charge execution. Twilio remains an optional per-school add-on rather than a payment-roadmap blocker. The first live school must publish an effective cancellation policy before current-month drafts containing cancellations or no-shows can be prepared.
+Finish the Step 8B gate by rehearsing scope/monthly-cap fallback against a locked statement and delivering its advance notice through the established email pipeline. Reconcile the remaining Step 8 email acceptance evidence and close both gates before beginning Step 9 charge execution. Twilio remains an optional per-school add-on rather than a payment-roadmap blocker. The first live school must publish an effective cancellation policy before current-month drafts containing cancellations or no-shows can be prepared.

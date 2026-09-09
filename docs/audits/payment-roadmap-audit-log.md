@@ -661,3 +661,13 @@ Recorded on 2026-09-09.
 - A controlled linked-project rehearsal then used Ava Morgan's existing active test method and durable portal authorization. A fresh approved request was created solely as non-charging test evidence. Enrollment below the approved amount failed closed with `cap_below_current_amount`; a $300 mandate with seven-day notice was accepted; a $400 mandate with five-day notice superseded it; and the authenticated payer RPC returned only the active replacement terms.
 - The same authenticated payer session revoked the replacement mandate through the portal RPC. Append-only events record the first mandate as superseded and the second as revoked through `payer_portal`; no active mandate remained and no provider charge attempt was created. Controlled approval request `17aa3619-c974-4c78-8fe9-f7040ee4a907` anchors the rehearsal evidence.
 - Live enrollment, supersession, minimum-cap enforcement, authenticated visibility, and durable revocation are accepted. Scope/monthly-cap fallback against a future locked statement and actual advance-notice delivery remain before the Step 8B exit gate passes.
+
+### Step 8B checkpoint — data-owned mandate scope and collection readiness
+
+Recorded on 2026-09-09.
+
+- Replaced the single `itemized_school_charges` decision literal with a protected charge-category catalog and source-to-category mapping. Every billing line now carries an immutable category snapshot, and each mandate snapshots the active automatic-charge-eligible categories at acceptance.
+- Existing lines and historical mandates were backfilled without rewriting amounts or consent evidence. New source types fail closed when no category mapping exists; inactive, unknown, or empty mandate category sets fail closed at insertion.
+- Added one capability-authorized collection-readiness contract for immutable periods. It resolves exact approval before mandate use and otherwise returns explicit states for missing mandate, inactive saved-method consent, uncovered categories, cap excess, and required advance notice. UI and future Stripe execution no longer reconstruct those rules.
+- Migrations `20260909120000` and `20260909121000` are deployed. Structural assertions, TypeScript, ESLint, and `git diff --check` pass; linked database lint reports only the two pre-existing unused-variable warnings.
+- Remaining acceptance work is a controlled locked-statement fallback rehearsal and durable advance-notice email delivery/reconciliation.
