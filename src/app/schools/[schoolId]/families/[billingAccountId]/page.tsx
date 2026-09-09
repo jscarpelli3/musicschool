@@ -5,6 +5,7 @@ import { ApprovalList } from "@/components/approvals/approval-list";
 import { LessonsToSchedule } from "@/components/scheduling/lessons-to-schedule";
 import { loadOwnerApprovals } from "@/lib/approvals/owner-approvals";
 import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
+import { billingPeriodDescriptor } from "@/lib/domain/state-descriptors";
 import { normalizeE164 } from "@/lib/phone";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -138,25 +139,26 @@ export default async function FamilyDetailPage({ params, searchParams }: {
           <div className="space-y-1">
           {(periodsResult.data ?? []).map((billingPeriod) => {
             const periodLines = linesByPeriod[billingPeriod.id] ?? [];
+            const periodState = billingPeriodDescriptor(billingPeriod.status);
             return (
               <details key={billingPeriod.id} open={billingPeriod.id === selectedPeriodId} className="border-b border-line py-5 first:pt-0">
                 <summary className="grid cursor-pointer list-none grid-cols-[1fr_auto] gap-4 marker:hidden">
-                  <div><p>{billingPeriod.label}</p><p className="mt-2 text-xs text-muted">{billingPeriod.period_start}–{billingPeriod.period_end} · <span className="uppercase">{billingPeriod.status}</span> · {periodLines.length} lines</p></div>
+                  <div><p>{billingPeriod.label}</p><p className="mt-2 text-xs text-muted">{billingPeriod.period_start}–{billingPeriod.period_end} · <span>{periodState.label}</span> · {periodLines.length} lines</p></div>
                   <div className="text-right"><p>{money(billingPeriod.amount_due_cents, billingPeriod.currency)}</p><p className="mt-2 text-xs text-muted">{money(paidByPeriod[billingPeriod.id] ?? 0, billingPeriod.currency)} paid</p></div>
                 </summary>
                 <div className="mt-5 border-l border-line pl-4 sm:pl-5">
                   {periodLines.map((line) => {
                     const metadata = line.metadata && typeof line.metadata === "object" && !Array.isArray(line.metadata) ? line.metadata : {};
                     const disposition = "disposition" in metadata && typeof metadata.disposition === "string" ? metadata.disposition : line.source_type.replaceAll("_", " ");
-                    return <div key={line.id} className="grid gap-2 border-t border-line py-4 first:border-t-0 sm:grid-cols-[1fr_auto] sm:gap-6"><div><p className="text-sm">{line.description}</p><p className="mt-1 text-xs text-muted">{line.service_date ?? "Period adjustment"} · <span className="uppercase">{line.source_type === "manual_adjustment" ? "owner adjustment" : disposition}</span></p>{canManagePayments && ["draft", "review"].includes(billingPeriod.status) && line.source_type === "manual_adjustment" ? <div className="mt-2"><BillingAdjustmentRemove schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} adjustmentId={line.id} /></div> : null}</div><p className={`text-sm sm:text-right ${(line.amount_cents ?? 0) < 0 ? "text-brand" : ""}`}>{money(line.amount_cents ?? 0, billingPeriod.currency)}</p></div>;
+                    return <div key={line.id} className="grid gap-2 border-t border-line py-4 first:border-t-0 sm:grid-cols-[1fr_auto] sm:gap-6"><div><p className="text-sm">{line.description}</p><p className="mt-1 text-xs text-muted">{line.service_date ?? "Period adjustment"} · <span className="uppercase">{line.source_type === "manual_adjustment" ? "owner adjustment" : disposition}</span></p>{canManagePayments && periodState.editable && line.source_type === "manual_adjustment" ? <div className="mt-2"><BillingAdjustmentRemove schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} adjustmentId={line.id} /></div> : null}</div><p className={`text-sm sm:text-right ${(line.amount_cents ?? 0) < 0 ? "text-brand" : ""}`}>{money(line.amount_cents ?? 0, billingPeriod.currency)}</p></div>;
                   })}
                   {!periodLines.length ? <EmptyDetail>No line items are recorded.</EmptyDetail> : null}
                   {latestApprovalByPeriod.get(billingPeriod.id)?.approval_status === "rejected" ? <div className="my-5 border border-danger/50 p-5"><p className="text-xs uppercase tracking-[0.14em] text-danger">Payer requested review</p><p className="mt-3 text-sm">{({ lesson_did_not_happen: "A lesson did not happen", wrong_lesson_or_date: "A lesson or date is wrong", wrong_amount: "An amount is wrong", missing_credit: "A credit or discount is missing", duplicate_charge: "A charge appears twice", other: "Other" } as Record<string, string>)[latestApprovalByPeriod.get(billingPeriod.id)?.rejection_reason_code ?? ""] ?? "Charges need review"}</p>{latestApprovalByPeriod.get(billingPeriod.id)?.rejection_note ? <p className="mt-2 text-sm leading-6 text-muted">“{latestApprovalByPeriod.get(billingPeriod.id)?.rejection_note}”</p> : null}</div> : null}
-                  {canManagePayments && ["draft", "review"].includes(billingPeriod.status) ? <BillingAdjustmentForm schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
-                  {canManagePayments && ["draft", "review"].includes(billingPeriod.status) && billingPeriod.amount_due_cents > 0 ? <div className="border-t border-line pt-5"><p className="max-w-lg text-xs leading-5 text-muted">Lock only after reviewing every line. Locking freezes this exact amount for the separate payer-approval step.</p><BillingPeriodLock schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /></div> : null}
+                  {canManagePayments && periodState.editable ? <BillingAdjustmentForm schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
+                  {canManagePayments && periodState.editable && billingPeriod.amount_due_cents > 0 ? <div className="border-t border-line pt-5"><p className="max-w-lg text-xs leading-5 text-muted">Lock only after reviewing every line. Locking freezes this exact amount for the separate payer-approval step.</p><BillingPeriodLock schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /></div> : null}
                   {canManagePayments && billingPeriod.status === "locked" && !latestApprovalByPeriod.get(billingPeriod.id) ? <BillingPeriodUnlock schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
                   {canManagePayments && billingPeriod.status === "approval_pending" && latestApprovalByPeriod.get(billingPeriod.id)?.approval_status === "pending" ? <BillingPeriodRevise schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
-                  {canManagePayments && ["locked", "approval_pending", "approved"].includes(billingPeriod.status) && billingPeriod.amount_due_cents > 0 ? <BillingApprovalEmail schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} latestStatus={latestEmailStatusByPeriod.get(billingPeriod.id)} approvalStatus={latestApprovalByPeriod.get(billingPeriod.id)?.approval_status} approvedAt={latestApprovalByPeriod.get(billingPeriod.id)?.approved_at} /> : null}
+                  {canManagePayments && periodState.canSendApproval && billingPeriod.amount_due_cents > 0 ? <BillingApprovalEmail schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} latestStatus={latestEmailStatusByPeriod.get(billingPeriod.id)} approvalStatus={latestApprovalByPeriod.get(billingPeriod.id)?.approval_status} approvedAt={latestApprovalByPeriod.get(billingPeriod.id)?.approved_at} /> : null}
                 </div>
               </details>
             );

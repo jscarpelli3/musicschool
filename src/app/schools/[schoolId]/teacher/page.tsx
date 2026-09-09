@@ -8,6 +8,8 @@ import { WeeklyAvailabilityEditor } from "@/components/scheduling/weekly-availab
 import { ProposalManagementControls } from "@/components/scheduling/proposal-management-controls";
 import { loadTeacherCalendar, personDisplayName } from "@/lib/scheduling/teacher-calendar";
 import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
+import { lessonOutcomeDescriptor } from "@/lib/domain/state-descriptors";
+import { lessonEventDescriptor } from "@/lib/scheduling/lesson-domain-contracts";
 import { createClient } from "@/lib/supabase/server";
 import { saveTeacherWeeklyAvailability } from "../availability-actions";
 import { decideLessonProposal, recordTeacherLessonOutcome, reportTeacherCancellation, rescheduleTeacherLesson } from "./actions";
@@ -67,7 +69,7 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
             <summary className="grid cursor-pointer list-none gap-2 py-5 sm:grid-cols-[10rem_1fr_auto] sm:items-baseline">
               <span className="text-sm text-muted">{dateTime.format(new Date(lesson.starts_at))}</span>
               <span><strong className="font-medium">{studentById.get(lesson.student_id) ?? "Student"}</strong><span className="mt-1 block text-sm text-muted">{productById.get(lesson.product_id) ?? "Lesson"} · {time.format(new Date(lesson.starts_at))}–{time.format(new Date(lesson.ends_at))}</span></span>
-              <span className="text-sm capitalize text-brand">{lesson.outcome?.replaceAll("_", " ") ?? lesson.status}</span>
+              <span className="text-sm text-brand">{lesson.outcome ? lessonOutcomeDescriptor(lesson.outcome).label : lessonEventDescriptor(lesson.status).label}</span>
             </summary>
             <div className="pb-7 sm:pl-40">
               <p className="text-sm text-muted">{place?.name ?? "Place not assigned"}{place?.details ? ` · ${place.details}` : ""}</p>

@@ -67,4 +67,6 @@ Migrations `20260908130000_structured_reschedule_rpc_boundary.sql` and `20260908
 
 Migrations `20260909100000_remove_encoded_reschedule_persistence.sql` and `20260909101000_verify_no_encoded_reschedule_persistence.sql` remove the private parser as well. Structured reason fields are carried through immediate owner/teacher moves and persisted on pending teacher proposals so a later owner decision retains the original code and detail. Display text is derived from the code but never parsed back into domain data. Regression verification rejects any return of delimiter parsing in the active functions. Both migrations deployed successfully; application type-check and lint plus linked database lint pass.
 
-Remaining structural work is to extend exhaustive descriptors to proposal, request, billing, and delivery states.
+`state-descriptors.ts` now exhaustively defines proposal, lesson-request, billing-period, delivery, and lesson-outcome states. Review, staff, billing, and teacher surfaces consume those descriptors instead of title-casing raw database strings. The teacher calendar no longer coerces every unexpected proposal state into `pending_teacher`; unsupported states fail explicitly at the data boundary. Type-check and lint pass.
+
+The hardcoded domain-assumption structural follow-up is complete for active lesson-change and school-management surfaces.

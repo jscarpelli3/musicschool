@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
+import { isLessonProposalState } from "@/lib/domain/state-descriptors";
 
 export type TeacherCalendarData = {
   availability: Array<{
@@ -88,7 +89,12 @@ export async function loadTeacherCalendar(
   if (proposalResult.error) throw new Error("Teacher scheduling proposals could not be loaded.");
 
   const lessons = (lessonResult.data ?? []).flatMap((lesson) => lesson.place_id ? [lesson] : []);
-  const pendingProposals = (proposalResult.data ?? []).map((item) => ({ ...item, status: item.status === "pending_owner" ? "pending_owner" as const : "pending_teacher" as const }));
+  const pendingProposals = (proposalResult.data ?? []).map((item) => {
+    if (!isLessonProposalState(item.status) || (item.status !== "pending_owner" && item.status !== "pending_teacher")) {
+      throw new Error(`Unsupported pending lesson proposal state: ${item.status}`);
+    }
+    return { ...item, status: item.status };
+  });
   const studentIds = [...new Set([...lessons.map((lesson) => lesson.student_id), ...pendingProposals.map((item) => item.student_id)])];
   const productIds = [...new Set(lessons.map((lesson) => lesson.product_id))];
   const placeIds = [...new Set(lessons.map((lesson) => lesson.place_id))];

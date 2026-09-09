@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { resolveLessonChangeRequest } from "@/app/schools/[schoolId]/approvals/actions";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
+import { lessonRequestDescriptor } from "@/lib/domain/state-descriptors";
 import type { LessonRequestApproval } from "@/lib/approvals/owner-approvals";
 
 type LessonResolution = "count_as_serviced" | "retain_for_reschedule" | "waive";
@@ -30,7 +31,7 @@ function scenarioPresentation(item: LessonRequestApproval) {
 
 export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { schoolId: string; item: LessonRequestApproval; timezone: string; closeHref: string }) {
   const router = useRouter();
-  const pending = ["pending", "in_progress"].includes(item.status);
+  const pending = lessonRequestDescriptor(item.status).reviewable === true;
   const policyRequiresJudgment = item.policyLessonResolution === "manual_review";
   const recommendedResolution = policyRequiresJudgment ? null : item.policyLessonResolution as LessonResolution;
   const fallbackResolution = item.resolutionChoices[0]?.value;
@@ -137,7 +138,7 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
             <HoldToConfirm action={() => submit("approved")} disabled={resolving || (requiresReason && !reason.trim()) || (adjustmentKind !== "none" && amountCents <= 0)} onBusyChange={setResolving} idleLabel="Hold to apply this outcome" holdingLabel="Keep holding to resolve…" submittingLabel="Applying lesson and account changes…" successLabel="Request resolved" />
             {!showDecline ? <button type="button" disabled={resolving} onClick={() => setShowDecline(true)} className="mt-2 text-sm text-muted underline-offset-4 transition hover:text-danger hover:underline disabled:cursor-wait disabled:text-muted/40 disabled:no-underline">{presentation.decline}</button> : <section className="mt-5 border-t border-line pt-5"><p className="text-sm font-medium">{presentation.decline}?</p><p className="mt-2 text-sm leading-6 text-muted">{presentation.declineEffect}</p><div className="mt-4 max-w-md"><HoldToConfirm action={() => submit("declined")} disabled={resolving} onBusyChange={setResolving} idleLabel="Hold to confirm" holdingLabel="Keep holding…" submittingLabel="Recording decision…" successLabel="Decision recorded" /></div><button type="button" disabled={resolving} onClick={() => setShowDecline(false)} className="mt-2 text-sm text-muted transition hover:text-ink disabled:cursor-wait disabled:opacity-40">Never mind</button></section>}
           </div>
-        </> : <p className="mt-7 text-sm capitalize text-muted">This request is {item.status.replaceAll("_", " ")}.</p>}
+        </> : <p className="mt-7 text-sm text-muted">This request is {lessonRequestDescriptor(item.status).label.toLowerCase()}.</p>}
       </section>
     </div>
   );

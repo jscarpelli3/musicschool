@@ -5,6 +5,7 @@ import { TeacherSchedulingSettingsForm } from "@/components/staff/teacher-schedu
 import { WeeklyAvailabilityEditor } from "@/components/scheduling/weekly-availability-editor";
 import { FocusedModal } from "@/components/ui/focused-modal";
 import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
+import { deliveryDescriptor } from "@/lib/domain/state-descriptors";
 import { createClient } from "@/lib/supabase/server";
 import { createAndInviteTeacher, deactivateTeacherAccess, inviteTeacherAccess, setTeacherSchedulingSettings } from "./actions";
 import { saveTeacherWeeklyAvailability } from "../availability-actions";
@@ -81,7 +82,7 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
               <div className="flex flex-wrap gap-3 pt-6">
                 <FocusedModal variant="secondary" triggerLabel="Access and invitation" eyebrow="Staff access" title={`Manage ${person.preferred_name || person.first_name}’s access.`} description="Send or disable passwordless school access.">
                   <form action={inviteTeacherAccess.bind(null, schoolId, person.id)} className="grid gap-5"><label><span className="text-xs text-muted">Login email</span><input required type="email" name="email" defaultValue={person.email ?? ""} placeholder="teacher@example.com" className="mt-2 w-full border-b border-line bg-transparent py-2 text-sm outline-none focus:border-brand" /></label><button className="justify-self-start border border-brand px-4 py-2 text-sm text-brand transition hover:bg-brand hover:text-canvas">{person.membershipStatus === "active" ? "Send access email again" : person.latestDelivery ? "Resend invitation" : "Invite teacher"}</button></form>
-                  {person.latestDelivery ? <p className="mt-4 text-xs text-muted">Latest invitation: {person.latestDelivery.status === "accepted" ? "handed to email provider" : person.latestDelivery.status} · {new Date(person.latestDelivery.created_at).toLocaleString()}</p> : null}
+                  {person.latestDelivery ? <p className="mt-4 text-xs text-muted">Latest invitation: {deliveryDescriptor(person.latestDelivery.status).label} · {new Date(person.latestDelivery.created_at).toLocaleString()}</p> : null}
                   {person.membershipStatus === "active" || person.membershipStatus === "invited" ? <form action={deactivateTeacherAccess.bind(null, schoolId, person.id)} className="mt-5 border-t border-line pt-4"><button className="text-xs text-danger hover:underline">Disable teacher access</button></form> : null}
                 </FocusedModal>
                 <FocusedModal variant="secondary" triggerLabel="Scheduling permissions" eyebrow="Scheduling authority" title={`Set ${person.preferred_name || person.first_name}’s permissions.`} description="Control direct schedule changes, availability editing, and outside-hours approval.">
