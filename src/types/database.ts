@@ -2310,6 +2310,8 @@ export type Database = {
           proposed_local_start: string
           proposed_starts_at: string
           reason: string
+          reason_code: string | null
+          reason_detail: string | null
           replaces_proposal_id: string | null
           schedule_type: string
           school_id: string
@@ -2341,6 +2343,8 @@ export type Database = {
           proposed_local_start: string
           proposed_starts_at: string
           reason: string
+          reason_code?: string | null
+          reason_detail?: string | null
           replaces_proposal_id?: string | null
           schedule_type: string
           school_id: string
@@ -2372,6 +2376,8 @@ export type Database = {
           proposed_local_start?: string
           proposed_starts_at?: string
           reason?: string
+          reason_code?: string | null
+          reason_detail?: string | null
           replaces_proposal_id?: string | null
           schedule_type?: string
           school_id?: string
