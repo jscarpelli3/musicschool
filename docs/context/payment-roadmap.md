@@ -14,7 +14,7 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 - Money and consent records are immutable snapshots once submitted or approved.
 - A browser redirect or client callback never establishes payment truth.
 - Verified, idempotent Stripe webhooks establish provider truth.
-- Every retryable provider mutation uses a stable idempotency key.
+- Every provider submission attempt uses a stable idempotency key for exact replay. A retry after a definitive terminal failure creates a new immutable attempt and a new key; an unknown outcome is reconciled before any retry.
 - No enabled control may imply success before durable persistence succeeds.
 - A chargeable offering must reference a Product and immutable Price in the school's own connected Stripe account. Browser-supplied and locally cached amounts are never charge authority.
 - Service entitlements remain in Common Time's lesson ledger. Monetary credits for Stripe-backed payers are posted to Stripe Customer invoice balance and linked to an immutable local reconciliation record.

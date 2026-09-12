@@ -9,6 +9,7 @@ The append-only master record for security process changes, scans, findings, rem
 - Never mark an audit passed because code compiles or a provider returned `200`. Verify the resulting application and database state.
 - Run destructive and provider-money rehearsals only in isolated test data/test mode unless a production action is explicitly authorized.
 - Use immutable or append-only evidence for billing, consent, provider events, refunds, credits, and security-sensitive changes.
+- Give every external submission attempt an immutable identity and canonical content snapshot or cryptographic content fingerprint. A retry after a definitive terminal failure is a new numbered attempt with a new provider idempotency key; an unknown outcome blocks retry until an operator or automated process reconciles it.
 - A failed audit creates a tracked finding. Fixes require a focused retest plus the relevant regression audit.
 - Keep secrets, raw payment credentials, approval bearer tokens, and unnecessary personal data out of audit output.
 - Record assumptions and checks that could not be completed. `Not tested` is never equivalent to `passed`.

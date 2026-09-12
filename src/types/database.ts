@@ -5719,6 +5719,10 @@ export type Database = {
         Args: { p_code?: string; p_delivery_id: string }
         Returns: undefined
       }
+      mark_billing_statement_notice_reconciliation_required: {
+        Args: { p_delivery_id: string }
+        Returns: undefined
+      }
       revise_submitted_billing_period: {
         Args: { p_billing_period_id: string; p_school_id: string }
         Returns: string

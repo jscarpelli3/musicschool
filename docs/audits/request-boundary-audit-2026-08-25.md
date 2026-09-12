@@ -30,21 +30,21 @@ The central unsafe-method gate and Next Server Action validation cover every act
 
 | Area/actions | Authentication and tenant/customer boundary | Input/side-effect controls | Additional throttle |
 |---|---|---|---|
-| Login and portal OTP request/verify | Server-side Supabase Auth; portal preflight uses private payer authorization state | Normalized email/code; no account creation; cookies established server-side | 5 sends/15 min and 10 verifies/15 min per email+IP |
+| Login and portal OTP request/verify | Server-side Supabase Auth; portal preflight is service-only and returns a uniform public response | Normalized email/code; no account creation; cookies established server-side | 5 sends/15 min and 10 verifies/15 min per email+IP |
 | Lesson create; dashboard/teacher reschedule | Active claims plus exact owner/admin or assigned-teacher RPC checks | UUID/enums/length/date checks; conflicts and school ownership rechecked in locked DB transaction | Lesson create 30/10 min per actor+school+IP; reschedule-specific throttle pending |
 | Portal change preview/submit | Active payer Auth identity; RPC binds current email to one active school/account/student/lesson | Enum/UUID checks; policy snapshot and request are atomic; lesson is not directly changed | Preview 30/10 min; submit 5/hour per actor+lesson+IP |
 | Billing approval/rejection/mandate | Scoped bearer token; database hashes token and locks exact request/account | Enum/length/value constraints; idempotent state transitions and immutable evidence | 10/15 min per action+token+IP |
-| Billing draft/send/retry/adjustments/payment method | Active claims plus owner/admin RPC and tenant-composite identifiers | Server-derived recipient/amount/provider ownership; durable provider attempts | Provider retry caps exist; general owner financial mutation throttle remains open |
-| Teacher invite/access/settings/instruments/availability | Active owner claim; school/teacher identity checked by RPC | Email/name/instrument/time validation; durable invite record | Invite send throttle remains open |
-| Profile/avatar | Active claim; storage path is derived from `auth.uid()` and Storage policy | MIME/size/image checks; upload cleanup semantics | Upload throttle remains open |
+| Billing draft/send/retry/adjustments/payment method | Active claims plus owner/admin RPC and tenant-composite identifiers | Server-derived recipient/amount/provider ownership; durable immutable provider attempts | Provider retry caps and statement-notice submission throttle exist; general owner financial mutation throttle remains open |
+| Teacher invite/access/settings/instruments/availability | Active owner claim; school/teacher identity checked by RPC | Email/name/instrument/time validation; durable invite record | Invite cooldown and owner/school hourly ceiling active |
+| Profile/avatar and school logo | Active claim; actor/school capability and Storage policies are rechecked | Images are byte-decoded, pixel-bounded, normalized, versioned, and cleaned up on failed metadata writes | Durable upload throttles active |
 | School/products/places/setup/notifications | Active role plus school-scoped RPC/RLS | UUID/enums/length/state checks vary by action | Low-risk general mutation throttle remains open |
 | Portal calendar rotate/revoke | Active payer claim; school account resolved by RPC | Token generated server-side; old token revoked atomically | 5 rotate/hour, 10 revoke/hour |
 | Public SMS consent | Browser Origin gate; no authenticated identity | Honeypot, normalized E.164, required consent, DB evidence | 5/hour per phone+IP |
 
 ## Findings and remaining work
 
-1. **High, partially remediated:** email delivery schemas are inconsistent. New lesson-created email intent is transactionally queued and has an explicit unknown-provider-outcome state. Teacher invitation and family lesson-request delivery still need migration into the unified communication/attempt/event model and full Resend webhook reconciliation.
-2. **Medium, open:** owner financial, teacher invite, avatar, reschedule, and general management actions inherit origin/auth/RPC/RLS protection but do not all have action-specific durable rate limits. Add limits based on business impact and test normal bulk workflows before enabling them.
+1. **Medium, partially remediated:** reconciled delivery coverage now includes teacher invitations, lesson-created mail, payer/owner billing notices, and collection advance notices, including explicit unknown-provider-outcome states. Continue migrating remaining legacy message kinds into the generic immutable attempt/event model.
+2. **Medium, partially remediated:** OTP, invite, media, school-create, lesson-create, change-request, approval, calendar, statement-notice, and Stripe onboarding/sync actions have durable limits. Reschedule and lower-risk general management actions retain origin/auth/RPC/RLS controls but do not all have action-specific limits. Add limits from measured abuse/business impact and test normal bulk workflows.
 3. **Medium, open:** Supabase hosted Auth rate limits, session duration/inactivity policy, refresh-token reuse detection, and CAPTCHA escalation thresholds are deployment configuration. Record and test their exact production values; do not rate-limit ordinary valid session refreshes so tightly that legitimate navigation fails.
 4. **Medium, open:** a single-node HMAC/IP limiter is durable in Postgres, but forwarded-IP trust depends on the deployment proxy. Confirm Vercel's header normalization and test spoofed forwarding headers at the public edge.
 5. **Medium, open:** add structured security-event capture and alerts for sustained throttles, signature failures, unknown hosts/origins, reconciliation-required email attempts, and provider webhook processing failures.
@@ -58,4 +58,3 @@ The central unsafe-method gate and Next Server Action validation cover every act
 - Approval and lesson-change replay/concurrency at and beyond limits; prove existing idempotent responses remain usable and no partial mutation occurs.
 - Forged, stale, duplicated, out-of-order, oversized, and valid Stripe/Resend/Twilio webhook payloads.
 - Provider acceptance followed by local-finalization failure for every email kind; prove unsafe retry is disabled until reconciliation.
-

@@ -4,7 +4,7 @@ import type Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { synchronizeStripeConnection } from "@/lib/stripe/connections";
 import { expireCardSetup, reconcileCompletedCardSetup } from "@/lib/stripe/payment-method-reconciliation";
-import { getStripe, getStripeWebhookSecrets } from "@/lib/stripe/server";
+import { getStripe, getStripeMode, getStripeWebhookSecrets } from "@/lib/stripe/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/types/database";
 
@@ -97,11 +97,16 @@ export async function POST(request: Request) {
   try {
     event = await verifyEvent(rawBody, signature);
   } catch (error) {
-    console.error("Stripe webhook signature verification failed", error);
+    console.error("Stripe webhook signature verification failed", { name: error instanceof Error ? error.name : "unknown" });
     return NextResponse.json({ error: "Invalid Stripe signature." }, { status: 400 });
   }
 
   const admin = createAdminClient();
+  const expectedLivemode = getStripeMode() === "live";
+  if (event.livemode !== expectedLivemode) {
+    console.error("Stripe webhook mode mismatch", { eventId: event.id, eventLivemode: event.livemode, expectedLivemode });
+    return NextResponse.json({ error: "Event mode mismatch." }, { status: 400 });
+  }
   const accountId = event.accountId;
   const { error: intakeError } = await admin.from("payment_provider_events").upsert({
     provider: "stripe",
@@ -115,10 +120,10 @@ export async function POST(request: Request) {
     provider_created_at: event.createdAt,
   }, { onConflict: "provider_event_id", ignoreDuplicates: true });
   if (intakeError) {
-    console.error("Stripe webhook intake failed", intakeError);
+    console.error("Stripe webhook intake failed", { eventId: event.id, code: intakeError.code });
     return NextResponse.json({
       error: "Event intake failed.",
-      ...(process.env.STRIPE_MODE === "test" ? { code: intakeError.code, detail: intakeError.message } : {}),
+      ...(process.env.NODE_ENV !== "production" && process.env.STRIPE_MODE === "test" ? { code: intakeError.code, detail: intakeError.message } : {}),
     }, { status: 500 });
   }
 
@@ -127,7 +132,10 @@ export async function POST(request: Request) {
     p_stale_after_seconds: 300,
   })
     .maybeSingle();
-  if (claimError) return NextResponse.json({ error: "Event claim failed." }, { status: 500 });
+  if (claimError) {
+    console.error("Stripe webhook claim failed", { eventId: event.id, code: claimError.code });
+    return NextResponse.json({ error: "Event claim failed." }, { status: 500 });
+  }
   if (!claimed) return NextResponse.json({ received: true, duplicate: true });
 
   try {
@@ -157,8 +165,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true });
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 1000) : "Unknown webhook processing failure";
-    await admin.from("payment_provider_events").update({ processing_status: "failed", last_error: message }).eq("id", claimed.id);
-    console.error("Stripe webhook processing failed", error);
+    const { error: failureWriteError } = await admin.from("payment_provider_events").update({ processing_status: "failed", last_error: message }).eq("id", claimed.id);
+    console.error("Stripe webhook processing failed", { eventId: event.id, name: error instanceof Error ? error.name : "unknown", failureWriteCode: failureWriteError?.code });
     return NextResponse.json({ error: "Event processing failed." }, { status: 500 });
   }
 }

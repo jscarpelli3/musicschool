@@ -160,14 +160,12 @@ Strengths:
 - Bounce, complaint, suppression, delayed, delivered, and failed states are modeled.
 - Webhooks verify the raw request using Svix headers.
 
-High-risk inconsistencies:
+Remaining high-risk inconsistencies (updated 2026-09-12):
 
-- Delivery durability is not uniform across message types. Teacher invitations and lesson-request emails do not yet use the same fully reconciled dispatch abstraction as owner notification/billing paths.
-- A Resend acceptance followed by a failed local update is explicitly handled in some billing paths, but ignored in teacher invitation delivery and counted as accepted in lesson-request dispatch.
-- The fallback update in the Resend webhook is not checked for failure.
-- There is no explicit request timeout or abort signal on the Resend fetch.
-- Fetch-level failures and invalid/non-JSON provider responses become similar errors, and retryability is not classified.
-- No centralized suppression check is visible for every message category.
+- Delivery durability is still not uniform across every legacy message type, but teacher invitations, lesson-created messages, owner/payer billing notifications, and statement notices now use bounded submission, signed webhook reconciliation, and explicit unknown-outcome states.
+- A notice submission that times out before its provider email ID is known safely remains `reconciliation_required`, but automated association of a later provider event is not available. Support must reconcile it before any retry; collection remains blocked.
+- Generic reconciliation and suppression coverage should be extended to any remaining legacy invitation/request outbox rather than duplicated per feature.
+- A complete provider fault-injection matrix and operator alerting for stuck reconciliation states remain open.
 
 ### Twilio
 

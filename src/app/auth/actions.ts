@@ -2,6 +2,7 @@
 
 import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 type AuthResult = { ok: boolean; message: string; accessState?: "ready" | "ambiguous" | "not_setup" };
 
@@ -12,7 +13,7 @@ export async function requestEmailCode(emailValue: string, audience: "account" |
   if (!validEmail(email)) return { ok: false, message: "Enter a valid email address." };
   const supabase = await createClient();
   const accessCheck = audience === "portal"
-    ? supabase.rpc("client_portal_email_access_state", { p_email: email })
+    ? createAdminClient().rpc("client_portal_email_access_state", { p_email: email })
     : null;
   try {
     await protectServerAction({ scope: `auth.code.request.${audience}`, subject: `email:${email}`, limit: 5, windowSeconds: 900, blockSeconds: 900 });
@@ -21,13 +22,16 @@ export async function requestEmailCode(emailValue: string, audience: "account" |
     return { ok: false, message: "This request could not be validated. Reload and try again." };
   }
   if (audience === "portal") {
-    const { data: accessState,error } = await accessCheck!;
+    const [{ error }, { error: otpError }] = await Promise.all([
+      accessCheck!,
+      supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } }),
+    ]);
     if (error) return { ok: false, message: "Portal access could not be checked. Wait a moment and try again." };
-    if (accessState === "not_setup") return { ok: false, accessState, message: "Your family portal has not been set up yet. Check the email address or contact your school for help." };
-    if (accessState === "ambiguous") return { ok: false, accessState, message: "More than one family account uses this email. Please contact the school for help." };
+    if (otpError) return { ok: true, message: "If this email can sign in, a one-time code is on its way." };
+    return { ok: true, message: "If this email can sign in, a one-time code is on its way." };
   }
   const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
-  if (error) return { ok: false, message: audience === "portal" ? "We could not send a sign-in code. Wait a moment and try again." : "We could not send a code for that email. Ask the school to confirm your access." };
+  if (error) return { ok: false, message: "We could not send a code for that email. Ask the school to confirm your access." };
   return { ok: true, message: "If this email can sign in, a one-time code is on its way." };
 }
 

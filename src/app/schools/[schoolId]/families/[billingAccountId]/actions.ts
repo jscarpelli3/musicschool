@@ -10,7 +10,8 @@ import { normalizeE164 } from "@/lib/phone";
 import { ensurePortalAuthIdentity } from "@/lib/portal/auth-identities";
 import { billingApprovalEmail } from "@/lib/resend/billing-approval-email";
 import { billingStatementNoticeEmail } from "@/lib/resend/billing-statement-notice-email";
-import { ResendRequestError, sendResendEmail } from "@/lib/resend/server";
+import { ResendRequestError, ResendUnknownOutcomeError, sendResendEmail } from "@/lib/resend/server";
+import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getTwilioMessagingServiceSid, sendTwilioMessage, TwilioRequestError } from "@/lib/twilio/server";
@@ -353,6 +354,13 @@ export async function sendBillingStatementNotice(
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
   if (!auth?.claims?.sub) redirect(`/login?next=${path}`);
+  try {
+    await protectServerAction({ scope: "billing.statement_notice.send", subject: `actor:${auth.claims.sub}|school:${schoolId}|period:${billingPeriodId}`, limit: 5, windowSeconds: 3600 });
+  } catch (caught) {
+    return { ok: false, message: caught instanceof RequestBoundaryError && caught.code === "rate_limited"
+      ? "Too many statement emails were requested. Wait before trying again."
+      : "This request could not be validated. Reload and try again." };
+  }
 
   const [{ data: school }, { data: period }, { data: readiness }, canManage] = await Promise.all([
     supabase.from("schools").select("name").eq("id", schoolId).maybeSingle(),
@@ -391,6 +399,11 @@ export async function sendBillingStatementNotice(
     const { error } = await admin.rpc("complete_billing_statement_notice_submission", { p_delivery_id: prepared.notice_delivery_id, p_provider_email_id: sent.id });
     if (error) return { ok: false, message: "Resend accepted the statement, but local reconciliation needs attention. Do not send it again yet." };
   } catch (error) {
+    if (error instanceof ResendUnknownOutcomeError) {
+      const { error: markError } = await admin.rpc("mark_billing_statement_notice_reconciliation_required", { p_delivery_id: prepared.notice_delivery_id });
+      if (markError) console.error("Statement notice unknown outcome could not be recorded", { deliveryId: prepared.notice_delivery_id, code: markError.code });
+      return { ok: false, message: "The email provider did not confirm whether it accepted the statement. Do not retry yet; delivery reconciliation is required." };
+    }
     const providerError = error instanceof ResendRequestError ? error : null;
     await admin.rpc("fail_billing_statement_notice_submission", { p_delivery_id: prepared.notice_delivery_id, p_code: providerError?.code ?? undefined });
     return { ok: false, message: "Resend did not accept the statement email. The failed attempt was recorded and can be retried." };

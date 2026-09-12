@@ -47,7 +47,7 @@
 - Connect configuration selected on 2026-08-05: sellers collect payments directly and use Stripe-hosted onboarding with the full Stripe Dashboard. Accounts v2 is used so Stripe remains responsible for fees, requirements, and unrecoverable connected-account losses; Express Dashboard is incompatible with that responsibility allocation.
 - Store `STRIPE_MODE=test` and the test secret key as server-only environment variables locally and in the appropriate Vercel environment. Never send the key through chat or prefix it with `NEXT_PUBLIC_`.
 
-## Create Before Public Email
+## Configured Provider Accounts
 
 ### 7. Domain And DNS
 
@@ -57,8 +57,9 @@
 
 ### 8. Transactional Email
 
-- Create a Resend account when invitations, schedule changes, and reminders are implemented.
-- Verify `notifications.commontime.studio` through Resend DNS records.
+- Resend is configured for invitations, schedule events, and billing notifications.
+- `notifications.commontime.studio` is verified through Resend DNS records.
+- Keep the send-only API key and webhook signing secret server-only and rotate them through the provider and deployment dashboards.
 - Keep authentication email configuration and operational email templates deliberately separated.
 
 ## Defer Until The Feature Is Scheduled
@@ -92,6 +93,6 @@
 4. Vercel project connected to GitHub
 5. Product domain and DNS
 6. Stripe test account and Connect platform configuration
-7. Resend when invitations/email are implemented
+7. Resend for invitations and operational email (complete)
 8. Paid Vercel and production Supabase when commercial launch is near
 9. Twilio and monitoring before their production features launch

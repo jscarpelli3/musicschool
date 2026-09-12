@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import sharp from "sharp";
 import { createClient } from "@/lib/supabase/server";
+import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
 
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const maxBytes = 2 * 1024 * 1024;
@@ -20,6 +21,8 @@ export async function uploadAvatar(formData: FormData): Promise<AvatarUploadResu
   const { data } = await supabase.auth.getClaims();
   const profileId = data?.claims?.sub;
   if (!profileId) redirect("/login?next=/profile");
+  try { await protectServerAction({ scope: "profile.avatar.upload", subject: `actor:${profileId}`, limit: 10, windowSeconds: 3600 }); }
+  catch (caught) { return { ok: false, message: caught instanceof RequestBoundaryError && caught.code === "rate_limited" ? "Too many avatar uploads were attempted. Wait before trying again." : "This upload could not be validated." }; }
 
   let normalizedImage: Buffer;
   try {

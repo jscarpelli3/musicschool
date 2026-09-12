@@ -6,6 +6,7 @@ import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
 import { synchronizeStripeConnection } from "@/lib/stripe/connections";
 import { getStripe, getStripeMode } from "@/lib/stripe/server";
 import { createClient } from "@/lib/supabase/server";
+import { protectServerAction } from "@/lib/security/request-boundary";
 
 function paymentsPath(schoolId: string, status?: string) {
   const path = `/schools/${schoolId}/payments`;
@@ -24,7 +25,7 @@ function onboardingFailureStatus(error: unknown) {
     return "platform-profile";
   }
 
-  console.error("Stripe onboarding failed", error);
+  console.error("Stripe onboarding failed", { name: error instanceof Error ? error.name : "unknown" });
   return "error";
 }
 
@@ -48,6 +49,8 @@ async function requireSchoolAdmin(schoolId: string) {
 
 export async function startStripeOnboarding(schoolId: string) {
   const { profileId, school, supabase } = await requireSchoolAdmin(schoolId);
+  try { await protectServerAction({ scope: "stripe.onboarding.start", subject: `actor:${profileId}|school:${schoolId}`, limit: 10, windowSeconds: 3600 }); }
+  catch { redirect(paymentsPath(schoolId, "rate-limited")); }
   const stripe = getStripe();
   const livemode = getStripeMode() === "live";
   let destination = paymentsPath(schoolId, "error");
@@ -110,6 +113,8 @@ export async function startStripeOnboarding(schoolId: string) {
 
 export async function syncStripeConnection(schoolId: string) {
   const { profileId, supabase } = await requireSchoolAdmin(schoolId);
+  try { await protectServerAction({ scope: "stripe.connection.sync", subject: `actor:${profileId}|school:${schoolId}`, limit: 30, windowSeconds: 3600 }); }
+  catch { redirect(paymentsPath(schoolId, "rate-limited")); }
   const livemode = getStripeMode() === "live";
   let status = "sync-error";
 
@@ -125,7 +130,7 @@ export async function syncStripeConnection(schoolId: string) {
     const { account } = await synchronizeStripeConnection(schoolId, connection.provider_account_id, profileId);
     status = account.charges_enabled && account.payouts_enabled ? "ready" : "synced";
   } catch (error) {
-    console.error("Stripe connection synchronization failed", error);
+    console.error("Stripe connection synchronization failed", { name: error instanceof Error ? error.name : "unknown" });
     status = "sync-error";
   }
 
