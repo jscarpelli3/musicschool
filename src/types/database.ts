@@ -5312,6 +5312,21 @@ export type Database = {
           school_name: string
         }[]
       }
+      get_billing_collection_readiness: {
+        Args: { p_billing_period_id: string; p_school_id: string }
+        Returns: {
+          advance_notice_days: number | null
+          amount_cents: number
+          approval_request_id: string | null
+          authorization_source: string
+          currency: string
+          mandate_id: string | null
+          monthly_cap_cents: number | null
+          readiness: string
+          reason: string | null
+          uncovered_categories: string[]
+        }[]
+      }
       get_client_portal_calendar_accounts: {
         Args: never
         Returns: {
@@ -5681,6 +5696,28 @@ export type Database = {
           recipient_email: string
           subject: string
         }[]
+      }
+      prepare_billing_statement_notice: {
+        Args: {
+          p_body_sha256: string
+          p_billing_period_id: string
+          p_from_address: string
+          p_school_id: string
+          p_subject: string
+        }
+        Returns: {
+          idempotency_key: string
+          notice_delivery_id: string
+          recipient_email: string
+        }[]
+      }
+      complete_billing_statement_notice_submission: {
+        Args: { p_delivery_id: string; p_provider_email_id: string }
+        Returns: undefined
+      }
+      fail_billing_statement_notice_submission: {
+        Args: { p_code?: string; p_delivery_id: string }
+        Returns: undefined
       }
       revise_submitted_billing_period: {
         Args: { p_billing_period_id: string; p_school_id: string }

@@ -9,6 +9,7 @@ import { getStripe } from "@/lib/stripe/server";
 import { normalizeE164 } from "@/lib/phone";
 import { ensurePortalAuthIdentity } from "@/lib/portal/auth-identities";
 import { billingApprovalEmail } from "@/lib/resend/billing-approval-email";
+import { billingStatementNoticeEmail } from "@/lib/resend/billing-statement-notice-email";
 import { ResendRequestError, sendResendEmail } from "@/lib/resend/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -18,6 +19,7 @@ export type CardSetupLinkState = { url: string | null; error: string | null };
 export type BillingApprovalSmsState = { ok: boolean; message: string };
 export type BillingContactPhoneState = { ok: boolean; message: string };
 export type BillingApprovalEmailState = { ok: boolean; message: string };
+export type BillingStatementNoticeState = { ok: boolean; message: string };
 export type BillingContactEmailState = { ok: boolean; message: string };
 export type BillingAdjustmentState = { ok: boolean; message: string };
 
@@ -338,6 +340,63 @@ export async function sendBillingApprovalEmail(
 
   revalidatePath(path);
   return { ok: true, message: `Approval request sent to ${email}.` };
+}
+
+export async function sendBillingStatementNotice(
+  schoolId: string,
+  billingAccountId: string,
+  billingPeriodId: string,
+  _previous: BillingStatementNoticeState,
+): Promise<BillingStatementNoticeState> {
+  void _previous;
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) redirect(`/login?next=${path}`);
+
+  const [{ data: school }, { data: period }, { data: readiness }, canManage] = await Promise.all([
+    supabase.from("schools").select("name").eq("id", schoolId).maybeSingle(),
+    supabase.from("billing_periods").select("label,amount_due_cents,currency").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", billingPeriodId).maybeSingle(),
+    supabase.rpc("get_billing_collection_readiness", { p_school_id: schoolId, p_billing_period_id: billingPeriodId }).maybeSingle(),
+    checkSchoolCapability(supabase, schoolId, "school.billing.manage"),
+  ]);
+  if (!canManage || !school || !period || !readiness || !["notice_required", "notice_failed"].includes(readiness.readiness)) {
+    return { ok: false, message: "This statement is not eligible for an automatic-payment notice." };
+  }
+
+  const amount = new Intl.NumberFormat("en-US", { style: "currency", currency: period.currency }).format(period.amount_due_cents / 100);
+  const message = billingStatementNoticeEmail({
+    schoolName: school.name,
+    periodLabel: period.label,
+    amount,
+    noticeDays: readiness.advance_notice_days!,
+    portalUrl: `${appOrigin()}/portal`,
+  });
+  const from = `${emailDisplayName(school.name)} via Common Time <notifications@notifications.commontime.studio>`;
+  const bodyHash = createHash("sha256").update(`${message.text}\n${message.html}`).digest("hex");
+  const { data: prepared, error: prepareError } = await supabase.rpc("prepare_billing_statement_notice", {
+    p_school_id: schoolId,
+    p_billing_period_id: billingPeriodId,
+    p_from_address: from,
+    p_subject: message.subject,
+    p_body_sha256: bodyHash,
+  }).maybeSingle();
+  if (prepareError || !prepared) return { ok: false, message: prepareError?.message.includes("recipient_suppressed")
+    ? "Email is paused after a permanent delivery problem or complaint. Confirm a different payer address first."
+    : "The statement notice could not be prepared. No email was sent." };
+
+  const admin = createAdminClient();
+  try {
+    const sent = await sendResendEmail({ from, to: prepared.recipient_email, subject: message.subject, html: message.html, text: message.text, idempotencyKey: prepared.idempotency_key, messageKind: "billing_statement_notice" });
+    const { error } = await admin.rpc("complete_billing_statement_notice_submission", { p_delivery_id: prepared.notice_delivery_id, p_provider_email_id: sent.id });
+    if (error) return { ok: false, message: "Resend accepted the statement, but local reconciliation needs attention. Do not send it again yet." };
+  } catch (error) {
+    const providerError = error instanceof ResendRequestError ? error : null;
+    await admin.rpc("fail_billing_statement_notice_submission", { p_delivery_id: prepared.notice_delivery_id, p_code: providerError?.code ?? undefined });
+    return { ok: false, message: "Resend did not accept the statement email. The failed attempt was recorded and can be retried." };
+  }
+  revalidatePath(path);
+  return { ok: true, message: `Statement notice accepted for ${prepared.recipient_email}. Collection remains blocked until verified delivery and the notice period both complete.` };
 }
 
 export async function retryBillingApprovalEmail(

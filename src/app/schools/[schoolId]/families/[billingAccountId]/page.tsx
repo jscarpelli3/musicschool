@@ -13,6 +13,7 @@ import { loadServiceEntitlements } from "@/lib/scheduling/service-entitlements";
 import { CardSetupControls } from "./card-setup-controls";
 import { BillingDraftForm } from "./billing-draft-form";
 import { BillingApprovalEmail } from "./billing-approval-email";
+import { BillingStatementNotice } from "./billing-statement-notice";
 import { BillingContactEmail } from "./billing-contact-email";
 import { BillingContactPhone } from "./billing-contact-phone";
 import { BillingPeriodLock } from "./billing-period-lock";
@@ -87,6 +88,13 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   }, {});
   const capabilities = await loadMySchoolCapabilities(schoolId);
   const canManagePayments = capabilities.has("school.billing.manage");
+  const readinessResults = canManagePayments ? await Promise.all(periodIds.map((billingPeriodId) =>
+    supabase.rpc("get_billing_collection_readiness", { p_school_id: schoolId, p_billing_period_id: billingPeriodId }).maybeSingle()
+  )) : [];
+  const readinessByPeriod = new Map(periodIds.flatMap((billingPeriodId, index) => {
+    const result = readinessResults[index];
+    return result?.data ? [[billingPeriodId, result.data] as const] : [];
+  }));
   const approvals = canManagePayments ? await loadOwnerApprovals(supabase,schoolId,{studentIds:students.map(student=>student.id)}) : [];
   const entitlements = canManagePayments ? await loadServiceEntitlements(supabase,schoolId,{studentIds:students.map(student=>student.id)}) : [];
   const stripeReady = connectionResult.data?.status === "enabled" && connectionResult.data.charges_enabled;
@@ -159,6 +167,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
                   {canManagePayments && billingPeriod.status === "locked" && !latestApprovalByPeriod.get(billingPeriod.id) ? <BillingPeriodUnlock schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
                   {canManagePayments && billingPeriod.status === "approval_pending" && latestApprovalByPeriod.get(billingPeriod.id)?.approval_status === "pending" ? <BillingPeriodRevise schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
                   {canManagePayments && periodState.canSendApproval && billingPeriod.amount_due_cents > 0 ? <BillingApprovalEmail schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} latestStatus={latestEmailStatusByPeriod.get(billingPeriod.id)} approvalStatus={latestApprovalByPeriod.get(billingPeriod.id)?.approval_status} approvedAt={latestApprovalByPeriod.get(billingPeriod.id)?.approved_at} /> : null}
+                  {canManagePayments && readinessByPeriod.get(billingPeriod.id)?.authorization_source === "active_mandate" ? <BillingStatementNotice schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} readiness={readinessByPeriod.get(billingPeriod.id)!.readiness} noticeDays={readinessByPeriod.get(billingPeriod.id)!.advance_notice_days!} /> : null}
                 </div>
               </details>
             );

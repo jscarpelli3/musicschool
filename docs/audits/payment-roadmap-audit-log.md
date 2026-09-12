@@ -671,3 +671,15 @@ Recorded on 2026-09-09.
 - Added one capability-authorized collection-readiness contract for immutable periods. It resolves exact approval before mandate use and otherwise returns explicit states for missing mandate, inactive saved-method consent, uncovered categories, cap excess, and required advance notice. UI and future Stripe execution no longer reconstruct those rules.
 - Migrations `20260909120000` and `20260909121000` are deployed. Structural assertions, TypeScript, ESLint, and `git diff --check` pass; linked database lint reports only the two pre-existing unused-variable warnings.
 - Remaining acceptance work is a controlled locked-statement fallback rehearsal and durable advance-notice email delivery/reconciliation.
+
+### Step 8B checkpoint — durable statement notice and frozen readiness contract
+
+Recorded on 2026-09-12.
+
+- Added a durable statement-notice delivery bound to one immutable billing period and the exact active mandate. It snapshots amount, currency, charge categories, notice days, recipient, and message hashes before the provider call.
+- Owner delivery uses Resend through a Server Action; provider identity and signed webhook events reconcile through the existing generic registry. The charge-readiness contract distinguishes required, failed, provider-pending, delivered-but-waiting, and fully elapsed notice states.
+- Readiness re-resolves the currently active mandate every time. Revocation or supersession therefore invalidates old notice authority even if that email was delivered. Cap excess, excluded categories, inactive saved-method consent, bounce, complaint, suppression, and changed immutable statement identity all fail closed.
+- Linked database lint found and prompted correction of an ambiguous suppression-column reference and an ambiguous mandate-category alias. Provider failure codes are now retained without message bodies or recipient data in diagnostics.
+- A controlled linked-project rehearsal passed `notice_required → notice_pending → ready`, duplicate webhook replay, revocation fallback, cap fallback, and category-scope fallback. Both controlled periods were left `void`, all rehearsal mandates were revoked, and zero payment attempts were created. Controlled period `4f104a02-1b8a-4103-b1fc-41e301ba92fa` anchors the successful evidence.
+- Migrations `20260912100000` through `20260912103000` are deployed. TypeScript, ESLint, `git diff --check`, the Next.js 16.3 webpack production build, and linked database lint pass with only the two pre-existing unused-variable warnings.
+- The readiness contract is frozen for Step 9 and the broad UI pass. One genuine provider-delivered beta statement remains required before Stripe charge execution is enabled.
