@@ -3,9 +3,11 @@ import { COMMON_INSTRUMENTS } from "@/lib/schools/instruments";
 export function InstrumentCatalogForm({
   instruments,
   action,
+  returnPath,
 }: {
   instruments: string[];
   action: (formData: FormData) => void | Promise<void>;
+  returnPath?: string;
 }) {
   const common = new Set(COMMON_INSTRUMENTS.map((name) => name.toLocaleLowerCase()));
   const selected = new Set(instruments.map((name) => name.toLocaleLowerCase()));
@@ -13,6 +15,7 @@ export function InstrumentCatalogForm({
 
   return (
     <form action={action} className="space-y-6">
+      {returnPath ? <input type="hidden" name="return_path" value={returnPath} /> : null}
       <fieldset>
         <legend className="text-sm font-medium text-ink">Instruments taught</legend>
         <p className="mt-1 text-sm leading-6 text-muted">These choices become the instrument list used throughout your school.</p>

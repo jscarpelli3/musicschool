@@ -3844,6 +3844,51 @@ export type Database = {
           },
         ]
       }
+      school_onboarding_invitations: {
+        Row: {
+          claimed_at: string | null
+          claimed_by: string | null
+          claimed_school_id: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          intended_school_name: string | null
+          issued_by: string | null
+          normalized_email: string
+          status: string
+          token_hash: string | null
+          updated_at: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          claimed_school_id?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          intended_school_name?: string | null
+          issued_by?: string | null
+          normalized_email: string
+          status?: string
+          token_hash?: string | null
+          updated_at?: string
+        }
+        Update: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          claimed_school_id?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          intended_school_name?: string | null
+          issued_by?: string | null
+          normalized_email?: string
+          status?: string
+          token_hash?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       school_members: {
         Row: {
           created_at: string
@@ -4096,6 +4141,7 @@ export type Database = {
           intended_charge_day: number
           logo_path: string | null
           name: string
+          onboarding_completed_at: string | null
           payer_review_days: number
           phone: string | null
           postal_code: string | null
@@ -4120,6 +4166,7 @@ export type Database = {
           intended_charge_day?: number
           logo_path?: string | null
           name: string
+          onboarding_completed_at?: string | null
           payer_review_days?: number
           phone?: string | null
           postal_code?: string | null
@@ -4144,6 +4191,7 @@ export type Database = {
           intended_charge_day?: number
           logo_path?: string | null
           name?: string
+          onboarding_completed_at?: string | null
           payer_review_days?: number
           phone?: string | null
           postal_code?: string | null
@@ -5184,9 +5232,26 @@ export type Database = {
         }
         Returns: string
       }
+      create_onboarding_student_and_payer: {
+        Args: {
+          p_payer_email: string
+          p_payer_first_name: string
+          p_payer_last_name: string
+          p_payer_profile_id: string
+          p_relationship?: string
+          p_school_id: string
+          p_student_first_name: string
+          p_student_last_name: string
+        }
+        Returns: Json
+      }
       create_school: {
         Args: { school_name: string; school_timezone?: string }
         Returns: string
+      }
+      complete_school_onboarding: {
+        Args: { p_school_id: string }
+        Returns: undefined
       }
       create_single_lesson: {
         Args: {
@@ -5417,6 +5482,16 @@ export type Database = {
         Returns: boolean
       }
       is_platform_admin: { Args: never; Returns: boolean }
+      issue_school_onboarding_invitation: {
+        Args: {
+          p_email: string
+          p_expires_at: string
+          p_issued_by: string
+          p_school_name: string
+          p_token_hash: string
+        }
+        Returns: string
+      }
       is_school_member: { Args: { target_school_id: string }; Returns: boolean }
       lock_family_billing_period: {
         Args: { p_billing_period_id: string; p_school_id: string }

@@ -5,7 +5,7 @@ import { createSchool, type CreateSchoolState } from "./actions";
 
 const initialState: CreateSchoolState = { error: null };
 
-export function SchoolForm() {
+export function SchoolForm({ initialName = "" }: { initialName?: string }) {
   const [state, action, pending] = useActionState(createSchool, initialState);
 
   return (
@@ -17,6 +17,7 @@ export function SchoolForm() {
           required
           maxLength={120}
           autoComplete="organization"
+          defaultValue={initialName}
           className="w-full rounded-control border border-line bg-surface px-4 py-3 outline-none transition focus:border-brand"
           placeholder="My Music School"
         />

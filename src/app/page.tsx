@@ -13,13 +13,16 @@ export default async function Home() {
 
   const { data: memberships } = await supabase
     .from("school_members")
-    .select("role, schools(id, name, slug)")
+    .select("role, schools(id, name, slug, onboarding_completed_at)")
     .eq("profile_id", profileId)
     .eq("status", "active");
 
   if (!memberships?.length) redirect("/setup");
 
   if (memberships.length === 1 && memberships[0].schools) {
+    if (!memberships[0].schools.onboarding_completed_at && memberships[0].role === "owner") {
+      redirect(`/schools/${memberships[0].schools.id}/onboarding`);
+    }
     redirect(`/schools/${memberships[0].schools.id}`);
   }
 
@@ -33,7 +36,7 @@ export default async function Home() {
             school ? (
               <Link
                 key={school.id}
-                href={`/schools/${school.id}`}
+                href={!school.onboarding_completed_at && role === "owner" ? `/schools/${school.id}/onboarding` : `/schools/${school.id}`}
                 className="grid grid-cols-[1fr_auto] border-b border-line py-5 transition hover:text-brand"
               >
                 <span className="block text-lg font-medium">{school.name}</span>

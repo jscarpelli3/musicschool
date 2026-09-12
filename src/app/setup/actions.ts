@@ -37,5 +37,5 @@ export async function createSchool(
       : "The school could not be created. Nothing was changed; try again." };
   }
 
-  redirect(`/schools/${schoolId}`);
+  redirect(`/schools/${schoolId}/onboarding`);
 }

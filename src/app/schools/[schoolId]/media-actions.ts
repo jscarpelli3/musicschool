@@ -16,7 +16,7 @@ function validImage(value: FormDataEntryValue | null): value is File {
 
 export async function uploadSchoolLogo(schoolId: string, formData: FormData) {
   const requestedReturnPath = String(formData.get("return_path") ?? "");
-  const returnPath = requestedReturnPath === `/schools/${schoolId}/setup`
+  const returnPath = requestedReturnPath === `/schools/${schoolId}/setup` || requestedReturnPath === `/schools/${schoolId}/onboarding`
     ? requestedReturnPath
     : `/schools/${schoolId}`;
   const image = formData.get("logo");

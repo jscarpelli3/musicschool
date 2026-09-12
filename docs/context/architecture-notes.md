@@ -1,5 +1,12 @@
 # Architecture Notes
 
+## Invitation-only tenant bootstrap (2026-09-12)
+
+- First-school creation is not a generic authenticated capability. A verified Auth email must match one active, unexpired platform invitation.
+- Invitation URLs are bearer credentials whose raw token is shown once and never stored. The database stores only a SHA-256 digest, retains invitation history, and permits one active invitation per email.
+- Platform invitation replacement is atomic and recorded in a platform-level audit log because no school exists yet to own the event.
+- The onboarding page reads durable domain records instead of maintaining a parallel browser-only wizard state. First-family creation is an atomic RPC so student, payer, contact, billing account, and assignment cannot drift apart.
+
 ## Current Recommendation
 
 - Framework: Next.js with App Router
