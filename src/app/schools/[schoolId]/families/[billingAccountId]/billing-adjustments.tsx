@@ -39,5 +39,5 @@ export function BillingAdjustmentForm({ schoolId, billingAccountId, billingPerio
 export function BillingAdjustmentRemove({ schoolId, billingAccountId, billingPeriodId, adjustmentId }: {
   schoolId: string; billingAccountId: string; billingPeriodId: string; adjustmentId: string;
 }) {
-  return <form action={async () => { await removeBillingAdjustment(schoolId, billingAccountId, billingPeriodId, adjustmentId); }}><button className="line-action pb-1 text-xs text-muted hover:text-danger">Remove</button></form>;
+  return <form action={async () => { await removeBillingAdjustment(schoolId, billingAccountId, billingPeriodId, adjustmentId); }}><button className="text-action text-xs text-muted hover:bg-danger/10 hover:text-danger">Remove</button></form>;
 }

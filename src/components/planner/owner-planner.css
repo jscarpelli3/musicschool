@@ -7,28 +7,6 @@
   );
 }
 
-.line-action {
-  position: relative;
-}
-
-.line-action::after {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 1px;
-  content: "";
-  background: currentColor;
-  transform: scaleX(0.18);
-  transform-origin: left;
-  transition: transform 260ms cubic-bezier(0.2, 0.75, 0.25, 1);
-}
-
-.line-action:hover::after,
-.line-action:focus-visible::after {
-  transform: scaleX(1);
-}
-
 .availability-block {
   position: absolute;
   z-index: 1;

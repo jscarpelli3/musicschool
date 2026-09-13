@@ -4137,6 +4137,7 @@ export type Database = {
           created_by: string
           currency: string
           family_billing_mode: string
+          font_key: string
           id: string
           intended_charge_day: number
           logo_path: string | null
@@ -4162,6 +4163,7 @@ export type Database = {
           created_by: string
           currency?: string
           family_billing_mode?: string
+          font_key?: string
           id?: string
           intended_charge_day?: number
           logo_path?: string | null
@@ -4187,6 +4189,7 @@ export type Database = {
           created_by?: string
           currency?: string
           family_billing_mode?: string
+          font_key?: string
           id?: string
           intended_charge_day?: number
           logo_path?: string | null

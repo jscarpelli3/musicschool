@@ -361,23 +361,23 @@ export function OwnerPlanner({
       </div>
 
       <div className="flex items-center justify-between border-b border-line py-3">
-        <button type="button" onClick={() => move(-1)} className="line-action text-sm text-muted hover:text-ink">← Previous</button>
+        <button type="button" onClick={() => move(-1)} className="text-action text-sm text-muted hover:text-ink">← Previous</button>
         <button type="button" onClick={() => setAnchorKey(initialDate)} className="text-sm text-brand hover:text-brand-hover">
           {view === "day" ? "Go to today" : view === "week" ? "Go to this week" : "Go to this month"}
         </button>
-        <button type="button" onClick={() => move(1)} className="line-action text-sm text-muted hover:text-ink">Next →</button>
+        <button type="button" onClick={() => move(1)} className="text-action text-sm text-muted hover:text-ink">Next →</button>
       </div>
 
       {rescheduleNotices.length ? (
         <div role="status" className="border-b border-brand bg-[color-mix(in_srgb,var(--ui-brand)_8%,transparent)]">
           <div className="flex items-center justify-between gap-5 border-b border-line px-4 py-3">
             <span className="text-xs uppercase tracking-[0.14em] text-brand">Recent calendar changes</span>
-            <button type="button" onClick={() => setRescheduleNotices([])} className="line-action pb-1 text-xs text-muted hover:text-ink">Dismiss all</button>
+            <button type="button" onClick={() => setRescheduleNotices([])} className="text-action text-xs text-muted hover:text-ink">Dismiss all</button>
           </div>
           {rescheduleNotices.map((notice) => (
             <div key={notice.id} className="flex items-start justify-between gap-5 border-b border-line px-4 py-4 text-sm text-brand last:border-b-0">
               <span>{notice.message}</span>
-              <button type="button" aria-label="Dismiss this calendar change" onClick={() => setRescheduleNotices((current) => current.filter((item) => item.id !== notice.id))} className="line-action shrink-0 pb-1 text-xs text-muted hover:text-ink">Dismiss</button>
+              <button type="button" aria-label="Dismiss this calendar change" onClick={() => setRescheduleNotices((current) => current.filter((item) => item.id !== notice.id))} className="text-action shrink-0 text-xs text-muted hover:text-ink">Dismiss</button>
             </div>
           ))}
         </div>
@@ -1008,7 +1008,7 @@ function LessonSheet({
               {student?.name ?? "Student"}
             </h2>
           </div>
-          <button autoFocus type="button" onClick={onClose} className="line-action pb-2 text-sm text-muted hover:text-ink">Close</button>
+          <button autoFocus type="button" onClick={onClose} className="text-action text-sm text-muted hover:text-ink">Close</button>
         </div>
 
         <dl className="divide-y divide-line border-b border-line">
@@ -1022,7 +1022,7 @@ function LessonSheet({
 
         {canReschedule && lesson.can_reschedule ? (
           <section className="border-b border-line py-8">
-            <button type="button" onClick={onReschedule} className="line-action pb-2 text-sm text-brand hover:text-brand-hover">Reschedule on calendar →</button>
+            <button type="button" onClick={onReschedule} className="text-action text-sm text-brand hover:text-brand-hover">Reschedule on calendar →</button>
             <p className="mt-3 text-xs leading-5 text-muted">The calendar will enter move mode. Dropping proposes a destination; nothing changes until you hold to confirm.</p>
           </section>
         ) : null}
@@ -1115,7 +1115,7 @@ function ReschedulePermission({ allowed, blockedReason, canManage, onChange }: {
           <button type="button" disabled={saving || !reason.trim()} onClick={() => save(false)} className="mt-5 border border-line px-4 py-3 text-sm text-muted disabled:opacity-40">{saving ? "Saving…" : "Mark non-reschedulable"}</button>
         </details>
       ) : null}
-      {canManage && !allowed ? <button type="button" disabled={saving} onClick={() => save(true)} className="line-action mt-5 pb-2 text-sm text-brand">{saving ? "Saving…" : "Allow rescheduling again"}</button> : null}
+      {canManage && !allowed ? <button type="button" disabled={saving} onClick={() => save(true)} className="text-action mt-5 text-sm text-brand">{saving ? "Saving…" : "Allow rescheduling again"}</button> : null}
       {message ? <p className="mt-3 text-xs text-muted" aria-live="polite">{message}</p> : null}
       <p className="mt-4 text-xs leading-5 text-muted">Past or completed lessons remain ineligible even when this setting is allowed.</p>
     </section>
