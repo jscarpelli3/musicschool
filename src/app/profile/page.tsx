@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AVATAR_UPLOAD_MAX_MB } from "@/lib/media/image-upload";
 import { createClient } from "@/lib/supabase/server";
 import { updateProfile } from "./actions";
 import { AvatarUploader } from "./avatar-uploader";
@@ -10,7 +11,7 @@ const field = "w-full border-b border-line bg-transparent py-3 outline-none tran
 const messages: Record<string, { text: string; error?: boolean }> = {
   "avatar-updated": { text: "Avatar updated." },
   "profile-updated": { text: "Profile updated." },
-  "invalid-avatar": { text: "Choose a JPG, PNG, or WebP image no larger than 2 MB.", error: true },
+  "invalid-avatar": { text: `Choose a JPG, PNG, or WebP image no larger than ${AVATAR_UPLOAD_MAX_MB} MB.`, error: true },
   "avatar-error": { text: "The avatar could not be saved.", error: true },
   "invalid-profile": { text: "Check your name and phone number.", error: true },
   "profile-error": { text: "The profile could not be saved.", error: true },
