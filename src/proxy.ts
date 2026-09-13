@@ -15,16 +15,15 @@ function appHosts() {
   return hosts;
 }
 
-function trustedMutationOrigins() {
+function trustedMutationOrigins(request: NextRequest, requestHost: string) {
   const origins = new Set(["https://app.commontime.studio"]);
+  const forwardedProtocol = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const requestProtocol = forwardedProtocol || request.nextUrl.protocol.replace(":", "");
+  try { origins.add(new URL(`${requestProtocol}://${requestHost}`).origin); } catch { /* malformed hosts fail the origin check below */ }
   if (process.env.APP_URL) {
     try { origins.add(new URL(process.env.APP_URL).origin); } catch { /* invalid deployment configuration is rejected below */ }
   }
   if (process.env.VERCEL_URL) origins.add(`https://${process.env.VERCEL_URL}`);
-  if (process.env.NODE_ENV !== "production") {
-    origins.add("http://localhost:3000");
-    origins.add("http://127.0.0.1:3000");
-  }
   return origins;
 }
 
@@ -75,7 +74,7 @@ export async function proxy(request: NextRequest) {
   if (unsafeMethod && !providerWebhook) {
     const origin = request.headers.get("origin");
     const fetchSite = request.headers.get("sec-fetch-site");
-    if (fetchSite === "cross-site" || !origin || !trustedMutationOrigins().has(origin)) {
+    if (fetchSite === "cross-site" || !origin || !trustedMutationOrigins(request, requestHost).has(origin)) {
       return NextResponse.json({ error: "Untrusted request origin." }, { status: 403 });
     }
   }
