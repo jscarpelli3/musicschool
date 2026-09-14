@@ -9,7 +9,6 @@
 
 .availability-block {
   position: absolute;
-  z-index: 1;
   padding: 0;
   border-left: 1px solid color-mix(in srgb, var(--ui-brand) 58%, transparent);
   background: color-mix(in srgb, var(--ui-brand) 9%, transparent);
@@ -25,21 +24,10 @@
   z-index: 18;
   left: var(--active-left, 6px) !important;
   width: var(--active-width, calc(100% - 12px)) !important;
-  background: color-mix(in srgb, var(--ui-brand) 15%, var(--ui-canvas));
-}
-
-.availability-block[data-collapsed="true"] {
-  z-index: 12;
-  left: var(--collapsed-left) !important;
-  width: 14px !important;
-  border-left-width: 2px;
-  border-left-color: color-mix(in srgb, var(--ui-brand) 72%, transparent);
-  background: transparent;
-}
-
-.availability-block[data-collapsed="true"]:hover,
-.availability-block[data-collapsed="true"]:focus-visible {
-  border-left-color: var(--ui-brand-hover);
+  background: var(--ui-surface);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ui-brand) 34%, transparent);
+  filter: none;
+  opacity: 1;
 }
 
 .availability-block:focus-visible {
@@ -48,7 +36,9 @@
 
 .availability-label {
   position: absolute;
+  z-index: 6;
   width: max-content;
+  pointer-events: none;
   font-size: 0.68rem;
   line-height: 1;
   letter-spacing: 0.04em;
@@ -86,11 +76,6 @@
   color: var(--ui-brand-hover);
   opacity: 1;
   transform: translateY(0);
-}
-
-.availability-block[data-collapsed="true"] .availability-label-vertical {
-  left: 0.12rem;
-  color: var(--ui-brand-hover);
 }
 
 .lesson-block {
@@ -136,14 +121,9 @@
   z-index: 20;
   left: var(--active-lesson-left, 10px) !important;
   width: var(--active-lesson-width, calc(100% - 20px)) !important;
-}
-
-.lesson-block[data-collapsed="true"] {
-  z-index: 9;
-  left: var(--collapsed-left) !important;
-  width: 14px !important;
-  border-left-width: 2px;
-  background: var(--ui-brand);
+  background: var(--ui-surface-raised);
+  filter: none;
+  opacity: 1;
 }
 
 .lesson-block[data-compact="true"] .lesson-block-content {

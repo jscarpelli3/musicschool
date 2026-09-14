@@ -617,6 +617,7 @@ function TimelineView({
   const [dragging, setDragging] = useState(false);
   const [hoverSlot, setHoverSlot] = useState<CreationSlot | null>(null);
   const [expandedTrack, setExpandedTrack] = useState<{ dateKey: string; teacherId: string } | null>(null);
+  const [pinnedTrack, setPinnedTrack] = useState<{ dateKey: string; teacherId: string } | null>(null);
   const scrollFrame = useRef<HTMLDivElement | null>(null);
   const pointerStart = useRef<{ x: number; y: number; offset: number } | null>(null);
   const pendingLesson = useRef<LessonWithParts | null>(null);
@@ -750,8 +751,15 @@ function TimelineView({
           {columns.map((column) => {
             const dateKey = key(column.date);
             const teacherCount = column.teachers.length;
-            const activeTeacherIndex = expandedTrack?.dateKey === dateKey
-              ? column.teachers.findIndex((teacher) => teacher.id === expandedTrack.teacherId)
+            const activeTrack = creationMode || rescheduleLesson
+              ? null
+              : pinnedTrack?.dateKey === dateKey
+                ? pinnedTrack
+                : expandedTrack?.dateKey === dateKey
+                  ? expandedTrack
+                  : null;
+            const activeTeacherIndex = activeTrack?.dateKey === dateKey
+              ? column.teachers.findIndex((teacher) => teacher.id === activeTrack.teacherId)
               : -1;
             return (
               <div
@@ -779,7 +787,7 @@ function TimelineView({
                   if (!creationMode && !rescheduleLesson && !dragging) setExpandedTrack(null);
                 }}
                 onClick={(event) => {
-                  if (!creationMode) { setExpandedTrack(null); return; }
+                  if (!creationMode) { setExpandedTrack(null); setPinnedTrack(null); return; }
                   if (!canCreateLesson || !column.teachers.length || rescheduleLesson || event.detail === 0) return;
                   if (event.target instanceof Element && event.target.closest(".lesson-block")) return;
                   onCreateSlot(creationSlotFromPointer(event, dateKey, column.teachers));
@@ -799,9 +807,8 @@ function TimelineView({
                         className="availability-block"
                         data-teacher-id={teacher.id}
                         data-active={activeTeacherIndex === teacherIndex}
-                        data-collapsed={activeTeacherIndex >= 0 && activeTeacherIndex !== teacherIndex}
-                        aria-pressed={activeTeacherIndex === teacherIndex}
-                        title={`${teacher.name} available ${clock(start)}–${clock(end)}`}
+                        aria-pressed={pinnedTrack?.dateKey === dateKey && pinnedTrack.teacherId === teacher.id}
+                        title={`${teacher.name} available ${clock(start)}–${clock(end)}. Click to ${pinnedTrack?.dateKey === dateKey && pinnedTrack.teacherId === teacher.id ? "unpin" : "pin"} this teacher.`}
                         style={availabilityTrackStyle(start, end, teacherIndex, teacherCount, activeTeacherIndex)}
                         onPointerEnter={(event) => {
                           if (event.pointerType !== "touch" && !creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: teacher.id });
@@ -810,10 +817,10 @@ function TimelineView({
                         onClick={(event) => {
                           if (creationMode) return;
                           event.stopPropagation();
-                          setExpandedTrack((current) => current?.dateKey === dateKey && current.teacherId === teacher.id ? null : { dateKey, teacherId: teacher.id });
+                          setPinnedTrack((current) => current?.dateKey === dateKey && current.teacherId === teacher.id ? null : { dateKey, teacherId: teacher.id });
                         }}
                       >
-                        {showAvailabilityLabels ? <><span aria-hidden="true" className="availability-label availability-label-vertical">{teacher.name}</span><span aria-hidden="true" className="availability-label availability-label-expanded">{teacher.name}</span></> : null}
+                        {showAvailabilityLabels ? <><span aria-hidden="true" className="availability-label availability-label-vertical">{teacher.name}</span><span aria-hidden="true" className="availability-label availability-label-expanded">{teacher.name}{pinnedTrack?.dateKey === dateKey && pinnedTrack.teacherId === teacher.id ? " · pinned" : ""}</span></> : null}
                         <span className="sr-only">{teacher.name} available {clock(start)} to {clock(end)}</span>
                       </button>
                     );
@@ -835,7 +842,6 @@ function TimelineView({
                         data-reschedule-origin={rescheduleLesson?.id === lesson.id}
                         data-dragging={dragging && rescheduleLesson?.id === lesson.id}
                         data-active={activeTeacherIndex === teacherIndex}
-                        data-collapsed={activeTeacherIndex >= 0 && activeTeacherIndex !== teacherIndex}
                         data-compact={compactLesson}
                         style={rescheduleLesson?.id === lesson.id ? lessonTrackStyle(lesson.start.minutes, lesson.end.minutes, 0, 1, -1) : lessonTrackStyle(lesson.start.minutes, lesson.end.minutes, teacherIndex, teacherCount, activeTeacherIndex)}
                         aria-label={`${studentNames[lesson.student_id]} with ${teacher?.name}, ${clock(lesson.start.minutes)}, ${placeDetails[lesson.place_id]?.name ?? "place not set"}. ${rescheduleLesson?.id === lesson.id ? "Drag to propose another time." : "Open lesson details."}`}
@@ -932,12 +938,6 @@ function trackStyle(start: number, end: number, track: number, tracks: number, l
   };
 }
 
-function collapsedTrackLeft(track: number, tracks: number, activeTrack: number) {
-  return track < activeTrack
-    ? `${track * 14}px`
-    : `calc(100% - ${(tracks - track) * 14}px)`;
-}
-
 function availabilityTrackStyle(
   start: number,
   end: number,
@@ -956,10 +956,7 @@ function availabilityTrackStyle(
     } as CSSProperties;
   }
 
-  return {
-    ...base,
-    "--collapsed-left": collapsedTrackLeft(track, tracks, activeTrack),
-  } as CSSProperties;
+  return base;
 }
 
 function lessonTrackStyle(
@@ -971,12 +968,7 @@ function lessonTrackStyle(
 ): CSSProperties {
   const base = trackStyle(start, end, track, tracks, true);
   if (activeTrack < 0) return base;
-  if (track !== activeTrack) {
-    return {
-      ...base,
-      "--collapsed-left": collapsedTrackLeft(track, tracks, activeTrack),
-    } as CSSProperties;
-  }
+  if (track !== activeTrack) return base;
   return {
     ...base,
     "--active-lesson-left": "10px",
