@@ -16,9 +16,9 @@
   color: var(--ui-muted);
   text-align: left;
   transition:
-    left 280ms cubic-bezier(0.2, 0.75, 0.25, 1),
-    width 280ms cubic-bezier(0.2, 0.75, 0.25, 1),
-    background 180ms ease;
+    left 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    background 240ms ease;
 }
 
 .availability-block[data-active="true"] {
@@ -52,7 +52,10 @@
   font-size: 0.68rem;
   line-height: 1;
   letter-spacing: 0.04em;
-  transition: color 180ms ease, opacity 160ms ease, transform 180ms ease;
+  transition:
+    color 240ms ease,
+    opacity 240ms ease,
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .availability-label-vertical {
@@ -97,11 +100,11 @@
   border-left: 2px solid var(--ui-brand);
   background: var(--ui-surface-raised);
   transition:
-    left 280ms cubic-bezier(0.2, 0.75, 0.25, 1),
-    width 280ms cubic-bezier(0.2, 0.75, 0.25, 1),
-    background 180ms ease,
-    color 180ms ease,
-    opacity 180ms ease;
+    left 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    background 240ms ease,
+    color 240ms ease,
+    opacity 240ms ease;
 }
 
 .lesson-block-content {
@@ -110,7 +113,7 @@
   height: 100%;
   overflow: hidden;
   padding: 0.3rem 0.4rem;
-  transition: opacity 140ms ease;
+  transition: opacity 240ms ease;
 }
 
 .lesson-student-name {
@@ -122,7 +125,7 @@
   line-height: 1.05;
   text-overflow: ellipsis;
   white-space: nowrap;
-  transition: font-size 180ms ease;
+  transition: font-size 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .lesson-block[data-active="true"] .lesson-student-name {
