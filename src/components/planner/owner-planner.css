@@ -146,7 +146,7 @@
   background: var(--ui-brand);
 }
 
-.lesson-block[data-collapsed="true"] .lesson-block-content {
+.lesson-block[data-compact="true"] .lesson-block-content {
   opacity: 0;
 }
 
@@ -164,7 +164,7 @@
   writing-mode: vertical-rl;
 }
 
-.lesson-block[data-collapsed="true"] .lesson-student-initials {
+.lesson-block[data-compact="true"] .lesson-student-initials {
   display: grid;
 }
 
@@ -277,7 +277,7 @@
   opacity: 1;
 }
 
-.lesson-block[data-collapsed="true"] .lesson-reschedule-icon {
+.lesson-block[data-compact="true"] .lesson-reschedule-icon {
   display: none;
 }
 

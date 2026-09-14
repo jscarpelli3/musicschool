@@ -823,6 +823,7 @@ function TimelineView({
                   .map((lesson) => {
                     const teacherIndex = Math.max(0, column.teachers.findIndex((teacher) => teacher.id === lesson.teacher_id));
                     const teacher = column.teachers[teacherIndex];
+                    const compactLesson = rescheduleLesson?.id !== lesson.id && teacherCount > 1 && activeTeacherIndex !== teacherIndex;
                     return (
                       <button
                         key={lesson.id}
@@ -835,6 +836,7 @@ function TimelineView({
                         data-dragging={dragging && rescheduleLesson?.id === lesson.id}
                         data-active={activeTeacherIndex === teacherIndex}
                         data-collapsed={activeTeacherIndex >= 0 && activeTeacherIndex !== teacherIndex}
+                        data-compact={compactLesson}
                         style={rescheduleLesson?.id === lesson.id ? lessonTrackStyle(lesson.start.minutes, lesson.end.minutes, 0, 1, -1) : lessonTrackStyle(lesson.start.minutes, lesson.end.minutes, teacherIndex, teacherCount, activeTeacherIndex)}
                         aria-label={`${studentNames[lesson.student_id]} with ${teacher?.name}, ${clock(lesson.start.minutes)}, ${placeDetails[lesson.place_id]?.name ?? "place not set"}. ${rescheduleLesson?.id === lesson.id ? "Drag to propose another time." : "Open lesson details."}`}
                         onPointerEnter={(event) => {
