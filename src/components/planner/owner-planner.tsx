@@ -200,6 +200,7 @@ export function OwnerPlanner({
   const [proposedPlaceId, setProposedPlaceId] = useState("");
   const [allowOutsideAvailability, setAllowOutsideAvailability] = useState(false);
   const [creationSlot, setCreationSlot] = useState<CreationSlot | null>(null);
+  const [creatingLesson, setCreatingLesson] = useState(false);
   const compactInitialized = useRef(false);
   const anchor = fromKey(anchorKey);
 
@@ -217,6 +218,7 @@ export function OwnerPlanner({
   useEffect(() => {
     const reset = () => {
       setCreationSlot(null);
+      setCreatingLesson(false);
       setSelectedLessonId(null);
       setRescheduleLessonId(null);
       setProposal(null);
@@ -246,6 +248,15 @@ export function OwnerPlanner({
     window.addEventListener("keydown", cancelOnEscape);
     return () => window.removeEventListener("keydown", cancelOnEscape);
   }, [rescheduleLessonId]);
+
+  useEffect(() => {
+    if (!creatingLesson) return;
+    function cancelOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setCreatingLesson(false);
+    }
+    window.addEventListener("keydown", cancelOnEscape);
+    return () => window.removeEventListener("keydown", cancelOnEscape);
+  }, [creatingLesson]);
 
   useEffect(() => {
     const compact = window.matchMedia("(max-width: 639px)");
@@ -278,6 +289,7 @@ export function OwnerPlanner({
   }
 
   function beginReschedule(lesson: LessonWithParts, keepCalendarPosition = false) {
+    setCreatingLesson(false);
     setSelectedLessonId(null);
     setRescheduleLessonId(lesson.id);
     setProposal(null);
@@ -301,6 +313,17 @@ export function OwnerPlanner({
     setDropError(null);
     setRescheduleReason("");
     setAllowOutsideAvailability(false);
+  }
+
+  function toggleCreationMode() {
+    if (creatingLesson) {
+      setCreatingLesson(false);
+      return;
+    }
+    setSelectedLessonId(null);
+    cancelReschedule();
+    setCreatingLesson(true);
+    if (view === "month") setView(window.matchMedia("(max-width: 639px)").matches ? "day" : "week");
   }
 
   function submitReschedule() {
@@ -338,6 +361,16 @@ export function OwnerPlanner({
           <h2 className="mt-3 font-display text-4xl font-normal tracking-[-0.03em]">{title}</h2>
         </div>
         <div className="flex flex-wrap items-end gap-8">
+          {lessonCreationOptions ? (
+            <button
+              type="button"
+              aria-pressed={creatingLesson}
+              onClick={toggleCreationMode}
+              className={`rounded-control border px-4 py-2 text-sm transition hover:-translate-y-px ${creatingLesson ? "border-brand bg-brand text-canvas" : "border-brand text-brand hover:bg-brand hover:text-canvas"}`}
+            >
+              <span aria-hidden="true" className="mr-2 text-base">+</span>{creatingLesson ? "Cancel adding" : "Add lesson"}
+            </button>
+          ) : null}
           {showTeacherFilter ? <label className="border-b border-line pb-2 text-sm">
             <span className="mr-3 text-muted">Teacher</span>
             <select value={teacherId} onChange={(event) => setTeacherId(event.target.value)} className="bg-transparent outline-none">
@@ -383,6 +416,18 @@ export function OwnerPlanner({
         </div>
       ) : null}
 
+      {creatingLesson ? (
+        <div role="status" className="flex items-center justify-between gap-5 border-b border-brand bg-[color-mix(in_srgb,var(--ui-brand)_9%,transparent)] px-4 py-3 text-sm">
+          <span><strong className="text-brand">Add lesson mode.</strong> Choose an open time on the calendar.</span>
+          <button type="button" onClick={() => setCreatingLesson(false)} className="text-action shrink-0 text-muted hover:text-ink">Cancel</button>
+        </div>
+      ) : rescheduleLesson ? (
+        <div role="status" className="flex items-center justify-between gap-5 border-b border-brand bg-[color-mix(in_srgb,var(--ui-brand)_9%,transparent)] px-4 py-3 text-sm">
+          <span><strong className="text-brand">Reschedule mode.</strong> Drag {studentNames[rescheduleLesson.student_id] ?? "this lesson"} to a new time.</span>
+          <button type="button" onClick={cancelReschedule} className="text-action shrink-0 text-muted hover:text-ink">Cancel</button>
+        </div>
+      ) : null}
+
       {view === "month" ? (
         <MonthView
           anchor={anchor}
@@ -422,7 +467,8 @@ export function OwnerPlanner({
           onExitReschedule={cancelReschedule}
           allowOutsideDrop={Boolean(rescheduleAction)}
           canCreateLesson={Boolean(lessonCreationOptions)}
-          onCreateSlot={setCreationSlot}
+          creationMode={creatingLesson}
+          onCreateSlot={(slot) => { setCreatingLesson(false); setCreationSlot(slot); }}
         />
       )}
       {selectedLesson ? (
@@ -532,6 +578,7 @@ function TimelineView({
   onExitReschedule,
   showAvailabilityLabels,
   canCreateLesson,
+  creationMode,
   onCreateSlot,
   allowOutsideDrop,
 }: {
@@ -556,11 +603,13 @@ function TimelineView({
   onExitReschedule: () => void;
   showAvailabilityLabels: boolean;
   canCreateLesson: boolean;
+  creationMode: boolean;
   onCreateSlot: (slot: CreationSlot) => void;
   allowOutsideDrop: boolean;
 }) {
   const [dragging, setDragging] = useState(false);
   const [hoverSlot, setHoverSlot] = useState<CreationSlot | null>(null);
+  const [expandedTrack, setExpandedTrack] = useState<{ dateKey: string; teacherId: string } | null>(null);
   const scrollFrame = useRef<HTMLDivElement | null>(null);
   const pointerStart = useRef<{ x: number; y: number; offset: number } | null>(null);
   const pendingLesson = useRef<LessonWithParts | null>(null);
@@ -693,20 +742,25 @@ function TimelineView({
           {columns.map((column) => {
             const dateKey = key(column.date);
             const teacherCount = column.teachers.length;
-            const activeTeacherIndex = -1;
+            const activeTeacherIndex = expandedTrack?.dateKey === dateKey
+              ? column.teachers.findIndex((teacher) => teacher.id === expandedTrack.teacherId)
+              : -1;
             return (
               <div
                 key={`${dateKey}-${column.label}`}
                 className="planner-timeline relative border-l border-line"
                 data-planner-date={dateKey}
+                data-creation-mode={creationMode}
+                data-reschedule-mode={Boolean(rescheduleLesson)}
                 style={{ height: `${hourCount * 60}px` }}
                 onPointerMove={(event) => {
-                  if (!canCreateLesson || !column.teachers.length || rescheduleLesson || dragging || event.pointerType === "touch") return;
+                  if (!canCreateLesson || !creationMode || !column.teachers.length || rescheduleLesson || dragging || event.pointerType === "touch") return;
                   if (event.target instanceof Element && event.target.closest(".lesson-block")) { setHoverSlot(null); return; }
                   setHoverSlot(creationSlotFromPointer(event, dateKey, column.teachers));
                 }}
                 onPointerLeave={(event) => { if (event.pointerType !== "touch") setHoverSlot(null); }}
                 onClick={(event) => {
+                  if (!creationMode) { setExpandedTrack(null); return; }
                   if (!canCreateLesson || !column.teachers.length || rescheduleLesson || event.detail === 0) return;
                   if (event.target instanceof Element && event.target.closest(".lesson-block")) return;
                   onCreateSlot(creationSlotFromPointer(event, dateKey, column.teachers));
@@ -725,10 +779,18 @@ function TimelineView({
                         type="button"
                         className="availability-block"
                         data-teacher-id={teacher.id}
+                        data-active={activeTeacherIndex === teacherIndex}
+                        data-collapsed={activeTeacherIndex >= 0 && activeTeacherIndex !== teacherIndex}
+                        aria-pressed={activeTeacherIndex === teacherIndex}
                         title={`${teacher.name} available ${clock(start)}–${clock(end)}`}
                         style={availabilityTrackStyle(start, end, teacherIndex, teacherCount, activeTeacherIndex)}
+                        onClick={(event) => {
+                          if (creationMode) return;
+                          event.stopPropagation();
+                          setExpandedTrack((current) => current?.dateKey === dateKey && current.teacherId === teacher.id ? null : { dateKey, teacherId: teacher.id });
+                        }}
                       >
-                        {showAvailabilityLabels ? <span className="availability-label">{teacher.name}</span> : null}
+                        {showAvailabilityLabels ? <><span aria-hidden="true" className="availability-label availability-label-vertical">{teacher.name}</span><span aria-hidden="true" className="availability-label availability-label-expanded">{teacher.name}</span></> : null}
                         <span className="sr-only">{teacher.name} available {clock(start)} to {clock(end)}</span>
                       </button>
                     );
@@ -747,6 +809,8 @@ function TimelineView({
                         data-can-reschedule={canReschedule && lesson.can_reschedule}
                         data-reschedule-origin={rescheduleLesson?.id === lesson.id}
                         data-dragging={dragging && rescheduleLesson?.id === lesson.id}
+                        data-active={activeTeacherIndex === teacherIndex}
+                        data-collapsed={activeTeacherIndex >= 0 && activeTeacherIndex !== teacherIndex}
                         style={rescheduleLesson?.id === lesson.id ? lessonTrackStyle(lesson.start.minutes, lesson.end.minutes, 0, 1, -1) : lessonTrackStyle(lesson.start.minutes, lesson.end.minutes, teacherIndex, teacherCount, activeTeacherIndex)}
                         aria-label={`${studentNames[lesson.student_id]} with ${teacher?.name}, ${clock(lesson.start.minutes)}, ${placeDetails[lesson.place_id]?.name ?? "place not set"}. ${rescheduleLesson?.id === lesson.id ? "Drag to propose another time." : "Open lesson details."}`}
                         onPointerDown={beginPointerDrag}

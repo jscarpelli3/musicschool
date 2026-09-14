@@ -48,22 +48,45 @@
 
 .availability-label {
   position: absolute;
-  bottom: calc(100% + 0.15rem);
-  left: 50%;
   width: max-content;
-  font-size: 1.25rem;
+  font-size: 0.68rem;
   line-height: 1;
-  letter-spacing: 0.02em;
-  transform: rotate(-70deg);
-  transform-origin: left bottom;
-  transition: color 180ms ease, opacity 160ms ease;
+  letter-spacing: 0.04em;
+  transition: color 180ms ease, opacity 160ms ease, transform 180ms ease;
 }
 
-.availability-block[data-collapsed="true"] .availability-label {
+.availability-label-vertical {
+  top: 0.45rem;
+  left: 0.35rem;
+  max-height: calc(100% - 0.9rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.availability-label-expanded {
+  bottom: calc(100% + 0.35rem);
+  left: 0;
+  opacity: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0;
+  transform: translateY(0.2rem);
+}
+
+.availability-block[data-active="true"] .availability-label-vertical {
   opacity: 0;
 }
 
-.availability-block[data-active="true"] .availability-label {
+.availability-block[data-active="true"] .availability-label-expanded {
+  color: var(--ui-brand-hover);
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.availability-block[data-collapsed="true"] .availability-label-vertical {
+  left: 0.1rem;
   color: var(--ui-brand-hover);
 }
 
@@ -298,6 +321,23 @@
   background: color-mix(in srgb, var(--ui-brand) 13%, transparent);
   color: var(--ui-brand);
   font-size: 0.7rem;
+  pointer-events: none;
+}
+
+.planner-timeline[data-creation-mode="true"] {
+  cursor: crosshair;
+}
+
+.planner-timeline[data-creation-mode="true"] .lesson-block,
+.planner-timeline[data-creation-mode="true"] .proposal-block,
+.planner-timeline[data-reschedule-mode="true"] .lesson-block:not([data-reschedule-origin="true"]),
+.planner-timeline[data-reschedule-mode="true"] .proposal-block {
+  filter: grayscale(0.75);
+  opacity: 0.28;
+}
+
+.planner-timeline[data-creation-mode="true"] .lesson-block,
+.planner-timeline[data-creation-mode="true"] .proposal-block {
   pointer-events: none;
 }
 
