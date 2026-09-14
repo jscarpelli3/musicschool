@@ -621,6 +621,7 @@ function TimelineView({
     ? teachers.map((teacher) => ({ date: anchor, teachers: [teacher], label: teacher.name }))
     : dates.map((date) => ({ date, teachers, label: new Intl.DateTimeFormat("en-US", { weekday: "short", day: "numeric" }).format(date) }));
   const hourCount = (timelineEnd - timelineStart) / 60;
+  const minimumColumnWidth = view === "week" ? Math.max(150, teachers.length * 14 + 100) : 150;
 
   function creationSlotFromPointer(event: { currentTarget: HTMLDivElement; clientX: number; clientY: number }, dateKey: string, columnTeachers: Teacher[]) {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -728,7 +729,7 @@ function TimelineView({
   return (
     <div ref={scrollFrame} className="planner-scroll overflow-x-auto">
       {dropError ? <div role="alert" className="sticky left-0 z-40 border-b border-danger px-4 py-3 text-sm text-danger">Move blocked: {dropError}</div> : null}
-      <div style={{ minWidth: `${Math.max(view === "day" && columns.length === 1 ? 360 : 760, columns.length * 150)}px` }}>
+      <div style={{ minWidth: `${Math.max(view === "day" && columns.length === 1 ? 360 : 760, columns.length * minimumColumnWidth)}px` }}>
         <div className="grid border-b border-line" style={{ gridTemplateColumns: `4.5rem repeat(${columns.length}, minmax(0, 1fr))` }}>
           <div />
           {columns.map((column) => <div key={`${key(column.date)}-${column.label}`} className="border-l border-line px-3 py-3 text-sm">{column.label}</div>)}
@@ -754,11 +755,22 @@ function TimelineView({
                 data-reschedule-mode={Boolean(rescheduleLesson)}
                 style={{ height: `${hourCount * 60}px` }}
                 onPointerMove={(event) => {
+                  if (!creationMode && !rescheduleLesson && !dragging) {
+                    const teacherElement = document.elementsFromPoint(event.clientX, event.clientY)
+                      .find((element): element is HTMLElement => element instanceof HTMLElement && Boolean(element.dataset.teacherId));
+                    if (teacherElement?.dataset.teacherId && column.teachers.some((teacher) => teacher.id === teacherElement.dataset.teacherId)) {
+                      setExpandedTrack({ dateKey, teacherId: teacherElement.dataset.teacherId });
+                    }
+                  }
                   if (!canCreateLesson || !creationMode || !column.teachers.length || rescheduleLesson || dragging || event.pointerType === "touch") return;
                   if (event.target instanceof Element && event.target.closest(".lesson-block")) { setHoverSlot(null); return; }
                   setHoverSlot(creationSlotFromPointer(event, dateKey, column.teachers));
                 }}
-                onPointerLeave={(event) => { if (event.pointerType !== "touch") setHoverSlot(null); }}
+                onPointerLeave={(event) => {
+                  if (event.pointerType === "touch") return;
+                  setHoverSlot(null);
+                  if (!creationMode && !rescheduleLesson && !dragging) setExpandedTrack(null);
+                }}
                 onClick={(event) => {
                   if (!creationMode) { setExpandedTrack(null); return; }
                   if (!canCreateLesson || !column.teachers.length || rescheduleLesson || event.detail === 0) return;
@@ -784,6 +796,10 @@ function TimelineView({
                         aria-pressed={activeTeacherIndex === teacherIndex}
                         title={`${teacher.name} available ${clock(start)}–${clock(end)}`}
                         style={availabilityTrackStyle(start, end, teacherIndex, teacherCount, activeTeacherIndex)}
+                        onPointerEnter={(event) => {
+                          if (event.pointerType !== "touch" && !creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: teacher.id });
+                        }}
+                        onFocus={() => { if (!creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: teacher.id }); }}
                         onClick={(event) => {
                           if (creationMode) return;
                           event.stopPropagation();
@@ -806,6 +822,7 @@ function TimelineView({
                         type="button"
                         className="lesson-block quick-view-trigger text-left text-xs"
                         data-lesson-id={lesson.id}
+                        data-teacher-id={lesson.teacher_id}
                         data-can-reschedule={canReschedule && lesson.can_reschedule}
                         data-reschedule-origin={rescheduleLesson?.id === lesson.id}
                         data-dragging={dragging && rescheduleLesson?.id === lesson.id}
@@ -813,6 +830,10 @@ function TimelineView({
                         data-collapsed={activeTeacherIndex >= 0 && activeTeacherIndex !== teacherIndex}
                         style={rescheduleLesson?.id === lesson.id ? lessonTrackStyle(lesson.start.minutes, lesson.end.minutes, 0, 1, -1) : lessonTrackStyle(lesson.start.minutes, lesson.end.minutes, teacherIndex, teacherCount, activeTeacherIndex)}
                         aria-label={`${studentNames[lesson.student_id]} with ${teacher?.name}, ${clock(lesson.start.minutes)}, ${placeDetails[lesson.place_id]?.name ?? "place not set"}. ${rescheduleLesson?.id === lesson.id ? "Drag to propose another time." : "Open lesson details."}`}
+                        onPointerEnter={(event) => {
+                          if (event.pointerType !== "touch" && !creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: lesson.teacher_id });
+                        }}
+                        onFocus={() => { if (!creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: lesson.teacher_id }); }}
                         onPointerDown={beginPointerDrag}
                         onPointerMove={movePointerDrag}
                         onPointerUp={endPointerDrag}
@@ -870,7 +891,7 @@ function TimelineView({
                   .filter((item) => item.start.dateKey === dateKey && column.teachers.some((teacher) => teacher.id === item.teacher_id))
                   .map((item) => {
                     const teacherIndex = Math.max(0, column.teachers.findIndex((teacher) => teacher.id === item.teacher_id));
-                    return <button key={item.id} type="button" className="proposal-block text-left" style={lessonTrackStyle(item.start.minutes, item.end.minutes, teacherIndex, teacherCount, activeTeacherIndex)} onClick={(event) => { event.stopPropagation(); onOpenProposal(item.href); }} aria-label={`Pending proposal for ${studentNames[item.student_id] ?? "student"} at ${clock(item.start.minutes)}`}>
+                    return <button key={item.id} type="button" className="proposal-block text-left" data-teacher-id={item.teacher_id} style={lessonTrackStyle(item.start.minutes, item.end.minutes, teacherIndex, teacherCount, activeTeacherIndex)} onPointerEnter={(event) => { if (event.pointerType !== "touch" && !creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: item.teacher_id }); }} onFocus={() => { if (!creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: item.teacher_id }); }} onClick={(event) => { event.stopPropagation(); onOpenProposal(item.href); }} aria-label={`Pending proposal for ${studentNames[item.student_id] ?? "student"} at ${clock(item.start.minutes)}`}>
                       <span className="proposal-label">Pending</span>
                       <span className="proposal-student">{studentNames[item.student_id] ?? "Student"}</span>
                       <QuickView><span className="block text-sm font-medium">Proposed · {clock(item.start.minutes)}–{clock(item.end.minutes)}</span><span className="mt-1 block text-xs opacity-65">{item.status === "pending_teacher" ? "Waiting for teacher" : "Waiting for owner"}{item.schedule_type === "weekly" ? " · Weekly" : ""}</span></QuickView>
@@ -902,7 +923,7 @@ function trackStyle(start: number, end: number, track: number, tracks: number, l
 }
 
 function edgeGeometry(activeTrack: number, tracks: number) {
-  const railTarget = 4;
+  const railTarget = 14;
   const leftSpace = activeTrack * railTarget;
   const rightSpace = (tracks - activeTrack - 1) * railTarget;
   return {
@@ -913,8 +934,8 @@ function edgeGeometry(activeTrack: number, tracks: number) {
 
 function collapsedTrackLeft(track: number, tracks: number, activeTrack: number) {
   return track < activeTrack
-    ? `${track * 4}px`
-    : `calc(100% - ${(tracks - track) * 4}px)`;
+    ? `${track * 14}px`
+    : `calc(100% - ${(tracks - track) * 14}px)`;
 }
 
 function availabilityTrackStyle(
