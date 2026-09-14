@@ -22,7 +22,7 @@
 }
 
 .availability-block[data-active="true"] {
-  z-index: 5;
+  z-index: 18;
   left: var(--active-left, 6px) !important;
   width: var(--active-width, calc(100% - 12px)) !important;
   background: color-mix(in srgb, var(--ui-brand) 15%, var(--ui-canvas));
@@ -130,7 +130,7 @@
 }
 
 .lesson-block[data-active="true"] {
-  z-index: 6;
+  z-index: 20;
   left: var(--active-lesson-left, 10px) !important;
   width: var(--active-lesson-width, calc(100% - 20px)) !important;
 }

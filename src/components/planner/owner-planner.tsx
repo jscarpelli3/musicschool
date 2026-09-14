@@ -922,16 +922,6 @@ function trackStyle(start: number, end: number, track: number, tracks: number, l
   };
 }
 
-function edgeGeometry(activeTrack: number, tracks: number) {
-  const railTarget = 14;
-  const leftSpace = activeTrack * railTarget;
-  const rightSpace = (tracks - activeTrack - 1) * railTarget;
-  return {
-    left: leftSpace + 6,
-    widthReduction: leftSpace + rightSpace + 12,
-  };
-}
-
 function collapsedTrackLeft(track: number, tracks: number, activeTrack: number) {
   return track < activeTrack
     ? `${track * 14}px`
@@ -949,11 +939,10 @@ function availabilityTrackStyle(
   if (activeTrack < 0) return base;
 
   if (track === activeTrack) {
-    const geometry = edgeGeometry(activeTrack, tracks);
     return {
       ...base,
-      "--active-left": `${geometry.left}px`,
-      "--active-width": `calc(100% - ${geometry.widthReduction}px)`,
+      "--active-left": "6px",
+      "--active-width": "calc(100% - 12px)",
     } as CSSProperties;
   }
 
@@ -978,11 +967,10 @@ function lessonTrackStyle(
       "--collapsed-left": collapsedTrackLeft(track, tracks, activeTrack),
     } as CSSProperties;
   }
-  const geometry = edgeGeometry(activeTrack, tracks);
   return {
     ...base,
-    "--active-lesson-left": `${geometry.left + 4}px`,
-    "--active-lesson-width": `calc(100% - ${geometry.widthReduction + 8}px)`,
+    "--active-lesson-left": "10px",
+    "--active-lesson-width": "calc(100% - 20px)",
   } as CSSProperties;
 }
 
