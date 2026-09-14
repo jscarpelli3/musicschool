@@ -208,6 +208,7 @@ export function OwnerPlanner({
   const [allowOutsideAvailability, setAllowOutsideAvailability] = useState(false);
   const [creationSlot, setCreationSlot] = useState<CreationSlot | null>(null);
   const [creatingLesson, setCreatingLesson] = useState(false);
+  const [expandedWeek, setExpandedWeek] = useState(false);
   const compactInitialized = useRef(false);
   const anchor = fromKey(anchorKey);
 
@@ -397,6 +398,16 @@ export function OwnerPlanner({
               >{option}</button>
             ))}
           </div>
+          {view === "week" && visibleTeachers.length > 1 ? (
+            <button
+              type="button"
+              aria-pressed={expandedWeek}
+              onClick={() => setExpandedWeek((current) => !current)}
+              className={`rounded-control border px-4 py-2 text-sm transition hover:-translate-y-px ${expandedWeek ? "border-brand bg-brand text-canvas" : "border-line text-muted hover:border-brand hover:text-ink"}`}
+            >
+              {expandedWeek ? "Compact week" : "Expand all teachers"}
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -433,6 +444,10 @@ export function OwnerPlanner({
           <span><strong className="text-brand">Reschedule mode.</strong> Drag {studentNames[rescheduleLesson.student_id] ?? "this lesson"} to a new time.</span>
           <button type="button" onClick={cancelReschedule} className="text-action shrink-0 text-muted hover:text-ink">Cancel</button>
         </div>
+      ) : expandedWeek && view === "week" ? (
+        <div role="status" className="border-b border-line px-4 py-3 text-sm text-muted">
+          <strong className="text-ink">Expanded week.</strong> Every teacher has a full column for each day. Scroll horizontally to move across the week.
+        </div>
       ) : null}
 
       {view === "month" ? (
@@ -453,6 +468,7 @@ export function OwnerPlanner({
       ) : (
         <TimelineView
           view={view}
+          expandedWeek={expandedWeek}
           anchor={anchor}
           teachers={visibleTeachers}
           availability={availability}
@@ -565,6 +581,7 @@ function evaluateProposal(
 
 function TimelineView({
   view,
+  expandedWeek,
   anchor,
   teachers,
   availability,
@@ -590,6 +607,7 @@ function TimelineView({
   allowOutsideDrop,
 }: {
   view: "day" | "week";
+  expandedWeek: boolean;
   anchor: Date;
   teachers: Teacher[];
   availability: Availability[];
@@ -627,9 +645,15 @@ function TimelineView({
   const dates = view === "day" ? [anchor] : weekDates(anchor);
   const columns = view === "day"
     ? teachers.map((teacher) => ({ date: anchor, teachers: [teacher], label: teacher.name }))
-    : dates.map((date) => ({ date, teachers, label: new Intl.DateTimeFormat("en-US", { weekday: "short", day: "numeric" }).format(date) }));
+    : expandedWeek
+      ? dates.flatMap((date) => teachers.map((teacher) => ({
+          date,
+          teachers: [teacher],
+          label: `${new Intl.DateTimeFormat("en-US", { weekday: "short", day: "numeric" }).format(date)} · ${teacher.name}`,
+        })))
+      : dates.map((date) => ({ date, teachers, label: new Intl.DateTimeFormat("en-US", { weekday: "short", day: "numeric" }).format(date) }));
   const hourCount = (timelineEnd - timelineStart) / 60;
-  const minimumColumnWidth = view === "week" ? Math.max(150, teachers.length * 14 + 100) : 150;
+  const minimumColumnWidth = expandedWeek ? 190 : view === "week" ? Math.max(150, teachers.length * 14 + 100) : 150;
 
   function creationSlotFromPointer(event: { currentTarget: HTMLDivElement; clientX: number; clientY: number }, dateKey: string, columnTeachers: Teacher[]) {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -646,7 +670,10 @@ function TimelineView({
     const column = document.elementsFromPoint(clientX, clientY)
       .find((element): element is HTMLElement => element instanceof HTMLElement && Boolean(element.dataset.plannerDate));
     if (!column?.dataset.plannerDate) return null;
-    const columnTeachers = columns.find(({ date }) => key(date) === column.dataset.plannerDate)?.teachers ?? [];
+    const columnTeacherId = column.dataset.plannerTeacher;
+    const columnTeachers = columnTeacherId
+      ? teachers.filter((teacher) => teacher.id === columnTeacherId)
+      : columns.find(({ date }) => key(date) === column.dataset.plannerDate)?.teachers ?? [];
     if (!columnTeachers.length) return null;
     const rect = column.getBoundingClientRect();
     const teacher = columnTeachers.find((candidate) => candidate.id === movingLesson.teacher_id) ?? columnTeachers[0];
@@ -751,7 +778,7 @@ function TimelineView({
           {columns.map((column) => {
             const dateKey = key(column.date);
             const teacherCount = column.teachers.length;
-            const activeTrack = creationMode || rescheduleLesson
+            const activeTrack = expandedWeek || creationMode || rescheduleLesson
               ? null
               : pinnedTrack?.dateKey === dateKey
                 ? pinnedTrack
@@ -766,11 +793,12 @@ function TimelineView({
                 key={`${dateKey}-${column.label}`}
                 className="planner-timeline relative border-l border-line"
                 data-planner-date={dateKey}
+                data-planner-teacher={column.teachers.length === 1 ? column.teachers[0].id : undefined}
                 data-creation-mode={creationMode}
                 data-reschedule-mode={Boolean(rescheduleLesson)}
                 style={{ height: `${hourCount * 60}px` }}
                 onPointerMove={(event) => {
-                  if (!creationMode && !rescheduleLesson && !dragging) {
+                  if (!expandedWeek && !creationMode && !rescheduleLesson && !dragging) {
                     const teacherElement = document.elementsFromPoint(event.clientX, event.clientY)
                       .find((element): element is HTMLElement => element instanceof HTMLElement && Boolean(element.dataset.teacherId));
                     if (teacherElement?.dataset.teacherId && column.teachers.some((teacher) => teacher.id === teacherElement.dataset.teacherId)) {
@@ -784,7 +812,7 @@ function TimelineView({
                 onPointerLeave={(event) => {
                   if (event.pointerType === "touch") return;
                   setHoverSlot(null);
-                  if (!creationMode && !rescheduleLesson && !dragging) setExpandedTrack(null);
+                  if (!expandedWeek && !creationMode && !rescheduleLesson && !dragging) setExpandedTrack(null);
                 }}
                 onClick={(event) => {
                   if (!creationMode) { setExpandedTrack(null); setPinnedTrack(null); return; }
@@ -811,16 +839,17 @@ function TimelineView({
                         title={`${teacher.name} available ${clock(start)}–${clock(end)}. Click to ${pinnedTrack?.dateKey === dateKey && pinnedTrack.teacherId === teacher.id ? "unpin" : "pin"} this teacher.`}
                         style={availabilityTrackStyle(start, end, teacherIndex, teacherCount, activeTeacherIndex)}
                         onPointerEnter={(event) => {
-                          if (event.pointerType !== "touch" && !creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: teacher.id });
+                          if (event.pointerType !== "touch" && !expandedWeek && !creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: teacher.id });
                         }}
-                        onFocus={() => { if (!creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: teacher.id }); }}
+                        onFocus={() => { if (!expandedWeek && !creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: teacher.id }); }}
                         onClick={(event) => {
                           if (creationMode) return;
                           event.stopPropagation();
+                          if (expandedWeek) return;
                           setPinnedTrack((current) => current?.dateKey === dateKey && current.teacherId === teacher.id ? null : { dateKey, teacherId: teacher.id });
                         }}
                       >
-                        {showAvailabilityLabels ? <><span aria-hidden="true" className="availability-label availability-label-vertical">{teacher.name}</span><span aria-hidden="true" className="availability-label availability-label-expanded">{teacher.name}{pinnedTrack?.dateKey === dateKey && pinnedTrack.teacherId === teacher.id ? " · pinned" : ""}</span></> : null}
+                        {showAvailabilityLabels && !expandedWeek ? <><span aria-hidden="true" className="availability-label availability-label-vertical">{teacher.name}</span><span aria-hidden="true" className="availability-label availability-label-expanded">{teacher.name}{pinnedTrack?.dateKey === dateKey && pinnedTrack.teacherId === teacher.id ? " · pinned" : ""}</span></> : null}
                         <span className="sr-only">{teacher.name} available {clock(start)} to {clock(end)}</span>
                       </button>
                     );
@@ -846,9 +875,9 @@ function TimelineView({
                         style={rescheduleLesson?.id === lesson.id ? lessonTrackStyle(lesson.start.minutes, lesson.end.minutes, 0, 1, -1) : lessonTrackStyle(lesson.start.minutes, lesson.end.minutes, teacherIndex, teacherCount, activeTeacherIndex)}
                         aria-label={`${studentNames[lesson.student_id]} with ${teacher?.name}, ${clock(lesson.start.minutes)}, ${placeDetails[lesson.place_id]?.name ?? "place not set"}. ${rescheduleLesson?.id === lesson.id ? "Drag to propose another time." : "Open lesson details."}`}
                         onPointerEnter={(event) => {
-                          if (event.pointerType !== "touch" && !creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: lesson.teacher_id });
+                          if (event.pointerType !== "touch" && !expandedWeek && !creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: lesson.teacher_id });
                         }}
-                        onFocus={() => { if (!creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: lesson.teacher_id }); }}
+                        onFocus={() => { if (!expandedWeek && !creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: lesson.teacher_id }); }}
                         onPointerDown={beginPointerDrag}
                         onPointerMove={movePointerDrag}
                         onPointerUp={endPointerDrag}
