@@ -4,10 +4,17 @@ import { refreshSession } from "@/lib/supabase/proxy";
 
 const MARKETING_HOSTS = new Set(["commontime.studio", "www.commontime.studio"]);
 const PROVIDER_WEBHOOK_PATHS = ["/api/stripe/webhooks", "/api/resend/webhooks", "/api/twilio/"];
+const VERCEL_HOST_ENV_KEYS = ["VERCEL_URL", "VERCEL_BRANCH_URL", "VERCEL_PROJECT_PRODUCTION_URL"] as const;
+
+function configuredVercelHosts() {
+  return VERCEL_HOST_ENV_KEYS.flatMap((key) => {
+    const host = process.env[key]?.trim().toLowerCase();
+    return host ? [host] : [];
+  });
+}
 
 function appHosts() {
-  const hosts = new Set(["app.commontime.studio"]);
-  if (process.env.VERCEL_URL) hosts.add(process.env.VERCEL_URL.toLowerCase());
+  const hosts = new Set(["app.commontime.studio", ...configuredVercelHosts()]);
   if (process.env.NODE_ENV !== "production") {
     hosts.add("localhost");
     hosts.add("127.0.0.1");
@@ -23,7 +30,7 @@ function trustedMutationOrigins(request: NextRequest, requestHost: string) {
   if (process.env.APP_URL) {
     try { origins.add(new URL(process.env.APP_URL).origin); } catch { /* invalid deployment configuration is rejected below */ }
   }
-  if (process.env.VERCEL_URL) origins.add(`https://${process.env.VERCEL_URL}`);
+  for (const host of configuredVercelHosts()) origins.add(`https://${host}`);
   return origins;
 }
 
