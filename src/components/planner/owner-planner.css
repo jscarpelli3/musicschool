@@ -150,6 +150,24 @@
   opacity: 0;
 }
 
+.lesson-student-initials {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
+  overflow: hidden;
+  color: var(--ui-canvas);
+  font-size: 0.5rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  writing-mode: vertical-rl;
+}
+
+.lesson-block[data-collapsed="true"] .lesson-student-initials {
+  display: grid;
+}
+
 .lesson-block:hover,
 .lesson-block:focus-visible {
   z-index: 30;

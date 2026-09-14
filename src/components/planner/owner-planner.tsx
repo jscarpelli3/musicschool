@@ -159,6 +159,13 @@ function clock(minutes: number) {
   return `${displayHour}:${String(minute).padStart(2, "0")} ${suffix}`;
 }
 
+function studentInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  if (parts.length === 1) return Array.from(parts[0]).slice(0, 2).join("").toUpperCase();
+  return `${Array.from(parts[0])[0] ?? ""}${Array.from(parts.at(-1) ?? "")[0] ?? ""}`.toUpperCase();
+}
+
 function timeMinutes(value: string) {
   const [hour, minute] = value.split(":").map(Number);
   return hour * 60 + minute;
@@ -878,6 +885,7 @@ function TimelineView({
                         <span className="lesson-block-content">
                           <span className="lesson-student-name">{studentNames[lesson.student_id]}</span>
                         </span>
+                        <span aria-hidden="true" className="lesson-student-initials">{studentInitials(studentNames[lesson.student_id] ?? "Student")}</span>
                         <QuickView>
                           <span className="block text-sm font-medium">
                             {clock(lesson.start.minutes)}–{clock(lesson.end.minutes)} · {lesson.end.minutes - lesson.start.minutes} min
