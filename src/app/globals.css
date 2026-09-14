@@ -51,6 +51,26 @@
   --ui-font-display: Georgia, "Times New Roman", serif;
 }
 
+[data-school-font="contemporary"] {
+  --ui-font-sans: var(--font-contemporary), "Helvetica Neue", Arial, sans-serif;
+  --ui-font-display: var(--font-contemporary), "Helvetica Neue", Arial, sans-serif;
+}
+
+[data-school-font="expressive"] {
+  --ui-font-sans: var(--font-sans), "Helvetica Neue", Arial, sans-serif;
+  --ui-font-display: var(--font-expressive), Georgia, serif;
+}
+
+[data-school-font="literary"] {
+  --ui-font-sans: var(--font-sans), "Helvetica Neue", Arial, sans-serif;
+  --ui-font-display: var(--font-literary), Georgia, serif;
+}
+
+[data-school-font="monospace"] {
+  --ui-font-sans: var(--font-monospace), ui-monospace, monospace;
+  --ui-font-display: var(--font-monospace), ui-monospace, monospace;
+}
+
 .text-action {
   display: inline-flex;
   align-items: center;
