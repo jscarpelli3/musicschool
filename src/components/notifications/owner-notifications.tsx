@@ -59,7 +59,8 @@ export function OwnerNotifications({ schoolId, embedded = false }: { schoolId: s
   useEffect(() => {
     const close = () => setOpen(false);
     window.addEventListener("common-time:open-approvals", close);
-    return () => window.removeEventListener("common-time:open-approvals", close);
+    window.addEventListener("common-time:open-invoices", close);
+    return () => { window.removeEventListener("common-time:open-approvals", close); window.removeEventListener("common-time:open-invoices", close); };
   }, []);
 
   const unread = notices.filter((notice) => !notice.read_at).length;

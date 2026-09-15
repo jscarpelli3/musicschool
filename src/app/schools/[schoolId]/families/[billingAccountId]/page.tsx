@@ -21,6 +21,8 @@ import { BillingPeriodUnlock } from "./billing-period-unlock";
 import { BillingPeriodRevise } from "./billing-period-revise";
 import { PaymentMethodRemove } from "./payment-method-remove";
 import { BillingAdjustmentForm, BillingAdjustmentRemove } from "./billing-adjustments";
+import { RecordLessonCalendar } from "@/components/calendar/record-lesson-calendar";
+import { schoolCalendarWindow } from "@/lib/calendar/school-calendar-window";
 
 export const dynamic = "force-dynamic";
 
@@ -59,10 +61,12 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     supabase.from("school_payment_connections").select("status, charges_enabled").eq("school_id", schoolId).eq("provider", "stripe").maybeSingle(),
     supabase.from("billing_approval_requests").select("id, billing_period_id, approval_status, approved_at, rejected_at, rejection_reason_code, rejection_note, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
     supabase.from("email_deliveries").select("approval_request_id, status, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
+    supabase.from("service_products").select("id,name").eq("school_id", schoolId),
+    supabase.from("lesson_places").select("id,name").eq("school_id", schoolId),
   ]);
   const failedRelated = related.find((result) => result.error);
   if (failedRelated?.error) throw new Error(`Family detail could not load: ${failedRelated.error.message}`);
-  const [peopleResult, studentsResult, periodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult] = related;
+  const [peopleResult, studentsResult, periodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult, productsResult, placesResult] = related;
   const periodIds = (periodsResult.data ?? []).map((period) => period.id);
   const { data: lineItems, error: lineItemsError } = periodIds.length
     ? await supabase.from("billing_line_items")
@@ -81,6 +85,11 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     const person = people.get(link.student_id);
     return person ? [{ id: link.student_id, person }] : [];
   });
+  const { rangeStart: calendarStart, rangeEnd: calendarEnd, queryStart, queryEnd } = schoolCalendarWindow(school.timezone);
+  const { data: familyLessons, error: familyLessonsError } = students.length ? await supabase.from("lesson_events").select("id,student_id,teacher_id,product_id,place_id,starts_at,ends_at,status,outcome,actual_starts_at,actual_ends_at,actual_place_id").eq("school_id", schoolId).in("student_id", students.map((student) => student.id)).gte("starts_at", queryStart).lt("starts_at", queryEnd).order("starts_at") : { data: [], error: null };
+  if (familyLessonsError) throw new Error(`Family lesson calendar could not load: ${familyLessonsError.message}`);
+  const products = new Map((productsResult.data ?? []).map((product) => [product.id, product.name]));
+  const places = new Map((placesResult.data ?? []).map((place) => [place.id, place.name]));
   const money = (cents: number, currency: string) => new Intl.NumberFormat("en-US", { style: "currency", currency }).format(cents / 100);
   const paidByPeriod = (attemptsResult.data ?? []).reduce<Record<string, number>>((totals, attempt) => {
     totals[attempt.billing_period_id] = (totals[attempt.billing_period_id] ?? 0) + attempt.amount_cents;
@@ -128,6 +137,11 @@ export default async function FamilyDetailPage({ params, searchParams }: {
 
       {approvals.length?<DetailSection title="Needs approval" description="Pending owner decisions involving students in this family."><ApprovalList schoolId={schoolId} items={approvals} timezone={school.timezone} compact/></DetailSection>:null}
       {entitlements.length?<DetailSection title="Lessons to schedule" description="Paid replacement lessons still owed to this family."><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} compact/></DetailSection>:null}
+
+      <section className="ui-card mt-6 p-6 md:p-8">
+        <div className="mb-7"><h2 className="font-display text-3xl">Family lesson calendar</h2><p className="mt-3 text-sm leading-6 text-muted">Lessons for every student on this account, across the current and next two months.</p></div>
+        <RecordLessonCalendar schoolId={schoolId} id={`family-${billingAccountId}-calendar`} lessons={(familyLessons ?? []).map((lesson) => { const studentPerson = people.get(lesson.student_id); const teacherPerson = people.get(lesson.teacher_id); return { id: lesson.id, studentId: lesson.student_id, studentName: studentPerson ? name(studentPerson) : "Student", teacherId: lesson.teacher_id, teacherName: teacherPerson ? name(teacherPerson) : "Unassigned teacher", productName: products.get(lesson.product_id) ?? "Lesson", placeName: places.get(lesson.actual_place_id ?? lesson.place_id) ?? "Unassigned place", startsAt: lesson.actual_starts_at ?? lesson.starts_at, endsAt: lesson.actual_ends_at ?? lesson.ends_at, status: lesson.outcome ?? lesson.status }; })} rangeStart={calendarStart} rangeEnd={calendarEnd} timeZone={school.timezone} />
+      </section>
 
       <DetailSection title="Primary payer" description="The person currently responsible for this billing account.">
         {contact ? <div><p className="font-display text-3xl">{name(contact)}</p><p className="mt-3 text-xs uppercase tracking-[0.14em] text-brand">{contact.status}</p>{canManagePayments ? <><BillingContactEmail schoolId={schoolId} billingAccountId={billingAccountId} email={contact.email ?? ""} hasPendingApproval={(approvalRequestsResult.data ?? []).some((request) => request.approval_status === "pending")} /><BillingContactPhone schoolId={schoolId} schoolName={school.name} billingAccountId={billingAccountId} phone={contact.phone ?? ""} consentState={smsConsentState ?? "not_enrolled"} /></> : <><p className="mt-3 text-sm text-muted">{contact.email || "No email recorded"}</p><p className="mt-3 text-sm text-muted">{contact.phone || "No mobile number recorded"}</p></>}</div> : <EmptyDetail>The billing contact record is unavailable.</EmptyDetail>}
