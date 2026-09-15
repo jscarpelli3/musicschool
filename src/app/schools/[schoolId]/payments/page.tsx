@@ -76,15 +76,15 @@ export default async function SchoolPaymentsPage({ params, searchParams }: {
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
       <SetupHeader schoolId={schoolId} schoolName={school.name} active="payments" />
-      {message ? <p className={`border-b border-line py-4 text-sm ${message.error ? "text-danger" : "text-brand"}`}>{message.text}</p> : null}
+      {message ? <p className={`mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm ${message.error ? "text-danger" : "text-brand"}`}>{message.text}</p> : null}
 
-      <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
-        <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">
+      <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
+        <div>
           <p className="text-xs text-brand">Stripe Connect · Test mode</p>
           <h2 className="mt-3 font-display text-3xl">Payments</h2>
           <p className="mt-3 text-sm leading-6 text-muted">The school receives family payments directly and manages its account in Stripe. Stripe remains responsible for fees, requirements, and unrecoverable account losses.</p>
         </div>
-        <div className="py-10 md:pl-10">
+        <div>
           <div className="flex items-start justify-between gap-6 border-b border-line pb-7">
             <div>
               <p className="text-xs text-muted">Connection status</p>

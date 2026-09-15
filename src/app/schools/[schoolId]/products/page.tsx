@@ -51,32 +51,32 @@ export default async function ProductsPage({
   const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-6 py-section">
+    <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
       <SetupHeader schoolId={schoolId} schoolName={school.name} active="offerings" />
-      <p className="border-b border-line py-6 text-sm leading-6 text-muted">Define the lessons and classes your school offers. Enrollment terms will snapshot these defaults later.</p>
+      <p className="mt-5 text-sm leading-6 text-muted">Define the lessons and classes your school offers. Enrollment terms will snapshot these defaults later.</p>
 
-      {created ? <p className="border-b border-line py-4 text-sm text-brand">Offering created.</p> : null}
-      {archived ? <p className="border-b border-line py-4 text-sm text-brand">Offering archived.</p> : null}
-      {error ? <p className="border-b border-line py-4 text-sm text-danger">The offering could not be archived. Nothing changed.</p> : null}
-      {billing ? <p className={`border-b border-line py-4 text-sm ${billing === "saved" ? "text-brand" : "text-danger"}`}>{billing === "saved" ? "Billing schedule saved for future agreements." : billing === "invalid" ? "Check the billing schedule values." : "The billing schedule could not be saved."}</p> : null}
+      {created ? <p className="mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm text-brand">Offering created.</p> : null}
+      {archived ? <p className="mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm text-brand">Offering archived.</p> : null}
+      {error ? <p className="mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm text-danger">The offering could not be archived. Nothing changed.</p> : null}
+      {billing ? <p className={`mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm ${billing === "saved" ? "text-brand" : "text-danger"}`}>{billing === "saved" ? "Billing schedule saved for future agreements." : billing === "invalid" ? "Check the billing schedule values." : "The billing schedule could not be saved."}</p> : null}
 
-      {canManage ? <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
-        <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10"><h2 className="font-display text-3xl">Billing schedule</h2><p className="mt-3 text-sm leading-6 text-muted">Defaults for new student agreements. Existing agreements keep their recorded terms.</p></div>
-        <form action={updateSchoolBillingTiming.bind(null, schoolId)} className="grid gap-7 py-10 sm:grid-cols-3 md:pl-10">
+      {canManage ? <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
+        <div><h2 className="font-display text-3xl">Billing schedule</h2><p className="mt-3 text-sm leading-6 text-muted">Defaults for new student agreements. Existing agreements keep their recorded terms.</p></div>
+        <form action={updateSchoolBillingTiming.bind(null, schoolId)} className="grid gap-7 sm:grid-cols-3">
           <label className="sm:col-span-3"><span className="text-xs text-muted">School default</span><select name="billing_timing_default" defaultValue={school.billing_timing_default} className="mt-2 w-full border-b border-line bg-transparent py-3"><option value="before_service">Bill before lessons happen</option><option value="after_service">Bill after lessons happen</option></select></label>
           <label><span className="text-xs text-muted">Prepare on day</span><input name="billing_day" type="number" min={1} max={28} defaultValue={school.billing_day} className="mt-2 w-full border-b border-line bg-transparent py-3" /></label>
           <label><span className="text-xs text-muted">Review window</span><input name="payer_review_days" type="number" min={1} max={14} defaultValue={school.payer_review_days} className="mt-2 w-full border-b border-line bg-transparent py-3" /><span className="mt-1 block text-xs text-muted">days</span></label>
           <label><span className="text-xs text-muted">Intended charge day</span><input name="intended_charge_day" type="number" min={1} max={28} defaultValue={school.intended_charge_day} className="mt-2 w-full border-b border-line bg-transparent py-3" /></label>
-          <div className="sm:col-span-3"><button className="border-b border-brand pb-2 text-sm text-brand">Save billing schedule →</button></div>
+          <div className="sm:col-span-3"><button className="rounded-md bg-brand px-4 py-2.5 text-sm text-surface transition hover:opacity-90">Save billing schedule</button></div>
         </form>
       </section> : null}
 
-      <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
-        <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">
+      <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
+        <div>
           <h2 className="font-display text-3xl font-normal">Current offerings</h2>
           <p className="mt-3 text-sm text-muted">{products?.filter((product) => product.status === "active").length ?? 0} active</p>
         </div>
-        <div className="py-10 md:pl-10">
+        <div>
           {products?.length ? products.map((product) => (
             <article key={product.id} className="grid gap-4 border-t border-line py-5 first:border-t-0 md:grid-cols-[1fr_auto]">
               <div>
@@ -103,7 +103,7 @@ export default async function ProductsPage({
         </div>
       </section>
 
-      {canManage ? <section className="flex items-center justify-between gap-6 py-10">
+      {canManage ? <section className="mt-6 flex items-center justify-between gap-6 px-1 py-6">
         <div><h2 className="font-display text-3xl font-normal">Expand your offerings.</h2><p className="mt-2 text-sm text-muted">Define a new lesson or class in a focused form.</p></div>
         <FocusedModal triggerLabel="Add offering +" eyebrow="Lessons and classes" title="New offering." description="Set the format, duration, cadence, and price."><ProductForm schoolId={schoolId} /></FocusedModal>
       </section> : null}
