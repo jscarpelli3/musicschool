@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { FocusedModal } from "@/components/ui/focused-modal";
 import type { AddFamilyState } from "@/app/schools/[schoolId]/families/actions";
 
@@ -11,11 +11,15 @@ export function AddFamilyDialog({ action, triggerLabel }: { action: (state: AddF
   const [open, setOpen] = useState(false);
   const [state, setState] = useState(initialState);
   const [pending, startTransition] = useTransition();
+  const operationId = useRef<string | null>(null);
   const submit = (formData: FormData) => startTransition(async () => {
+    operationId.current ??= crypto.randomUUID();
+    formData.set("operation_id", operationId.current);
     const next = await action(initialState, formData);
     setState(next);
     if (!next.ok) return;
     setOpen(false);
+    operationId.current = null;
     window.dispatchEvent(new CustomEvent("common-time:toast", { detail: { title: "Family added", message: "The student, payer, and family account are ready." } }));
   });
   return <FocusedModal triggerLabel={triggerLabel} title="Add a student and payer." description="This creates the student record and connects it to the person responsible for billing." open={open} onOpenChange={setOpen}>
