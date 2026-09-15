@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 
 export type LessonOutcome = "completed" | "rescheduled" | "cancelled_timely" | "cancelled_late" | "no_show" | "upcoming" | "unrecorded";
 
@@ -31,7 +32,7 @@ export function LessonStatusStrip({ schoolId, lessons, monthLabel }: { schoolId:
         </span>;
       })}
     </div>
-    {tooltip ? (() => { const outcome = outcomes[lessons.find((lesson) => lesson.id === tooltip.lessonId)?.outcome ?? "upcoming"]; return <span role="tooltip" style={{ left: tooltip.left, top: tooltip.top, transform: "translate(-50%, -100%)" } as CSSProperties} className="pointer-events-none fixed z-[120] w-max max-w-48 rounded-control bg-ink px-3 py-2 text-center text-[11px] leading-4 text-canvas shadow-lg"><strong className="block font-medium">{outcome.label}</strong><span className="mt-0.5 block opacity-75">{outcome.action}</span></span>; })() : null}
+    {tooltip && typeof document !== "undefined" ? createPortal((() => { const outcome = outcomes[lessons.find((lesson) => lesson.id === tooltip.lessonId)?.outcome ?? "upcoming"]; return <span role="tooltip" style={{ left: tooltip.left, top: tooltip.top, transform: "translate(-50%, -100%)" } as CSSProperties} className="pointer-events-none fixed z-[120] w-max max-w-48 rounded-control bg-ink px-3 py-2 text-center text-[11px] leading-4 text-canvas shadow-lg"><strong className="block font-medium">{outcome.label}</strong><span className="mt-0.5 block opacity-75">{outcome.action}</span></span>; })(), document.body) : null}
     <p className="mt-2 text-xs leading-5 text-muted">{lessons.length ? Object.entries(counts).map(([outcome, count]) => `${count} ${outcomes[outcome as LessonOutcome].label.toLowerCase()}`).join(" · ") : `No lessons in ${monthLabel}`}</p>
   </div>;
 }
