@@ -108,12 +108,14 @@ export function StudentRosterTable({
   initialView,
   saveView,
   addFamilyAction,
+  dashboard = false,
 }: {
   rows: StudentRosterRow[];
   monthLabel: string;
   initialView?: Partial<RosterViewSettings> | null;
   saveView: (settings: RosterViewSettings) => Promise<void>;
   addFamilyAction?: (state: AddFamilyState, formData: FormData) => Promise<AddFamilyState>;
+  dashboard?: boolean;
 }) {
   const startingColumns = validOrder(initialView?.columns) ? initialView.columns : defaults;
   const requestedSort = initialView?.sort;
@@ -192,10 +194,10 @@ export function StudentRosterTable({
   }
 
   return (
-    <section aria-labelledby="student-roster-heading">
+    <section aria-labelledby="student-roster-heading" className={dashboard ? "mt-10" : ""}>
       <header className="flex flex-wrap items-end justify-between gap-6 pb-4">
         <div>
-          <h1 id="student-roster-heading" className="font-display text-5xl tracking-[-0.04em] sm:text-6xl">Students.</h1>
+          {dashboard ? <h2 id="student-roster-heading" className="font-display text-4xl tracking-[-0.035em]">Student matrix</h2> : <h1 id="student-roster-heading" className="font-display text-5xl tracking-[-0.04em] sm:text-6xl">Students.</h1>}
           <p className="mt-4 max-w-2xl text-sm leading-6 text-muted">Review student schedules, family connections, teachers, and recent lesson activity.</p>
           <p className="mt-2 text-sm text-muted">{rows.length} active · actual occurrences in {monthLabel}</p>
         </div>

@@ -10,6 +10,7 @@ import { saveStudentRosterView } from "./dashboard-actions";
 import { addStudentAndPayer } from "./families/actions";
 import { InvoiceList } from "@/components/billing/invoice-list";
 import { invoiceNeedsAttention, loadSchoolInvoices } from "@/lib/billing/school-invoices";
+import { StudentDirectory } from "@/components/students/student-directory";
 
 export const dynamic = "force-dynamic";
 
@@ -241,15 +242,11 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
 
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-6 py-section">
-      {view === "students" ? <StudentRosterTable
+      {view === "students" ? <StudentDirectory
         rows={studentRowsForTable}
-        monthLabel={monthLabel}
-        initialView={rosterPreference?.settings as Partial<RosterViewSettings> | null}
-        saveView={saveStudentRosterView.bind(null, schoolId)}
         addFamilyAction={capabilities.has("school.billing.manage") ? addStudentAndPayer.bind(null, schoolId) : undefined}
       /> : null}
-      {view === "dashboard" && entitlements.length ? <section className="ui-card mb-8 p-6 sm:p-8"><p className="text-xs uppercase tracking-[0.14em] text-brand">Needs scheduling</p><h2 className="mt-2 font-display text-3xl">Paid lessons waiting for a time</h2><p className="mt-2 mb-5 text-sm text-muted">These lessons are already funded. Scheduling one consumes its entitlement and will not create another charge.</p><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} /></section> : null}
-      {view === "dashboard" && capabilities.has("school.billing.manage") ? <section className="ui-card mb-8 p-6 sm:p-8"><div className="flex flex-wrap items-start justify-between gap-5"><div><p className="text-xs uppercase tracking-[0.14em] text-brand">Invoices</p><h2 className="mt-2 font-display text-3xl">{openInvoices.length ? `${openInvoices.length} still in progress` : "Everything is settled"}</h2><p className="mt-2 text-sm text-muted">Recent family invoices and their current approval or payment status.</p></div><Link href={`/schools/${schoolId}/invoices`} className="text-sm text-brand hover:text-brand-hover">View all invoices →</Link></div><div className="mt-5"><InvoiceList schoolId={schoolId} invoices={invoices.slice(0, 6)} compact /></div></section> : null}
+      {view === "dashboard" && canManageSchool ? <section className="ui-card mb-8 p-6 sm:p-8"><p className="text-xs uppercase tracking-[0.14em] text-brand">Needs scheduling</p><h2 className="mt-2 font-display text-3xl">{entitlements.length ? "Paid lessons waiting for a time" : "Nothing is waiting for a time"}</h2><p className="mt-2 text-sm text-muted">Paid replacement lessons appear here until they are placed back on the calendar.</p>{entitlements.length ? <div className="mt-5"><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} /></div> : null}</section> : null}
       {view === "dashboard" ? <OwnerPlanner
         schoolId={schoolId}
         canReschedule={canManageSchool}
@@ -282,6 +279,8 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
           minimumTimeToday,
         } : undefined}
       /> : null}
+      {view === "dashboard" ? <StudentRosterTable rows={studentRowsForTable} monthLabel={monthLabel} initialView={rosterPreference?.settings as Partial<RosterViewSettings> | null} saveView={saveStudentRosterView.bind(null, schoolId)} dashboard /> : null}
+      {view === "dashboard" && capabilities.has("school.billing.manage") ? <section className="ui-card mt-10 p-6 sm:p-8"><div className="flex flex-wrap items-start justify-between gap-5"><div><p className="text-xs uppercase tracking-[0.14em] text-brand">Invoices</p><h2 className="mt-2 font-display text-3xl">{openInvoices.length ? `${openInvoices.length} still in progress` : "Everything is settled"}</h2><p className="mt-2 text-sm text-muted">Recent family invoices and their current approval or payment status.</p></div><Link href={`/schools/${schoolId}/invoices`} className="text-sm text-brand hover:text-brand-hover">View all invoices →</Link></div><div className="mt-5"><InvoiceList schoolId={schoolId} invoices={invoices.slice(0, 6)} compact /></div></section> : null}
     </main>
   );
 }
