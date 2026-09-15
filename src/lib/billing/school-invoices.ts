@@ -46,5 +46,5 @@ export async function loadSchoolInvoices(client: Client, schoolId: string, limit
 }
 
 export function invoiceNeedsAttention(invoice: SchoolInvoice) {
-  return !["paid", "void", "voided"].includes(invoice.status);
+  return !billingPeriodDescriptor(invoice.status).terminal;
 }
