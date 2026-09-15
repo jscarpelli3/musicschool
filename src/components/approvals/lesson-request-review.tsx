@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { resolveLessonChangeRequest } from "@/app/schools/[schoolId]/approvals/actions";
@@ -86,7 +87,7 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
       <button type="button" aria-label="Close request review" disabled={resolving} onClick={() => router.push(closeHref)} className="fixed inset-0 bg-[var(--ui-overlay)] disabled:cursor-wait" />
       <section className="fixed left-1/2 top-1/2 z-[101] max-h-[calc(100dvh-2rem)] w-[min(50rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto border border-brand bg-canvas p-5 shadow-xl sm:p-8">
         <div className="flex items-start justify-between gap-5">
-          <div><p className="text-xs uppercase tracking-[0.14em] text-brand">{presentation.eyebrow}</p><h2 id="lesson-request-title" className="mt-3 font-display text-4xl">{presentation.title}</h2><p className="mt-3 text-sm leading-6 text-muted">Teacher: {item.teacher}</p></div>
+          <div><p className="text-xs uppercase tracking-[0.14em] text-brand">{presentation.eyebrow}</p><h2 id="lesson-request-title" className="mt-3 font-display text-4xl">{presentation.title}</h2><p className="mt-3 text-sm leading-6 text-muted"><Link href={`/schools/${schoolId}/students/${item.studentId}`} className="hover:text-brand">{item.student}</Link> · Teacher: <Link href={`/schools/${schoolId}/staff/${item.teacherId}`} className="hover:text-brand">{item.teacher}</Link></p></div>
           <button type="button" disabled={resolving} onClick={() => router.push(closeHref)} className="text-sm text-muted transition hover:text-ink disabled:cursor-wait disabled:opacity-40">Close</button>
         </div>
 

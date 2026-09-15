@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { QuickView } from "@/components/ui/quick-view";
@@ -65,6 +66,7 @@ type StudentDetail = {
     phone: string | null;
   }>;
   payers: Array<{
+    accountId?: string;
     accountName: string;
     name: string;
     email: string | null;
@@ -496,6 +498,7 @@ export function OwnerPlanner({
       )}
       {selectedLesson ? (
         <LessonSheet
+          schoolId={schoolId}
           lesson={selectedLesson}
           teacherName={teachers.find((teacher) => teacher.id === selectedLesson.teacher_id)?.name ?? "Teacher"}
           student={studentDetails[selectedLesson.student_id]}
@@ -1078,6 +1081,7 @@ function MonthView({
 }
 
 function LessonSheet({
+  schoolId,
   lesson,
   teacherName,
   student,
@@ -1090,6 +1094,7 @@ function LessonSheet({
   onSchoolCancellation,
   onClose,
 }: {
+  schoolId: string;
   lesson: Lesson & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> };
   teacherName: string;
   student: StudentDetail | undefined;
@@ -1110,16 +1115,14 @@ function LessonSheet({
         <div className="flex items-start justify-between gap-6 border-b border-line pb-7">
           <div>
             <p className="text-xs text-brand">{lessonEventDescriptor(lesson.status).label}</p>
-            <h2 id="lesson-sheet-title" className="mt-4 font-display text-4xl font-normal tracking-[-0.035em]">
-              {student?.name ?? "Student"}
-            </h2>
+            <h2 id="lesson-sheet-title" className="mt-4 font-display text-4xl font-normal tracking-[-0.035em]"><Link href={`/schools/${schoolId}/students/${lesson.student_id}`} className="hover:text-brand">{student?.name ?? "Student"}</Link></h2>
           </div>
           <button autoFocus type="button" onClick={onClose} className="text-action text-sm text-muted hover:text-ink">Close</button>
         </div>
 
         <dl className="divide-y divide-line border-b border-line">
           <Detail label="Lesson" value={productName} />
-          <Detail label="Teacher" value={teacherName} />
+          <div className="py-5"><dt className="text-xs text-muted">Teacher</dt><dd className="mt-2 text-sm"><Link href={`/schools/${schoolId}/staff/${lesson.teacher_id}`} className="hover:text-brand">{teacherName}</Link></dd></div>
           <Detail label="Date" value={new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(fromKey(lesson.start.dateKey))} />
           <Detail label="Time" value={`${clock(lesson.start.minutes)}–${clock(lesson.end.minutes)} · ${duration} minutes`} />
           <Detail label="Place" value={place.details ? `${place.name} · ${place.details}` : place.name} />
@@ -1155,7 +1158,7 @@ function LessonSheet({
 
         <section className="border-b border-line py-8">
           <h3 className="font-display text-2xl font-normal">Student</h3>
-          <p className="mt-4 text-sm">{student?.name}</p>
+          <p className="mt-4 text-sm"><Link href={`/schools/${schoolId}/students/${lesson.student_id}`} className="hover:text-brand">{student?.name}</Link></p>
           {student?.email ? <p className="mt-1 text-sm text-muted">{student.email}</p> : null}
           {student?.phone ? <p className="mt-1 text-sm text-muted">{student.phone}</p> : null}
         </section>
@@ -1178,7 +1181,7 @@ function LessonSheet({
           <h3 className="font-display text-2xl font-normal">Payer</h3>
           {student?.payers.length ? student.payers.map((payer) => (
             <div key={`${payer.accountName}-${payer.name}`} className="mt-5">
-              <p className="text-sm">{payer.name}</p>
+              <p className="text-sm">{payer.accountId ? <Link href={`/schools/${schoolId}/families/${payer.accountId}`} className="hover:text-brand">{payer.name}</Link> : payer.name}</p>
               <p className="mt-1 text-xs text-brand">{payer.selfPaying ? "Self-paying student" : payer.accountName}</p>
               {payer.email ? <p className="mt-2 text-sm text-muted">{payer.email}</p> : null}
               {payer.phone ? <p className="mt-1 text-sm text-muted">{payer.phone}</p> : null}

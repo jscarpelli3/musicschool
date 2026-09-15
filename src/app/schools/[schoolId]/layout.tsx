@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AppSignOut } from "@/components/auth/app-sign-out";
 import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 import { loadOwnerApprovals } from "@/lib/approvals/owner-approvals";
+import { invoiceNeedsAttention, loadSchoolInvoices } from "@/lib/billing/school-invoices";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +23,11 @@ export default async function SchoolLayout({ children, params }: { children: Rea
     loadMySchoolCapabilities(schoolId),
   ]);
   if (!school || !membership) notFound();
-  const [{ data: avatar }, { data: logo }, approvals] = await Promise.all([
+  const [{ data: avatar }, { data: logo }, approvals, invoices] = await Promise.all([
     profile?.avatar_path ? supabase.storage.from("avatars").createSignedUrl(profile.avatar_path, 3600) : Promise.resolve({ data: null }),
     school.logo_path ? supabase.storage.from("school-logos").createSignedUrl(school.logo_path, 3600) : Promise.resolve({ data: null }),
     capabilities.has("school.approvals.review") ? loadOwnerApprovals(supabase, schoolId) : Promise.resolve([]),
+    capabilities.has("school.billing.manage") ? loadSchoolInvoices(supabase, schoolId) : Promise.resolve([]),
   ]);
   const avatarUrl = avatar?.signedUrl ?? profile?.avatar_url;
   return <div data-school-theme={school.theme_key} data-school-font={school.font_key} className="min-h-screen bg-canvas text-ink">
@@ -37,7 +39,7 @@ export default async function SchoolLayout({ children, params }: { children: Rea
         </div>
         <div className="flex shrink-0 items-start gap-3"><Link href="/profile" aria-label="Profile settings" className="flex items-center gap-3 py-control text-sm text-muted hover:text-ink">{avatarUrl ? <img /* eslint-disable-line @next/next/no-img-element */ src={avatarUrl} alt="Your avatar" className="h-10 w-10 rounded-full border border-line object-cover" /> : null}<span className="hidden sm:inline">Profile</span></Link><AppSignOut /></div>
       </header>
-      <SchoolManagementNav schoolId={schoolId} capabilities={[...capabilities]} recentApprovals={approvals.slice(0, 5).map((item) => ({ id: item.id, kind: item.kind, teacher: item.teacher, student: item.student, detail: item.kind === "schedule_proposal" ? "Schedule change" : item.requestType === "cancellation" ? "Cancellation request" : "Reschedule request" }))} approvalCount={approvals.length} />
+      <SchoolManagementNav schoolId={schoolId} capabilities={[...capabilities]} recentApprovals={approvals.slice(0, 5).map((item) => ({ id: item.id, kind: item.kind, teacherId: item.teacherId, studentId: item.studentId, teacher: item.teacher, student: item.student, detail: item.kind === "schedule_proposal" ? "Schedule change" : item.requestType === "cancellation" ? "Cancellation request" : "Reschedule request" }))} approvalCount={approvals.length} recentInvoices={invoices.slice(0, 5)} invoiceCount={invoices.filter(invoiceNeedsAttention).length} />
     </div>
     {children}
   </div>;

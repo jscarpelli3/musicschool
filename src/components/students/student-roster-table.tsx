@@ -25,6 +25,7 @@ export type StudentRosterRow = {
   time: string;
   timeMinutes: number;
   teacher: string;
+  teacherId: string | null;
   place: string;
   lessons: Array<{ id: string; outcome: LessonOutcome }>;
 };
@@ -169,8 +170,10 @@ export function StudentRosterTable({
   }
 
   function cell(row: StudentRosterRow, column: Column) {
-    if (column === "student") return <Link href={`/schools/${row.schoolId}/students/${row.id}`} className="border-b border-transparent pb-1 hover:border-brand hover:text-brand">{row.student}</Link>;
-    if (column === "family" && row.billingAccountId) return <Link href={`/schools/${row.schoolId}/families/${row.billingAccountId}`} className="border-b border-transparent pb-1 hover:border-brand hover:text-brand">{row.family}</Link>;
+    if (column === "student") return <Link href={`/schools/${row.schoolId}/students/${row.id}`} className="hover:text-brand">{row.student}</Link>;
+    if (column === "family" && row.billingAccountId) return <Link href={`/schools/${row.schoolId}/families/${row.billingAccountId}`} className="hover:text-brand">{row.family}</Link>;
+    if (column === "parent" && row.billingAccountId) return <Link href={`/schools/${row.schoolId}/families/${row.billingAccountId}`} className="hover:text-brand">{row.parent}</Link>;
+    if (column === "teacher" && row.teacherId) return <Link href={`/schools/${row.schoolId}/staff/${row.teacherId}`} className="text-sm leading-5 text-muted hover:text-brand">{row.teacher}</Link>;
     if (column !== "month") return <span className={column === "teacher" || column === "place" ? "text-sm leading-5 text-muted" : ""}>{row[column]}</span>;
     const counts = row.lessons.reduce<Partial<Record<LessonOutcome, number>>>((total, lesson) => {
       total[lesson.outcome] = (total[lesson.outcome] ?? 0) + 1;
