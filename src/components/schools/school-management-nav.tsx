@@ -15,7 +15,6 @@ export function SchoolManagementNav({ schoolId, capabilities, approvalCount = 0 
         { label: "Dashboard", href: dashboardHref, active: pathname === dashboardHref },
         { label: "Students", href: `${base}/students`, active: pathname.startsWith(`${base}/students`) },
         { label: "Families", href: `${base}/families`, active: pathname.startsWith(`${base}/families`) },
-        ...(can("school.approvals.review") ? [{ label: `Approvals${approvalCount ? ` (${approvalCount})` : ""}`, href: `${base}/approvals`, active: pathname.startsWith(`${base}/approvals`) }] : []),
         ...(can("school.staff.directory_manage") ? [{ label: "Staff", href: `${base}/staff`, active: pathname.startsWith(`${base}/staff`) }] : []),
       ];
 
@@ -24,7 +23,10 @@ export function SchoolManagementNav({ schoolId, capabilities, approvalCount = 0 
       {items.map((item) => <Link key={item.href} href={item.href} aria-current={item.active ? "page" : undefined} className={`relative py-1 text-sm transition-colors after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:bg-brand ${item.active ? "text-ink after:scale-x-100" : "text-muted after:scale-x-0 hover:text-ink"}`}>{item.label}</Link>)}
       {can("school.lessons.manage") ? <Link href={`${base}/lessons/new`} className="text-sm text-brand hover:text-brand-hover">New lesson +</Link> : null}
       {can("school.setup.manage") ? <Link href={`${base}/setup`} className="text-sm text-brand hover:text-brand-hover">School setup →</Link> : null}
-      <div className="ml-auto"><OwnerNotifications schoolId={schoolId} embedded /></div>
+      <div className="ml-auto flex items-center gap-4">
+        {can("school.approvals.review") ? <Link href={`${base}/approvals`} aria-current={pathname.startsWith(`${base}/approvals`) ? "page" : undefined} className={`rounded-control px-2 py-1 text-sm transition ${pathname.startsWith(`${base}/approvals`) ? "bg-surface text-ink" : "text-muted hover:bg-surface hover:text-ink"}`}>Approvals{approvalCount ? <span className="ml-2 inline-grid min-w-5 place-items-center rounded-full bg-brand px-1 text-xs text-canvas">{approvalCount}</span> : null}</Link> : null}
+        <OwnerNotifications schoolId={schoolId} embedded />
+      </div>
     </nav>
   );
 }
