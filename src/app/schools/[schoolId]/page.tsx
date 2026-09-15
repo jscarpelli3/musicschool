@@ -240,7 +240,7 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
         initialView={rosterPreference?.settings as Partial<RosterViewSettings> | null}
         saveView={saveStudentRosterView.bind(null, schoolId)}
       /> : null}
-      {view === "dashboard" && entitlements.length ? <section className="mb-10 border-b border-line pb-10"><p className="text-xs uppercase tracking-[0.14em] text-brand">Needs scheduling</p><h2 className="mt-2 font-display text-3xl">Paid lessons waiting for a time</h2><p className="mt-2 mb-5 text-sm text-muted">These lessons are already funded. Scheduling one consumes its entitlement and will not create another charge.</p><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} /></section> : null}
+      {view === "dashboard" && entitlements.length ? <section className="ui-card mb-8 p-6 sm:p-8"><p className="text-xs uppercase tracking-[0.14em] text-brand">Needs scheduling</p><h2 className="mt-2 font-display text-3xl">Paid lessons waiting for a time</h2><p className="mt-2 mb-5 text-sm text-muted">These lessons are already funded. Scheduling one consumes its entitlement and will not create another charge.</p><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} /></section> : null}
       {view === "dashboard" ? <OwnerPlanner
         schoolId={schoolId}
         canReschedule={canManageSchool}

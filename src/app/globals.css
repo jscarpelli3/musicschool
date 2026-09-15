@@ -20,7 +20,7 @@
   --ui-shadow-medium: 0 1.25rem 3.5rem rgb(0 10 24 / 0.42);
   --ui-shadow-strong: 0 2rem 7rem rgb(0 7 18 / 0.58);
   --ui-radius-control: 0.125rem;
-  --ui-radius-card: 0.125rem;
+  --ui-radius-card: 0.75rem;
   --ui-radius-panel: 0;
   --ui-space-control: 0.6875rem;
   --ui-space-card: 1.5rem;
@@ -272,6 +272,12 @@ body::before {
   content: "";
   opacity: 0.025;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");
+}
+
+.ui-card {
+  border-radius: var(--ui-radius-card);
+  background: var(--ui-surface-raised);
+  box-shadow: var(--ui-shadow-soft);
 }
 
 .coming-soon {

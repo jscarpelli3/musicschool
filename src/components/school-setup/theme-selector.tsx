@@ -9,7 +9,7 @@ export function ThemeSelector({
   action: (formData: FormData) => Promise<void>;
 }) {
   return (
-    <form action={action} className="py-10 md:pl-10">
+    <form action={action}>
       <fieldset>
         <legend className="sr-only">School interface palette</legend>
         <div className="grid gap-4 sm:grid-cols-2">

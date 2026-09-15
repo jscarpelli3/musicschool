@@ -6,7 +6,7 @@ export function DetailHeader({ eyebrow, title, meta }: {
   meta?: string;
 }) {
   return (
-    <header className="border-b border-line pb-8">
+    <header className="pb-4">
       <div>
         <p className="text-xs text-brand">{eyebrow}</p>
         <h1 className="mt-3 font-display text-5xl font-normal tracking-[-0.04em] sm:text-6xl">{title}</h1>
@@ -22,16 +22,16 @@ export function DetailSection({ title, description, children }: {
   children: ReactNode;
 }) {
   return (
-    <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
-      <div className="border-b border-line py-8 md:border-r md:border-b-0 md:py-10 md:pr-10">
+    <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[minmax(12rem,1fr)_2fr] md:gap-12 md:p-8">
+      <div>
         <h2 className="font-display text-3xl">{title}</h2>
         {description ? <p className="mt-3 text-sm leading-6 text-muted">{description}</p> : null}
       </div>
-      <div className="py-8 md:py-10 md:pl-10">{children}</div>
+      <div>{children}</div>
     </section>
   );
 }
 
 export function EmptyDetail({ children }: { children: ReactNode }) {
-  return <p className="border-l border-line pl-4 text-sm leading-6 text-muted">{children}</p>;
+  return <p className="rounded-control bg-surface px-4 py-3 text-sm leading-6 text-muted">{children}</p>;
 }

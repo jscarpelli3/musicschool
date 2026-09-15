@@ -41,8 +41,8 @@ export default async function AppearancePage({
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
       <SetupHeader schoolId={schoolId} schoolName={school.name} active="appearance" />
-      <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
-        <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">
+      <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
+        <div>
           <h2 className="font-display text-3xl">Workspace palette</h2>
           <p className="mt-3 text-sm leading-6 text-muted">
             Choose a complete, contrast-tested color system for this school’s workspace.
@@ -62,14 +62,14 @@ export default async function AppearancePage({
             action={updateSchoolTheme.bind(null, schoolId)}
           />
         ) : (
-          <p className="py-10 text-sm text-muted md:pl-10">
+          <p className="text-sm text-muted">
             Only the school owner can change the workspace palette.
           </p>
         )}
       </section>
-      <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
-        <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10"><h2 className="font-display text-3xl">Fonts</h2><p className="mt-3 text-sm leading-6 text-muted">Choose the voice used for headings and everyday interface text across this school.</p></div>
-        {capabilities.has("school.appearance.palette_manage") ? <FontSelector currentFont={isSchoolFontKey(school.font_key) ? school.font_key : "editorial"} action={updateSchoolFont.bind(null, schoolId)} /> : <p className="py-10 text-sm text-muted md:pl-10">Only the school owner can change shared typography.</p>}
+      <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
+        <div><h2 className="font-display text-3xl">Fonts</h2><p className="mt-3 text-sm leading-6 text-muted">Choose the voice used for headings and everyday interface text across this school.</p></div>
+        {capabilities.has("school.appearance.palette_manage") ? <FontSelector currentFont={isSchoolFontKey(school.font_key) ? school.font_key : "editorial"} action={updateSchoolFont.bind(null, schoolId)} /> : <p className="text-sm text-muted">Only the school owner can change shared typography.</p>}
       </section>
     </main>
   );

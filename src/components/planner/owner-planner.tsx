@@ -362,8 +362,8 @@ export function OwnerPlanner({
       : new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(anchor);
 
   return (
-    <section className="border-t border-line">
-      <div className="grid gap-8 border-b border-line py-6 md:grid-cols-[1fr_auto] md:items-end">
+    <section className="ui-card overflow-hidden">
+      <div className="grid gap-8 px-5 py-6 md:grid-cols-[1fr_auto] md:items-end sm:px-7">
         <div>
           <p className="text-xs text-muted">{contextLabel} · {timezone.replaceAll("_", " ")}</p>
           <h2 className="mt-3 font-display text-4xl font-normal tracking-[-0.03em]">{title}</h2>
@@ -411,7 +411,7 @@ export function OwnerPlanner({
         </div>
       </div>
 
-      <div className="flex items-center justify-between border-b border-line py-3">
+      <div className="mx-5 flex items-center justify-between border-t border-line/60 py-3 sm:mx-7">
         <button type="button" onClick={() => move(-1)} className="text-action text-sm text-muted hover:text-ink">← Previous</button>
         <button type="button" onClick={() => setAnchorKey(initialDate)} className="text-sm text-brand hover:text-brand-hover">
           {view === "day" ? "Go to today" : view === "week" ? "Go to this week" : "Go to this month"}

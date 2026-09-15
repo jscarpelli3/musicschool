@@ -185,7 +185,7 @@ export function StudentRosterTable({
   }
 
   return (
-    <section className="border-t border-line py-10" aria-labelledby="student-roster-heading">
+    <section className="ui-card p-5 sm:p-8" aria-labelledby="student-roster-heading">
       <div className="flex flex-wrap items-end justify-between gap-5 pb-6">
         <div>
           <h2 id="student-roster-heading" className="font-display text-4xl">Students.</h2>
@@ -194,12 +194,12 @@ export function StudentRosterTable({
         <button type="button" onClick={() => setArranging((value) => !value)} aria-expanded={arranging} className="border-b border-line pb-2 text-sm text-muted hover:border-brand hover:text-ink">Arrange columns</button>
       </div>
 
-      {arranging ? <div className="flex items-center justify-between border-t border-line px-3 py-3 text-xs text-muted"><span>Drag the headers into place, or use the arrows inside each column.</span><button type="button" onClick={() => commit(defaults)} className="text-brand">Reset order</button></div> : null}
+      {arranging ? <div className="mb-3 flex items-center justify-between rounded-control bg-surface px-3 py-3 text-xs text-muted"><span>Drag the headers into place, or use the arrows inside each column.</span><button type="button" onClick={() => commit(defaults)} className="text-brand">Reset order</button></div> : null}
 
       <HorizontalScrollFrame label="student table">
         <table className="w-full border-collapse text-left">
           <thead>
-            <tr className="border-y border-line text-xs text-muted">
+            <tr className="border-b border-line text-xs text-muted">
               {columns.map((column, index) => (
                 <th
                   key={column}

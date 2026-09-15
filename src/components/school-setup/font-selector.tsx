@@ -1,7 +1,7 @@
 import { SCHOOL_FONTS, type SchoolFontKey } from "@/lib/ui/school-fonts";
 
 export function FontSelector({ currentFont, action }: { currentFont: SchoolFontKey; action: (formData: FormData) => Promise<void> }) {
-  return <form action={action} className="py-10 md:pl-10">
+  return <form action={action}>
     <fieldset>
       <legend className="sr-only">School typography</legend>
       <div className="grid gap-4 sm:grid-cols-2">
