@@ -47,19 +47,19 @@ export function PortalAuth() {
     router.refresh();
   }
 
-  return <section className="mx-auto w-full max-w-md border-t border-line pt-8">
+  return <section className="ui-card mx-auto w-full max-w-md p-7 sm:p-9">
     <CommonTimeLogo priority className="w-56 max-w-full" />
     <p className="mt-5 text-sm text-brand">Family scheduling</p>
     <h1 className="mt-6 font-display text-5xl leading-none">Your lessons.</h1>
     <p className="mt-5 text-sm leading-6 text-muted">Use the email address your school has on file. We will send a one-time code—no password required.</p>
     {step === "email" ? <form onSubmit={sendCode} className="mt-10 space-y-6">
-      <label className="block"><span className="text-xs text-muted">Email address</span><input type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 w-full border-b border-line bg-transparent py-3 outline-none focus:border-brand" /></label>
-      <button disabled={pending} className="w-full border border-brand px-5 py-3 text-sm text-brand transition hover:bg-brand hover:text-canvas disabled:cursor-wait disabled:opacity-50">{pending ? "Requesting your code…" : "Send one-time code"}</button><PendingActionStatus pending={pending} label="Checking your family access and requesting the email…" slowLabel="The email provider is taking longer than usual. Keep this page open; please do not request another code yet." />
+      <label className="block"><span className="text-xs text-muted">Email address</span><input type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 w-full rounded-control border border-line bg-surface px-4 py-3 outline-none focus:border-brand" /></label>
+      <button disabled={pending} className="w-full rounded-control border border-brand bg-brand px-5 py-3 text-sm text-canvas transition hover:-translate-y-px hover:bg-brand-hover disabled:cursor-wait disabled:opacity-50">{pending ? "Requesting your code…" : "Send one-time code"}</button><PendingActionStatus pending={pending} label="Checking your family access and requesting the email…" slowLabel="The email provider is taking longer than usual. Keep this page open; please do not request another code yet." />
     </form> : <form onSubmit={verifyCode} className="mt-10 space-y-6">
       <div><p className="text-xs text-muted">Code sent to</p><p className="mt-2 text-sm">{email}</p></div>
-      <label className="block"><span className="text-xs text-muted">One-time code</span><input inputMode="numeric" autoComplete="one-time-code" required minLength={6} maxLength={8} value={code} onChange={(event) => setCode(event.target.value)} className="mt-2 w-full border-b border-line bg-transparent py-3 text-2xl tracking-[0.25em] outline-none focus:border-brand" /></label>
-      <button disabled={pending} className="w-full border border-brand px-5 py-3 text-sm text-brand transition hover:bg-brand hover:text-canvas disabled:cursor-wait disabled:opacity-50">{pending ? "Opening your lessons…" : "Open my lessons"}</button><PendingActionStatus pending={pending} label="Verifying the code securely…" slowLabel="The code was submitted. Loading the family schedule is taking longer than usual; please keep this page open." />
-      <button type="button" onClick={() => { setStep("email"); setCode(""); setMessage(""); }} className="w-full text-sm text-muted">Use a different email</button>
+      <label className="block"><span className="text-xs text-muted">One-time code</span><input inputMode="numeric" autoComplete="one-time-code" required minLength={6} maxLength={8} value={code} onChange={(event) => setCode(event.target.value)} className="mt-2 w-full rounded-control border border-line bg-surface px-4 py-3 text-2xl tracking-[0.25em] outline-none focus:border-brand" /></label>
+      <button disabled={pending} className="w-full rounded-control border border-brand bg-brand px-5 py-3 text-sm text-canvas transition hover:-translate-y-px hover:bg-brand-hover disabled:cursor-wait disabled:opacity-50">{pending ? "Opening your lessons…" : "Open my lessons"}</button><PendingActionStatus pending={pending} label="Verifying the code securely…" slowLabel="The code was submitted. Loading the family schedule is taking longer than usual; please keep this page open." />
+      <button type="button" onClick={() => { setStep("email"); setCode(""); setMessage(""); }} className="text-action mx-auto block text-sm text-muted hover:text-ink">Use a different email</button>
     </form>}
     {message ? <p role="status" className="mt-6 border-l-2 border-brand pl-4 text-sm leading-6 text-muted">{message}</p> : null}
   </section>;
