@@ -767,7 +767,7 @@ function TimelineView({
       <div style={{ minWidth: `${Math.max(view === "day" && columns.length === 1 ? 360 : 760, columns.length * minimumColumnWidth)}px` }}>
         <div className="grid border-b border-line" style={{ gridTemplateColumns: `4.5rem repeat(${columns.length}, minmax(0, 1fr))` }}>
           <div />
-          {columns.map((column) => <div key={`${key(column.date)}-${column.label}`} className="border-l border-line px-3 py-3 text-sm">{column.label}</div>)}
+          {columns.map((column, columnIndex) => <div key={`${key(column.date)}-${column.label}`} className="planner-column-boundary border-l border-line px-3 py-3 text-sm" data-expanded-week={expandedWeek} data-day-start={expandedWeek && columnIndex % teachers.length === 0}>{column.label}</div>)}
         </div>
         <div className="grid" style={{ gridTemplateColumns: `4.5rem repeat(${columns.length}, minmax(0, 1fr))` }}>
           <div className="relative" style={{ height: `${hourCount * 60}px` }}>
@@ -775,7 +775,7 @@ function TimelineView({
               <span key={index} className="absolute right-3 text-[10px] text-muted" style={{ top: `${index * 60 - 6}px` }}>{clock(timelineStart + index * 60)}</span>
             ))}
           </div>
-          {columns.map((column) => {
+          {columns.map((column, columnIndex) => {
             const dateKey = key(column.date);
             const teacherCount = column.teachers.length;
             const activeTrack = expandedWeek || creationMode || rescheduleLesson
@@ -791,7 +791,9 @@ function TimelineView({
             return (
               <div
                 key={`${dateKey}-${column.label}`}
-                className="planner-timeline relative border-l border-line"
+                className="planner-column-boundary planner-timeline relative border-l border-line"
+                data-expanded-week={expandedWeek}
+                data-day-start={expandedWeek && columnIndex % teachers.length === 0}
                 data-planner-date={dateKey}
                 data-planner-teacher={column.teachers.length === 1 ? column.teachers[0].id : undefined}
                 data-creation-mode={creationMode}

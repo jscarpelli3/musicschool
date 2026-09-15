@@ -7,6 +7,15 @@
   );
 }
 
+.planner-column-boundary[data-expanded-week="true"] {
+  border-left-color: color-mix(in srgb, var(--ui-line) 38%, transparent);
+}
+
+.planner-column-boundary[data-expanded-week="true"][data-day-start="true"] {
+  border-left-width: 2px;
+  border-left-color: color-mix(in srgb, var(--ui-ink) 44%, var(--ui-line));
+}
+
 .availability-block {
   position: absolute;
   padding: 0;
