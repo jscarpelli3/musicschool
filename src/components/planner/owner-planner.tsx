@@ -387,14 +387,14 @@ export function OwnerPlanner({
               {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}{teacher.isOwner ? " · you" : ""}</option>)}
             </select>
           </label> : null}
-          <div className="flex border-b border-line" role="group" aria-label="Planner view">
+          <div className="flex items-center gap-2" role="group" aria-label="Planner view">
             {views.map((option) => (
               <button
                 key={option}
                 type="button"
                 aria-pressed={view === option}
                 onClick={() => setView(option)}
-                className={`relative px-4 py-2 text-sm capitalize after:absolute after:right-0 after:bottom-[-1px] after:left-0 after:h-px after:bg-brand after:transition-transform ${view === option ? "text-ink after:scale-x-100" : "text-muted after:scale-x-0 hover:text-ink"}`}
+                className={`rounded-control capitalize transition hover:-translate-y-px ${option === "week" ? `border px-4 py-2 text-sm ${view === option ? "border-brand bg-brand text-canvas" : "border-line text-ink hover:border-brand hover:bg-surface"}` : `px-2 py-1 text-xs ${view === option ? "bg-surface text-ink" : "text-muted hover:text-ink"}`}`}
               >{option}</button>
             ))}
           </div>
