@@ -31,6 +31,7 @@ export function TeacherScheduleCalendar({
 }) {
   return <OwnerPlanner
     schoolId={schoolId}
+    currentTimeMs={currentTimeMs}
     canReschedule={canReschedule}
     initialDate={initialDate}
     timezone={timezone}

@@ -6,8 +6,9 @@ import { DragHandle } from "@/components/ui/drag-handle";
 import { HorizontalScrollFrame } from "@/components/ui/horizontal-scroll-frame";
 import { AddFamilyDialog } from "@/components/families/add-family-dialog";
 import type { AddFamilyState } from "@/app/schools/[schoolId]/families/actions";
+import { LessonStatusStrip, type LessonOutcome } from "./lesson-status-strip";
 
-export type LessonOutcome = "completed" | "rescheduled" | "cancelled_timely" | "cancelled_late" | "no_show" | "upcoming" | "unrecorded";
+export type { LessonOutcome } from "./lesson-status-strip";
 
 export type StudentRosterRow = {
   id: string;
@@ -88,16 +89,6 @@ function sortArrow(column: Column, mode: number) {
   return mode % 2 === 0 ? "↑" : "↓";
 }
 
-const outcomes: Record<LessonOutcome, { label: string; mark: string }> = {
-  completed: { label: "Serviced", mark: "bg-brand" },
-  rescheduled: { label: "Rescheduled", mark: "bg-outcome-rescheduled" },
-  cancelled_timely: { label: "Cancelled in time", mark: "bg-outcome-cancelled" },
-  cancelled_late: { label: "Late cancellation", mark: "bg-danger" },
-  no_show: { label: "No-show", mark: "bg-outcome-no-show" },
-  upcoming: { label: "Upcoming", mark: "border border-line bg-transparent" },
-  unrecorded: { label: "Needs status", mark: "border border-danger bg-transparent" },
-};
-
 function validOrder(value: unknown): value is Column[] {
   return Array.isArray(value) && value.length === defaults.length && defaults.every((column) => value.includes(column));
 }
@@ -177,27 +168,14 @@ export function StudentRosterTable({
     if (column === "parent" && row.billingAccountId) return <Link href={`/schools/${row.schoolId}/families/${row.billingAccountId}`} className="hover:text-brand">{row.parent}</Link>;
     if (column === "teacher" && row.teacherId) return <Link href={`/schools/${row.schoolId}/staff/${row.teacherId}`} className="text-sm leading-5 text-muted hover:text-brand">{row.teacher}</Link>;
     if (column !== "month") return <span className={column === "teacher" || column === "place" ? "text-sm leading-5 text-muted" : ""}>{row[column]}</span>;
-    const counts = row.lessons.reduce<Partial<Record<LessonOutcome, number>>>((total, lesson) => {
-      total[lesson.outcome] = (total[lesson.outcome] ?? 0) + 1;
-      return total;
-    }, {});
-    return (
-      <div>
-        <div className="flex gap-1" aria-label={`${row.lessons.length} lessons in ${monthLabel}`}>
-          {row.lessons.map((lesson) => <span key={lesson.id} title={outcomes[lesson.outcome].label} className={`h-3 min-w-4 flex-1 ${outcomes[lesson.outcome].mark}`} />)}
-        </div>
-        <p className="mt-2 text-xs leading-5 text-muted">
-          {row.lessons.length ? Object.entries(counts).map(([outcome, count]) => `${count} ${outcomes[outcome as LessonOutcome].label.toLowerCase()}`).join(" · ") : "No lessons this month"}
-        </p>
-      </div>
-    );
+    return <LessonStatusStrip schoolId={row.schoolId} lessons={row.lessons} monthLabel={monthLabel} />;
   }
 
   return (
-    <section aria-labelledby="student-roster-heading" className={dashboard ? "mt-10" : ""}>
+    <section aria-labelledby="student-roster-heading" className={dashboard ? "mt-16" : ""}>
       <header className="flex flex-wrap items-end justify-between gap-6 pb-4">
         <div>
-          {dashboard ? <h2 id="student-roster-heading" className="font-display text-4xl tracking-[-0.035em]">Student matrix</h2> : <h1 id="student-roster-heading" className="font-display text-5xl tracking-[-0.04em] sm:text-6xl">Students.</h1>}
+          {dashboard ? <h2 id="student-roster-heading" className="font-display text-4xl tracking-[-0.035em]">School matrix</h2> : <h1 id="student-roster-heading" className="font-display text-5xl tracking-[-0.04em] sm:text-6xl">Students.</h1>}
           <p className="mt-4 max-w-2xl text-sm leading-6 text-muted">Review student schedules, family connections, teachers, and recent lesson activity.</p>
           <p className="mt-2 text-sm text-muted">{rows.length} active · actual occurrences in {monthLabel}</p>
         </div>

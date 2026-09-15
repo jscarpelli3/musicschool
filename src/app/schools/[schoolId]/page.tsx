@@ -14,7 +14,7 @@ import { StudentDirectory } from "@/components/students/student-directory";
 
 export const dynamic = "force-dynamic";
 
-export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; view: "dashboard" | "students" }) {
+export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { schoolId: string; view: "dashboard" | "students"; initialLessonId?: string }) {
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getClaims();
   const profileId = authData?.claims?.sub;
@@ -244,11 +244,15 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
     <main className="mx-auto min-h-screen max-w-7xl px-6 py-section">
       {view === "students" ? <StudentDirectory
         rows={studentRowsForTable}
+        monthLabel={monthLabel}
         addFamilyAction={capabilities.has("school.billing.manage") ? addStudentAndPayer.bind(null, schoolId) : undefined}
       /> : null}
       {view === "dashboard" && canManageSchool ? <section className="ui-card mb-8 p-6 sm:p-8"><p className="text-xs uppercase tracking-[0.14em] text-brand">Needs scheduling</p><h2 className="mt-2 font-display text-3xl">{entitlements.length ? "Paid lessons waiting for a time" : "Nothing is waiting for a time"}</h2><p className="mt-2 text-sm text-muted">Paid replacement lessons appear here until they are placed back on the calendar.</p>{entitlements.length ? <div className="mt-5"><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} /></div> : null}</section> : null}
       {view === "dashboard" ? <OwnerPlanner
+        key={initialLessonId ?? "school-calendar"}
         schoolId={schoolId}
+        initialLessonId={initialLessonId}
+        currentTimeMs={now}
         canReschedule={canManageSchool}
         initialDate={initialDate}
         timezone={school.timezone}
@@ -285,7 +289,8 @@ export async function SchoolWorkspace({ schoolId, view }: { schoolId: string; vi
   );
 }
 
-export default async function SchoolDashboard({ params }: { params: Promise<{ schoolId: string }> }) {
+export default async function SchoolDashboard({ params, searchParams }: { params: Promise<{ schoolId: string }>; searchParams: Promise<{ lesson?: string }> }) {
   const { schoolId } = await params;
-  return <SchoolWorkspace schoolId={schoolId} view="dashboard" />;
+  const { lesson } = await searchParams;
+  return <SchoolWorkspace schoolId={schoolId} view="dashboard" initialLessonId={lesson} />;
 }

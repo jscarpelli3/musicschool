@@ -8,6 +8,8 @@ import { LessonCreationDialog, type LessonCreationOptions } from "@/components/s
 import { MdHistory } from "react-icons/md";
 import { reportSchoolCancellation, rescheduleOwnerLesson, setLessonReschedulePermission } from "@/app/schools/[schoolId]/dashboard-actions";
 import { LessonChangeReport } from "@/components/lessons/lesson-change-report";
+import { LessonOutcomeForm } from "@/components/teacher/lesson-outcome-form";
+import { recordTeacherLessonOutcome } from "@/app/schools/[schoolId]/teacher/actions";
 import { lessonEventDescriptor, rescheduleReasonLabel } from "@/lib/scheduling/lesson-domain-contracts";
 import { RescheduleConfirmation, type RescheduleProposal } from "./lesson-reschedule-controls";
 import "./owner-planner.css";
@@ -97,6 +99,8 @@ type Props = {
   allowAllTeachers?: boolean;
   rescheduleMode?: "apply" | "propose";
   rescheduleAction?: (input: { lessonId: string; localStart: string; reason: string }) => Promise<{ ok: boolean; message: string }>;
+  initialLessonId?: string;
+  currentTimeMs?: number;
 };
 
 type LessonWithParts = Lesson & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> };
@@ -194,12 +198,14 @@ export function OwnerPlanner({
   allowAllTeachers = true,
   rescheduleMode = "apply",
   rescheduleAction,
+  initialLessonId,
+  currentTimeMs = 0,
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<View>("week");
   const [anchorKey, setAnchorKey] = useState(initialDate);
   const [teacherId, setTeacherId] = useState(initialTeacherId);
-  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
+  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(initialLessonId ?? null);
   const [rescheduleLessonId, setRescheduleLessonId] = useState<string | null>(null);
   const [dragCandidate, setDragCandidate] = useState<RescheduleProposal | null>(null);
   const [proposal, setProposal] = useState<RescheduleProposal | null>(null);
@@ -364,7 +370,7 @@ export function OwnerPlanner({
       : new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(anchor);
 
   return (
-    <section className="ui-card overflow-hidden">
+    <section id="school-calendar" className="ui-card scroll-mt-6 overflow-hidden">
       <div className="grid gap-8 px-5 py-6 md:grid-cols-[1fr_auto] md:items-end sm:px-7">
         <div>
           <p className="text-xs text-muted">{contextLabel} · {timezone.replaceAll("_", " ")}</p>
@@ -499,6 +505,7 @@ export function OwnerPlanner({
       {selectedLesson ? (
         <LessonSheet
           schoolId={schoolId}
+          currentTimeMs={currentTimeMs}
           lesson={selectedLesson}
           teacherName={teachers.find((teacher) => teacher.id === selectedLesson.teacher_id)?.name ?? "Teacher"}
           student={studentDetails[selectedLesson.student_id]}
@@ -513,7 +520,10 @@ export function OwnerPlanner({
             return result;
           }}
           onSchoolCancellation={reportSchoolCancellation.bind(null, schoolId, selectedLesson.id)}
-          onClose={() => setSelectedLessonId(null)}
+          onClose={() => {
+            setSelectedLessonId(null);
+            if (initialLessonId) router.replace(`/schools/${schoolId}#school-calendar`, { scroll: false });
+          }}
         />
       ) : null}
       {rescheduleLesson && proposal ? (
@@ -1082,6 +1092,7 @@ function MonthView({
 
 function LessonSheet({
   schoolId,
+  currentTimeMs,
   lesson,
   teacherName,
   student,
@@ -1095,6 +1106,7 @@ function LessonSheet({
   onClose,
 }: {
   schoolId: string;
+  currentTimeMs: number;
   lesson: Lesson & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> };
   teacherName: string;
   student: StudentDetail | undefined;
@@ -1142,6 +1154,8 @@ function LessonSheet({
           canManage={canMarkReschedule}
           onChange={onPermissionChange}
         />
+
+        {canMarkReschedule && lesson.status === "scheduled" && new Date(lesson.ends_at).getTime() <= currentTimeMs ? <section className="border-b border-line py-8"><LessonOutcomeForm action={(outcome, notes) => recordTeacherLessonOutcome(schoolId, lesson.id, outcome, notes)} /></section> : null}
 
         {canReschedule && lesson.status === "scheduled" ? (
           <section className="border-b border-line py-8">
