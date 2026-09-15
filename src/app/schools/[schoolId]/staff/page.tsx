@@ -62,16 +62,12 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
             : null;
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
-      <header className="grid gap-5 pb-4 md:grid-cols-[1fr_2fr] md:items-end"><p className="text-sm text-muted">{school.name}</p><div><p className="text-sm text-brand">People and access</p><h1 className="mt-3 font-display text-5xl tracking-[-0.04em] sm:text-6xl">Staff.</h1><p className="mt-4 max-w-2xl text-sm leading-6 text-muted">Invite teachers, review access, and set each person’s scheduling boundaries.</p></div></header>
+    <main className="mx-auto min-h-screen max-w-7xl px-5 py-10 sm:px-8 sm:py-section">
+      <header className="flex flex-wrap items-end justify-between gap-6 pb-4"><div><h1 className="font-display text-5xl tracking-[-0.04em] sm:text-6xl">Staff.</h1><p className="mt-4 max-w-2xl text-sm leading-6 text-muted">Invite teachers, review access, and set each person’s scheduling boundaries.</p><p className="mt-2 text-sm text-muted">{roster.length} teaching {roster.length === 1 ? "staff member" : "staff members"}</p></div><AddTeacherDialog instruments={instrumentNames} action={createAndInviteTeacher.bind(null, schoolId)} /></header>
       {inviteStatus ? <div id="staff-status" role="alert" className={`scroll-mt-6 border p-4 text-sm leading-6 ${inviteStatus.tone}`}>{inviteStatus.message}</div> : null}
       {query.access ? <p role="status" className={`mt-4 rounded-control bg-surface px-4 py-3 text-sm ${query.access === "disabled" ? "text-brand" : "text-danger"}`}>{query.access === "disabled" ? "Teacher access disabled for this school." : "Teacher access could not be changed."}</p> : null}
-      <section className="py-10">
-        <div className="flex flex-wrap items-end justify-between gap-4 pb-5">
-          <div><p className="text-xs uppercase tracking-[0.14em] text-muted">Team</p><h2 className="mt-2 font-display text-4xl">Staff roster</h2></div>
-          <div className="text-right"><AddTeacherDialog instruments={instrumentNames} action={createAndInviteTeacher.bind(null, schoolId)} /><p className="mt-3 text-sm text-muted">{roster.length} teaching {roster.length === 1 ? "staff member" : "staff members"}</p></div>
-        </div>
-        <div className="grid gap-5 pt-4">
+      <section className="mt-8" aria-label="Staff roster">
+        <div className="grid gap-5">
           {roster.map((person) => (
             <article key={person.id} className="ui-card p-5 sm:p-7">
               <header className="flex flex-wrap items-start justify-between gap-5 pb-5">

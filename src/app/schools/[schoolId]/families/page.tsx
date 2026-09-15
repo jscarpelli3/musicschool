@@ -34,18 +34,19 @@ export default async function FamiliesPage({ params }: { params: Promise<{ schoo
   }, {});
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
-      <header className="border-b border-line pb-7">
-        <h1 className="font-display text-5xl">Families.</h1>
-        <p className="mt-3 text-sm text-muted">{accounts?.length ?? 0} payer accounts</p>
+    <main className="mx-auto min-h-screen max-w-7xl px-5 py-10 sm:px-8 sm:py-section">
+      <header className="pb-4">
+        <h1 className="font-display text-5xl tracking-[-0.04em] sm:text-6xl">Families.</h1>
+        <p className="mt-4 max-w-2xl text-sm leading-6 text-muted">Review payer accounts, contact details, and the students connected to each family.</p>
+        <p className="mt-2 text-sm text-muted">{accounts?.length ?? 0} payer accounts</p>
       </header>
-      <div>
+      <div className="mt-8 grid gap-4">
         {(accounts ?? []).map((account) => {
           const contact = peopleById.get(account.billing_contact_person_id);
           const count = studentCount[account.id] ?? 0;
-          return <Link key={account.id} href={`/schools/${schoolId}/families/${account.id}`} className="grid gap-3 border-b border-line py-6 transition-colors hover:bg-surface/40 sm:grid-cols-[1fr_1fr_auto] sm:items-center sm:px-4"><div><h2 className="text-lg">{account.name}</h2><p className="mt-1 text-xs capitalize text-muted">{account.status}</p></div><div className="text-sm text-muted"><p>{contact ? displayName(contact) : "No payer assigned"}</p><p className="mt-1 text-xs">{contact?.email || contact?.phone || "No contact details"}</p></div><p className="text-sm text-brand">{count} {count === 1 ? "student" : "students"} →</p></Link>;
+          return <Link key={account.id} href={`/schools/${schoolId}/families/${account.id}`} className="ui-card grid gap-4 p-5 transition hover:-translate-y-px hover:bg-surface sm:grid-cols-[1fr_1fr_auto] sm:items-center sm:p-6"><div><h2 className="font-display text-2xl">{account.name}</h2><p className="mt-1 text-xs capitalize text-muted">{account.status}</p></div><div className="text-sm text-muted"><p>{contact ? displayName(contact) : "No payer assigned"}</p><p className="mt-1 text-xs">{contact?.email || contact?.phone || "No contact details"}</p></div><p className="text-sm text-brand">{count} {count === 1 ? "student" : "students"} →</p></Link>;
         })}
-        {!accounts?.length ? <p className="py-12 text-sm text-muted">No family accounts have been created.</p> : null}
+        {!accounts?.length ? <p className="ui-card p-6 text-sm text-muted">No family accounts have been created.</p> : null}
       </div>
     </main>
   );
