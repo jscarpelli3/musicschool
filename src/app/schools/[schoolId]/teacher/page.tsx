@@ -61,18 +61,18 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
   const recent = lessons.filter((lesson) => new Date(lesson.ends_at).getTime() <= nowMs || lesson.status !== "scheduled").reverse();
 
   const lessonList = (rows: typeof lessons) => rows?.length ? (
-    <div className="border-t border-line">
+    <div className="grid gap-3">
       {rows.map((lesson) => {
         const place = lesson.place_id ? placeById.get(lesson.place_id) : null;
         const canLog = lesson.status === "scheduled" && new Date(lesson.ends_at).getTime() <= nowMs;
         return (
-          <details key={lesson.id} className="group border-b border-line">
-            <summary className="grid cursor-pointer list-none gap-2 py-5 sm:grid-cols-[10rem_1fr_auto] sm:items-baseline">
+          <details key={lesson.id} className="group rounded-control bg-surface p-4 transition hover:bg-surface/70 sm:px-5">
+            <summary className="grid cursor-pointer list-none gap-2 sm:grid-cols-[10rem_1fr_auto] sm:items-baseline">
               <span className="text-sm text-muted">{dateTime.format(new Date(lesson.starts_at))}</span>
               <span><strong className="font-medium"><Link href={`/schools/${schoolId}/students/${lesson.student_id}`} className="hover:text-brand">{studentById.get(lesson.student_id) ?? "Student"}</Link></strong><span className="mt-1 block text-sm text-muted">{productById.get(lesson.product_id) ?? "Lesson"} · {time.format(new Date(lesson.starts_at))}–{time.format(new Date(lesson.ends_at))}</span></span>
               <span className="text-sm text-brand">{lesson.outcome ? lessonOutcomeDescriptor(lesson.outcome).label : lessonEventDescriptor(lesson.status).label}</span>
             </summary>
-            <div className="pb-7 sm:pl-40">
+            <div className="pt-5 sm:pl-40">
               <p className="text-sm text-muted">{place?.name ?? "Place not assigned"}{place?.details ? ` · ${place.details}` : ""}</p>
               {lesson.staff_notes ? <p className="mt-4 border-l border-line pl-4 text-sm leading-6">{lesson.staff_notes}</p> : null}
               {lesson.status === "scheduled" && new Date(lesson.starts_at).getTime() > nowMs ? <TeacherRescheduleControls canSelfReschedule={teacherSettings.scheduling_authority === "manage_assigned_lessons"} earliestLocal={earliestLocal} rescheduleAction={rescheduleTeacherLesson.bind(null, schoolId, lesson.id)} /> : null}
@@ -83,12 +83,13 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
         );
       })}
     </div>
-  ) : <p className="border-t border-line py-8 text-sm text-muted">No lessons in this section.</p>;
+  ) : <p className="rounded-control bg-surface p-5 text-sm text-muted">No lessons in this section.</p>;
 
   return (
     <main className="mx-auto min-h-screen max-w-5xl px-5 py-12 sm:px-8">
-      <header className="border-b border-line pb-9"><p className="text-sm text-muted">{school.name}</p><h1 className="mt-3 font-display text-5xl sm:text-6xl">Your lessons.</h1><p className="mt-4 text-sm text-muted">{personDisplayName(teacherPerson)} · Times shown in {school.timezone}</p></header>
-      {proposals?.length ? <section id="lesson-proposals" className="scroll-mt-6 border-b border-line py-10"><h2 className="font-display text-3xl">Needs your approval</h2><p className="mt-3 text-sm text-muted">These proposed lessons are outside your saved availability and are not on the calendar yet.</p><div className="mt-6 divide-y divide-line border-y border-line">{proposals.map((proposal)=><article key={proposal.id} className="py-5"><p className="font-medium"><Link href={`/schools/${schoolId}/students/${proposal.student_id}`} className="hover:text-brand">{studentById.get(proposal.student_id)??"Student"}</Link> · {dateTime.format(new Date(proposal.proposed_starts_at))}</p><p className="mt-2 text-sm text-muted">{proposal.schedule_type==="weekly"?"Weekly proposal":"One-time lesson"} · {proposal.reason}</p><LessonProposalControls accept={decideLessonProposal.bind(null,schoolId,proposal.id,"accept")} decline={decideLessonProposal.bind(null,schoolId,proposal.id,"decline")} /></article>)}</div></section>:null}
+      <header><p className="text-sm text-muted">{school.name}</p><h1 className="mt-3 font-display text-5xl sm:text-6xl">Your lessons.</h1><p className="mt-4 text-sm text-muted">{personDisplayName(teacherPerson)} · Times shown in {school.timezone}</p></header>
+      {proposals?.length ? <section id="lesson-proposals" className="ui-card mt-section scroll-mt-6 p-6 sm:p-8"><h2 className="font-display text-3xl">Needs your approval</h2><p className="mt-3 text-sm text-muted">These proposed lessons are outside your saved availability and are not on the calendar yet.</p><div className="mt-6 grid gap-3">{proposals.map((proposal)=><article key={proposal.id} className="rounded-control bg-surface p-5"><p className="font-medium"><Link href={`/schools/${schoolId}/students/${proposal.student_id}`} className="hover:text-brand">{studentById.get(proposal.student_id)??"Student"}</Link> · {dateTime.format(new Date(proposal.proposed_starts_at))}</p><p className="mt-2 text-sm text-muted">{proposal.schedule_type==="weekly"?"Weekly proposal":"One-time lesson"} · {proposal.reason}</p><LessonProposalControls accept={decideLessonProposal.bind(null,schoolId,proposal.id,"accept")} decline={decideLessonProposal.bind(null,schoolId,proposal.id,"decline")} /></article>)}</div></section>:null}
+      <div className="mt-section">
       <TeacherScheduleCalendar
         schoolId={schoolId}
         initialDate={initialDate}
@@ -104,10 +105,11 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
         }}
         currentTimeMs={nowMs}
       />
-      {schedule.pendingProposals.some((proposal)=>proposal.status==="pending_owner"&&proposal.created_by===profileId)?<section id="my-pending-proposals" className="border-b border-line py-10"><h2 className="font-display text-3xl">Your pending proposals</h2><div className="mt-5 divide-y divide-line border-y border-line">{schedule.pendingProposals.filter((proposal)=>proposal.status==="pending_owner"&&proposal.created_by===profileId).map((proposal)=><div key={proposal.id} className="py-5"><p className="font-medium"><Link href={`/schools/${schoolId}/students/${proposal.student_id}`} className="hover:text-brand">{studentById.get(proposal.student_id)??"Student"}</Link> · {dateTime.format(new Date(proposal.proposed_starts_at))}</p><p className="mt-2 text-sm text-muted">Waiting for the owner. The original lesson remains scheduled.</p><ProposalManagementControls schoolId={schoolId} proposalId={proposal.id} localStart={proposal.proposed_local_start} reason={proposal.reason}/></div>)}</div></section>:null}
-      <section className="border-b border-line py-10"><h2 className="font-display text-3xl">Weekly availability</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-muted">Record every recurring block when lessons normally fit. Availability guides scheduling; changing it never moves an existing lesson.</p><div className="mt-6">{teacherSettings.can_manage_own_availability ? <WeeklyAvailabilityEditor initialBlocks={currentAvailability} action={saveTeacherWeeklyAvailability.bind(null,schoolId,teacherPerson.id)} /> : <p className="border border-line p-4 text-sm text-muted">The school owner manages your availability. Ask them to update these blocks.</p>}</div></section>
-      <section className="py-10"><div className="flex items-baseline justify-between gap-4"><h2 className="font-display text-3xl">Upcoming</h2><span className="text-sm text-muted">{upcoming.length}</span></div><div className="mt-6">{lessonList(upcoming)}</div></section>
-      <section className="border-t border-line py-10"><div className="flex items-baseline justify-between gap-4"><h2 className="font-display text-3xl">Recent and ready to log</h2><span className="text-sm text-muted">{recent.length}</span></div><div className="mt-6">{lessonList(recent)}</div></section>
+      </div>
+      {schedule.pendingProposals.some((proposal)=>proposal.status==="pending_owner"&&proposal.created_by===profileId)?<section id="my-pending-proposals" className="ui-card mt-section p-6 sm:p-8"><h2 className="font-display text-3xl">Your pending proposals</h2><div className="mt-5 grid gap-3">{schedule.pendingProposals.filter((proposal)=>proposal.status==="pending_owner"&&proposal.created_by===profileId).map((proposal)=><div key={proposal.id} className="rounded-control bg-surface p-5"><p className="font-medium"><Link href={`/schools/${schoolId}/students/${proposal.student_id}`} className="hover:text-brand">{studentById.get(proposal.student_id)??"Student"}</Link> · {dateTime.format(new Date(proposal.proposed_starts_at))}</p><p className="mt-2 text-sm text-muted">Waiting for the owner. The original lesson remains scheduled.</p><ProposalManagementControls schoolId={schoolId} proposalId={proposal.id} localStart={proposal.proposed_local_start} reason={proposal.reason}/></div>)}</div></section>:null}
+      <section className="ui-card mt-section p-6 sm:p-8"><h2 className="font-display text-3xl">Weekly availability</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-muted">Record every recurring block when lessons normally fit. Availability guides scheduling; changing it never moves an existing lesson.</p><div className="mt-6">{teacherSettings.can_manage_own_availability ? <WeeklyAvailabilityEditor initialBlocks={currentAvailability} action={saveTeacherWeeklyAvailability.bind(null,schoolId,teacherPerson.id)} /> : <p className="rounded-control bg-surface p-4 text-sm text-muted">The school owner manages your availability. Ask them to update these blocks.</p>}</div></section>
+      <section className="mt-section"><div className="flex items-baseline justify-between gap-4"><h2 className="font-display text-3xl">Upcoming</h2><span className="text-sm text-muted">{upcoming.length}</span></div><div className="ui-card mt-6 p-4 sm:p-6">{lessonList(upcoming)}</div></section>
+      <section className="mt-section"><div className="flex items-baseline justify-between gap-4"><h2 className="font-display text-3xl">Recent and ready to log</h2><span className="text-sm text-muted">{recent.length}</span></div><div className="ui-card mt-6 p-4 sm:p-6">{lessonList(recent)}</div></section>
     </main>
   );
 }

@@ -18,11 +18,11 @@ export function LessonOutcomeForm({
   };
 
   return (
-    <div className="mt-6 border-t border-line pt-6">
+    <div className="mt-6 rounded-control bg-surface-raised p-5">
       <h3 className="font-display text-2xl">Log this lesson</h3>
       <div className="mt-4 grid gap-2">
         {Object.entries(labels).map(([value, label]) => (
-          <label key={value} className="flex cursor-pointer items-center gap-3 border border-line px-4 py-3 text-sm has-[:checked]:border-brand">
+          <label key={value} className="flex cursor-pointer items-center gap-3 rounded-control border border-line bg-surface px-4 py-3 text-sm transition hover:border-brand/60 has-[:checked]:border-brand has-[:checked]:bg-brand/10">
             <input type="radio" name="outcome" value={value} checked={outcome === value} onChange={() => setOutcome(value)} />
             <span className="capitalize">{label}</span>
           </label>
