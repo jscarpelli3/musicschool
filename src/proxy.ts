@@ -4,10 +4,17 @@ import { refreshSession } from "@/lib/supabase/proxy";
 
 const MARKETING_HOSTS = new Set(["commontime.studio", "www.commontime.studio"]);
 const PROVIDER_WEBHOOK_PATHS = ["/api/stripe/webhooks", "/api/resend/webhooks", "/api/twilio/"];
+const VERCEL_HOST_ENV_KEYS = ["VERCEL_URL", "VERCEL_BRANCH_URL", "VERCEL_PROJECT_PRODUCTION_URL"] as const;
+
+function configuredVercelHosts() {
+  return VERCEL_HOST_ENV_KEYS.flatMap((key) => {
+    const host = process.env[key]?.trim().toLowerCase();
+    return host ? [host] : [];
+  });
+}
 
 function appHosts() {
-  const hosts = new Set(["app.commontime.studio"]);
-  if (process.env.VERCEL_URL) hosts.add(process.env.VERCEL_URL.toLowerCase());
+  const hosts = new Set(["app.commontime.studio", ...configuredVercelHosts()]);
   if (process.env.NODE_ENV !== "production") {
     hosts.add("localhost");
     hosts.add("127.0.0.1");
@@ -15,16 +22,15 @@ function appHosts() {
   return hosts;
 }
 
-function trustedMutationOrigins() {
+function trustedMutationOrigins(request: NextRequest, requestHost: string) {
   const origins = new Set(["https://app.commontime.studio"]);
+  const forwardedProtocol = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const requestProtocol = forwardedProtocol || request.nextUrl.protocol.replace(":", "");
+  try { origins.add(new URL(`${requestProtocol}://${requestHost}`).origin); } catch { /* malformed hosts fail the origin check below */ }
   if (process.env.APP_URL) {
     try { origins.add(new URL(process.env.APP_URL).origin); } catch { /* invalid deployment configuration is rejected below */ }
   }
-  if (process.env.VERCEL_URL) origins.add(`https://${process.env.VERCEL_URL}`);
-  if (process.env.NODE_ENV !== "production") {
-    origins.add("http://localhost:3000");
-    origins.add("http://127.0.0.1:3000");
-  }
+  for (const host of configuredVercelHosts()) origins.add(`https://${host}`);
   return origins;
 }
 
@@ -75,7 +81,7 @@ export async function proxy(request: NextRequest) {
   if (unsafeMethod && !providerWebhook) {
     const origin = request.headers.get("origin");
     const fetchSite = request.headers.get("sec-fetch-site");
-    if (fetchSite === "cross-site" || !origin || !trustedMutationOrigins().has(origin)) {
+    if (fetchSite === "cross-site" || !origin || !trustedMutationOrigins(request, requestHost).has(origin)) {
       return NextResponse.json({ error: "Untrusted request origin." }, { status: 403 });
     }
   }

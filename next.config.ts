@@ -10,6 +10,11 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Avatar uploads accept 5 MB images. Multipart encoding adds a small amount
+    // of overhead to the raw file size before the Server Action receives it.
+    serverActions: { bodySizeLimit: "6mb" },
+  },
   async headers() { return [{ source: "/(.*)", headers: securityHeaders }]; },
 };
 

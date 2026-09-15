@@ -44,15 +44,15 @@ export default async function SchoolInfoPage({ params, searchParams }: {
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
       <SetupHeader schoolId={schoolId} schoolName={school.name} active="info" />
-      {query.status ? <p className={`border-b border-line py-4 text-sm ${query.status === "saved" ? "text-brand" : "text-danger"}`}>{query.status === "saved" ? "School information saved." : "School information could not be saved."}</p> : null}
-      {logoMessage ? <p className={`border-b border-line py-4 text-sm ${logoMessage.error ? "text-danger" : "text-brand"}`}>{logoMessage.text}</p> : null}
-      {query.instruments ? <p role="status" className={`border-b border-line py-4 text-sm ${query.instruments === "saved" ? "text-brand" : "text-danger"}`}>{query.instruments === "saved" ? "School instruments saved." : "The instrument list could not be saved."}</p> : null}
-      <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
-        <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">
+      {query.status ? <p className={`mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm ${query.status === "saved" ? "text-brand" : "text-danger"}`}>{query.status === "saved" ? "School information saved." : "School information could not be saved."}</p> : null}
+      {logoMessage ? <p className={`mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm ${logoMessage.error ? "text-danger" : "text-brand"}`}>{logoMessage.text}</p> : null}
+      {query.instruments ? <p role="status" className={`mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm ${query.instruments === "saved" ? "text-brand" : "text-danger"}`}>{query.instruments === "saved" ? "School instruments saved." : "The instrument list could not be saved."}</p> : null}
+      <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
+        <div>
           <h2 className="font-display text-3xl">Identity</h2>
           <p className="mt-3 text-sm leading-6 text-muted">The details families and staff use to recognize and contact the school.</p>
         </div>
-        <div className="py-10 md:pl-10">
+        <div>
           <div className="flex items-center gap-6">
             {logo?.signedUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -61,17 +61,17 @@ export default async function SchoolInfoPage({ params, searchParams }: {
             <form action={uploadSchoolLogo.bind(null, schoolId)}>
               <input type="hidden" name="return_path" value={`/schools/${schoolId}/setup`} />
               <input required name="logo" type="file" accept="image/jpeg,image/png,image/webp" className="block max-w-60 text-sm text-muted file:mr-3 file:border-0 file:bg-surface-raised file:px-3 file:py-2 file:text-ink" />
-              <button className="mt-4 border-b border-brand pb-1 text-sm text-brand">Update logo</button>
+              <button className="mt-4 rounded-md border border-line bg-surface px-4 py-2 text-sm text-ink transition hover:border-brand hover:bg-surface-raised">Update logo</button>
             </form>
           </div>
         </div>
       </section>
-      <form action={updateSchoolInfo.bind(null, schoolId)} className="grid md:grid-cols-[1fr_2fr]">
-        <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">
+      <form action={updateSchoolInfo.bind(null, schoolId)} className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
+        <div>
           <h2 className="font-display text-3xl">Contact</h2>
           <p className="mt-3 text-sm text-muted">Timezone: {school.timezone}</p>
         </div>
-        <div className="grid gap-7 py-10 md:grid-cols-2 md:pl-10">
+        <div className="grid gap-7 md:grid-cols-2">
           <label className="md:col-span-2"><span className="text-xs text-muted">School name</span><input required name="name" defaultValue={school.name} className={field} /></label>
           <label className="md:col-span-2"><span className="text-xs text-muted">Phone number</span><input name="phone" type="tel" defaultValue={school.phone ?? ""} className={field} /></label>
           <label className="md:col-span-2"><span className="text-xs text-muted">Address</span><input name="address_line_1" defaultValue={school.address_line_1 ?? ""} className={field} /></label>
@@ -79,12 +79,12 @@ export default async function SchoolInfoPage({ params, searchParams }: {
           <label><span className="text-xs text-muted">City</span><input name="city" defaultValue={school.city ?? ""} className={field} /></label>
           <label><span className="text-xs text-muted">State / region</span><input name="region" defaultValue={school.region ?? ""} className={field} /></label>
           <label><span className="text-xs text-muted">Postal code</span><input name="postal_code" defaultValue={school.postal_code ?? ""} className={field} /></label>
-          <div className="flex items-end"><button className="border-b border-brand pb-2 text-sm text-brand">Save school info →</button></div>
+          <div className="flex items-end"><button className="rounded-md bg-brand px-4 py-2.5 text-sm text-surface transition hover:opacity-90">Save school info</button></div>
         </div>
       </form>
-      <section className="grid border-t border-line md:grid-cols-[1fr_2fr]">
-        <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10"><h2 className="font-display text-3xl">Instruments</h2><p className="mt-3 text-sm leading-6 text-muted">Choose the instruments this school teaches. Staff profiles use this shared catalog.</p></div>
-        <div className="py-10 md:pl-10"><InstrumentCatalogForm instruments={(instruments ?? []).map((item) => item.name)} action={updateSchoolInstrumentCatalog.bind(null, schoolId)} /></div>
+      <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
+        <div><h2 className="font-display text-3xl">Instruments</h2><p className="mt-3 text-sm leading-6 text-muted">Choose the instruments this school teaches. Staff profiles use this shared catalog.</p></div>
+        <div><InstrumentCatalogForm instruments={(instruments ?? []).map((item) => item.name)} action={updateSchoolInstrumentCatalog.bind(null, schoolId)} /></div>
       </section>
     </main>
   );

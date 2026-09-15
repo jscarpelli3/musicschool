@@ -59,7 +59,7 @@ export function RescheduleConfirmation({
       <section className="reschedule-confirm-panel">
         <div className="flex items-start justify-between gap-5 border-b border-line pb-6">
           <div><p className="text-xs uppercase tracking-[0.14em] text-brand">Proposed move</p><h3 id="reschedule-confirm-title" className="mt-3 font-display text-4xl">{mode === "propose" ? "Send this proposed time." : "Confirm the new time."}</h3></div>
-          <button type="button" onClick={onClose} className="line-action pb-2 text-sm text-muted">Back</button>
+          <button type="button" onClick={onClose} className="text-action text-sm text-muted">Back</button>
         </div>
         <div className="grid gap-6 border-b border-line py-7 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
           <div><p className="text-xs text-muted">From</p><p className="mt-2 text-sm">{lesson.start.dateKey}</p><p className="mt-1 text-lg">{clock(lesson.start.minutes)}–{clock(lesson.end.minutes)}</p></div>

@@ -159,6 +159,13 @@ function clock(minutes: number) {
   return `${displayHour}:${String(minute).padStart(2, "0")} ${suffix}`;
 }
 
+function studentInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  if (parts.length === 1) return Array.from(parts[0]).slice(0, 2).join("").toUpperCase();
+  return `${Array.from(parts[0])[0] ?? ""}${Array.from(parts.at(-1) ?? "")[0] ?? ""}`.toUpperCase();
+}
+
 function timeMinutes(value: string) {
   const [hour, minute] = value.split(":").map(Number);
   return hour * 60 + minute;
@@ -200,6 +207,8 @@ export function OwnerPlanner({
   const [proposedPlaceId, setProposedPlaceId] = useState("");
   const [allowOutsideAvailability, setAllowOutsideAvailability] = useState(false);
   const [creationSlot, setCreationSlot] = useState<CreationSlot | null>(null);
+  const [creatingLesson, setCreatingLesson] = useState(false);
+  const [expandedWeek, setExpandedWeek] = useState(false);
   const compactInitialized = useRef(false);
   const anchor = fromKey(anchorKey);
 
@@ -217,6 +226,7 @@ export function OwnerPlanner({
   useEffect(() => {
     const reset = () => {
       setCreationSlot(null);
+      setCreatingLesson(false);
       setSelectedLessonId(null);
       setRescheduleLessonId(null);
       setProposal(null);
@@ -246,6 +256,15 @@ export function OwnerPlanner({
     window.addEventListener("keydown", cancelOnEscape);
     return () => window.removeEventListener("keydown", cancelOnEscape);
   }, [rescheduleLessonId]);
+
+  useEffect(() => {
+    if (!creatingLesson) return;
+    function cancelOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setCreatingLesson(false);
+    }
+    window.addEventListener("keydown", cancelOnEscape);
+    return () => window.removeEventListener("keydown", cancelOnEscape);
+  }, [creatingLesson]);
 
   useEffect(() => {
     const compact = window.matchMedia("(max-width: 639px)");
@@ -278,6 +297,7 @@ export function OwnerPlanner({
   }
 
   function beginReschedule(lesson: LessonWithParts, keepCalendarPosition = false) {
+    setCreatingLesson(false);
     setSelectedLessonId(null);
     setRescheduleLessonId(lesson.id);
     setProposal(null);
@@ -301,6 +321,17 @@ export function OwnerPlanner({
     setDropError(null);
     setRescheduleReason("");
     setAllowOutsideAvailability(false);
+  }
+
+  function toggleCreationMode() {
+    if (creatingLesson) {
+      setCreatingLesson(false);
+      return;
+    }
+    setSelectedLessonId(null);
+    cancelReschedule();
+    setCreatingLesson(true);
+    if (view === "month") setView(window.matchMedia("(max-width: 639px)").matches ? "day" : "week");
   }
 
   function submitReschedule() {
@@ -331,13 +362,23 @@ export function OwnerPlanner({
       : new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(anchor);
 
   return (
-    <section className="border-t border-line">
-      <div className="grid gap-8 border-b border-line py-6 md:grid-cols-[1fr_auto] md:items-end">
+    <section className="ui-card overflow-hidden">
+      <div className="grid gap-8 px-5 py-6 md:grid-cols-[1fr_auto] md:items-end sm:px-7">
         <div>
           <p className="text-xs text-muted">{contextLabel} · {timezone.replaceAll("_", " ")}</p>
           <h2 className="mt-3 font-display text-4xl font-normal tracking-[-0.03em]">{title}</h2>
         </div>
         <div className="flex flex-wrap items-end gap-8">
+          {lessonCreationOptions ? (
+            <button
+              type="button"
+              aria-pressed={creatingLesson}
+              onClick={toggleCreationMode}
+              className={`rounded-control border px-4 py-2 text-sm transition hover:-translate-y-px ${creatingLesson ? "border-brand bg-brand text-canvas" : "border-brand text-brand hover:bg-brand hover:text-canvas"}`}
+            >
+              <span aria-hidden="true" className="mr-2 text-base">+</span>{creatingLesson ? "Cancel adding" : "Add lesson"}
+            </button>
+          ) : null}
           {showTeacherFilter ? <label className="border-b border-line pb-2 text-sm">
             <span className="mr-3 text-muted">Teacher</span>
             <select value={teacherId} onChange={(event) => setTeacherId(event.target.value)} className="bg-transparent outline-none">
@@ -346,40 +387,66 @@ export function OwnerPlanner({
               {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}{teacher.isOwner ? " · you" : ""}</option>)}
             </select>
           </label> : null}
-          <div className="flex border-b border-line" role="group" aria-label="Planner view">
+          <div className="flex items-center gap-2" role="group" aria-label="Planner view">
             {views.map((option) => (
               <button
                 key={option}
                 type="button"
                 aria-pressed={view === option}
                 onClick={() => setView(option)}
-                className={`relative px-4 py-2 text-sm capitalize after:absolute after:right-0 after:bottom-[-1px] after:left-0 after:h-px after:bg-brand after:transition-transform ${view === option ? "text-ink after:scale-x-100" : "text-muted after:scale-x-0 hover:text-ink"}`}
+                className={`rounded-control capitalize transition hover:-translate-y-px ${option === "week" ? `border px-4 py-2 text-sm ${view === option ? "border-brand bg-brand text-canvas" : "border-line text-ink hover:border-brand hover:bg-surface"}` : `px-2 py-1 text-xs ${view === option ? "bg-surface text-ink" : "text-muted hover:text-ink"}`}`}
               >{option}</button>
             ))}
           </div>
+          {view === "week" && visibleTeachers.length > 1 ? (
+            <button
+              type="button"
+              aria-pressed={expandedWeek}
+              onClick={() => setExpandedWeek((current) => !current)}
+              className={`rounded-control border px-4 py-2 text-sm transition hover:-translate-y-px ${expandedWeek ? "border-brand bg-brand text-canvas" : "border-line text-muted hover:border-brand hover:text-ink"}`}
+            >
+              {expandedWeek ? "Compact week" : "Expand all teachers"}
+            </button>
+          ) : null}
         </div>
       </div>
 
-      <div className="flex items-center justify-between border-b border-line py-3">
-        <button type="button" onClick={() => move(-1)} className="line-action text-sm text-muted hover:text-ink">← Previous</button>
+      <div className="mx-5 flex items-center justify-between border-t border-line/60 py-3 sm:mx-7">
+        <button type="button" onClick={() => move(-1)} className="text-action text-sm text-muted hover:text-ink">← Previous</button>
         <button type="button" onClick={() => setAnchorKey(initialDate)} className="text-sm text-brand hover:text-brand-hover">
           {view === "day" ? "Go to today" : view === "week" ? "Go to this week" : "Go to this month"}
         </button>
-        <button type="button" onClick={() => move(1)} className="line-action text-sm text-muted hover:text-ink">Next →</button>
+        <button type="button" onClick={() => move(1)} className="text-action text-sm text-muted hover:text-ink">Next →</button>
       </div>
 
       {rescheduleNotices.length ? (
         <div role="status" className="border-b border-brand bg-[color-mix(in_srgb,var(--ui-brand)_8%,transparent)]">
           <div className="flex items-center justify-between gap-5 border-b border-line px-4 py-3">
             <span className="text-xs uppercase tracking-[0.14em] text-brand">Recent calendar changes</span>
-            <button type="button" onClick={() => setRescheduleNotices([])} className="line-action pb-1 text-xs text-muted hover:text-ink">Dismiss all</button>
+            <button type="button" onClick={() => setRescheduleNotices([])} className="text-action text-xs text-muted hover:text-ink">Dismiss all</button>
           </div>
           {rescheduleNotices.map((notice) => (
             <div key={notice.id} className="flex items-start justify-between gap-5 border-b border-line px-4 py-4 text-sm text-brand last:border-b-0">
               <span>{notice.message}</span>
-              <button type="button" aria-label="Dismiss this calendar change" onClick={() => setRescheduleNotices((current) => current.filter((item) => item.id !== notice.id))} className="line-action shrink-0 pb-1 text-xs text-muted hover:text-ink">Dismiss</button>
+              <button type="button" aria-label="Dismiss this calendar change" onClick={() => setRescheduleNotices((current) => current.filter((item) => item.id !== notice.id))} className="text-action shrink-0 text-xs text-muted hover:text-ink">Dismiss</button>
             </div>
           ))}
+        </div>
+      ) : null}
+
+      {creatingLesson ? (
+        <div role="status" className="flex items-center justify-between gap-5 border-b border-brand bg-[color-mix(in_srgb,var(--ui-brand)_9%,transparent)] px-4 py-3 text-sm">
+          <span><strong className="text-brand">Add lesson mode.</strong> Choose an open time on the calendar.</span>
+          <button type="button" onClick={() => setCreatingLesson(false)} className="text-action shrink-0 text-muted hover:text-ink">Cancel</button>
+        </div>
+      ) : rescheduleLesson ? (
+        <div role="status" className="flex items-center justify-between gap-5 border-b border-brand bg-[color-mix(in_srgb,var(--ui-brand)_9%,transparent)] px-4 py-3 text-sm">
+          <span><strong className="text-brand">Reschedule mode.</strong> Drag {studentNames[rescheduleLesson.student_id] ?? "this lesson"} to a new time.</span>
+          <button type="button" onClick={cancelReschedule} className="text-action shrink-0 text-muted hover:text-ink">Cancel</button>
+        </div>
+      ) : expandedWeek && view === "week" ? (
+        <div role="status" className="border-b border-line px-4 py-3 text-sm text-muted">
+          <strong className="text-ink">Expanded week.</strong> Every teacher has a full column for each day. Scroll horizontally to move across the week.
         </div>
       ) : null}
 
@@ -401,6 +468,7 @@ export function OwnerPlanner({
       ) : (
         <TimelineView
           view={view}
+          expandedWeek={expandedWeek}
           anchor={anchor}
           teachers={visibleTeachers}
           availability={availability}
@@ -422,7 +490,8 @@ export function OwnerPlanner({
           onExitReschedule={cancelReschedule}
           allowOutsideDrop={Boolean(rescheduleAction)}
           canCreateLesson={Boolean(lessonCreationOptions)}
-          onCreateSlot={setCreationSlot}
+          creationMode={creatingLesson}
+          onCreateSlot={(slot) => { setCreatingLesson(false); setCreationSlot(slot); }}
         />
       )}
       {selectedLesson ? (
@@ -512,6 +581,7 @@ function evaluateProposal(
 
 function TimelineView({
   view,
+  expandedWeek,
   anchor,
   teachers,
   availability,
@@ -532,10 +602,12 @@ function TimelineView({
   onExitReschedule,
   showAvailabilityLabels,
   canCreateLesson,
+  creationMode,
   onCreateSlot,
   allowOutsideDrop,
 }: {
   view: "day" | "week";
+  expandedWeek: boolean;
   anchor: Date;
   teachers: Teacher[];
   availability: Availability[];
@@ -556,11 +628,14 @@ function TimelineView({
   onExitReschedule: () => void;
   showAvailabilityLabels: boolean;
   canCreateLesson: boolean;
+  creationMode: boolean;
   onCreateSlot: (slot: CreationSlot) => void;
   allowOutsideDrop: boolean;
 }) {
   const [dragging, setDragging] = useState(false);
   const [hoverSlot, setHoverSlot] = useState<CreationSlot | null>(null);
+  const [expandedTrack, setExpandedTrack] = useState<{ dateKey: string; teacherId: string } | null>(null);
+  const [pinnedTrack, setPinnedTrack] = useState<{ dateKey: string; teacherId: string } | null>(null);
   const scrollFrame = useRef<HTMLDivElement | null>(null);
   const pointerStart = useRef<{ x: number; y: number; offset: number } | null>(null);
   const pendingLesson = useRef<LessonWithParts | null>(null);
@@ -570,8 +645,15 @@ function TimelineView({
   const dates = view === "day" ? [anchor] : weekDates(anchor);
   const columns = view === "day"
     ? teachers.map((teacher) => ({ date: anchor, teachers: [teacher], label: teacher.name }))
-    : dates.map((date) => ({ date, teachers, label: new Intl.DateTimeFormat("en-US", { weekday: "short", day: "numeric" }).format(date) }));
+    : expandedWeek
+      ? dates.flatMap((date) => teachers.map((teacher) => ({
+          date,
+          teachers: [teacher],
+          label: `${new Intl.DateTimeFormat("en-US", { weekday: "short", day: "numeric" }).format(date)} · ${teacher.name}`,
+        })))
+      : dates.map((date) => ({ date, teachers, label: new Intl.DateTimeFormat("en-US", { weekday: "short", day: "numeric" }).format(date) }));
   const hourCount = (timelineEnd - timelineStart) / 60;
+  const minimumColumnWidth = expandedWeek ? 190 : view === "week" ? Math.max(150, teachers.length * 14 + 100) : 150;
 
   function creationSlotFromPointer(event: { currentTarget: HTMLDivElement; clientX: number; clientY: number }, dateKey: string, columnTeachers: Teacher[]) {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -588,7 +670,10 @@ function TimelineView({
     const column = document.elementsFromPoint(clientX, clientY)
       .find((element): element is HTMLElement => element instanceof HTMLElement && Boolean(element.dataset.plannerDate));
     if (!column?.dataset.plannerDate) return null;
-    const columnTeachers = columns.find(({ date }) => key(date) === column.dataset.plannerDate)?.teachers ?? [];
+    const columnTeacherId = column.dataset.plannerTeacher;
+    const columnTeachers = columnTeacherId
+      ? teachers.filter((teacher) => teacher.id === columnTeacherId)
+      : columns.find(({ date }) => key(date) === column.dataset.plannerDate)?.teachers ?? [];
     if (!columnTeachers.length) return null;
     const rect = column.getBoundingClientRect();
     const teacher = columnTeachers.find((candidate) => candidate.id === movingLesson.teacher_id) ?? columnTeachers[0];
@@ -679,10 +764,10 @@ function TimelineView({
   return (
     <div ref={scrollFrame} className="planner-scroll overflow-x-auto">
       {dropError ? <div role="alert" className="sticky left-0 z-40 border-b border-danger px-4 py-3 text-sm text-danger">Move blocked: {dropError}</div> : null}
-      <div style={{ minWidth: `${Math.max(view === "day" && columns.length === 1 ? 360 : 760, columns.length * 150)}px` }}>
+      <div style={{ minWidth: `${Math.max(view === "day" && columns.length === 1 ? 360 : 760, columns.length * minimumColumnWidth)}px` }}>
         <div className="grid border-b border-line" style={{ gridTemplateColumns: `4.5rem repeat(${columns.length}, minmax(0, 1fr))` }}>
           <div />
-          {columns.map((column) => <div key={`${key(column.date)}-${column.label}`} className="border-l border-line px-3 py-3 text-sm">{column.label}</div>)}
+          {columns.map((column, columnIndex) => <div key={`${key(column.date)}-${column.label}`} className="planner-column-boundary border-l border-line px-3 py-3 text-sm" data-expanded-week={expandedWeek} data-day-start={expandedWeek && columnIndex % teachers.length === 0}>{column.label}</div>)}
         </div>
         <div className="grid" style={{ gridTemplateColumns: `4.5rem repeat(${columns.length}, minmax(0, 1fr))` }}>
           <div className="relative" style={{ height: `${hourCount * 60}px` }}>
@@ -690,23 +775,49 @@ function TimelineView({
               <span key={index} className="absolute right-3 text-[10px] text-muted" style={{ top: `${index * 60 - 6}px` }}>{clock(timelineStart + index * 60)}</span>
             ))}
           </div>
-          {columns.map((column) => {
+          {columns.map((column, columnIndex) => {
             const dateKey = key(column.date);
             const teacherCount = column.teachers.length;
-            const activeTeacherIndex = -1;
+            const activeTrack = expandedWeek || creationMode || rescheduleLesson
+              ? null
+              : pinnedTrack?.dateKey === dateKey
+                ? pinnedTrack
+                : expandedTrack?.dateKey === dateKey
+                  ? expandedTrack
+                  : null;
+            const activeTeacherIndex = activeTrack?.dateKey === dateKey
+              ? column.teachers.findIndex((teacher) => teacher.id === activeTrack.teacherId)
+              : -1;
             return (
               <div
                 key={`${dateKey}-${column.label}`}
-                className="planner-timeline relative border-l border-line"
+                className="planner-column-boundary planner-timeline relative border-l border-line"
+                data-expanded-week={expandedWeek}
+                data-day-start={expandedWeek && columnIndex % teachers.length === 0}
                 data-planner-date={dateKey}
+                data-planner-teacher={column.teachers.length === 1 ? column.teachers[0].id : undefined}
+                data-creation-mode={creationMode}
+                data-reschedule-mode={Boolean(rescheduleLesson)}
                 style={{ height: `${hourCount * 60}px` }}
                 onPointerMove={(event) => {
-                  if (!canCreateLesson || !column.teachers.length || rescheduleLesson || dragging || event.pointerType === "touch") return;
+                  if (!expandedWeek && !creationMode && !rescheduleLesson && !dragging) {
+                    const teacherElement = document.elementsFromPoint(event.clientX, event.clientY)
+                      .find((element): element is HTMLElement => element instanceof HTMLElement && Boolean(element.dataset.teacherId));
+                    if (teacherElement?.dataset.teacherId && column.teachers.some((teacher) => teacher.id === teacherElement.dataset.teacherId)) {
+                      setExpandedTrack({ dateKey, teacherId: teacherElement.dataset.teacherId });
+                    }
+                  }
+                  if (!canCreateLesson || !creationMode || !column.teachers.length || rescheduleLesson || dragging || event.pointerType === "touch") return;
                   if (event.target instanceof Element && event.target.closest(".lesson-block")) { setHoverSlot(null); return; }
                   setHoverSlot(creationSlotFromPointer(event, dateKey, column.teachers));
                 }}
-                onPointerLeave={(event) => { if (event.pointerType !== "touch") setHoverSlot(null); }}
+                onPointerLeave={(event) => {
+                  if (event.pointerType === "touch") return;
+                  setHoverSlot(null);
+                  if (!expandedWeek && !creationMode && !rescheduleLesson && !dragging) setExpandedTrack(null);
+                }}
                 onClick={(event) => {
+                  if (!creationMode) { setExpandedTrack(null); setPinnedTrack(null); return; }
                   if (!canCreateLesson || !column.teachers.length || rescheduleLesson || event.detail === 0) return;
                   if (event.target instanceof Element && event.target.closest(".lesson-block")) return;
                   onCreateSlot(creationSlotFromPointer(event, dateKey, column.teachers));
@@ -725,10 +836,22 @@ function TimelineView({
                         type="button"
                         className="availability-block"
                         data-teacher-id={teacher.id}
-                        title={`${teacher.name} available ${clock(start)}–${clock(end)}`}
+                        data-active={activeTeacherIndex === teacherIndex}
+                        aria-pressed={pinnedTrack?.dateKey === dateKey && pinnedTrack.teacherId === teacher.id}
+                        title={`${teacher.name} available ${clock(start)}–${clock(end)}. Click to ${pinnedTrack?.dateKey === dateKey && pinnedTrack.teacherId === teacher.id ? "unpin" : "pin"} this teacher.`}
                         style={availabilityTrackStyle(start, end, teacherIndex, teacherCount, activeTeacherIndex)}
+                        onPointerEnter={(event) => {
+                          if (event.pointerType !== "touch" && !expandedWeek && !creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: teacher.id });
+                        }}
+                        onFocus={() => { if (!expandedWeek && !creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: teacher.id }); }}
+                        onClick={(event) => {
+                          if (creationMode) return;
+                          event.stopPropagation();
+                          if (expandedWeek) return;
+                          setPinnedTrack((current) => current?.dateKey === dateKey && current.teacherId === teacher.id ? null : { dateKey, teacherId: teacher.id });
+                        }}
                       >
-                        {showAvailabilityLabels ? <span className="availability-label">{teacher.name}</span> : null}
+                        {showAvailabilityLabels && !expandedWeek ? <><span aria-hidden="true" className="availability-label availability-label-vertical">{teacher.name}</span><span aria-hidden="true" className="availability-label availability-label-expanded">{teacher.name}{pinnedTrack?.dateKey === dateKey && pinnedTrack.teacherId === teacher.id ? " · pinned" : ""}</span></> : null}
                         <span className="sr-only">{teacher.name} available {clock(start)} to {clock(end)}</span>
                       </button>
                     );
@@ -738,17 +861,25 @@ function TimelineView({
                   .map((lesson) => {
                     const teacherIndex = Math.max(0, column.teachers.findIndex((teacher) => teacher.id === lesson.teacher_id));
                     const teacher = column.teachers[teacherIndex];
+                    const compactLesson = rescheduleLesson?.id !== lesson.id && teacherCount > 1 && activeTeacherIndex !== teacherIndex;
                     return (
                       <button
                         key={lesson.id}
                         type="button"
                         className="lesson-block quick-view-trigger text-left text-xs"
                         data-lesson-id={lesson.id}
+                        data-teacher-id={lesson.teacher_id}
                         data-can-reschedule={canReschedule && lesson.can_reschedule}
                         data-reschedule-origin={rescheduleLesson?.id === lesson.id}
                         data-dragging={dragging && rescheduleLesson?.id === lesson.id}
+                        data-active={activeTeacherIndex === teacherIndex}
+                        data-compact={compactLesson}
                         style={rescheduleLesson?.id === lesson.id ? lessonTrackStyle(lesson.start.minutes, lesson.end.minutes, 0, 1, -1) : lessonTrackStyle(lesson.start.minutes, lesson.end.minutes, teacherIndex, teacherCount, activeTeacherIndex)}
                         aria-label={`${studentNames[lesson.student_id]} with ${teacher?.name}, ${clock(lesson.start.minutes)}, ${placeDetails[lesson.place_id]?.name ?? "place not set"}. ${rescheduleLesson?.id === lesson.id ? "Drag to propose another time." : "Open lesson details."}`}
+                        onPointerEnter={(event) => {
+                          if (event.pointerType !== "touch" && !expandedWeek && !creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: lesson.teacher_id });
+                        }}
+                        onFocus={() => { if (!expandedWeek && !creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: lesson.teacher_id }); }}
                         onPointerDown={beginPointerDrag}
                         onPointerMove={movePointerDrag}
                         onPointerUp={endPointerDrag}
@@ -793,6 +924,7 @@ function TimelineView({
                         <span className="lesson-block-content">
                           <span className="lesson-student-name">{studentNames[lesson.student_id]}</span>
                         </span>
+                        <span aria-hidden="true" className="lesson-student-initials">{studentInitials(studentNames[lesson.student_id] ?? "Student")}</span>
                         <QuickView>
                           <span className="block text-sm font-medium">
                             {clock(lesson.start.minutes)}–{clock(lesson.end.minutes)} · {lesson.end.minutes - lesson.start.minutes} min
@@ -806,7 +938,7 @@ function TimelineView({
                   .filter((item) => item.start.dateKey === dateKey && column.teachers.some((teacher) => teacher.id === item.teacher_id))
                   .map((item) => {
                     const teacherIndex = Math.max(0, column.teachers.findIndex((teacher) => teacher.id === item.teacher_id));
-                    return <button key={item.id} type="button" className="proposal-block text-left" style={lessonTrackStyle(item.start.minutes, item.end.minutes, teacherIndex, teacherCount, activeTeacherIndex)} onClick={(event) => { event.stopPropagation(); onOpenProposal(item.href); }} aria-label={`Pending proposal for ${studentNames[item.student_id] ?? "student"} at ${clock(item.start.minutes)}`}>
+                    return <button key={item.id} type="button" className="proposal-block text-left" data-teacher-id={item.teacher_id} style={lessonTrackStyle(item.start.minutes, item.end.minutes, teacherIndex, teacherCount, activeTeacherIndex)} onPointerEnter={(event) => { if (event.pointerType !== "touch" && !creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: item.teacher_id }); }} onFocus={() => { if (!creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: item.teacher_id }); }} onClick={(event) => { event.stopPropagation(); onOpenProposal(item.href); }} aria-label={`Pending proposal for ${studentNames[item.student_id] ?? "student"} at ${clock(item.start.minutes)}`}>
                       <span className="proposal-label">Pending</span>
                       <span className="proposal-student">{studentNames[item.student_id] ?? "Student"}</span>
                       <QuickView><span className="block text-sm font-medium">Proposed · {clock(item.start.minutes)}–{clock(item.end.minutes)}</span><span className="mt-1 block text-xs opacity-65">{item.status === "pending_teacher" ? "Waiting for teacher" : "Waiting for owner"}{item.schedule_type === "weekly" ? " · Weekly" : ""}</span></QuickView>
@@ -837,22 +969,6 @@ function trackStyle(start: number, end: number, track: number, tracks: number, l
   };
 }
 
-function edgeGeometry(activeTrack: number, tracks: number) {
-  const railTarget = 4;
-  const leftSpace = activeTrack * railTarget;
-  const rightSpace = (tracks - activeTrack - 1) * railTarget;
-  return {
-    left: leftSpace + 6,
-    widthReduction: leftSpace + rightSpace + 12,
-  };
-}
-
-function collapsedTrackLeft(track: number, tracks: number, activeTrack: number) {
-  return track < activeTrack
-    ? `${track * 4}px`
-    : `calc(100% - ${(tracks - track) * 4}px)`;
-}
-
 function availabilityTrackStyle(
   start: number,
   end: number,
@@ -864,18 +980,14 @@ function availabilityTrackStyle(
   if (activeTrack < 0) return base;
 
   if (track === activeTrack) {
-    const geometry = edgeGeometry(activeTrack, tracks);
     return {
       ...base,
-      "--active-left": `${geometry.left}px`,
-      "--active-width": `calc(100% - ${geometry.widthReduction}px)`,
+      "--active-left": "6px",
+      "--active-width": "calc(100% - 12px)",
     } as CSSProperties;
   }
 
-  return {
-    ...base,
-    "--collapsed-left": collapsedTrackLeft(track, tracks, activeTrack),
-  } as CSSProperties;
+  return base;
 }
 
 function lessonTrackStyle(
@@ -887,17 +999,11 @@ function lessonTrackStyle(
 ): CSSProperties {
   const base = trackStyle(start, end, track, tracks, true);
   if (activeTrack < 0) return base;
-  if (track !== activeTrack) {
-    return {
-      ...base,
-      "--collapsed-left": collapsedTrackLeft(track, tracks, activeTrack),
-    } as CSSProperties;
-  }
-  const geometry = edgeGeometry(activeTrack, tracks);
+  if (track !== activeTrack) return base;
   return {
     ...base,
-    "--active-lesson-left": `${geometry.left + 4}px`,
-    "--active-lesson-width": `calc(100% - ${geometry.widthReduction + 8}px)`,
+    "--active-lesson-left": "10px",
+    "--active-lesson-width": "calc(100% - 20px)",
   } as CSSProperties;
 }
 
@@ -1008,7 +1114,7 @@ function LessonSheet({
               {student?.name ?? "Student"}
             </h2>
           </div>
-          <button autoFocus type="button" onClick={onClose} className="line-action pb-2 text-sm text-muted hover:text-ink">Close</button>
+          <button autoFocus type="button" onClick={onClose} className="text-action text-sm text-muted hover:text-ink">Close</button>
         </div>
 
         <dl className="divide-y divide-line border-b border-line">
@@ -1022,7 +1128,7 @@ function LessonSheet({
 
         {canReschedule && lesson.can_reschedule ? (
           <section className="border-b border-line py-8">
-            <button type="button" onClick={onReschedule} className="line-action pb-2 text-sm text-brand hover:text-brand-hover">Reschedule on calendar →</button>
+            <button type="button" onClick={onReschedule} className="text-action text-sm text-brand hover:text-brand-hover">Reschedule on calendar →</button>
             <p className="mt-3 text-xs leading-5 text-muted">The calendar will enter move mode. Dropping proposes a destination; nothing changes until you hold to confirm.</p>
           </section>
         ) : null}
@@ -1115,7 +1221,7 @@ function ReschedulePermission({ allowed, blockedReason, canManage, onChange }: {
           <button type="button" disabled={saving || !reason.trim()} onClick={() => save(false)} className="mt-5 border border-line px-4 py-3 text-sm text-muted disabled:opacity-40">{saving ? "Saving…" : "Mark non-reschedulable"}</button>
         </details>
       ) : null}
-      {canManage && !allowed ? <button type="button" disabled={saving} onClick={() => save(true)} className="line-action mt-5 pb-2 text-sm text-brand">{saving ? "Saving…" : "Allow rescheduling again"}</button> : null}
+      {canManage && !allowed ? <button type="button" disabled={saving} onClick={() => save(true)} className="text-action mt-5 text-sm text-brand">{saving ? "Saving…" : "Allow rescheduling again"}</button> : null}
       {message ? <p className="mt-3 text-xs text-muted" aria-live="polite">{message}</p> : null}
       <p className="mt-4 text-xs leading-5 text-muted">Past or completed lessons remain ineligible even when this setting is allowed.</p>
     </section>

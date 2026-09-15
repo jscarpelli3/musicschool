@@ -34,20 +34,20 @@ export default async function PlacesPage({
   const canManageAll = capabilities.has("school.places.manage");
 
   return (
-    <main className="mx-auto min-h-screen max-w-5xl px-6 py-section">
+    <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
       <SetupHeader schoolId={schoolId} schoolName={school.name} active="spaces" />
-      <p className="border-b border-line py-6 text-sm leading-6 text-muted">Use the language your school uses. Spaces can be rooms, homes, stages, addresses, or online spaces.</p>
+      <p className="mt-5 text-sm leading-6 text-muted">Use the language your school uses. Spaces can be rooms, homes, stages, addresses, or online spaces.</p>
 
-      {created ? <p className="border-b border-line py-4 text-sm text-brand">Place added.</p> : null}
-      {archived ? <p className="border-b border-line py-4 text-sm text-brand">Space archived.</p> : null}
-      {error ? <p className="border-b border-line py-4 text-sm text-danger">The space could not be archived. Nothing changed.</p> : null}
+      {created ? <p className="mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm text-brand">Place added.</p> : null}
+      {archived ? <p className="mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm text-brand">Space archived.</p> : null}
+      {error ? <p className="mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm text-danger">The space could not be archived. Nothing changed.</p> : null}
 
-      <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
-        <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">
+      <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
+        <div>
           <h2 className="font-display text-3xl font-normal">Current list</h2>
           <p className="mt-3 text-sm text-muted">{places?.filter((place) => place.status === "active").length ?? 0} active</p>
         </div>
-        <div className="py-10 md:pl-10">
+        <div>
           {places?.map((place) => {
             const canArchive = place.status === "active" && (canManageAll || place.created_by === profileId);
             return (
@@ -68,7 +68,7 @@ export default async function PlacesPage({
         </div>
       </section>
 
-      {canCreate ? <section className="flex items-center justify-between gap-6 py-10">
+      {canCreate ? <section className="mt-6 flex items-center justify-between gap-6 px-1 py-6">
         <div><h2 className="font-display text-3xl font-normal">Need another space?</h2><p className="mt-2 text-sm text-muted">Add it without leaving the current list.</p></div>
         <FocusedModal triggerLabel="Add place +" eyebrow="School spaces" title="Add a place." description="Create a room, address, stage, home, or online space."><PlaceForm schoolId={schoolId} /></FocusedModal>
       </section> : null}

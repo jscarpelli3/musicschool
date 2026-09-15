@@ -45,26 +45,26 @@ export default async function PoliciesPage({ params }: { params: Promise<{ schoo
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
       <SetupHeader schoolId={schoolId} schoolName={school.name} active="policies" />
-      <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
-        <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">
+      <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
+        <div>
           <h2 className="font-display text-3xl">Policies</h2>
           <p className="mt-3 text-sm leading-6 text-muted">Human-readable terms backed by rules the schedule and billing system can enforce.</p>
         </div>
-        <div className="py-10 md:pl-10">
+        <div>
           <CancellationPolicyForm initial={initial} action={publishCancellationPolicy.bind(null, schoolId)} />
           {latestVersion ? <p className="mt-8 border-t border-line pt-5 text-xs text-muted">Currently published: version {latestVersion.version_number} · {new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Chicago" }).format(new Date(latestVersion.published_at!))}</p> : null}
         </div>
       </section>
-      <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
-        <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10"><h2 className="font-display text-3xl">Family cancellation access</h2><p className="mt-3 text-sm leading-6 text-muted">Control when families can act immediately and how refund choices appear. Individual payer exceptions remain private and audited.</p></div>
-        <div className="py-10 md:pl-10"><FamilyCancellationAccessForm initial={{timelyApprovalMode:familyAccess?.timely_approval_mode??"owner_review",refundPortalMode:familyAccess?.refund_portal_mode??"contact_school"}} action={saveFamilyCancellationAccess.bind(null,schoolId)}/></div>
+      <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
+        <div><h2 className="font-display text-3xl">Family cancellation access</h2><p className="mt-3 text-sm leading-6 text-muted">Control when families can act immediately and how refund choices appear. Individual payer exceptions remain private and audited.</p></div>
+        <div><FamilyCancellationAccessForm initial={{timelyApprovalMode:familyAccess?.timely_approval_mode??"owner_review",refundPortalMode:familyAccess?.refund_portal_mode??"contact_school"}} action={saveFamilyCancellationAccess.bind(null,schoolId)}/></div>
       </section>
-      <section className="grid md:grid-cols-[1fr_2fr]">
-        <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">
+      <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
+        <div>
           <h2 className="font-display text-3xl">Documents</h2>
           <p className="mt-3 text-sm leading-6 text-muted">Private legal and operational files kept on hand for the school.</p>
         </div>
-        <div className="py-10 md:pl-10">
+        <div>
           <p className="text-sm text-muted">No documents uploaded.</p>
           <button disabled className="mt-8 border-b border-line pb-2 text-sm text-muted">Upload document — storage setup coming next</button>
         </div>

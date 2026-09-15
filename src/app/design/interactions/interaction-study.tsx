@@ -73,8 +73,8 @@ export function InteractionStudy() {
           </p>
         </div>
         <div className="grid gap-5 px-6 py-10 md:grid-cols-2 md:px-16 md:py-14">
-          <button className="line-action text-lg">Review Tuesday’s schedule →</button>
-          <button className="line-action text-lg">Invite a teacher →</button>
+          <button className="text-action text-lg">Review Tuesday’s schedule →</button>
+          <button className="text-action text-lg">Invite a teacher →</button>
         </div>
       </section>
 

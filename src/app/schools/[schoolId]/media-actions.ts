@@ -4,14 +4,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import sharp from "sharp";
 import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
+import { isAcceptedImageType, SCHOOL_LOGO_UPLOAD_MAX_BYTES } from "@/lib/media/image-upload";
 import { protectServerAction } from "@/lib/security/request-boundary";
 import { createClient } from "@/lib/supabase/server";
 
-const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-const maxBytes = 2 * 1024 * 1024;
-
 function validImage(value: FormDataEntryValue | null): value is File {
-  return value instanceof File && value.size > 0 && value.size <= maxBytes && allowedTypes.has(value.type);
+  return value instanceof File && value.size > 0 && value.size <= SCHOOL_LOGO_UPLOAD_MAX_BYTES && isAcceptedImageType(value.type);
 }
 
 export async function uploadSchoolLogo(schoolId: string, formData: FormData) {

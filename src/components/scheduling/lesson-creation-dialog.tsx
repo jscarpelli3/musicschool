@@ -37,7 +37,7 @@ export function LessonCreationDialog({ schoolId, slot, options, lockTeacher, onC
     <section className="reschedule-confirm-panel max-h-[92vh] overflow-y-auto">
       <div className="flex items-start justify-between gap-5 border-b border-line pb-6">
         <div><p className="text-xs uppercase tracking-[0.14em] text-brand">New lesson</p><h3 id="new-lesson-dialog-title" className="mt-3 font-display text-4xl">Add to the calendar.</h3></div>
-        <button type="button" onClick={onClose} className="line-action pb-2 text-sm text-muted hover:text-ink">Close</button>
+        <button type="button" onClick={onClose} className="text-action text-sm text-muted hover:text-ink">Close</button>
       </div>
       <div className="pt-6">
         <NewLessonForm

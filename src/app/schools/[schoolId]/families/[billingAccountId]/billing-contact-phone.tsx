@@ -41,7 +41,7 @@ export function BillingContactPhone({ schoolId, schoolName, billingAccountId, ph
       </FocusedModal>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs">
         <span className={consentState === "opted_in" ? "text-brand" : consentState === "opted_out" ? "text-danger" : "text-muted"}>{consentLabel}</span>
-        {consentState === "not_enrolled" ? <Link href={`/sms-consent?school=${encodeURIComponent(schoolName)}`} className="line-action pb-1 text-brand">Open payer consent form</Link> : null}
+        {consentState === "not_enrolled" ? <Link href={`/sms-consent?school=${encodeURIComponent(schoolName)}`} className="text-action text-brand">Open payer consent form</Link> : null}
         {consentState === "opted_out" ? <span className="text-muted">The payer must text START or UNSTOP.</span> : null}
       </div>
       {state.message ? <p role="status" className={`mt-3 text-sm ${state.ok ? "text-muted" : "text-danger"}`}>{state.message}</p> : null}

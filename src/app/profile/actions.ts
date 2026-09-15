@@ -3,18 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import sharp from "sharp";
+import { AVATAR_UPLOAD_MAX_BYTES, AVATAR_UPLOAD_MAX_MB, isAcceptedImageType } from "@/lib/media/image-upload";
 import { createClient } from "@/lib/supabase/server";
 import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
-
-const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-const maxBytes = 2 * 1024 * 1024;
 
 export type AvatarUploadResult = { ok: boolean; message: string; avatarUrl?: string };
 
 export async function uploadAvatar(formData: FormData): Promise<AvatarUploadResult> {
   const image = formData.get("avatar");
-  if (!(image instanceof File) || image.size <= 0 || image.size > maxBytes || !allowedTypes.has(image.type)) {
-    return { ok: false, message: "Choose a JPG, PNG, or WebP image no larger than 2 MB." };
+  if (!(image instanceof File) || image.size <= 0 || image.size > AVATAR_UPLOAD_MAX_BYTES || !isAcceptedImageType(image.type)) {
+    return { ok: false, message: `Choose a JPG, PNG, or WebP image no larger than ${AVATAR_UPLOAD_MAX_MB} MB.` };
   }
 
   const supabase = await createClient();

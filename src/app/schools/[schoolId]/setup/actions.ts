@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
 import { createClient } from "@/lib/supabase/server";
 import { isSchoolThemeKey } from "@/lib/ui/school-themes";
+import { isSchoolFontKey } from "@/lib/ui/school-fonts";
 
 export async function updateSchoolTheme(schoolId: string, formData: FormData) {
   const themeKey = String(formData.get("theme_key") ?? "");
@@ -21,6 +22,20 @@ export async function updateSchoolTheme(schoolId: string, formData: FormData) {
   revalidatePath(`/schools/${schoolId}`);
   revalidatePath(`/schools/${schoolId}/appearance`);
   redirect(`/schools/${schoolId}/appearance?status=saved`);
+}
+
+export async function updateSchoolFont(schoolId: string, formData: FormData) {
+  const fontKey = String(formData.get("font_key") ?? "");
+  if (!isSchoolFontKey(fontKey)) redirect(`/schools/${schoolId}/appearance?type=font&status=invalid`);
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) redirect(`/login?next=/schools/${schoolId}/appearance`);
+  if (!await checkSchoolCapability(supabase, schoolId, "school.appearance.palette_manage")) redirect(`/schools/${schoolId}`);
+  const { data: updated, error } = await supabase.from("schools").update({ font_key: fontKey }).eq("id", schoolId).select("id").maybeSingle();
+  if (error || !updated) redirect(`/schools/${schoolId}/appearance?type=font&status=error`);
+  revalidatePath(`/schools/${schoolId}`);
+  revalidatePath(`/schools/${schoolId}/appearance`);
+  redirect(`/schools/${schoolId}/appearance?type=font&status=saved`);
 }
 
 export async function updateSchoolInfo(schoolId: string, formData: FormData) {

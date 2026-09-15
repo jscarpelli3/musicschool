@@ -4137,6 +4137,7 @@ export type Database = {
           created_by: string
           currency: string
           family_billing_mode: string
+          font_key: string
           id: string
           intended_charge_day: number
           logo_path: string | null
@@ -4162,6 +4163,7 @@ export type Database = {
           created_by: string
           currency?: string
           family_billing_mode?: string
+          font_key?: string
           id?: string
           intended_charge_day?: number
           logo_path?: string | null
@@ -4187,6 +4189,7 @@ export type Database = {
           created_by?: string
           currency?: string
           family_billing_mode?: string
+          font_key?: string
           id?: string
           intended_charge_day?: number
           logo_path?: string | null
@@ -5234,6 +5237,20 @@ export type Database = {
       }
       create_onboarding_student_and_payer: {
         Args: {
+          p_payer_email: string
+          p_payer_first_name: string
+          p_payer_last_name: string
+          p_payer_profile_id: string
+          p_relationship?: string
+          p_school_id: string
+          p_student_first_name: string
+          p_student_last_name: string
+        }
+        Returns: Json
+      }
+      create_student_and_payer: {
+        Args: {
+          p_operation_id?: string
           p_payer_email: string
           p_payer_first_name: string
           p_payer_last_name: string

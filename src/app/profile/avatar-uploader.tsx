@@ -2,10 +2,8 @@
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
+import { AVATAR_UPLOAD_MAX_BYTES, AVATAR_UPLOAD_MAX_MB, isAcceptedImageType } from "@/lib/media/image-upload";
 import { uploadAvatar } from "./actions";
-
-const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-const maxBytes = 2 * 1024 * 1024;
 
 export function AvatarUploader({ currentUrl, initial }: { currentUrl: string | null; initial: string }) {
   const router = useRouter();
@@ -24,9 +22,9 @@ export function AvatarUploader({ currentUrl, initial }: { currentUrl: string | n
     const file = input.files?.[0];
     input.value = "";
     if (!file) return;
-    if (!allowedTypes.has(file.type) || file.size <= 0 || file.size > maxBytes) {
+    if (!isAcceptedImageType(file.type) || file.size <= 0 || file.size > AVATAR_UPLOAD_MAX_BYTES) {
       setState("error");
-      setMessage("Choose a JPG, PNG, or WebP image no larger than 2 MB.");
+      setMessage(`Choose a JPG, PNG, or WebP image no larger than ${AVATAR_UPLOAD_MAX_MB} MB.`);
       return;
     }
 
@@ -85,7 +83,7 @@ export function AvatarUploader({ currentUrl, initial }: { currentUrl: string | n
           {state === "uploading" ? "Uploading…" : displayUrl ? "Choose a new avatar" : "Choose an avatar"}
         </label>
         <p role="status" aria-live="polite" className={`mt-3 min-h-10 text-sm leading-5 ${state === "error" ? "text-danger" : state === "success" ? "text-brand" : "text-muted"}`}>{message}</p>
-        <p className="mt-1 text-xs text-muted">JPG, PNG, or WebP · 2 MB maximum</p>
+        <p className="mt-1 text-xs text-muted">JPG, PNG, or WebP · {AVATAR_UPLOAD_MAX_MB} MB maximum</p>
       </div>
     </div>
   );

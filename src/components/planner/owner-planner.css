@@ -7,61 +7,36 @@
   );
 }
 
-.line-action {
-  position: relative;
+.planner-column-boundary[data-expanded-week="true"] {
+  border-left-color: color-mix(in srgb, var(--ui-line) 38%, transparent);
 }
 
-.line-action::after {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 1px;
-  content: "";
-  background: currentColor;
-  transform: scaleX(0.18);
-  transform-origin: left;
-  transition: transform 260ms cubic-bezier(0.2, 0.75, 0.25, 1);
-}
-
-.line-action:hover::after,
-.line-action:focus-visible::after {
-  transform: scaleX(1);
+.planner-column-boundary[data-expanded-week="true"][data-day-start="true"] {
+  border-left-width: 2px;
+  border-left-color: color-mix(in srgb, var(--ui-ink) 44%, var(--ui-line));
 }
 
 .availability-block {
   position: absolute;
-  z-index: 1;
   padding: 0;
   border-left: 1px solid color-mix(in srgb, var(--ui-brand) 58%, transparent);
   background: color-mix(in srgb, var(--ui-brand) 9%, transparent);
   color: var(--ui-muted);
   text-align: left;
   transition:
-    left 280ms cubic-bezier(0.2, 0.75, 0.25, 1),
-    width 280ms cubic-bezier(0.2, 0.75, 0.25, 1),
-    background 180ms ease;
+    left 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    background 240ms ease;
 }
 
 .availability-block[data-active="true"] {
-  z-index: 5;
+  z-index: 18;
   left: var(--active-left, 6px) !important;
   width: var(--active-width, calc(100% - 12px)) !important;
-  background: color-mix(in srgb, var(--ui-brand) 15%, var(--ui-canvas));
-}
-
-.availability-block[data-collapsed="true"] {
-  z-index: 8;
-  left: var(--collapsed-left) !important;
-  width: 4px !important;
-  border-left-width: 2px;
-  border-left-color: color-mix(in srgb, var(--ui-brand) 72%, transparent);
-  background: transparent;
-}
-
-.availability-block[data-collapsed="true"]:hover,
-.availability-block[data-collapsed="true"]:focus-visible {
-  border-left-color: var(--ui-brand-hover);
+  background: var(--ui-surface);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ui-brand) 34%, transparent);
+  filter: none;
+  opacity: 1;
 }
 
 .availability-block:focus-visible {
@@ -70,23 +45,50 @@
 
 .availability-label {
   position: absolute;
-  bottom: calc(100% + 0.15rem);
-  left: 50%;
+  z-index: 6;
   width: max-content;
-  font-size: 1.25rem;
+  pointer-events: none;
+  font-size: 0.68rem;
   line-height: 1;
-  letter-spacing: 0.02em;
-  transform: rotate(-70deg);
-  transform-origin: left bottom;
-  transition: color 180ms ease, opacity 160ms ease;
+  letter-spacing: 0.04em;
+  transition:
+    color 240ms ease,
+    opacity 240ms ease,
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.availability-block[data-collapsed="true"] .availability-label {
+.availability-label-vertical {
+  top: 0.45rem;
+  left: 0.35rem;
+  max-height: calc(100% - 0.9rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.availability-label-expanded {
+  bottom: calc(100% + 0.35rem);
+  left: 0;
+  padding: 0.3rem 0.45rem;
+  background: #fff;
+  color: #111;
+  box-shadow: 0 0.25rem 0.75rem rgb(0 0 0 / 0.18);
+  opacity: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0;
+  transform: translateY(0.2rem);
+}
+
+.availability-block[data-active="true"] .availability-label-vertical {
   opacity: 0;
 }
 
-.availability-block[data-active="true"] .availability-label {
-  color: var(--ui-brand-hover);
+.availability-block[data-active="true"] .availability-label-expanded {
+  color: #111;
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .lesson-block {
@@ -96,11 +98,11 @@
   border-left: 2px solid var(--ui-brand);
   background: var(--ui-surface-raised);
   transition:
-    left 280ms cubic-bezier(0.2, 0.75, 0.25, 1),
-    width 280ms cubic-bezier(0.2, 0.75, 0.25, 1),
-    background 180ms ease,
-    color 180ms ease,
-    opacity 180ms ease;
+    left 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    background 240ms ease,
+    color 240ms ease,
+    opacity 240ms ease;
 }
 
 .lesson-block-content {
@@ -109,7 +111,7 @@
   height: 100%;
   overflow: hidden;
   padding: 0.3rem 0.4rem;
-  transition: opacity 140ms ease;
+  transition: opacity 240ms ease;
 }
 
 .lesson-student-name {
@@ -121,7 +123,7 @@
   line-height: 1.05;
   text-overflow: ellipsis;
   white-space: nowrap;
-  transition: font-size 180ms ease;
+  transition: font-size 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .lesson-block[data-active="true"] .lesson-student-name {
@@ -129,21 +131,34 @@
 }
 
 .lesson-block[data-active="true"] {
-  z-index: 6;
+  z-index: 20;
   left: var(--active-lesson-left, 10px) !important;
   width: var(--active-lesson-width, calc(100% - 20px)) !important;
+  background: var(--ui-surface-raised);
+  filter: none;
+  opacity: 1;
 }
 
-.lesson-block[data-collapsed="true"] {
-  z-index: 9;
-  left: var(--collapsed-left) !important;
-  width: 4px !important;
-  border-left-width: 2px;
-  background: var(--ui-brand);
-}
-
-.lesson-block[data-collapsed="true"] .lesson-block-content {
+.lesson-block[data-compact="true"] .lesson-block-content {
   opacity: 0;
+}
+
+.lesson-student-initials {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
+  overflow: hidden;
+  color: var(--ui-canvas);
+  font-size: 0.5rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  writing-mode: vertical-rl;
+}
+
+.lesson-block[data-compact="true"] .lesson-student-initials {
+  display: grid;
 }
 
 .lesson-block:hover,
@@ -255,7 +270,7 @@
   opacity: 1;
 }
 
-.lesson-block[data-collapsed="true"] .lesson-reschedule-icon {
+.lesson-block[data-compact="true"] .lesson-reschedule-icon {
   display: none;
 }
 
@@ -320,6 +335,23 @@
   background: color-mix(in srgb, var(--ui-brand) 13%, transparent);
   color: var(--ui-brand);
   font-size: 0.7rem;
+  pointer-events: none;
+}
+
+.planner-timeline[data-creation-mode="true"] {
+  cursor: crosshair;
+}
+
+.planner-timeline[data-creation-mode="true"] .lesson-block,
+.planner-timeline[data-creation-mode="true"] .proposal-block,
+.planner-timeline[data-reschedule-mode="true"] .lesson-block:not([data-reschedule-origin="true"]),
+.planner-timeline[data-reschedule-mode="true"] .proposal-block {
+  filter: grayscale(0.75);
+  opacity: 0.28;
+}
+
+.planner-timeline[data-creation-mode="true"] .lesson-block,
+.planner-timeline[data-creation-mode="true"] .proposal-block {
   pointer-events: none;
 }
 

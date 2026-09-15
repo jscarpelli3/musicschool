@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { DragHandle } from "@/components/ui/drag-handle";
 import { HorizontalScrollFrame } from "@/components/ui/horizontal-scroll-frame";
+import { AddFamilyDialog } from "@/components/families/add-family-dialog";
+import type { AddFamilyState } from "@/app/schools/[schoolId]/families/actions";
 
 export type LessonOutcome = "completed" | "rescheduled" | "cancelled_timely" | "cancelled_late" | "no_show" | "upcoming" | "unrecorded";
 
@@ -104,11 +106,13 @@ export function StudentRosterTable({
   monthLabel,
   initialView,
   saveView,
+  addFamilyAction,
 }: {
   rows: StudentRosterRow[];
   monthLabel: string;
   initialView?: Partial<RosterViewSettings> | null;
   saveView: (settings: RosterViewSettings) => Promise<void>;
+  addFamilyAction?: (state: AddFamilyState, formData: FormData) => Promise<AddFamilyState>;
 }) {
   const startingColumns = validOrder(initialView?.columns) ? initialView.columns : defaults;
   const requestedSort = initialView?.sort;
@@ -185,21 +189,25 @@ export function StudentRosterTable({
   }
 
   return (
-    <section className="border-t border-line py-10" aria-labelledby="student-roster-heading">
-      <div className="flex flex-wrap items-end justify-between gap-5 pb-6">
+    <section aria-labelledby="student-roster-heading">
+      <header className="flex flex-wrap items-end justify-between gap-6 pb-4">
         <div>
-          <h2 id="student-roster-heading" className="font-display text-4xl">Students.</h2>
+          <h1 id="student-roster-heading" className="font-display text-5xl tracking-[-0.04em] sm:text-6xl">Students.</h1>
+          <p className="mt-4 max-w-2xl text-sm leading-6 text-muted">Review student schedules, family connections, teachers, and recent lesson activity.</p>
           <p className="mt-2 text-sm text-muted">{rows.length} active · actual occurrences in {monthLabel}</p>
         </div>
-        <button type="button" onClick={() => setArranging((value) => !value)} aria-expanded={arranging} className="border-b border-line pb-2 text-sm text-muted hover:border-brand hover:text-ink">Arrange columns</button>
-      </div>
+        {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add student +" /> : null}
+      </header>
 
-      {arranging ? <div className="flex items-center justify-between border-t border-line px-3 py-3 text-xs text-muted"><span>Drag the headers into place, or use the arrows inside each column.</span><button type="button" onClick={() => commit(defaults)} className="text-brand">Reset order</button></div> : null}
+      <div className="ui-card mt-8 p-5 sm:p-8">
+      <div className="flex justify-end pb-4"><button type="button" onClick={() => setArranging((value) => !value)} aria-expanded={arranging} className="text-action text-sm text-muted hover:text-ink">Arrange columns</button></div>
+
+      {arranging ? <div className="mb-3 flex items-center justify-between rounded-control bg-surface px-3 py-3 text-xs text-muted"><span>Drag the headers into place, or use the arrows inside each column.</span><button type="button" onClick={() => commit(defaults)} className="text-brand">Reset order</button></div> : null}
 
       <HorizontalScrollFrame label="student table">
         <table className="w-full border-collapse text-left">
           <thead>
-            <tr className="border-y border-line text-xs text-muted">
+            <tr className="border-b border-line text-xs text-muted">
               {columns.map((column, index) => (
                 <th
                   key={column}
@@ -262,6 +270,7 @@ export function StudentRosterTable({
       </HorizontalScrollFrame>
       <p className="mt-3 text-xs text-muted">Sorted by {sortModes[sort.column][sort.mode]}. Click the arrow again to cycle that column’s sort.</p>
       {viewSaveError ? <p role="alert" className="mt-2 border-l border-danger pl-3 text-xs text-danger">This view could not be saved. Your data is unchanged; try moving or sorting a column again.</p> : null}
+      </div>
     </section>
   );
 }
