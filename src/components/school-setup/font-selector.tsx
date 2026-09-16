@@ -14,10 +14,10 @@ export function FontSelector({ currentFont, action }: { currentFont: SchoolFontK
   }, [currentFont]);
   const pendingFont = SCHOOL_FONTS.find((font) => font.key === pending);
 
-  return <form action={action}>
-    <fieldset>
+  return <form action={action} className="min-w-0 max-w-full">
+    <fieldset className="min-w-0 max-w-full">
       <legend className="sr-only">School typography</legend>
-      <ChoiceCarousel label="School fonts">
+      <ChoiceCarousel label="School fonts" selectedValue={selected}>
         {SCHOOL_FONTS.map((font) => <label key={font.key} data-school-font={font.key} data-choice-selected={font.key === selected} className="w-[min(19rem,82vw)] shrink-0 snap-start cursor-pointer">
           <input type="radio" name="font_key" value={font.key} checked={font.key === selected} onChange={() => { if (font.key === currentFont) return; setSelected(font.key); setPending(font.key); }} className="peer sr-only" />
           <span className="block min-h-48 rounded-md border border-line bg-canvas p-5 text-ink transition hover:-translate-y-px hover:bg-surface peer-checked:border-brand peer-checked:bg-brand/10 peer-checked:shadow-[inset_0_0_0_1px_var(--ui-brand)] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-brand">

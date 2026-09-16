@@ -22,10 +22,10 @@ export function ThemeSelector({
   const pendingTheme = SCHOOL_THEMES.find((theme) => theme.key === pending);
 
   return (
-    <form action={action}>
-      <fieldset>
+    <form action={action} className="min-w-0 max-w-full">
+      <fieldset className="min-w-0 max-w-full">
         <legend className="sr-only">School interface palette</legend>
-        <ChoiceCarousel label="School palettes">
+        <ChoiceCarousel label="School palettes" selectedValue={selected}>
           {SCHOOL_THEMES.map((theme) => (
             <label key={theme.key} data-school-theme={theme.key} data-choice-selected={theme.key === selected} className="w-[min(19rem,82vw)] shrink-0 snap-start cursor-pointer">
               <input
