@@ -41,7 +41,7 @@ export function ThemeSelector({
               />
               <span className="block rounded-md border border-line bg-canvas p-4 text-ink transition peer-checked:border-brand peer-checked:bg-brand/10 peer-checked:shadow-[inset_0_0_0_1px_var(--ui-brand)] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-brand">
                 <span className="flex items-center gap-4" aria-hidden="true">
-                  <Image src={`/app-icons/${theme.key}.png`} alt="" width={52} height={52} className="h-13 w-13 shrink-0" />
+                  <Image src={theme.icon} alt="" width={52} height={52} className="h-13 w-13 shrink-0" />
                   <span className="flex flex-1 gap-1">
                     <span className="h-5 flex-1 bg-surface" />
                     <span className="h-5 flex-1 bg-surface-raised" />
