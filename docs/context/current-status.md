@@ -6,6 +6,15 @@ Production-domain URL, environment, provider-callback, verification, testing, an
 
 Owner scheduling and family billing foundation are live in test mode. Payment roadmap Step 8 now delivers approval links by included transactional email; SMS has moved to an optional per-school add-on.
 
+## 2026-09-15 beta readiness update
+
+- The six additional school color palettes are merged to `main`.
+- Transactional email now enforces the authenticated Common Time sender, canonical application links, anti-phishing copy, sanitized school display names, and optional school `Reply-To` centrally. Public token RPC bypasses and the expired demo approval token were removed.
+- The family portal now shows relationship-scoped sent statements with safe itemized lines and separate approval/payment states, so a payer can verify a suspicious email without using its link.
+- The full beta flow audit is recorded in [`../audits/beta-flow-audit-2026-09-15.md`](../audits/beta-flow-audit-2026-09-15.md). Public in-app help and role guides are available in `docs/guides/`.
+- Supabase is migrated through `20260916045000`. Typecheck, lint, linked database lint, migration assertions, and the webpack production build pass.
+- Remaining pre-invite operations: enforce DMARC in DNS, confirm Resend tracking is disabled, deploy this branch, and perform one cold invitation/onboarding rehearsal.
+
 ## Active Focus
 
 0. Redesign cancellation policy and owner resolution around the audited orthogonal outcome model in [`../audits/cancellation-policy-schema-audit.md`](../audits/cancellation-policy-schema-audit.md). The vocabulary/compatibility and append-only decision-revision schema in migrations `20260831120000` and `20260831121000` is deployed, migration assertions passed, and generated types match the live schema. A live owner-decision rehearsal remains before expanding or restyling the current three-option owner UI.
@@ -81,7 +90,7 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 
 ## Updated
 
-2026-08-18
+2026-09-15
 ## 2026-08-15 pause — approval rejection and billing timing
 
 - Garcia family August 2026 version 2 is approved at $200. Approval did not create a Stripe charge. Preserve it as successful approval evidence.

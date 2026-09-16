@@ -5458,6 +5458,25 @@ export type Database = {
           teacher_name: string
         }[]
       }
+      get_client_portal_statements: {
+        Args: never
+        Returns: {
+          amount_due_cents: number
+          approval_status: string | null
+          billing_account_id: string
+          billing_account_name: string
+          billing_period_id: string
+          currency: string
+          line_items: Json
+          payment_status: string | null
+          period_end: string
+          period_label: string
+          period_start: string
+          period_status: string
+          school_id: string
+          school_name: string
+        }[]
+      }
       get_payer_calendar_subscription: {
         Args: { raw_token: string }
         Returns: {

@@ -4,6 +4,9 @@ import { PortalAuth } from "./portal-auth";
 import { PortalSignOut } from "./portal-sign-out";
 import { CalendarSubscription } from "./calendar-subscription";
 import { AutomaticPaymentSettings } from "./automatic-payment-settings";
+import { billingPeriodDescriptor } from "@/lib/domain/state-descriptors";
+import type { Json } from "@/types/database";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -21,14 +24,16 @@ export default async function ClientPortalPage() {
     <section className="ui-card mt-10 p-6 sm:p-8"><p className="text-sm leading-6">{accessState === "ambiguous" ? "More than one family account uses this email. Please contact the school for help." : <>The family portal for <strong>{email}</strong> has not been set up yet.</>}</p><p className="mt-3 text-sm leading-6 text-muted">Check that you used the email address your school has on file, or contact the school for help.</p></section>
   </main>;
 
-  const [{ data: lessons, error }, { data: calendarAccounts, error: calendarError }, { data: collectionAccounts, error: collectionError }] = await Promise.all([
+  const [{ data: lessons, error }, { data: calendarAccounts, error: calendarError }, { data: collectionAccounts, error: collectionError }, { data: statements, error: statementError }] = await Promise.all([
     supabase.rpc("get_client_portal_lessons"),
     supabase.rpc("get_client_portal_calendar_accounts"),
     supabase.rpc("get_client_portal_collection_accounts"),
+    supabase.rpc("get_client_portal_statements"),
   ]);
   if (error) throw new Error(`Portal schedule could not load: ${error.message}`);
   if (calendarError) throw new Error(`Portal calendar access could not load: ${calendarError.message}`);
   if (collectionError) throw new Error(`Portal payment settings could not load: ${collectionError.message}`);
+  if (statementError) throw new Error(`Portal statements could not load: ${statementError.message}`);
   const rangeStart = new Date();
   const rangeEnd = new Date(rangeStart);
   rangeEnd.setUTCMonth(rangeEnd.getUTCMonth() + 3);
@@ -38,10 +43,31 @@ export default async function ClientPortalPage() {
     school.lessons.push(lesson);
     schools.set(lesson.school_id, school);
   }
+  const money = (cents: number, currency: string) => new Intl.NumberFormat("en-US", { style: "currency", currency }).format(cents / 100);
+  const statementItems = (value: Json) => Array.isArray(value) ? value.filter((item): item is Record<string, Json | undefined> => Boolean(item) && typeof item === "object" && !Array.isArray(item)) : [];
 
   return <main className="mx-auto min-h-screen max-w-5xl px-5 py-10 sm:px-8 sm:py-16">
-    <header className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end"><div><p className="text-sm text-brand">Family scheduling</p><h1 className="mt-3 font-display text-5xl">Upcoming lessons</h1><p className="mt-3 text-xs text-muted">Signed in as {email}</p></div><PortalSignOut label="Use a different email" /></header>
+    <header className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end"><div><p className="text-sm text-brand">Family scheduling</p><h1 className="mt-3 font-display text-5xl">Upcoming lessons</h1><p className="mt-3 text-xs text-muted">Signed in as {email}</p></div><div className="flex items-center gap-4"><Link href="/support" className="text-sm text-muted hover:text-ink">Help</Link><PortalSignOut label="Use a different email" /></div></header>
     <p className="mt-6 max-w-2xl text-sm leading-6 text-muted">Scheduled lessons for the next three months. On phones, the same calendar becomes a compact agenda for easier reading.</p>
+    <section className="mt-section">
+      <h2 className="font-display text-3xl">Statements</h2>
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">Verify amounts and payment status here whenever an email seems unusual. Approval means you accepted the amount; it does not mean payment is complete.</p>
+      <div className="mt-6 grid gap-4">{statements?.length ? statements.map((statement) => {
+        const descriptor = billingPeriodDescriptor(statement.period_status);
+        const items = statementItems(statement.line_items);
+        return <details key={statement.billing_period_id} className="ui-card p-5 sm:p-6">
+          <summary className="grid cursor-pointer list-none gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-center">
+            <span><strong className="font-medium">{statement.period_label}</strong><span className="mt-1 block text-sm text-muted">{statement.school_name} · {statement.billing_account_name}</span></span>
+            <span className="text-sm text-brand">{descriptor.label}</span>
+            <strong className="font-display text-2xl font-normal">{money(statement.amount_due_cents, statement.currency)}</strong>
+          </summary>
+          <div className="mt-5 rounded-control bg-surface p-4">
+            <ul className="grid gap-3 text-sm">{items.map((item, index) => <li key={`${String(item.description)}-${index}`} className="flex justify-between gap-5"><span>{String(item.description ?? "Statement item")}</span><span>{money(Number(item.amount_cents ?? 0), statement.currency)}</span></li>)}</ul>
+            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted"><span>Approval: {statement.approval_status?.replaceAll("_", " ") ?? "not recorded"}</span><span>Payment: {statement.payment_status?.replaceAll("_", " ") ?? (statement.period_status === "paid" ? "paid" : "not completed")}</span></div>
+          </div>
+        </details>;
+      }) : <div className="ui-card p-6"><p className="text-sm text-muted">No statements have been sent to this family yet.</p></div>}</div>
+    </section>
     {collectionAccounts?.some((account) => account.mandate_status === "active") ? <section className="mt-section">
       <h2 className="font-display text-3xl">Automatic payment</h2>
       <p className="mt-2 text-sm text-muted">Review or change the permission you have given each school.</p>
