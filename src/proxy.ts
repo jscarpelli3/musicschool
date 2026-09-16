@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { refreshSession } from "@/lib/supabase/proxy";
 
 const MARKETING_HOSTS = new Set(["commontime.studio", "www.commontime.studio"]);
+const PUBLIC_MARKETING_PATHS = new Set(["/privacy", "/terms", "/support"]);
 const PROVIDER_WEBHOOK_PATHS = ["/api/stripe/webhooks", "/api/resend/webhooks", "/api/twilio/"];
 const VERCEL_HOST_ENV_KEYS = ["VERCEL_URL", "VERCEL_BRANCH_URL", "VERCEL_PROJECT_PRODUCTION_URL"] as const;
 
@@ -49,7 +50,10 @@ export async function proxy(request: NextRequest) {
     }
 
     if (hostname === "commontime.studio") {
-      const destination = new URL("https://www.commontime.studio");
+      const destination = request.nextUrl.clone();
+      destination.protocol = "https:";
+      destination.hostname = "www.commontime.studio";
+      destination.port = "";
       return NextResponse.redirect(destination, 308);
     }
 
@@ -65,9 +69,11 @@ export async function proxy(request: NextRequest) {
       });
     }
 
-    if (request.nextUrl.pathname !== "/") {
+    if (request.nextUrl.pathname !== "/" && !PUBLIC_MARKETING_PATHS.has(request.nextUrl.pathname)) {
       return NextResponse.redirect(new URL("https://www.commontime.studio"), 307);
     }
+
+    if (PUBLIC_MARKETING_PATHS.has(request.nextUrl.pathname)) return NextResponse.next();
 
     const destination = request.nextUrl.clone();
     destination.pathname = "/coming-soon";

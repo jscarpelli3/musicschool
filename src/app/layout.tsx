@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Cormorant_Garamond, DM_Sans, Fraunces, Manrope, Newsreader, Space_Mono } from "next/font/google";
 import type { ReactNode } from "react";
+import { SiteFooter } from "@/components/layout/site-footer";
 import "./globals.css";
 
 const sans = DM_Sans({
@@ -37,7 +38,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en" className={`${sans.variable} ${display.variable} ${grotesk.variable} ${contemporary.variable} ${expressive.variable} ${literary.variable} ${monospace.variable}`}>
-      <body>{children}</body>
+      <body className="flex min-h-screen flex-col"><div className="flex-1">{children}</div><SiteFooter /></body>
     </html>
   );
 }
