@@ -1,4 +1,5 @@
 import type { createClient } from "@/lib/supabase/server";
+import { cache } from "react";
 import { lessonResolutionContract, type LessonResolutionChoice } from "@/lib/approvals/lesson-resolution-contract";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
@@ -6,12 +7,13 @@ type ProposalApproval = { kind:"schedule_proposal";id:string;status:string;teach
 export type LessonRequestApproval = { kind:"lesson_change_request";id:string;status:string;teacherId:string;studentId:string;teacher:string;student:string;lessonAt:string;lessonEndsAt:string;requestType:string;originKind:string;scenario:string;requestedResolution:string;requestedAt:string;withinPolicyWindow:boolean;cutoffHours:number;policyGuidance:string;accountingState:string;policyLessonResolution:string;policyFeeCents:number;replacementWindowDays:number|null;resolutionChoices:LessonResolutionChoice[];allowedAdjustmentKinds:Array<"fee"|"credit"> };
 export type OwnerApprovalItem = ProposalApproval | LessonRequestApproval;
 
-export async function loadOwnerApprovals(client:Client,schoolId:string,{teacherId,studentIds,history=false}:{teacherId?:string;studentIds?:string[];history?:boolean}={}){
+export async function loadOwnerApprovals(client:Client,schoolId:string,{teacherId,studentIds,history=false,limit}:{teacherId?:string;studentIds?:string[];history?:boolean;limit?:number}={}){
  let proposalQuery=client.from("lesson_schedule_proposals").select("id,status,teacher_id,student_id,original_starts_at,proposed_starts_at,reason,created_at").eq("school_id",schoolId).eq("proposal_kind","reschedule").order("created_at",{ascending:false});
  proposalQuery=history?proposalQuery.neq("status","pending_owner"):proposalQuery.eq("status","pending_owner");
  if(teacherId)proposalQuery=proposalQuery.eq("teacher_id",teacherId);if(studentIds)proposalQuery=studentIds.length?proposalQuery.in("student_id",studentIds):proposalQuery.in("student_id",["00000000-0000-0000-0000-000000000000"]);
  let requestQuery=client.from("lesson_change_requests").select("id,status,lesson_event_id,request_type,origin_kind,scenario,requested_resolution,requested_at,within_policy_window,cutoff_hours,policy_guidance,accounting_state,policy_version_id").eq("school_id",schoolId).order("requested_at",{ascending:false});
  requestQuery=history?requestQuery.in("status",["approved","declined","withdrawn","superseded"]):requestQuery.in("status",["pending","in_progress"]);
+ if(limit){proposalQuery=proposalQuery.limit(limit);requestQuery=requestQuery.limit(limit);}
  const [{data:proposalRows,error:proposalError},{data:requestRows,error:requestError}]=await Promise.all([proposalQuery,requestQuery]);
  if(proposalError)throw new Error(`Approvals could not load: ${proposalError.message}`);if(requestError)throw new Error(`Lesson requests could not load: ${requestError.message}`);
  const eventIds=(requestRows??[]).map(row=>row.lesson_event_id);const {data:events,error:eventError}=eventIds.length?await client.from("lesson_events").select("id,student_id,teacher_id,starts_at,ends_at").eq("school_id",schoolId).in("id",eventIds):{data:[],error:null};if(eventError)throw new Error(`Request lessons could not load: ${eventError.message}`);
@@ -26,3 +28,13 @@ export async function loadOwnerApprovals(client:Client,schoolId:string,{teacherI
  const requests:LessonRequestApproval[]=filteredRequests.flatMap(row=>{const event=eventMap.get(row.lesson_event_id);if(!event)return[];const timing=["teacher_cancellation","school_cancellation","student_no_show"].includes(row.scenario)?"not_applicable":row.within_policy_window?"timely":"late";const outcome=outcomeMap.get(`${row.policy_version_id}:${row.scenario}:${timing}`);if(!outcome)return[];const contract=lessonResolutionContract(row.scenario);const policyNeedsFinancialReview=["account_credit","reduce_charge","manual_financial_review"].includes(outcome.original_charge_treatment);const policyLessonResolution=policyNeedsFinancialReview||outcome.calendar_action==="manual_review"||outcome.replacement_kind==="manual_review"?"manual_review":outcome.calendar_action==="retain_for_later"?"retain_for_reschedule":outcome.original_charge_treatment==="keep_full_charge"?"count_as_serviced":"waive";return[{kind:"lesson_change_request",id:row.id,status:row.status,teacherId:event.teacher_id,studentId:event.student_id,teacher:names.get(event.teacher_id)??"Teacher",student:names.get(event.student_id)??"Student",lessonAt:event.starts_at,lessonEndsAt:event.ends_at,requestType:row.request_type,originKind:row.origin_kind,scenario:row.scenario,requestedResolution:row.requested_resolution,requestedAt:row.requested_at,withinPolicyWindow:row.within_policy_window,cutoffHours:row.cutoff_hours,policyGuidance:row.policy_guidance,accountingState:row.accounting_state,policyLessonResolution,policyFeeCents:outcome.adjustment_kind==="fee"?outcome.adjustment_amount_cents:0,replacementWindowDays:outcome.expiration_days,resolutionChoices:contract.choices,allowedAdjustmentKinds:contract.adjustmentKinds}];});
  return [...proposals,...requests].sort((a,b)=>new Date(b.kind==="schedule_proposal"?b.createdAt:b.requestedAt).getTime()-new Date(a.kind==="schedule_proposal"?a.createdAt:a.requestedAt).getTime()) satisfies OwnerApprovalItem[];
 }
+
+export const loadOwnerApprovalSummary = cache(async function loadOwnerApprovalSummary(client: Client, schoolId: string) {
+ const [items, proposalCount, requestCount] = await Promise.all([
+  loadOwnerApprovals(client,schoolId,{limit:5}),
+  client.from("lesson_schedule_proposals").select("id",{count:"exact",head:true}).eq("school_id",schoolId).eq("proposal_kind","reschedule").eq("status","pending_owner"),
+  client.from("lesson_change_requests").select("id",{count:"exact",head:true}).eq("school_id",schoolId).in("status",["pending","in_progress"]),
+ ]);
+ if(proposalCount.error||requestCount.error)throw new Error("Approval count could not be loaded.");
+ return {items:items.slice(0,5),count:(proposalCount.count??0)+(requestCount.count??0)};
+});
