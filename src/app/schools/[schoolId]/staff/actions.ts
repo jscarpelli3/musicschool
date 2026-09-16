@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
 import { ensurePortalAuthIdentity } from "@/lib/portal/auth-identities";
 import { sendResendEmail, ResendRequestError, ResendUnknownOutcomeError } from "@/lib/resend/server";
+import { normalizeReplyTo, schoolEmailSender } from "@/lib/resend/email-security";
 import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -124,13 +125,15 @@ async function deliverTeacherAccess(schoolId: string, teacherId: string, email: 
   const loginUrl = `${origin}/login?email=${encodeURIComponent(email)}&next=${encodeURIComponent(`/schools/${schoolId}/teacher`)}`;
   const message = teacherInvitationEmail({ schoolName: invitation.school_name, teacherName: invitation.teacher_name, loginUrl });
   const admin = createAdminClient();
+  const { data: schoolEmail } = await supabase.from("schools").select("reply_to_email").eq("id", schoolId).maybeSingle();
   try {
     const sent = await sendResendEmail({
-      from: `${invitation.school_name} via Common Time <notifications@notifications.commontime.studio>`,
+      from: schoolEmailSender(invitation.school_name),
       to: email,
       subject: message.subject,
       text: message.text,
       html: message.html,
+      replyTo: normalizeReplyTo(schoolEmail?.reply_to_email),
       idempotencyKey: invitation.idempotency_key,
       messageKind: "teacher_invitation",
       timeoutMs: 10_000,

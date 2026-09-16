@@ -41,6 +41,7 @@ export async function updateSchoolFont(schoolId: string, formData: FormData) {
 export async function updateSchoolInfo(schoolId: string, formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim() || null;
+  const replyToEmail = String(formData.get("reply_to_email") ?? "").trim().toLowerCase() || null;
   const addressLine1 = String(formData.get("address_line_1") ?? "").trim() || null;
   const addressLine2 = String(formData.get("address_line_2") ?? "").trim() || null;
   const city = String(formData.get("city") ?? "").trim() || null;
@@ -48,6 +49,7 @@ export async function updateSchoolInfo(schoolId: string, formData: FormData) {
   const postalCode = String(formData.get("postal_code") ?? "").trim() || null;
 
   if (!name || name.length > 120) redirect(`/schools/${schoolId}/setup?status=invalid`);
+  if (replyToEmail && (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(replyToEmail) || replyToEmail.length > 320)) redirect(`/schools/${schoolId}/setup?status=invalid`);
   if ([phone, addressLine1, addressLine2, city, region, postalCode].some((value) => value && value.length > 160)) {
     redirect(`/schools/${schoolId}/setup?status=invalid`);
   }
@@ -60,6 +62,7 @@ export async function updateSchoolInfo(schoolId: string, formData: FormData) {
   const { data: updated, error } = await supabase.from("schools").update({
     name,
     phone,
+    reply_to_email: replyToEmail,
     address_line_1: addressLine1,
     address_line_2: addressLine2,
     city,

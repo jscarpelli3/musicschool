@@ -1,6 +1,6 @@
 "use server";
 
-import { createPublicClient } from "@/lib/supabase/public";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizeE164 } from "@/lib/phone";
 import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
 
@@ -21,7 +21,7 @@ export async function recordSmsConsent(_state: SmsConsentState, formData: FormDa
     return { ok: false, message: caught instanceof RequestBoundaryError && caught.code === "rate_limited" ? "Too many enrollment attempts were made. Wait an hour and try again." : "This request could not be validated. Reload and try again." };
   }
 
-  const supabase = createPublicClient();
+  const supabase = createAdminClient();
   const { error } = await supabase.rpc("record_public_sms_opt_in", {
     p_full_name: fullName,
     p_phone_e164: phone,

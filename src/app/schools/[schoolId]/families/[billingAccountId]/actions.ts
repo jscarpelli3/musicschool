@@ -10,6 +10,7 @@ import { normalizeE164 } from "@/lib/phone";
 import { ensurePortalAuthIdentity } from "@/lib/portal/auth-identities";
 import { billingApprovalEmail } from "@/lib/resend/billing-approval-email";
 import { billingStatementNoticeEmail } from "@/lib/resend/billing-statement-notice-email";
+import { normalizeReplyTo, schoolEmailSender } from "@/lib/resend/email-security";
 import { ResendRequestError, ResendUnknownOutcomeError, sendResendEmail } from "@/lib/resend/server";
 import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -28,10 +29,6 @@ function appOrigin() {
   const value = process.env.APP_URL?.trim();
   if (!value) throw new Error("Missing required server environment variable: APP_URL");
   return new URL(value).origin;
-}
-
-function emailDisplayName(value: string) {
-  return value.replace(/[\r\n<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, 100) || "Common Time school";
 }
 
 export async function prepareFamilyBillingDraft(schoolId: string, billingAccountId: string, formData: FormData) {
@@ -216,7 +213,7 @@ export async function sendBillingApprovalSms(
   const rawToken = randomBytes(32).toString("base64url");
   const approvalUrl = `${appOrigin()}/approve/${rawToken}`;
   const amount = new Intl.NumberFormat("en-US", { style: "currency", currency: period.currency }).format(period.amount_due_cents / 100);
-  const body = `${school.name}: Review and approve ${period.label} lesson charges (${amount}): ${approvalUrl} Approval does not charge your card. Reply STOP to opt out, HELP for help.`;
+  const body = `${school.name}: Review and approve ${period.label} lesson charges (${amount}): ${approvalUrl} Approval does not charge your card. Common Time links only use app.commontime.studio. Never enter a card number from a text link. Reply STOP to opt out, HELP for help.`;
   const hash = (value: string) => createHash("sha256").update(value).digest("hex");
   const messagingServiceSid = getTwilioMessagingServiceSid();
   const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
@@ -275,7 +272,7 @@ export async function sendBillingApprovalEmail(
   if (!profileId) redirect(`/login?next=${path}`);
 
   const [{ data: school }, { data: account }, { data: period }, canManage] = await Promise.all([
-    supabase.from("schools").select("name").eq("id", schoolId).maybeSingle(),
+    supabase.from("schools").select("name,reply_to_email").eq("id", schoolId).maybeSingle(),
     supabase.from("billing_accounts").select("billing_contact_person_id").eq("school_id", schoolId).eq("id", billingAccountId).maybeSingle(),
     supabase.from("billing_periods").select("label, amount_due_cents, currency, status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", billingPeriodId).maybeSingle(),
     checkSchoolCapability(supabase, schoolId, "school.billing.manage"),
@@ -298,7 +295,7 @@ export async function sendBillingApprovalEmail(
   const amount = new Intl.NumberFormat("en-US", { style: "currency", currency: period.currency }).format(period.amount_due_cents / 100);
   const payerName = `${contact?.preferred_name || contact?.first_name || "there"}${contact?.last_name ? ` ${contact.last_name}` : ""}`;
   const message = billingApprovalEmail({ schoolName: school.name, payerName, periodLabel: period.label, amount, approvalUrl });
-  const from = `${emailDisplayName(school.name)} via Common Time <notifications@notifications.commontime.studio>`;
+  const from = schoolEmailSender(school.name);
   const hash = (value: string) => createHash("sha256").update(value).digest("hex");
   const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
   const { data: prepared, error: prepareError } = await supabase.rpc("create_billing_approval_email_delivery", {
@@ -320,7 +317,7 @@ export async function sendBillingApprovalEmail(
 
   const admin = createAdminClient();
   try {
-    const sent = await sendResendEmail({ from, to: email, subject: message.subject, html: message.html, text: message.text, idempotencyKey: prepared.idempotency_key });
+    const sent = await sendResendEmail({ from, to: email, subject: message.subject, html: message.html, text: message.text, replyTo: normalizeReplyTo(school.reply_to_email), idempotencyKey: prepared.idempotency_key });
     const { error: completionError } = await admin.rpc("complete_email_provider_submission", {
       p_delivery_id: prepared.email_delivery_id,
       p_provider_email_id: sent.id,
@@ -363,7 +360,7 @@ export async function sendBillingStatementNotice(
   }
 
   const [{ data: school }, { data: period }, { data: readiness }, canManage] = await Promise.all([
-    supabase.from("schools").select("name").eq("id", schoolId).maybeSingle(),
+    supabase.from("schools").select("name,reply_to_email").eq("id", schoolId).maybeSingle(),
     supabase.from("billing_periods").select("label,amount_due_cents,currency").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", billingPeriodId).maybeSingle(),
     supabase.rpc("get_billing_collection_readiness", { p_school_id: schoolId, p_billing_period_id: billingPeriodId }).maybeSingle(),
     checkSchoolCapability(supabase, schoolId, "school.billing.manage"),
@@ -380,7 +377,7 @@ export async function sendBillingStatementNotice(
     noticeDays: readiness.advance_notice_days!,
     portalUrl: `${appOrigin()}/portal`,
   });
-  const from = `${emailDisplayName(school.name)} via Common Time <notifications@notifications.commontime.studio>`;
+  const from = schoolEmailSender(school.name);
   const bodyHash = createHash("sha256").update(`${message.text}\n${message.html}`).digest("hex");
   const { data: prepared, error: prepareError } = await supabase.rpc("prepare_billing_statement_notice", {
     p_school_id: schoolId,
@@ -395,7 +392,7 @@ export async function sendBillingStatementNotice(
 
   const admin = createAdminClient();
   try {
-    const sent = await sendResendEmail({ from, to: prepared.recipient_email, subject: message.subject, html: message.html, text: message.text, idempotencyKey: prepared.idempotency_key, messageKind: "billing_statement_notice" });
+    const sent = await sendResendEmail({ from, to: prepared.recipient_email, subject: message.subject, html: message.html, text: message.text, replyTo: normalizeReplyTo(school.reply_to_email), idempotencyKey: prepared.idempotency_key, messageKind: "billing_statement_notice" });
     const { error } = await admin.rpc("complete_billing_statement_notice_submission", { p_delivery_id: prepared.notice_delivery_id, p_provider_email_id: sent.id });
     if (error) return { ok: false, message: "Resend accepted the statement, but local reconciliation needs attention. Do not send it again yet." };
   } catch (error) {
@@ -426,7 +423,7 @@ export async function retryBillingApprovalEmail(
   if (!profileId) redirect(`/login?next=${path}`);
 
   const [{ data: school }, { data: account }, { data: request }, canManage] = await Promise.all([
-    supabase.from("schools").select("name").eq("id", schoolId).maybeSingle(),
+    supabase.from("schools").select("name,reply_to_email").eq("id", schoolId).maybeSingle(),
     supabase.from("billing_accounts").select("billing_contact_person_id").eq("school_id", schoolId).eq("id", billingAccountId).maybeSingle(),
     supabase.from("billing_approval_requests").select("id, period_label, amount_cents, currency, approval_status")
       .eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("billing_period_id", billingPeriodId)
@@ -467,7 +464,7 @@ export async function retryBillingApprovalEmail(
   try {
     const sent = await sendResendEmail({
       from: prepared.from_address, to: prepared.recipient_email, subject: prepared.subject,
-      html: message.html, text: message.text, idempotencyKey: prepared.idempotency_key,
+      html: message.html, text: message.text, replyTo: normalizeReplyTo(school.reply_to_email), idempotencyKey: prepared.idempotency_key,
     });
     const { error } = await admin.rpc("complete_email_provider_submission", { p_delivery_id: prepared.email_delivery_id, p_provider_email_id: sent.id });
     if (error) return { ok: false, message: "Resend accepted the retry, but local reconciliation failed. Do not retry again yet." };

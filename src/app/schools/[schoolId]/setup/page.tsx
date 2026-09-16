@@ -22,7 +22,7 @@ export default async function SchoolInfoPage({ params, searchParams }: {
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/setup`);
 
   const [{ data: school }, { data: membership }, { data: instruments },capabilities] = await Promise.all([
-    supabase.from("schools").select("id, name, logo_path, phone, address_line_1, address_line_2, city, region, postal_code, timezone").eq("id", schoolId).maybeSingle(),
+    supabase.from("schools").select("id, name, logo_path, phone, reply_to_email, address_line_1, address_line_2, city, region, postal_code, timezone").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("school_instruments").select("name").eq("school_id", schoolId).eq("is_active", true).order("name"),
     loadMySchoolCapabilities(schoolId),
@@ -74,6 +74,7 @@ export default async function SchoolInfoPage({ params, searchParams }: {
         <div className="grid gap-7 md:grid-cols-2">
           <label className="md:col-span-2"><span className="text-xs text-muted">School name</span><input required name="name" defaultValue={school.name} className={field} /></label>
           <label className="md:col-span-2"><span className="text-xs text-muted">Phone number</span><input name="phone" type="tel" defaultValue={school.phone ?? ""} className={field} /></label>
+          <label className="md:col-span-2"><span className="text-xs text-muted">Email replies go to</span><input name="reply_to_email" type="email" autoComplete="email" defaultValue={school.reply_to_email ?? ""} className={field} /><span className="mt-2 block text-xs leading-5 text-muted">Families and teachers can reply here. Messages still come from Common Time’s authenticated notification address.</span></label>
           <label className="md:col-span-2"><span className="text-xs text-muted">Address</span><input name="address_line_1" defaultValue={school.address_line_1 ?? ""} className={field} /></label>
           <label className="md:col-span-2"><span className="text-xs text-muted">Suite or unit</span><input name="address_line_2" defaultValue={school.address_line_2 ?? ""} className={field} /></label>
           <label><span className="text-xs text-muted">City</span><input name="city" defaultValue={school.city ?? ""} className={field} /></label>

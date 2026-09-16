@@ -4147,6 +4147,7 @@ export type Database = {
           phone: string | null
           postal_code: string | null
           primary_color: string | null
+          reply_to_email: string | null
           region: string | null
           slug: string
           theme_key: string
@@ -4173,6 +4174,7 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           primary_color?: string | null
+          reply_to_email?: string | null
           region?: string | null
           slug: string
           theme_key?: string
@@ -4199,6 +4201,7 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           primary_color?: string | null
+          reply_to_email?: string | null
           region?: string | null
           slug?: string
           theme_key?: string
@@ -5088,6 +5091,7 @@ export type Database = {
           idempotency_key: string
           message_text: string
           recipient_email: string
+          reply_to_email: string | null
           school_name: string
           subject: string
         }[]
@@ -5452,6 +5456,25 @@ export type Database = {
           student_id: string
           student_name: string
           teacher_name: string
+        }[]
+      }
+      get_client_portal_statements: {
+        Args: never
+        Returns: {
+          amount_due_cents: number
+          approval_status: string | null
+          billing_account_id: string
+          billing_account_name: string
+          billing_period_id: string
+          currency: string
+          line_items: Json
+          payment_status: string | null
+          period_end: string
+          period_label: string
+          period_start: string
+          period_status: string
+          school_id: string
+          school_name: string
         }[]
       }
       get_payer_calendar_subscription: {

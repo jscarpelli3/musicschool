@@ -3,6 +3,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ResendRequestError, ResendUnknownOutcomeError, sendResendEmail } from "@/lib/resend/server";
+import { normalizeReplyTo, schoolEmailSender, secureEmailContent } from "@/lib/resend/email-security";
 
 const escape = (value: string) => value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
@@ -26,14 +27,16 @@ export async function dispatchOwnerNotificationEmail(deliveryId: string) {
     .eq("status", "pending")
     .maybeSingle();
   if (!delivery) return { ok: false as const, reason: "not_retryable" as const };
-  const { data: school } = await admin.from("schools").select("name").eq("id", delivery.school_id).single();
+  const { data: school } = await admin.from("schools").select("name,reply_to_email").eq("id", delivery.school_id).single();
+  const content = secureEmailContent({ text: `${delivery.subject}\n\n${delivery.message_text}`, html: `<h1>${escape(delivery.subject)}</h1><p>${escape(delivery.message_text)}</p>` });
   try {
     const result = await sendResendEmail({
-      from: `${school?.name ?? "Common Time school"} via Common Time <notifications@notifications.commontime.studio>`,
+      from: schoolEmailSender(school?.name ?? "Common Time school"),
       to: delivery.recipient_email,
       subject: delivery.subject,
-      text: `${delivery.subject}\n\n${delivery.message_text}`,
-      html: `<h1>${escape(delivery.subject)}</h1><p>${escape(delivery.message_text)}</p>`,
+      text: content.text,
+      html: content.html,
+      replyTo: normalizeReplyTo(school?.reply_to_email),
       idempotencyKey: delivery.idempotency_key,
       messageKind: "owner_payer_response",
       timeoutMs: 10_000,

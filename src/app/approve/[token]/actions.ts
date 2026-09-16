@@ -4,7 +4,6 @@ import { createHash } from "node:crypto";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createPublicClient } from "@/lib/supabase/public";
 import { dispatchOwnerResponseEmails } from "@/lib/notifications/dispatch-owner-notifications";
 import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
 
@@ -21,7 +20,7 @@ async function protectApprovalAction(token: string, action: string) {
 
 export async function approveBillingRequest(token: string) {
   if (!await protectApprovalAction(token,"approve")) return { ok: false, message: "This request could not be validated. Wait a moment, reload, and try again." };
-  const supabase = createPublicClient();
+  const supabase = createAdminClient();
   const { data, error } = await supabase.rpc("approve_billing_request", {
     raw_token: token,
   });
@@ -54,7 +53,7 @@ export async function rejectBillingRequest(token: string, _previous: RejectBilli
   const reason = String(formData.get("reason") ?? "");
   const note = String(formData.get("note") ?? "").trim();
   if (!await protectApprovalAction(token,"reject")) return { ok: false, message: "This request could not be validated. Wait a moment, reload, and try again." };
-  const supabase = createPublicClient();
+  const supabase = createAdminClient();
   const { data, error } = await supabase.rpc("reject_billing_request", {
     p_note: note || undefined,
     p_reason_code: reason,
