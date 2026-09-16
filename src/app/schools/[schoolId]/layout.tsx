@@ -4,30 +4,26 @@ import type { ReactNode } from "react";
 import { SchoolManagementNav } from "@/components/schools/school-management-nav";
 import { createClient } from "@/lib/supabase/server";
 import { AppSignOut } from "@/components/auth/app-sign-out";
-import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
-import { loadOwnerApprovals } from "@/lib/approvals/owner-approvals";
-import { invoiceNeedsAttention, loadSchoolInvoices } from "@/lib/billing/school-invoices";
+import { loadCurrentSchoolAccess } from "@/lib/auth/school-access";
+import { loadOwnerApprovalSummary } from "@/lib/approvals/owner-approvals";
+import { loadSchoolInvoiceSummary } from "@/lib/billing/school-invoices";
 
 export const dynamic = "force-dynamic";
 
 export default async function SchoolLayout({ children, params }: { children: ReactNode; params: Promise<{ schoolId: string }> }) {
   const { schoolId } = await params;
   const supabase = await createClient();
-  const { data: auth } = await supabase.auth.getClaims();
-  const profileId = auth?.claims?.sub;
+  const { profileId, school, membership, capabilities } = await loadCurrentSchoolAccess(schoolId);
   if (!profileId) redirect(`/login?next=/schools/${schoolId}`);
-  const [{ data: school }, { data: membership }, { data: profile }, capabilities] = await Promise.all([
-    supabase.from("schools").select("id, name, timezone, family_billing_mode, logo_path, theme_key, font_key").eq("id", schoolId).maybeSingle(),
-    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
+  const [{ data: profile }, approvalSummary, invoiceSummary] = await Promise.all([
     supabase.from("profiles").select("avatar_url, avatar_path").eq("id", profileId).maybeSingle(),
-    loadMySchoolCapabilities(schoolId),
+    capabilities.has("school.approvals.review") ? loadOwnerApprovalSummary(supabase, schoolId) : Promise.resolve({ items: [], count: 0 }),
+    capabilities.has("school.billing.manage") ? loadSchoolInvoiceSummary(supabase, schoolId, 6) : Promise.resolve({ invoices: [], attentionCount: 0 }),
   ]);
   if (!school || !membership) notFound();
-  const [{ data: avatar }, { data: logo }, approvals, invoices] = await Promise.all([
+  const [{ data: avatar }, { data: logo }] = await Promise.all([
     profile?.avatar_path ? supabase.storage.from("avatars").createSignedUrl(profile.avatar_path, 3600) : Promise.resolve({ data: null }),
     school.logo_path ? supabase.storage.from("school-logos").createSignedUrl(school.logo_path, 3600) : Promise.resolve({ data: null }),
-    capabilities.has("school.approvals.review") ? loadOwnerApprovals(supabase, schoolId) : Promise.resolve([]),
-    capabilities.has("school.billing.manage") ? loadSchoolInvoices(supabase, schoolId) : Promise.resolve([]),
   ]);
   const avatarUrl = avatar?.signedUrl ?? profile?.avatar_url;
   return <div data-school-theme={school.theme_key} data-school-font={school.font_key} className="min-h-screen bg-canvas text-ink">
@@ -39,7 +35,7 @@ export default async function SchoolLayout({ children, params }: { children: Rea
         </div>
         <div className="flex shrink-0 items-start gap-3"><Link href="/profile" aria-label="Profile settings" className="flex items-center gap-3 py-control text-sm text-muted hover:text-ink">{avatarUrl ? <img /* eslint-disable-line @next/next/no-img-element */ src={avatarUrl} alt="Your avatar" className="h-10 w-10 rounded-full border border-line object-cover" /> : null}<span className="hidden sm:inline">Profile</span></Link><AppSignOut /></div>
       </header>
-      <SchoolManagementNav schoolId={schoolId} capabilities={[...capabilities]} recentApprovals={approvals.slice(0, 5).map((item) => ({ id: item.id, kind: item.kind, teacherId: item.teacherId, studentId: item.studentId, teacher: item.teacher, student: item.student, detail: item.kind === "schedule_proposal" ? "Schedule change" : item.requestType === "cancellation" ? "Cancellation request" : "Reschedule request" }))} approvalCount={approvals.length} recentInvoices={invoices.slice(0, 5)} invoiceCount={invoices.filter(invoiceNeedsAttention).length} />
+      <SchoolManagementNav schoolId={schoolId} capabilities={[...capabilities]} recentApprovals={approvalSummary.items.map((item) => ({ id: item.id, kind: item.kind, teacherId: item.teacherId, studentId: item.studentId, teacher: item.teacher, student: item.student, detail: item.kind === "schedule_proposal" ? "Schedule change" : item.requestType === "cancellation" ? "Cancellation request" : "Reschedule request" }))} approvalCount={approvalSummary.count} recentInvoices={invoiceSummary.invoices.slice(0, 5)} invoiceCount={invoiceSummary.attentionCount} />
     </div>
     {children}
   </div>;

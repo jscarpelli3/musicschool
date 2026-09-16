@@ -5,41 +5,36 @@ import { LessonsToSchedule } from "@/components/scheduling/lessons-to-schedule";
 import { StudentRosterTable, type LessonOutcome, type RosterViewSettings, type StudentRosterRow } from "@/components/students/student-roster-table";
 import { createClient } from "@/lib/supabase/server";
 import { loadServiceEntitlements } from "@/lib/scheduling/service-entitlements";
-import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
+import { loadCurrentSchoolAccess } from "@/lib/auth/school-access";
 import { saveStudentRosterView } from "./dashboard-actions";
 import { addStudentAndPayer } from "./families/actions";
 import { InvoiceList } from "@/components/billing/invoice-list";
-import { invoiceNeedsAttention, loadSchoolInvoices } from "@/lib/billing/school-invoices";
+import { loadSchoolInvoiceSummary } from "@/lib/billing/school-invoices";
 import { StudentDirectory } from "@/components/students/student-directory";
 
 export const dynamic = "force-dynamic";
 
 export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { schoolId: string; view: "dashboard" | "students"; initialLessonId?: string }) {
   const supabase = await createClient();
-  const { data: authData } = await supabase.auth.getClaims();
-  const profileId = authData?.claims?.sub;
+  const { profileId, school, membership, capabilities } = await loadCurrentSchoolAccess(schoolId);
   if (!profileId) redirect(`/login?next=/schools/${schoolId}`);
-
-  const [{ data: school }, { data: membership }, capabilities] = await Promise.all([
-    supabase
-      .from("schools")
-      .select("id, name, slug, timezone")
-      .eq("id", schoolId)
-      .maybeSingle(),
-    supabase
-      .from("school_members")
-      .select("role")
-      .eq("school_id", schoolId)
-      .eq("profile_id", profileId)
-      .eq("status", "active")
-      .maybeSingle(),
-    loadMySchoolCapabilities(schoolId),
-  ]);
 
   if (!school || !membership) notFound();
   if (!capabilities.has("school.workspace.view") && capabilities.has("teacher.workspace.use")) redirect(`/schools/${schoolId}/teacher`);
 
-  const dashboardQueries = await Promise.all([
+  const lessonWindowStart = new Date();
+  lessonWindowStart.setUTCMonth(lessonWindowStart.getUTCMonth() - 6, 1);
+  lessonWindowStart.setUTCHours(0, 0, 0, 0);
+  const lessonWindowEnd = new Date();
+  lessonWindowEnd.setUTCMonth(lessonWindowEnd.getUTCMonth() + 13, 1);
+  lessonWindowEnd.setUTCHours(0, 0, 0, 0);
+  const lessonWindowStartIso = lessonWindowStart.toISOString();
+  const lessonWindowEndIso = lessonWindowEnd.toISOString();
+  const canManageSchool = capabilities.has("school.lessons.manage");
+  const entitlementPromise = view === "dashboard" && canManageSchool ? loadServiceEntitlements(supabase, schoolId) : Promise.resolve([]);
+  const invoiceSummaryPromise = view === "dashboard" && capabilities.has("school.billing.manage") ? loadSchoolInvoiceSummary(supabase, schoolId, 6) : Promise.resolve({ invoices: [], attentionCount: 0 });
+
+  const [dashboardQueries, entitlements, invoiceSummary] = await Promise.all([Promise.all([
     supabase.from("teachers").select("person_id, outside_availability_policy").eq("school_id", schoolId),
     supabase.from("students").select("person_id").eq("school_id", schoolId),
     supabase.from("people").select("id, first_name, last_name, preferred_name, profile_id, email, phone").eq("school_id", schoolId),
@@ -51,6 +46,8 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
       .from("lesson_events")
       .select("id, product_id, teacher_id, student_id, starts_at, ends_at, status, cancellation_timing, notes, place_id, reschedule_allowed, reschedule_blocked_reason, reschedule_reason_code, reschedule_reason_detail")
       .eq("school_id", schoolId)
+      .gte("starts_at", lessonWindowStartIso)
+      .lt("starts_at", lessonWindowEndIso)
       .order("starts_at"),
     supabase.from("service_products").select("id, name, sessions_per_interval, interval_count, interval_unit, duration_minutes, price_cents, currency, status, format").eq("school_id", schoolId),
     supabase
@@ -69,7 +66,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
     supabase.from("user_view_preferences").select("settings").eq("school_id", schoolId).eq("profile_id", profileId).eq("view_key", "student_roster").maybeSingle(),
     supabase.from("lesson_event_price_snapshots").select("lesson_event_id, billing_service_date").eq("school_id", schoolId),
     supabase.from("lesson_schedule_proposals").select("id,teacher_id,student_id,proposed_starts_at,proposed_ends_at,status,proposal_kind,schedule_type").eq("school_id",schoolId).in("status",["pending_teacher","pending_owner"]),
-  ]);
+  ]), entitlementPromise, invoiceSummaryPromise]);
 
   const failedDashboardQuery = dashboardQueries.find((result) => result.error);
   if (failedDashboardQuery?.error) throw new Error(`The dashboard could not load: ${failedDashboardQuery.error.message}`);
@@ -235,10 +232,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
     }];
   }).sort((a, b) => a.family.localeCompare(b.family) || a.student.localeCompare(b.student));
 
-  const canManageSchool = capabilities.has("school.lessons.manage");
-  const entitlements = view === "dashboard" && canManageSchool ? await loadServiceEntitlements(supabase, schoolId) : [];
-  const invoices = view === "dashboard" && capabilities.has("school.billing.manage") ? await loadSchoolInvoices(supabase, schoolId) : [];
-  const openInvoices = invoices.filter(invoiceNeedsAttention);
+  const invoices = invoiceSummary.invoices;
 
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-6 py-section">
@@ -284,7 +278,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
         } : undefined}
       /> : null}
       {view === "dashboard" ? <StudentRosterTable rows={studentRowsForTable} monthLabel={monthLabel} initialView={rosterPreference?.settings as Partial<RosterViewSettings> | null} saveView={saveStudentRosterView.bind(null, schoolId)} dashboard /> : null}
-      {view === "dashboard" && capabilities.has("school.billing.manage") ? <section className="ui-card mt-10 p-6 sm:p-8"><div className="flex flex-wrap items-start justify-between gap-5"><div><p className="text-xs uppercase tracking-[0.14em] text-brand">Invoices</p><h2 className="mt-2 font-display text-3xl">{openInvoices.length ? `${openInvoices.length} still in progress` : "Everything is settled"}</h2><p className="mt-2 text-sm text-muted">Recent family invoices and their current approval or payment status.</p></div><Link href={`/schools/${schoolId}/invoices`} className="text-sm text-brand hover:text-brand-hover">View all invoices →</Link></div><div className="mt-5"><InvoiceList schoolId={schoolId} invoices={invoices.slice(0, 6)} compact /></div></section> : null}
+      {view === "dashboard" && capabilities.has("school.billing.manage") ? <section className="ui-card mt-10 p-6 sm:p-8"><div className="flex flex-wrap items-start justify-between gap-5"><div><p className="text-xs uppercase tracking-[0.14em] text-brand">Invoices</p><h2 className="mt-2 font-display text-3xl">{invoiceSummary.attentionCount ? `${invoiceSummary.attentionCount} still in progress` : "Everything is settled"}</h2><p className="mt-2 text-sm text-muted">Recent family invoices and their current approval or payment status.</p></div><Link href={`/schools/${schoolId}/invoices`} className="text-sm text-brand hover:text-brand-hover">View all invoices →</Link></div><div className="mt-5"><InvoiceList schoolId={schoolId} invoices={invoices} compact /></div></section> : null}
     </main>
   );
 }

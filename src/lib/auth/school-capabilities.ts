@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
@@ -37,10 +38,10 @@ export async function checkSchoolCapability(
   return data === true;
 }
 
-export async function loadMySchoolCapabilities(schoolId: string) {
+export const loadMySchoolCapabilities = cache(async function loadMySchoolCapabilities(schoolId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("get_my_school_capabilities", { p_school_id: schoolId });
   if (error) throw new Error("School capabilities could not be loaded.");
   const known = new Set<string>(schoolCapabilities);
   return new Set((data ?? []).filter((capability): capability is SchoolCapability => known.has(capability)));
-}
+});

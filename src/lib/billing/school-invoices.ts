@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { cache } from "react";
 import type { Database } from "@/types/database";
-import { billingPeriodDescriptor } from "@/lib/domain/state-descriptors";
+import { billingPeriodDescriptor, billingPeriodStates } from "@/lib/domain/state-descriptors";
 
 type Client = SupabaseClient<Database>;
 
@@ -48,3 +49,16 @@ export async function loadSchoolInvoices(client: Client, schoolId: string, limit
 export function invoiceNeedsAttention(invoice: SchoolInvoice) {
   return !billingPeriodDescriptor(invoice.status).terminal;
 }
+
+const attentionStatuses = Object.entries(billingPeriodStates)
+  .filter(([, descriptor]) => !descriptor.terminal)
+  .map(([status]) => status);
+
+export const loadSchoolInvoiceSummary = cache(async function loadSchoolInvoiceSummary(client: Client, schoolId: string, limit = 6) {
+  const [invoices, countResult] = await Promise.all([
+    loadSchoolInvoices(client, schoolId, limit),
+    client.from("billing_periods").select("id", { count: "exact", head: true }).eq("school_id", schoolId).in("status", attentionStatuses),
+  ]);
+  if (countResult.error) throw new Error("Invoice attention count could not be loaded.");
+  return { invoices, attentionCount: countResult.count ?? 0 };
+});
