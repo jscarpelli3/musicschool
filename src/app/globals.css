@@ -246,6 +246,117 @@
   --ui-shadow-strong: 0 2rem 7rem rgb(23 59 115 / 0.23);
 }
 
+[data-school-theme="cobalt"] {
+  --ui-canvas: #07111f;
+  --ui-surface: #101f38;
+  --ui-surface-raised: #182e52;
+  --ui-ink: #f2f6ff;
+  --ui-muted: #a8b7d2;
+  --ui-line: #30496f;
+  --ui-brand: #88aaff;
+  --ui-brand-hover: #b6c9ff;
+  --ui-danger: #ff8d9d;
+  --ui-outcome-rescheduled: #7697d2;
+  --ui-outcome-cancelled: #74839e;
+  --ui-outcome-no-show: #efa178;
+  --ui-overlay: rgb(4 10 19 / 0.8);
+}
+
+[data-school-theme="clay"] {
+  color-scheme: light;
+  --ui-canvas: #efe1d6;
+  --ui-surface: #dfc7b6;
+  --ui-surface-raised: #fff8f2;
+  --ui-ink: #32241f;
+  --ui-muted: #766159;
+  --ui-line: #c2a18c;
+  --ui-brand: #a83e32;
+  --ui-brand-hover: #7f2b24;
+  --ui-danger: #9b2738;
+  --ui-outcome-rescheduled: #805a62;
+  --ui-outcome-cancelled: #77675f;
+  --ui-outcome-no-show: #a44b2e;
+  --ui-overlay: rgb(50 36 31 / 0.58);
+  --ui-shadow-soft: 0 0.75rem 1.875rem rgb(83 48 30 / 0.12);
+  --ui-shadow-medium: 0 1.25rem 3.5rem rgb(83 48 30 / 0.17);
+  --ui-shadow-strong: 0 2rem 7rem rgb(83 48 30 / 0.23);
+}
+
+[data-school-theme="sage"] {
+  color-scheme: light;
+  --ui-canvas: #e8ede2;
+  --ui-surface: #d6dfcf;
+  --ui-surface-raised: #f8faf5;
+  --ui-ink: #1e2b24;
+  --ui-muted: #59695d;
+  --ui-line: #aab9ab;
+  --ui-brand: #356a50;
+  --ui-brand-hover: #244e3a;
+  --ui-danger: #963642;
+  --ui-outcome-rescheduled: #4f7163;
+  --ui-outcome-cancelled: #68736b;
+  --ui-outcome-no-show: #9b5638;
+  --ui-overlay: rgb(30 43 36 / 0.56);
+  --ui-shadow-soft: 0 0.75rem 1.875rem rgb(42 65 50 / 0.11);
+  --ui-shadow-medium: 0 1.25rem 3.5rem rgb(42 65 50 / 0.16);
+  --ui-shadow-strong: 0 2rem 7rem rgb(42 65 50 / 0.22);
+}
+
+[data-school-theme="cabaret"] {
+  --ui-canvas: #190912;
+  --ui-surface: #2a101f;
+  --ui-surface-raised: #421a30;
+  --ui-ink: #fff0f5;
+  --ui-muted: #c4a1af;
+  --ui-line: #633149;
+  --ui-brand: #ff82ad;
+  --ui-brand-hover: #ffb0ca;
+  --ui-danger: #ff8a83;
+  --ui-outcome-rescheduled: #b487a0;
+  --ui-outcome-cancelled: #8d7480;
+  --ui-outcome-no-show: #ed9b72;
+  --ui-overlay: rgb(19 5 13 / 0.8);
+}
+
+[data-school-theme="glacier"] {
+  color-scheme: light;
+  --ui-canvas: #e8f4f8;
+  --ui-surface: #d0e7ee;
+  --ui-surface-raised: #f8fcfd;
+  --ui-ink: #152b38;
+  --ui-muted: #566e7a;
+  --ui-line: #a8c6d0;
+  --ui-brand: #176f93;
+  --ui-brand-hover: #0b5271;
+  --ui-danger: #a12f45;
+  --ui-outcome-rescheduled: #41758a;
+  --ui-outcome-cancelled: #657880;
+  --ui-outcome-no-show: #a45738;
+  --ui-overlay: rgb(21 43 56 / 0.56);
+  --ui-shadow-soft: 0 0.75rem 1.875rem rgb(28 83 105 / 0.1);
+  --ui-shadow-medium: 0 1.25rem 3.5rem rgb(28 83 105 / 0.15);
+  --ui-shadow-strong: 0 2rem 7rem rgb(28 83 105 / 0.21);
+}
+
+[data-school-theme="espresso"] {
+  --ui-canvas: #160f0b;
+  --ui-surface: #241912;
+  --ui-surface-raised: #38261b;
+  --ui-ink: #f8eee5;
+  --ui-muted: #bba899;
+  --ui-line: #5d4638;
+  --ui-brand: #65c5ae;
+  --ui-brand-hover: #9de1d1;
+  --ui-danger: #ff8b8f;
+  --ui-outcome-rescheduled: #76a99e;
+  --ui-outcome-cancelled: #8b7b70;
+  --ui-outcome-no-show: #e69a6b;
+  --ui-overlay: rgb(15 9 6 / 0.82);
+  --ui-shadow-soft: 0 0.75rem 1.875rem rgb(0 0 0 / 0.32);
+  --ui-shadow-medium: 0 1.25rem 3.5rem rgb(0 0 0 / 0.4);
+  --ui-shadow-strong: 0 2rem 7rem rgb(0 0 0 / 0.54);
+}
+
 * {
   box-sizing: border-box;
 }
