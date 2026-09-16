@@ -13,7 +13,7 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 - The family portal now shows relationship-scoped sent statements with safe itemized lines and separate approval/payment states, so a payer can verify a suspicious email without using its link.
 - The full beta flow audit is recorded in [`../audits/beta-flow-audit-2026-09-15.md`](../audits/beta-flow-audit-2026-09-15.md). Public in-app help and role guides are available in `docs/guides/`.
 - Supabase is migrated through `20260916045000`. Typecheck, lint, linked database lint, migration assertions, and the webpack production build pass.
-- Remaining pre-invite operations: enforce DMARC in DNS, confirm Resend tracking is disabled, deploy this branch, and perform one cold invitation/onboarding rehearsal.
+- DMARC quarantine enforcement is live at the apex and notification subdomain, the unsafe wildcard DNS record is removed, and Resend SPF/DKIM remain intact. Remaining pre-invite operations: confirm Resend tracking is disabled and perform one cold invitation/onboarding rehearsal.
 
 ## Active Focus
 
