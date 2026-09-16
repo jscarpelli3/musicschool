@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
-import { createPublicClient } from "@/lib/supabase/public";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { approveBillingRequest } from "./actions";
 import { AutoChargeEnrollment } from "./auto-charge-enrollment";
 import { RejectChargesForm } from "./reject-charges-form";
@@ -44,7 +44,7 @@ function money(cents: number, currency: string) {
 
 export default async function ApprovalPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const supabase = createPublicClient();
+  const supabase = createAdminClient();
   const { data, error } = await supabase.rpc("get_billing_approval", { raw_token: token });
   const approval = (data?.[0] ?? null) as Approval | null;
 

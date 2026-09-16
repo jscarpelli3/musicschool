@@ -6,6 +6,7 @@ import { CommonTimeLogo } from "@/components/brand/common-time-logo";
 import { requestEmailCode, verifyEmailCode } from "@/app/auth/actions";
 import { createClient } from "@/lib/supabase/client";
 import { PendingActionStatus } from "@/components/ui/pending-action-status";
+import { safeNextPath } from "@/lib/auth/safe-next-path";
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -18,8 +19,7 @@ function LoginForm() {
   const [codeSent, setCodeSent] = useState(false);
 
   const safeNext = () => {
-    const value = searchParams.get("next");
-    return value?.startsWith("/") && !value.startsWith("//") ? value : "/";
+    return safeNextPath(searchParams.get("next"), window.location.origin);
   };
 
   async function signIn() {
@@ -28,8 +28,8 @@ function LoginForm() {
 
     const supabase = createClient();
     const callback = new URL("/auth/callback", window.location.origin);
-    const next = searchParams.get("next");
-    if (next?.startsWith("/") && !next.startsWith("//")) {
+    const next = safeNextPath(searchParams.get("next"), window.location.origin);
+    if (next !== "/") {
       callback.searchParams.set("next", next);
     }
 

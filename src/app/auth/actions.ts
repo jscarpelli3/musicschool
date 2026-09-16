@@ -31,7 +31,7 @@ export async function requestEmailCode(emailValue: string, audience: "account" |
     return { ok: true, message: "If this email can sign in, a one-time code is on its way." };
   }
   const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
-  if (error) return { ok: false, message: "We could not send a code for that email. Ask the school to confirm your access." };
+  if (error) console.warn("Account sign-in code request was not accepted", { code: error.code });
   return { ok: true, message: "If this email can sign in, a one-time code is on its way." };
 }
 

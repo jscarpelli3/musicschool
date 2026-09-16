@@ -2,6 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ResendRequestError, ResendUnknownOutcomeError, sendResendEmail } from "@/lib/resend/server";
+import { normalizeReplyTo, schoolEmailSender, secureEmailContent } from "@/lib/resend/email-security";
 
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (character) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
@@ -19,14 +20,16 @@ export async function dispatchLessonCreatedEmail(entityType: "lesson_event" | "l
   }
   const delivery = data?.[0];
   if (!delivery) return { status: "queued" as const };
+  const content = secureEmailContent({ text: delivery.message_text, html: `<div style="font-family:Arial,sans-serif;line-height:1.65"><h1>${escapeHtml(delivery.subject)}</h1><p>${escapeHtml(delivery.message_text)}</p></div>` });
 
   try {
     const sent = await sendResendEmail({
-      from: `${delivery.school_name} via Common Time <notifications@notifications.commontime.studio>`,
+      from: schoolEmailSender(delivery.school_name),
       to: delivery.recipient_email,
       subject: delivery.subject,
-      text: delivery.message_text,
-      html: `<div style="font-family:Arial,sans-serif;line-height:1.65"><h1>${escapeHtml(delivery.subject)}</h1><p>${escapeHtml(delivery.message_text)}</p></div>`,
+      text: content.text,
+      html: content.html,
+      replyTo: normalizeReplyTo(delivery.reply_to_email),
       idempotencyKey: delivery.idempotency_key,
       messageKind: "lesson_created",
       timeoutMs: 10_000,

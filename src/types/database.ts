@@ -4147,6 +4147,7 @@ export type Database = {
           phone: string | null
           postal_code: string | null
           primary_color: string | null
+          reply_to_email: string | null
           region: string | null
           slug: string
           theme_key: string
@@ -4173,6 +4174,7 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           primary_color?: string | null
+          reply_to_email?: string | null
           region?: string | null
           slug: string
           theme_key?: string
@@ -4199,6 +4201,7 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           primary_color?: string | null
+          reply_to_email?: string | null
           region?: string | null
           slug?: string
           theme_key?: string
@@ -5088,6 +5091,7 @@ export type Database = {
           idempotency_key: string
           message_text: string
           recipient_email: string
+          reply_to_email: string | null
           school_name: string
           subject: string
         }[]
