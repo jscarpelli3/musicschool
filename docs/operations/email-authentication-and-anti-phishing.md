@@ -1,6 +1,6 @@
 # Email authentication and anti-phishing runbook
 
-Last verified: 2026-09-15
+Last verified: 2026-09-16
 
 Common Time sends transactional mail from `notifications@notifications.commontime.studio`. School names may appear in the display name, but a school-controlled address is only used as `Reply-To`. Application links in outgoing mail must use `https://app.commontime.studio`.
 
@@ -18,30 +18,27 @@ Do not weaken these checks for a new email type. Build the content with `secureE
 
 ## Current public DNS state
 
-The following was observed with public DNS queries on 2026-09-15:
+The following was observed through the system resolver, Cloudflare `1.1.1.1`, and Google `8.8.8.8` on 2026-09-16:
 
-- `_dmarc.commontime.studio`: `v=DMARC1; p=none;`
+- `_dmarc.commontime.studio`: `v=DMARC1; p=quarantine; sp=quarantine; pct=100`
+- `_dmarc.notifications.commontime.studio`: `v=DMARC1; p=quarantine; pct=100`
 - `send.notifications.commontime.studio`: Resend SPF and feedback MX are present.
 - `resend._domainkey.notifications.commontime.studio`: Resend DKIM is present.
-- `*.commontime.studio`: CNAME to `pixie.porkbun.com`.
-- `_dmarc.notifications.commontime.studio`: currently falls through to that wildcard CNAME rather than publishing an explicit DMARC record.
+- The former wildcard CNAME to `pixie.porkbun.com` is removed; a random undefined subdomain returns no record.
 - The apex has no explicit SPF record and no null MX record.
 
-The Resend sending records are in place, but the DMARC policy is monitoring-only and the wildcard leaves the notification subdomain without an explicit DMARC policy.
+DMARC quarantine enforcement is active at both the organizational and notification domains. Resend sending authentication remains intact.
 
-## DNS work before inviting payers
+## DNS follow-up
 
-Make these changes in the DNS provider. Copy Resend-generated SPF, MX, and DKIM values exactly from its domain screen; do not replace those values from an example in this document.
+The initial quarantine deployment and wildcard removal are complete. Do not replace Resend-generated SPF, MX, or DKIM values with examples from this document.
 
 1. Create a mailbox or reporting service that can receive aggregate DMARC reports. Use that controlled address in the `rua` value below.
-2. Publish an explicit TXT record at `_dmarc.notifications.commontime.studio` so it does not fall through to the wildcard:
-   `v=DMARC1; p=quarantine; pct=100; rua=mailto:DMARC_REPORT_ADDRESS; adkim=s; aspf=s`
-3. Strengthen the apex policy after confirming legitimate mail aligns correctly:
-   `v=DMARC1; p=quarantine; sp=quarantine; pct=100; rua=mailto:DMARC_REPORT_ADDRESS`
-4. Review reports for at least one normal billing cycle. When all legitimate sources pass and align, change both policies from `p=quarantine` to `p=reject` (and the apex `sp` to `reject`).
-5. If the apex never sends or receives mail, publish `v=spf1 -all` as its SPF TXT record and `0 .` as its null MX. Only do this after confirming no human or vendor sends as `@commontime.studio`.
-6. Keep the Resend-generated SPF, feedback MX, and DKIM records under `notifications.commontime.studio`. Do not add a second SPF TXT record at the same hostname.
-7. Replace the broad wildcard CNAME with explicit host records where practical. At minimum, keep explicit TXT records for every `_dmarc` name so the wildcard cannot answer for them.
+2. Add that reporting address as `rua=mailto:DMARC_REPORT_ADDRESS` to both existing DMARC records.
+3. Review reports for at least one normal billing cycle. When all legitimate sources pass and align, change both policies from `p=quarantine` to `p=reject` (and the apex `sp` to `reject`).
+4. If the apex never sends or receives mail, publish `v=spf1 -all` as its SPF TXT record and `0 .` as its null MX. Only do this after confirming no human or vendor sends as `@commontime.studio`.
+5. Keep the Resend-generated SPF, feedback MX, and DKIM records under `notifications.commontime.studio`. Do not add a second SPF TXT record at the same hostname.
+6. Do not restore the broad wildcard CNAME. Keep explicit TXT records for every `_dmarc` name.
 
 Start with quarantine rather than jumping straight to reject because the current aggregate reports have not yet been reviewed. Moving to reject is the target state, not an optional cleanup.
 
