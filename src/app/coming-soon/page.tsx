@@ -34,11 +34,6 @@ export default function ComingSoonPage() {
           <EarlyAccessForm />
         </div>
       </section>
-
-      <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-line pt-5 text-xs text-muted">
-        <span>commontime.studio</span>
-        <span>Chicago · 2026</span>
-      </footer>
     </main>
   );
 }

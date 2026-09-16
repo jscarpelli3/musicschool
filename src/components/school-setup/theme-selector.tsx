@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import { useCallback, useState } from "react";
-import { SCHOOL_THEMES, type SchoolThemeKey } from "@/lib/ui/school-themes";
+import { SCHOOL_THEMES, SCHOOL_THEME_ICON, type SchoolThemeKey } from "@/lib/ui/school-themes";
 import { ChoiceConfirmationDialog } from "./choice-confirmation-dialog";
+import { ChoiceCarousel } from "./choice-carousel";
 
 export function ThemeSelector({
   currentTheme,
@@ -24,9 +25,9 @@ export function ThemeSelector({
     <form action={action}>
       <fieldset>
         <legend className="sr-only">School interface palette</legend>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <ChoiceCarousel label="School palettes">
           {SCHOOL_THEMES.map((theme) => (
-            <label key={theme.key} data-school-theme={theme.key} className="cursor-pointer">
+            <label key={theme.key} data-school-theme={theme.key} data-choice-selected={theme.key === selected} className="w-[min(19rem,82vw)] shrink-0 snap-start cursor-pointer">
               <input
                 type="radio"
                 name="theme_key"
@@ -41,7 +42,7 @@ export function ThemeSelector({
               />
               <span className="block rounded-md border border-line bg-canvas p-4 text-ink transition peer-checked:border-brand peer-checked:bg-brand/10 peer-checked:shadow-[inset_0_0_0_1px_var(--ui-brand)] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-brand">
                 <span className="flex items-center gap-4" aria-hidden="true">
-                  <Image src={theme.icon} alt="" width={52} height={52} className="h-13 w-13 shrink-0" />
+                  <Image src={SCHOOL_THEME_ICON} alt="" width={52} height={52} className="h-13 w-13 shrink-0" />
                   <span className="flex flex-1 gap-1">
                     <span className="h-5 flex-1 bg-surface" />
                     <span className="h-5 flex-1 bg-surface-raised" />
@@ -57,7 +58,7 @@ export function ThemeSelector({
               </span>
             </label>
           ))}
-        </div>
+        </ChoiceCarousel>
       </fieldset>
       <ChoiceConfirmationDialog open={pending !== null} title="Change the school palette?" description={`This will update colors across the school workspace${pendingTheme ? ` to ${pendingTheme.name}` : ""}.`} confirmLabel="Change palette" onCancel={cancelChange} />
     </form>
