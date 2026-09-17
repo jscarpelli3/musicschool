@@ -2,6 +2,14 @@
 
 Production-domain URL, environment, provider-callback, verification, testing, and rollback changes are tracked in [`../operations/domain-cutover.md`](../operations/domain-cutover.md).
 
+## 2026-09-17 beta-test checkpoint
+
+- **Decision:** ready for one supervised invitation-only beta acceptance run using synthetic/test data. Do not import real customer records, enable live charges, or represent production SMS as available.
+- Before handing over the invitation, confirm Resend click/open tracking is disabled and deploy the current branch.
+- During the session, complete the cold owner invitation/onboarding path, accept one teacher invitation, sign into the payer portal by OTP, and rehearse statement delivery → payer rejection → corrected replacement → approval. Do not execute a charge.
+- The broader production security baseline, backup/restore rehearsal, automated security pipeline, provider failure matrices, monitoring, and independent review remain production-scale gates; this beta session does not close them.
+- Browser notification reads now request only the five rendered fields. The full-row Postgres Changes subscription was replaced with a 30-second minimal-field refresh plus refresh-on-tab-return so notification metadata and internal entity identifiers are not sent merely to render the notification control.
+
 ## Phase
 
 Owner scheduling and family billing foundation are live in test mode. Payment roadmap Step 8 now delivers approval links by included transactional email; SMS has moved to an optional per-school add-on.

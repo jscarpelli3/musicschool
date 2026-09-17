@@ -1,19 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/types/database";
 import { reportOwnerNotificationEmailProblem, retryOwnerNotificationEmail } from "./actions";
 
-type Notice = Database["public"]["Tables"]["owner_notifications"]["Row"];
+type Notice = Pick<Database["public"]["Tables"]["owner_notifications"]["Row"], "id" | "title" | "message" | "href" | "read_at">;
 type FailedEmail = Pick<Database["public"]["Tables"]["owner_notification_email_outbox"]["Row"], "id" | "subject" | "failed_at" | "retry_count" | "retry_not_before">;
 type Toast = { title: string; message: string; href?: string; notice?: Notice };
 
 export function OwnerNotifications({ schoolId, embedded = false }: { schoolId: string; embedded?: boolean }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const loadedNoticeIds = useRef<Set<string> | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
@@ -27,18 +28,35 @@ export function OwnerNotifications({ schoolId, embedded = false }: { schoolId: s
   useEffect(() => {
     if (!schoolId) return;
     let active = true;
-    void Promise.all([
-      supabase.from("owner_notifications").select("*").eq("school_id", schoolId).is("archived_at", null).gte("created_at", new Date(Date.now() - 7 * 86_400_000).toISOString()).order("created_at", { ascending: false }).limit(20),
-      supabase.from("owner_notification_email_outbox").select("id, subject, failed_at, retry_count, retry_not_before").eq("school_id", schoolId).eq("status", "failed").order("failed_at", { ascending: false }).limit(10),
-      supabase.from("platform_support_incidents").select("source_id").eq("school_id", schoolId).eq("source_type", "owner_notification_email_outbox").in("status", ["open", "acknowledged"]),
-    ]).then(([noticeResult, failedResult, incidentResult]) => { if (active) { setNotices(noticeResult.data ?? []); setFailedEmails(failedResult.data ?? []); setReportedDeliveryIds(new Set((incidentResult.data ?? []).map((item) => item.source_id))); } });
-    const channel = supabase.channel(`owner-notifications:${schoolId}`).on("postgres_changes", { event: "INSERT", schema: "public", table: "owner_notifications", filter: `school_id=eq.${schoolId}` }, (payload) => {
-      const notice = payload.new as Notice;
-      setNotices((current) => [notice, ...current.filter((item) => item.id !== notice.id)].slice(0, 20));
-      setToast({ title: notice.title, message: notice.message, href: notice.href, notice });
-      router.refresh();
-    }).subscribe();
-    return () => { active = false; void supabase.removeChannel(channel); };
+    const load = async () => {
+      const [noticeResult, failedResult, incidentResult] = await Promise.all([
+        supabase.from("owner_notifications").select("id, title, message, href, read_at").eq("school_id", schoolId).is("archived_at", null).gte("created_at", new Date(Date.now() - 7 * 86_400_000).toISOString()).order("created_at", { ascending: false }).limit(20),
+        supabase.from("owner_notification_email_outbox").select("id, subject, failed_at, retry_count, retry_not_before").eq("school_id", schoolId).eq("status", "failed").order("failed_at", { ascending: false }).limit(10),
+        supabase.from("platform_support_incidents").select("source_id").eq("school_id", schoolId).eq("source_type", "owner_notification_email_outbox").in("status", ["open", "acknowledged"]),
+      ]);
+      if (!active) return;
+      const nextNotices = noticeResult.data ?? [];
+      if (loadedNoticeIds.current) {
+        const newest = nextNotices.find((notice) => !loadedNoticeIds.current?.has(notice.id));
+        if (newest) {
+          setToast({ title: newest.title, message: newest.message, href: newest.href, notice: newest });
+          router.refresh();
+        }
+      }
+      loadedNoticeIds.current = new Set(nextNotices.map((notice) => notice.id));
+      setNotices(nextNotices);
+      setFailedEmails(failedResult.data ?? []);
+      setReportedDeliveryIds(new Set((incidentResult.data ?? []).map((item) => item.source_id)));
+    };
+    const refreshWhenVisible = () => { if (document.visibilityState === "visible") void load(); };
+    void load();
+    const interval = window.setInterval(() => void load(), 30_000);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
   }, [router, schoolId, supabase]);
 
   useEffect(() => {
