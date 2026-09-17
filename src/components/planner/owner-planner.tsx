@@ -81,6 +81,7 @@ type StudentDetail = {
 type Props = {
   schoolId: string;
   canReschedule: boolean;
+  canCollectPayment?: boolean;
   initialDate: string;
   timezone: string;
   teachers: Teacher[];
@@ -180,6 +181,7 @@ function timeMinutes(value: string) {
 export function OwnerPlanner({
   schoolId,
   canReschedule,
+  canCollectPayment = false,
   initialDate,
   timezone,
   teachers,
@@ -512,6 +514,7 @@ export function OwnerPlanner({
           productName={productNames[selectedLesson.product_id] ?? "Lesson"}
           place={placeDetails[selectedLesson.place_id] ?? { name: "Place not set", details: null }}
           canReschedule={canReschedule}
+          canCollectPayment={canCollectPayment}
           canMarkReschedule={selectedLesson.can_mark_reschedule}
           onReschedule={() => beginReschedule(selectedLesson)}
           onPermissionChange={async (allowed, reason) => {
@@ -1099,6 +1102,7 @@ function LessonSheet({
   productName,
   place,
   canReschedule,
+  canCollectPayment,
   canMarkReschedule,
   onReschedule,
   onPermissionChange,
@@ -1113,6 +1117,7 @@ function LessonSheet({
   productName: string;
   place: { name: string; details: string | null };
   canReschedule: boolean;
+  canCollectPayment: boolean;
   canMarkReschedule: boolean;
   onReschedule: () => void;
   onPermissionChange: (allowed: boolean, reason: string) => Promise<{ ok: boolean; message: string }>;
@@ -1140,6 +1145,8 @@ function LessonSheet({
           <Detail label="Place" value={place.details ? `${place.name} · ${place.details}` : place.name} />
           {lesson.reschedule_reason_code ? <Detail label="Last moved" value={rescheduleReasonLabel(lesson.reschedule_reason_code, lesson.reschedule_reason_detail)} /> : null}
         </dl>
+
+        {canCollectPayment ? <section className="border-b border-line py-8"><h3 className="font-display text-2xl font-normal">Payment</h3><p className="mt-3 text-xs leading-5 text-muted">Create a secure QR code for the payer to scan on their own phone.</p><Link href={`/schools/${schoolId}/lessons/${lesson.id}/payment`} className="mt-4 inline-flex rounded-control bg-brand px-4 py-2.5 text-sm text-canvas hover:bg-brand-hover">Collect payment now</Link></section> : null}
 
         {canReschedule && lesson.can_reschedule ? (
           <section className="border-b border-line py-8">

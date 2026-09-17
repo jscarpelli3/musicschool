@@ -10,6 +10,13 @@ Production-domain URL, environment, provider-callback, verification, testing, an
 - The broader production security baseline, backup/restore rehearsal, automated security pipeline, provider failure matrices, monitoring, and independent review remain production-scale gates; this beta session does not close them.
 - Browser notification reads now request only the five rendered fields. The full-row Postgres Changes subscription was replaced with a 30-second minimal-field refresh plus refresh-on-tab-return so notification metadata and internal entity identifiers are not sent merely to render the notification control.
 
+## 2026-09-17 one-time lesson payment checkpoint
+
+- A payer-present, card-only Stripe Checkout flow is implemented locally for positively priced per-session lessons. It derives the exact amount, currency, school account, lesson, student, and billing account from immutable server data and requires the billing-management capability inside the Server Action.
+- Provider identity and amount are re-read from Stripe in the connected-account context before a signed webhook may establish payment success. A separately paid lesson remains visible on its eventual statement with a zero amount due.
+- Retry recovery reuses one durable request and Stripe idempotency key; webhook metadata can recover a provider-accepted session even if the initial local session-ID write failed. Hosted receipt URLs are not persisted.
+- **Not deployed or live-tested:** migrations `20260916100000` and `20260916101000`, the Checkout UI, real test-card completion, webhook replay/concurrency, wrong-account/wrong-amount rejection, expired-session recovery, draft allocation, refunds/disputes, and receipt retrieval. This feature must remain out of production until those checks pass.
+
 ## Phase
 
 Owner scheduling and family billing foundation are live in test mode. Payment roadmap Step 8 now delivers approval links by included transactional email; SMS has moved to an optional per-school add-on.

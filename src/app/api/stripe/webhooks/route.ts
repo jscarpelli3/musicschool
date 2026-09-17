@@ -3,6 +3,7 @@ import "server-only";
 import type Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { synchronizeStripeConnection } from "@/lib/stripe/connections";
+import { expireLessonPayment, reconcileCompletedLessonPayment } from "@/lib/stripe/lesson-quick-pay";
 import { expireCardSetup, reconcileCompletedCardSetup } from "@/lib/stripe/payment-method-reconciliation";
 import { getStripe, getStripeMode, getStripeWebhookSecrets } from "@/lib/stripe/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -73,7 +74,7 @@ async function verifyEvent(rawBody: string, signature: string): Promise<Verified
         createdAt: new Date(event.created * 1000).toISOString(),
         payload: event as unknown as Json,
         accountEvent: event.type === "account.updated",
-        checkoutSetupEvent: event.type === "checkout.session.completed"
+        checkoutSetupEvent: event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded"
           ? "completed"
           : event.type === "checkout.session.expired" ? "expired" : null,
       };
@@ -149,13 +150,16 @@ export async function POST(request: Request) {
       await synchronizeStripeConnection(connection.school_id, accountId, null);
     }
 
+    let lessonPaymentEvent = false;
     if (event.checkoutSetupEvent === "completed" && accountId && event.objectId) {
-      await reconcileCompletedCardSetup(event.objectId, accountId, event.createdAt);
-    } else if (event.checkoutSetupEvent === "expired" && event.objectId) {
-      await expireCardSetup(event.objectId);
+      lessonPaymentEvent = await reconcileCompletedLessonPayment(event.objectId, accountId, event.id, event.createdAt);
+      if (!lessonPaymentEvent) await reconcileCompletedCardSetup(event.objectId, accountId, event.createdAt);
+    } else if (event.checkoutSetupEvent === "expired" && accountId && event.objectId) {
+      lessonPaymentEvent = await expireLessonPayment(event.objectId, accountId);
+      if (!lessonPaymentEvent) await expireCardSetup(event.objectId);
     }
 
-    const supported = event.accountEvent || Boolean(event.checkoutSetupEvent);
+    const supported = event.accountEvent || lessonPaymentEvent || Boolean(event.checkoutSetupEvent);
     const { error: completeError } = await admin.from("payment_provider_events").update({
       processing_status: supported ? "processed" : "ignored",
       processed_at: new Date().toISOString(),
