@@ -30,7 +30,7 @@ jobs:
       - name: Unit tests
         run: node --test tests/*.test.mjs
       - name: TypeScript
-        run: npm run typecheck
+        run: npm exec next typegen && npm run typecheck
       - name: ESLint
         run: npm run lint
       - name: Production build
