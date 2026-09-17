@@ -13,6 +13,20 @@ npm run dev
 
 Copy `.env.example` to `.env.local` and supply the Supabase project values before starting the app. Never commit `.env.local`.
 
+## Verification
+
+Run the same local checks enforced by CI:
+
+```bash
+node --test tests/*.test.mjs
+npm exec next typegen
+npm run typecheck
+npm run lint
+npm run build -- --webpack
+```
+
+CI runs these checks for every pull request and every push to `main`.
+
 Project context lives in [`docs/context/project-brief.md`](docs/context/project-brief.md).
 
 Operational tracking lives in:
