@@ -2,6 +2,8 @@
 
 Production-domain URL, environment, provider-callback, verification, testing, and rollback changes are tracked in [`../operations/domain-cutover.md`](../operations/domain-cutover.md).
 
+The gated path from supervised beta to a one-school production pilot is tracked in [`../operations/production-readiness-plan.md`](../operations/production-readiness-plan.md). That checklist is the launch authority for payment testing and production readiness; passing application CI alone does not authorize live charges or real customer data.
+
 ## 2026-09-17 beta-test checkpoint
 
 - **Decision:** ready for one supervised invitation-only beta acceptance run using synthetic/test data. Do not import real customer records, enable live charges, or represent production SMS as available.

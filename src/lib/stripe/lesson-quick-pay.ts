@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { validateCompletedLessonCheckout } from "@/lib/stripe/lesson-quick-pay-validation";
 import { getStripe, getStripeMode } from "@/lib/stripe/server";
 
 function applicationUrl() {
@@ -131,17 +132,16 @@ export async function reconcileCompletedLessonPayment(checkoutSessionId: string,
   const { data: connection, error: connectionError } = await admin.from("school_payment_connections").select("provider_account_id")
     .eq("id", request.payment_connection_id).eq("school_id", request.school_id).single();
   if (connectionError || connection.provider_account_id !== stripeAccount) throw connectionError ?? new Error("Lesson payment connected account does not match.");
-  if (session.mode !== "payment" || session.payment_status !== "paid" || session.client_reference_id !== request.id) throw new Error("Lesson payment Checkout binding or status does not match.");
-  if (session.amount_total !== request.amount_cents || session.currency?.toUpperCase() !== request.currency) throw new Error("Lesson payment amount or currency does not match.");
-  const intent = typeof session.payment_intent === "string" ? null : session.payment_intent;
-  if (!intent || intent.status !== "succeeded") throw new Error("Lesson payment intent is not succeeded.");
-  const charge = typeof intent.latest_charge === "string" ? null : intent.latest_charge;
-  if (!charge || !charge.paid || charge.amount !== request.amount_cents || charge.currency.toUpperCase() !== request.currency) throw new Error("Lesson payment charge does not match.");
+  const providerPayment = validateCompletedLessonCheckout({
+    requestId: request.id,
+    amountCents: request.amount_cents,
+    currency: request.currency,
+  }, session);
   const { error: completeError } = await admin.rpc("complete_lesson_payment_request", {
     p_request_id: request.id,
     p_checkout_session_id: checkoutSessionId,
-    p_payment_intent_id: intent.id,
-    p_charge_id: charge.id,
+    p_payment_intent_id: providerPayment.paymentIntentId,
+    p_charge_id: providerPayment.chargeId,
     p_provider_event_id: providerEventId,
     p_succeeded_at: providerCreatedAt,
   });
