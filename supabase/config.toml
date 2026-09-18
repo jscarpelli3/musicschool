@@ -64,6 +64,14 @@ enabled = true
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
 sql_paths = ["./seed.sql"]
 
+# The persistent staging branch is intentionally data-less until a reviewed,
+# deterministic synthetic fixture replaces the currently absent seed.sql.
+[remotes.staging]
+project_id = "plnluybazyltxtsbkxpn"
+
+[remotes.staging.db.seed]
+enabled = false
+
 [db.network_restrictions]
 # Enable management of network restrictions.
 enabled = false
