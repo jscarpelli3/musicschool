@@ -2,6 +2,7 @@ name: CI
 
 on:
   pull_request:
+  workflow_dispatch:
   push:
     branches: [main]
 
@@ -27,6 +28,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
       - name: Unit and invariant tests
         run: node --test tests/*.test.mjs
       - name: TypeScript
@@ -35,3 +38,22 @@ jobs:
         run: npm run lint
       - name: Production build
         run: npm run build -- --webpack
+
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: supabase/setup-cli@v2
+        with:
+          version: 2.90.0
+      - name: Replay migrations on a clean local database
+        run: supabase db start
+      - name: Lint the resulting database
+        run: supabase db lint --local --level warning
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop --no-backup

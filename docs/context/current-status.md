@@ -18,6 +18,7 @@ The gated path from supervised beta to a one-school production pilot is tracked 
 - Provider identity and amount are re-read from Stripe in the connected-account context before a signed webhook may establish payment success. A separately paid lesson remains visible on its eventual statement with a zero amount due.
 - Retry recovery reuses one durable request and Stripe idempotency key; webhook metadata can recover a provider-accepted session even if the initial local session-ID write failed. Hosted receipt URLs are not persisted.
 - **Not deployed or live-tested:** migrations `20260916100000` and `20260916101000`, the Checkout UI, real test-card completion, webhook replay/concurrency, wrong-account/wrong-amount rejection, expired-session recovery, draft allocation, refunds/disputes, and receipt retrieval. This feature must remain out of production until those checks pass.
+- **Automation started 2026-09-18:** pure provider-binding tests now reject wrong Checkout mode/status/request, amount/currency, PaymentIntent state, and Charge state. CI now includes a production dependency audit plus a clean local Supabase migration replay and database lint; the database job remains provisional until its first GitHub run passes.
 
 ## Phase
 
