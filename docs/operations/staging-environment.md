@@ -28,13 +28,12 @@ The persistent staging environment exists to test migrations, authentication, pr
 - The Git `staging` branch and `main` require pull requests, current `verify` and `database` checks, resolved conversations, and linear history.
 - All Git branches reject deletion and force pushes.
 - Staging database seeding is disabled until a deterministic synthetic fixture is reviewed and committed.
-- Vercel production variables are now scoped only to Production. Separate staging values for `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SECRET_KEY` are scoped to Preview branch `staging`. A fresh deployment and project-reference verification remain required before use.
+- Vercel production variables are now scoped only to Production. Separate staging values for `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, and `APP_URL` are scoped to Preview branch `staging`. The Supabase project reference is verified; a fresh deployment after the `APP_URL` change remains required before callback testing.
 
 ## Next configuration gate
 
-The three Supabase variables are configured. Complete the remaining staging-only provider and origin settings:
+The Supabase variables and application origin are configured. Complete the remaining staging-only provider settings:
 
-- `APP_URL`
 - `STRIPE_MODE=test`
 - staging-specific Stripe secret and webhook signing secrets
 
