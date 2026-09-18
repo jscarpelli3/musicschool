@@ -104,7 +104,7 @@ The one-time Checkout feature remains undeployed until this gate passes.
 
 - Gate 0 is conditionally ready for a supervised synthetic-data beta run; the operational checklist is not yet fully evidenced.
 - Gate 1 code is committed in `a3213a4`, but its migrations and UI are not deployed and the live Stripe test matrix has not run.
-- Gate 2 has begun: CI runs unit/invariant tests, payment provider-binding tests, a production dependency audit, typecheck, lint, a production build, and a clean local Supabase migration replay with database lint. The new database job must pass on GitHub before it counts as evidence. Deeper RLS fixtures, browser tests, and secret scanning are still incomplete.
+- Gate 2 has begun: CI runs unit/invariant tests, payment provider-binding tests, a production dependency audit, typecheck, lint, a production build, and a clean local Supabase migration replay with database lint. GitHub Actions run `35359611104` passed both application and database jobs on 2026-09-18. Deeper multi-tenant RLS fixtures, browser tests, and secret scanning are still incomplete.
 - Gates 3–6 remain open. Therefore the product is suitable for controlled beta testing, not production handling of real families or live money.
 
 ## Immediate execution order
