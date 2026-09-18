@@ -41,6 +41,7 @@ for each row execute function public.set_updated_at();
 alter table public.lesson_payment_requests enable row level security;
 create policy lesson_payment_requests_billing_select on public.lesson_payment_requests for select to authenticated
   using (public.has_school_capability(school_id,'school.billing.manage'));
+revoke all on public.lesson_payment_requests from public, anon;
 grant select on public.lesson_payment_requests to authenticated;
 revoke insert,update,delete on public.lesson_payment_requests from authenticated;
 
