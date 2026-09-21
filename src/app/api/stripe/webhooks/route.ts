@@ -36,12 +36,11 @@ type VerifiedEvent = {
   checkoutSetupEvent: "completed" | "expired" | null;
 };
 
-async function verifyEvent(rawBody: string, signature: string): Promise<VerifiedEvent> {
-  const stripe = getStripe();
+async function verifyEvent(rawBody: string, signature: string, stripe: ReturnType<typeof getStripe>, secrets: string[]): Promise<VerifiedEvent> {
   const parsed = JSON.parse(rawBody) as { object?: string };
   let lastVerificationError: unknown;
 
-  for (const secret of getStripeWebhookSecrets()) {
+  for (const secret of secrets) {
     try {
       if (parsed.object === "v2.core.event") {
         const notification = await stripe.parseEventNotificationAsync(rawBody, signature, secret);
@@ -94,9 +93,25 @@ export async function POST(request: Request) {
 
   const rawBody = await request.text();
   if (rawBody.length > 1_048_576) return NextResponse.json({ error: "Payload too large." }, { status: 413 });
+  let stripe: ReturnType<typeof getStripe>;
+  let secrets: string[];
+  try {
+    stripe = getStripe();
+    secrets = getStripeWebhookSecrets();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    const variable = /^Missing required server environment variable: (STRIPE_[A-Z_]+)$/.exec(message)?.[1];
+    const reason = variable ? "missing_variable"
+      : message === "STRIPE_MODE must be either test or live." ? "invalid_mode"
+        : message.startsWith("STRIPE_SECRET_KEY does not match STRIPE_MODE=") ? "key_mode_mismatch"
+          : message === "Stripe webhook secrets must begin with whsec_." ? "invalid_signing_secret"
+            : "unknown";
+    console.error("Stripe webhook configuration failed", { reason, variable: variable ?? "none" });
+    return NextResponse.json({ error: "Webhook configuration unavailable." }, { status: 500 });
+  }
   let event: VerifiedEvent;
   try {
-    event = await verifyEvent(rawBody, signature);
+    event = await verifyEvent(rawBody, signature, stripe, secrets);
   } catch (error) {
     console.error("Stripe webhook signature verification failed", { name: error instanceof Error ? error.name : "unknown" });
     return NextResponse.json({ error: "Invalid Stripe signature." }, { status: 400 });
