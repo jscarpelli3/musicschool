@@ -12,6 +12,7 @@ export function FocusedModal({
   variant = "primary",
   open: controlledOpen,
   onOpenChange,
+  hideTrigger = false,
 }: {
   triggerLabel: string;
   eyebrow?: string;
@@ -22,6 +23,7 @@ export function FocusedModal({
   variant?: "primary" | "secondary";
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
 }) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
@@ -51,9 +53,9 @@ export function FocusedModal({
   }, [open]);
 
   return <>
-    <button ref={triggerRef} type="button" disabled={disabled} onClick={() => setOpen(true)} className={`border px-5 py-3 text-sm transition disabled:cursor-not-allowed disabled:border-line disabled:bg-transparent disabled:text-muted ${variant === "primary" ? "border-brand bg-brand text-canvas hover:bg-brand-hover" : "border-line bg-transparent text-ink hover:border-brand hover:text-brand"}`}>
+    {!hideTrigger ? <button ref={triggerRef} type="button" disabled={disabled} onClick={() => setOpen(true)} className={`border px-5 py-3 text-sm transition disabled:cursor-not-allowed disabled:border-line disabled:bg-transparent disabled:text-muted ${variant === "primary" ? "border-brand bg-brand text-canvas hover:bg-brand-hover" : "border-line bg-transparent text-ink hover:border-brand hover:text-brand"}`}>
       {triggerLabel}
-    </button>
+    </button> : null}
     {open ? <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <button type="button" aria-label={`Close ${title}`} onClick={() => setOpen(false)} className="fixed inset-0 border-0 bg-[var(--ui-overlay)]" />
       <section className="fixed left-1/2 top-1/2 z-[101] max-h-[calc(100dvh-2rem)] w-[min(42rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto border border-line bg-surface p-6 shadow-xl sm:p-9">

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { FocusedModal } from "@/components/ui/focused-modal";
 import { addStudentAndPayer, type AddFamilyState } from "../families/actions";
 
 export type OnboardingFamily = {
@@ -70,13 +71,20 @@ export function FamilyForm({ schoolId, families }: { schoolId: string; families:
         </div>
       ) : null}
 
-      {families.length ? <button type="button" onClick={() => openForm("new")} className="mt-5 rounded-control border border-brand px-5 py-3 text-sm text-brand transition hover:bg-brand hover:text-canvas">Add another student and payer</button> : null}
+      <button type="button" onClick={() => openForm("new")} className="mt-5 rounded-control border border-brand px-5 py-3 text-sm text-brand transition hover:bg-brand hover:text-canvas">{families.length ? "Add another student and payer" : "Add student and payer"}</button>
 
-      {activePayerId ? (
-        <form action={submit} className="mt-6 grid gap-4 rounded-control border border-line bg-surface p-5 sm:grid-cols-2">
+      <FocusedModal
+        triggerLabel="Add student and payer"
+        eyebrow="Family setup"
+        title={activePayer ? `Add a student for ${activePayer.firstName} ${activePayer.lastName}.` : "Add a student and payer."}
+        description={activePayer ? "This student will use the existing payer and family billing account." : "This creates a student, payer, and connected family billing account."}
+        open={activePayerId !== null}
+        onOpenChange={(open) => { if (!open && !pending) setActivePayerId(null); }}
+        hideTrigger
+      >
+        <form action={submit} className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <h3 className="font-display text-2xl">{activePayer ? `Add a student for ${activePayer.firstName} ${activePayer.lastName}` : "Add a student and payer"}</h3>
-            <p className="mt-2 text-xs leading-5 text-muted">{activePayer ? "This student will use the existing payer and family billing account." : "This creates a student, payer, and connected family billing account."}</p>
+            <p className="text-xs leading-5 text-muted">Complete the student details and confirm who is responsible for billing.</p>
           </div>
           <label><span className="mb-2 block text-sm text-muted">Student first name</span><input required name="student_first" autoComplete="off" className={field} /></label>
           <label><span className="mb-2 block text-sm text-muted">Student last name</span><input required name="student_last" autoComplete="off" className={field} /></label>
@@ -84,10 +92,10 @@ export function FamilyForm({ schoolId, families }: { schoolId: string; families:
           <label><span className="mb-2 block text-sm text-muted">Payer last name</span><input required readOnly={Boolean(activePayer)} name="payer_last" defaultValue={activePayer?.lastName ?? ""} autoComplete="family-name" className={field} /></label>
           <label className="sm:col-span-2"><span className="mb-2 block text-sm text-muted">Payer email</span><input required readOnly={Boolean(activePayer)} name="payer_email" type="email" defaultValue={activePayer?.email ?? ""} autoComplete="email" className={field} /><span className="mt-2 block text-xs leading-5 text-muted">Billing summaries, approvals, and portal access go to this address.</span></label>
           <label><span className="mb-2 block text-sm text-muted">Relationship to student</span><select name="relationship" className={field}><option value="parent">Parent</option><option value="guardian">Guardian</option><option value="self">Self</option><option value="other">Other</option></select></label>
-          <div className="flex items-end gap-3"><button disabled={pending} className="w-full rounded-control bg-ink px-5 py-3 text-sm text-canvas disabled:opacity-50">{pending ? "Adding…" : activePayer ? "Add student" : "Add student and payer"}</button>{families.length ? <button type="button" disabled={pending} onClick={() => setActivePayerId(null)} className="px-2 py-3 text-sm text-muted">Cancel</button> : null}</div>
+          <div className="flex items-end"><button disabled={pending} className="w-full rounded-control bg-ink px-5 py-3 text-sm text-canvas disabled:opacity-50">{pending ? "Adding…" : activePayer ? "Add student" : "Add student and payer"}</button></div>
           {state.message ? <p role="status" aria-live="polite" className={`sm:col-span-2 text-sm ${state.ok ? "text-brand" : "text-danger"}`}>{state.message}</p> : null}
         </form>
-      ) : null}
+      </FocusedModal>
     </div>
   );
 }
