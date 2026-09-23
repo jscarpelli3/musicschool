@@ -35,7 +35,7 @@ export default async function OnboardingPage({ params, searchParams }: {
     supabase.from("schools").select("id,name,timezone,logo_path,onboarding_completed_at").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("profiles").select("full_name,avatar_path,avatar_url").eq("id", profileId).maybeSingle(),
-    supabase.from("teachers").select("person_id", { count: "exact", head: true }).eq("school_id", schoolId),
+    supabase.from("teachers").select("person_id").eq("school_id", schoolId),
     supabase.from("school_instruments").select("name").eq("school_id", schoolId).eq("is_active", true).order("name"),
     supabase.from("billing_accounts").select("id,name,billing_contact_person_id").eq("school_id", schoolId).eq("status", "active").order("created_at"),
     supabase.from("people").select("id,first_name,last_name,preferred_name,email").eq("school_id", schoolId),
@@ -74,6 +74,10 @@ export default async function OnboardingPage({ params, searchParams }: {
   const logo = school.logo_path ? await supabase.storage.from("school-logos").createSignedUrl(school.logo_path, 3600) : null;
   const avatar = profile.avatar_path ? await supabase.storage.from("avatars").createSignedUrl(profile.avatar_path, 3600) : null;
   const instrumentNames = (instrumentResult.data ?? []).map((instrument) => instrument.name);
+  const onboardingTeachers = (teacherResult.data ?? []).flatMap((teacher) => {
+    const person = peopleById.get(teacher.person_id);
+    return person ? [person] : [];
+  }).sort((a, b) => personName(a).localeCompare(personName(b)));
 
   return (
     <main className="mx-auto min-h-screen max-w-3xl px-5 py-12 text-center sm:px-8 sm:py-20">
@@ -120,9 +124,28 @@ export default async function OnboardingPage({ params, searchParams }: {
               <h4 className="font-display text-2xl text-ink">Are you the owner and a teacher?</h4>
               <p className="mt-2 text-sm leading-6 text-ink">Add yourself here too. Your owner account manages the school, while your teacher record connects you to instruments, students, and lessons.</p>
             </aside>
-            <div className="mt-6 flex flex-wrap items-start justify-between gap-5 border-t border-line pt-6">
-              <p className="pt-2 text-sm text-muted">{teacherResult.count ?? 0} teachers added</p>
-              <AddTeacherDialog instruments={instrumentNames} action={createAndInviteTeacher.bind(null, schoolId)} emptyMessage="Choose at least one instrument above and save the list before adding teachers." />
+            <div className="mt-6 border-t border-line pt-6">
+              {onboardingTeachers.length ? (
+                <div>
+                  <p className="text-sm font-medium text-ink">{onboardingTeachers.length} {onboardingTeachers.length === 1 ? "teacher" : "teachers"} added</p>
+                  <ul className="mt-3 divide-y divide-line border-y border-line" aria-label="Teachers added">
+                    {onboardingTeachers.map((teacher) => (
+                      <li key={teacher.id} className="flex flex-wrap items-baseline justify-between gap-2 py-3">
+                        <span className="font-medium text-ink">{personName(teacher)}</span>
+                        <span className="text-sm text-muted">{teacher.email || "No email address"}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : <p className="text-sm text-muted">No teachers added yet.</p>}
+              <div className="mt-5">
+                <AddTeacherDialog
+                  instruments={instrumentNames}
+                  action={createAndInviteTeacher.bind(null, schoolId)}
+                  emptyMessage="Choose at least one instrument above and save the list before adding teachers."
+                  triggerLabel={onboardingTeachers.length ? "Add another teacher +" : "Add teacher +"}
+                />
+              </div>
             </div>
           </div>
         </div>
