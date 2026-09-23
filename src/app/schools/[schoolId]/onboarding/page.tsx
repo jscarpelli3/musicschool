@@ -50,8 +50,6 @@ export default async function OnboardingPage({ params, searchParams }: {
   const profile = profileResult.data;
   if (!school || !membership || !profile) notFound();
   if (!capabilities.has("school.setup.manage")) redirect(`/schools/${schoolId}`);
-  if (school.onboarding_completed_at) redirect(`/schools/${schoolId}`);
-
   const peopleById = new Map((peopleResult.data ?? []).map((person) => [person.id, person]));
   const studentIdsByAccount = (studentLinkResult.data ?? []).reduce<Record<string, string[]>>((groups, link) => {
     (groups[link.billing_account_id] ??= []).push(link.student_id);
@@ -81,9 +79,9 @@ export default async function OnboardingPage({ params, searchParams }: {
 
   return (
     <main className="mx-auto min-h-screen max-w-3xl px-5 py-12 text-center sm:px-8 sm:py-20">
-      <p className="text-xs uppercase tracking-[0.14em] text-brand">New school setup</p>
-      <h1 className="mt-4 font-display text-5xl sm:text-6xl">Let’s make {school.name} feel like yours.</h1>
-      <p className="mx-auto mt-5 max-w-2xl text-sm leading-6 text-muted">You can change all of this later. We’ll begin with the people and details Common Time needs to keep schedules and billing understandable.</p>
+      <p className="text-xs uppercase tracking-[0.14em] text-brand">{school.onboarding_completed_at ? "School setup guide" : "New school setup"}</p>
+      <h1 className="mt-4 font-display text-5xl sm:text-6xl">{school.onboarding_completed_at ? `${school.name}, all in one place.` : `Let’s make ${school.name} feel like yours.`}</h1>
+      <p className="mx-auto mt-5 max-w-2xl text-sm leading-6 text-muted">{school.onboarding_completed_at ? "Review your setup, add people, or revisit how billing moves from lessons to completed payments." : "You can change all of this later. We’ll begin with the people and details Common Time needs to keep schedules and billing understandable."}</p>
       <ol className="mx-auto mt-8 flex max-w-xl justify-center gap-3 text-xs text-muted" aria-label="Onboarding steps"><li>1 · School</li><li>2 · Family</li><li>3 · Teachers</li><li>4 · How billing works</li></ol>
 
       <section className="mt-14 border-t border-line py-10">
@@ -154,8 +152,29 @@ export default async function OnboardingPage({ params, searchParams }: {
       <section className="border-t border-line py-10">
         <p className="text-xs uppercase tracking-[0.14em] text-brand">4 · Billing in plain English</p>
         <h2 className="mt-3 font-display text-4xl">What happens when money is involved.</h2>
-        <ul className="mx-auto mt-7 max-w-2xl space-y-4 text-left text-sm leading-6"><li>• Lessons and fees collect in a draft <Term definition="An itemized summary of charges for one family during a date range. Nothing is charged merely because a statement exists.">statement</Term> that you review before anyone pays.</li><li>• You lock the exact statement when it looks right. Locking prevents quiet changes while someone is reviewing it.</li><li>• The payer receives the itemized amount and gives <Term definition="Clear permission from the payer for one exact statement and amount.">approval</Term>. Approval is permission—it is not a completed payment.</li><li>• If a payer has separately allowed automatic payments, Common Time still sends advance notice and waits the agreed number of days.</li><li>• A charge is attempted only after the required approval or permission, notice, waiting period, and saved payment method are all confirmed.</li><li>• Common Time keeps invoices, credits, failed attempts, and receipts as separate records so the history stays understandable.</li></ul>
-        {!hasStudent ? <p className="mt-7 text-sm text-danger">Add the first student and payer before finishing setup.</p> : <form action={finishOnboarding.bind(null, schoolId)} className="mt-8"><button className="rounded-control bg-ink px-7 py-3 text-sm font-medium text-canvas">Finish setup and open my school</button>{query.finish ? <p className="mt-3 text-sm text-danger">Setup could not be completed. Reload and try again.</p> : null}</form>}
+        <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted">Money moves forward in deliberate stages. Each handoff is visible, and nothing is charged simply because a lesson exists.</p>
+        <ol className="mx-auto mt-8 grid max-w-3xl gap-3 text-left sm:grid-cols-2 lg:grid-cols-5" aria-label="Billing flow">
+          {[
+            ["01", "Collect", <>Lessons and fees gather in a draft <Term definition="An itemized summary of charges for one family during a date range. Nothing is charged merely because a statement exists.">statement</Term>.</>],
+            ["02", "Review & lock", <>You check every line, then lock the exact statement so it cannot quietly change.</>],
+            ["03", "Get approval", <>The payer sees the itemized amount and gives <Term definition="Clear permission from the payer for one exact statement and amount.">approval</Term>.</>],
+            ["04", "Notify & wait", <>Automatic payments still receive advance notice and observe the agreed waiting period.</>],
+            ["05", "Charge", <>Only then—with permission and a saved payment method—does Common Time attempt payment.</>],
+          ].map(([number, title, description]) => (
+            <li key={String(number)} className="relative overflow-hidden rounded-control border border-line bg-surface p-5">
+              <span className="font-display text-4xl text-brand/35" aria-hidden="true">{number}</span>
+              <h3 className="mt-5 font-display text-2xl text-ink">{title}</h3>
+              <p className="mt-3 text-sm leading-6 text-muted">{description}</p>
+            </li>
+          ))}
+        </ol>
+        <aside className="mx-auto mt-4 max-w-3xl border-l-4 border-brand bg-brand/10 px-5 py-4 text-left">
+          <p className="text-xs uppercase tracking-[0.12em] text-brand">A clear paper trail</p>
+          <p className="mt-2 text-sm leading-6 text-ink">Invoices, credits, failed attempts, and receipts stay separate, so you and the payer can always see exactly what happened.</p>
+        </aside>
+        {school.onboarding_completed_at ? (
+          <Link href={`/schools/${schoolId}`} className="mt-8 inline-flex rounded-control bg-ink px-7 py-3 text-sm font-medium text-canvas">Return to my school</Link>
+        ) : !hasStudent ? <p className="mt-7 text-sm text-danger">Add the first student and payer before finishing setup.</p> : <form action={finishOnboarding.bind(null, schoolId)} className="mt-8"><button className="rounded-control bg-ink px-7 py-3 text-sm font-medium text-canvas">Finish setup and open my school</button>{query.finish ? <p className="mt-3 text-sm text-danger">Setup could not be completed. Reload and try again.</p> : null}</form>}
       </section>
     </main>
   );
