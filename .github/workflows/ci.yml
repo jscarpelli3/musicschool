@@ -45,19 +45,37 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Detect database migration changes
+        id: database_changes
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            echo "required=true" >> "$GITHUB_OUTPUT"
+          elif git diff --quiet "$BASE_SHA" HEAD -- supabase/migrations; then
+            echo "required=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "required=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v5
+        if: steps.database_changes.outputs.required == 'true'
         with:
           node-version: 22
       - uses: supabase/setup-cli@v2
+        if: steps.database_changes.outputs.required == 'true'
         with:
           version: 2.90.0
       - name: Authenticate Supabase image pulls
+        if: steps.database_changes.outputs.required == 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Replay migrations on a clean local database
+        if: steps.database_changes.outputs.required == 'true'
         run: |
           for attempt in 1 2 3; do
             if supabase db start; then
@@ -69,7 +87,8 @@ jobs:
             sleep $((attempt * 15))
           done
       - name: Lint the resulting database
+        if: steps.database_changes.outputs.required == 'true'
         run: supabase db lint --local --level warning
       - name: Stop local Supabase
-        if: always()
+        if: always() && steps.database_changes.outputs.required == 'true'
         run: supabase stop --no-backup
