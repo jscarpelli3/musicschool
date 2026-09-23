@@ -1,21 +1,35 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { COMMON_INSTRUMENTS } from "@/lib/schools/instruments";
+import type { InstrumentCatalogResult } from "@/app/schools/[schoolId]/setup/instrument-actions";
 
 export function InstrumentCatalogForm({
   instruments,
   action,
-  returnPath,
 }: {
   instruments: string[];
-  action: (formData: FormData) => void | Promise<void>;
-  returnPath?: string;
+  action: (formData: FormData) => Promise<InstrumentCatalogResult>;
 }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [result, setResult] = useState<InstrumentCatalogResult | null>(null);
   const common = new Set(COMMON_INSTRUMENTS.map((name) => name.toLocaleLowerCase()));
   const selected = new Set(instruments.map((name) => name.toLocaleLowerCase()));
   const custom = instruments.filter((name) => !common.has(name.toLocaleLowerCase()));
 
+  function submit(formData: FormData) {
+    setResult(null);
+    startTransition(async () => {
+      const nextResult = await action(formData);
+      setResult(nextResult);
+      if (nextResult.ok) router.refresh();
+    });
+  }
+
   return (
-    <form action={action} className="space-y-6">
-      {returnPath ? <input type="hidden" name="return_path" value={returnPath} /> : null}
+    <form action={submit} className="space-y-6">
       <fieldset>
         <legend className="text-sm font-medium text-ink">Instruments taught</legend>
         <p className="mt-1 text-sm leading-6 text-muted">These choices become the instrument list used throughout your school.</p>
@@ -33,7 +47,12 @@ export function InstrumentCatalogForm({
         <span className="mt-1 block text-xs text-muted">Enter one per line. These are stored as your school’s own instrument names.</span>
         <textarea name="other_instruments" rows={Math.max(3, custom.length)} defaultValue={custom.join("\n")} placeholder={"Mandolin\nMusic production"} className="mt-3 w-full border border-line bg-transparent p-3 text-sm outline-none focus:border-brand" />
       </label>
-      <button className="border border-brand px-5 py-3 text-sm text-brand">Save instruments</button>
+      <div className="flex flex-wrap items-center gap-4">
+        <button disabled={pending} className="border border-brand px-5 py-3 text-sm text-brand disabled:cursor-wait disabled:opacity-60">
+          {pending ? "Saving instruments…" : "Save instruments"}
+        </button>
+        {result ? <p role="status" aria-live="polite" className={`text-sm ${result.ok ? "text-brand" : "text-danger"}`}>{result.message}</p> : null}
+      </div>
     </form>
   );
 }

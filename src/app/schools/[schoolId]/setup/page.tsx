@@ -12,7 +12,7 @@ const field = "w-full border-b border-line bg-transparent py-3 outline-none tran
 
 export default async function SchoolInfoPage({ params, searchParams }: {
   params: Promise<{ schoolId: string }>;
-  searchParams: Promise<{ status?: string; media?: string; instruments?: string }>;
+  searchParams: Promise<{ status?: string; media?: string }>;
 }) {
   const { schoolId } = await params;
   const query = await searchParams;
@@ -46,7 +46,6 @@ export default async function SchoolInfoPage({ params, searchParams }: {
       <SetupHeader schoolId={schoolId} schoolName={school.name} active="info" />
       {query.status ? <p className={`mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm ${query.status === "saved" ? "text-brand" : "text-danger"}`}>{query.status === "saved" ? "School information saved." : "School information could not be saved."}</p> : null}
       {logoMessage ? <p className={`mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm ${logoMessage.error ? "text-danger" : "text-brand"}`}>{logoMessage.text}</p> : null}
-      {query.instruments ? <p role="status" className={`mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm ${query.instruments === "saved" ? "text-brand" : "text-danger"}`}>{query.instruments === "saved" ? "School instruments saved." : "The instrument list could not be saved."}</p> : null}
       <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
         <div>
           <h2 className="font-display text-3xl">Identity</h2>
