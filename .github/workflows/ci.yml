@@ -58,7 +58,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Replay migrations on a clean local database
-        run: supabase db start
+        run: |
+          for attempt in 1 2 3; do
+            if supabase db start; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            sleep $((attempt * 15))
+          done
       - name: Lint the resulting database
         run: supabase db lint --local --level warning
       - name: Stop local Supabase
