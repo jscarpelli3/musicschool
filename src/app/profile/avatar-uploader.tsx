@@ -89,12 +89,12 @@ export function AvatarUploader({ currentUrl, initial }: { currentUrl: string | n
   }
 
   return (
-    <div className="flex flex-col gap-7 sm:flex-row sm:items-center">
+    <div>
       {displayUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={displayUrl} alt="Your avatar" className={`h-28 w-28 rounded-full border object-cover transition ${pending ? "animate-pulse border-brand opacity-70" : "border-line"}`} />
-      ) : <div className="grid h-28 w-28 place-items-center rounded-full border border-line font-display text-4xl text-brand">{initial}</div>}
-      <div className="w-full max-w-sm">
+        <img src={displayUrl} alt="Your avatar" className={`h-24 w-24 rounded-full border object-cover transition ${pending ? "animate-pulse border-brand opacity-70" : "border-line"}`} />
+      ) : <div className="grid h-24 w-24 place-items-center rounded-full border border-line font-display text-4xl text-brand">{initial}</div>}
+      <div className="mt-4 w-full">
         <ImageUploadControls
           id="avatar-image"
           inputName="avatar"
