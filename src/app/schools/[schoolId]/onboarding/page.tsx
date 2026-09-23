@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { MdCreditCard, MdHowToReg, MdLockOutline, MdReceiptLong, MdScheduleSend } from "react-icons/md";
 import { AvatarUploader } from "@/app/profile/avatar-uploader";
 import { SchoolLogoUploader } from "@/components/school-setup/school-logo-uploader";
 import { InstrumentCatalogForm } from "@/components/school-setup/instrument-catalog-form";
@@ -153,22 +154,29 @@ export default async function OnboardingPage({ params, searchParams }: {
         <p className="text-xs uppercase tracking-[0.14em] text-brand">4 · Billing in plain English</p>
         <h2 className="mt-3 font-display text-4xl">What happens when money is involved.</h2>
         <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted">Money moves forward in deliberate stages. Each handoff is visible, and nothing is charged simply because a lesson exists.</p>
-        <ol className="mx-auto mt-8 grid max-w-3xl gap-3 text-left sm:grid-cols-2 lg:grid-cols-5" aria-label="Billing flow">
+        <ol className="relative mx-auto mt-10 grid max-w-5xl gap-8 text-left lg:grid-cols-5 lg:gap-5" aria-label="Billing flow">
+          <span aria-hidden="true" className="absolute top-8 bottom-8 left-8 w-px bg-brand/40 lg:inset-x-[10%] lg:top-8 lg:bottom-auto lg:h-px lg:w-auto" />
           {[
-            ["01", "Collect", <>Lessons and fees gather in a draft <Term definition="An itemized summary of charges for one family during a date range. Nothing is charged merely because a statement exists.">statement</Term>.</>],
-            ["02", "Review & lock", <>You check every line, then lock the exact statement so it cannot quietly change.</>],
-            ["03", "Get approval", <>The payer sees the itemized amount and gives <Term definition="Clear permission from the payer for one exact statement and amount.">approval</Term>.</>],
-            ["04", "Notify & wait", <>Automatic payments still receive advance notice and observe the agreed waiting period.</>],
-            ["05", "Charge", <>Only then—with permission and a saved payment method—does Common Time attempt payment.</>],
-          ].map(([number, title, description]) => (
-            <li key={String(number)} className="relative overflow-hidden rounded-control border border-line bg-surface p-5">
-              <span className="font-display text-4xl text-brand/35" aria-hidden="true">{number}</span>
-              <h3 className="mt-5 font-display text-2xl text-ink">{title}</h3>
-              <p className="mt-3 text-sm leading-6 text-muted">{description}</p>
-            </li>
-          ))}
+            { number: "01", title: "Collect", icon: MdReceiptLong, description: <>Lessons and fees gather in a draft <Term definition="An itemized summary of charges for one family during a date range. Nothing is charged merely because a statement exists.">statement</Term>.</> },
+            { number: "02", title: "Review & lock", icon: MdLockOutline, description: <>You check every line, then lock the exact statement so it cannot quietly change.</> },
+            { number: "03", title: "Get approval", icon: MdHowToReg, description: <>The payer sees the itemized amount and gives <Term definition="Clear permission from the payer for one exact statement and amount.">approval</Term>.</> },
+            { number: "04", title: "Notify & wait", icon: MdScheduleSend, description: <>Automatic payments still receive advance notice and observe the agreed waiting period.</> },
+            { number: "05", title: "Charge", icon: MdCreditCard, description: <>Only then—with permission and a saved payment method—does Common Time attempt payment.</> },
+          ].map((step) => {
+            const Icon = step.icon;
+            return <li key={step.number} className="relative grid grid-cols-[4rem_1fr] gap-4 lg:block">
+              <div className="relative z-10 grid h-16 w-16 place-items-center rounded-full border-2 border-brand bg-canvas text-brand shadow-[0_0_0_6px_var(--color-canvas)] lg:mx-auto">
+                <Icon aria-hidden="true" className="h-7 w-7" />
+              </div>
+              <div className="rounded-control border border-line bg-surface p-5 lg:mt-7 lg:min-h-64">
+                <span className="text-xs font-medium tracking-[0.14em] text-brand">STEP {step.number}</span>
+                <h3 className="mt-3 font-display text-2xl text-ink">{step.title}</h3>
+                <p className="mt-3 text-sm leading-6 text-muted">{step.description}</p>
+              </div>
+            </li>;
+          })}
         </ol>
-        <aside className="mx-auto mt-4 max-w-3xl border-l-4 border-brand bg-brand/10 px-5 py-4 text-left">
+        <aside className="mx-auto mt-8 max-w-5xl border-l-4 border-brand bg-brand/10 px-5 py-4 text-left">
           <p className="text-xs uppercase tracking-[0.12em] text-brand">A clear paper trail</p>
           <p className="mt-2 text-sm leading-6 text-ink">Invoices, credits, failed attempts, and receipts stay separate, so you and the payer can always see exactly what happened.</p>
         </aside>
