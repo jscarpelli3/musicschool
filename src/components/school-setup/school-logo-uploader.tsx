@@ -3,6 +3,7 @@
 import { useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { uploadSchoolLogo } from "@/app/schools/[schoolId]/media-actions";
+import { ImageUploadControls } from "@/components/media/image-upload-controls";
 import {
   isAcceptedImageType,
   SCHOOL_LOGO_UPLOAD_MAX_BYTES,
@@ -55,27 +56,19 @@ export function SchoolLogoUploader({ schoolId }: { schoolId: string }) {
 
   return (
     <div className="mt-4">
-      <label className="block text-sm font-medium text-ink" htmlFor={`school-logo-${schoolId}`}>Choose logo image</label>
-      <input
-        ref={inputRef}
+      <ImageUploadControls
         id={`school-logo-${schoolId}`}
-        name="logo"
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        disabled={pending}
+        inputName="logo"
+        chooserLabel="Choose logo image"
+        uploadLabel="Upload logo"
+        maxSizeMb={SCHOOL_LOGO_UPLOAD_MAX_MB}
+        inputRef={inputRef}
+        hasFile={Boolean(file)}
+        pending={pending}
+        result={result}
         onChange={chooseFile}
-        className="mt-2 block w-full cursor-pointer rounded-control border border-dashed border-brand bg-canvas p-2 text-sm text-muted transition file:mr-3 file:cursor-pointer file:rounded-control file:border-0 file:bg-brand file:px-4 file:py-2 file:text-sm file:font-medium file:text-canvas hover:bg-surface-raised disabled:cursor-wait disabled:opacity-60"
+        onUpload={() => void upload()}
       />
-      <p className="mt-2 text-xs text-muted">JPG, PNG, or WebP · {SCHOOL_LOGO_UPLOAD_MAX_MB} MB maximum</p>
-      <button
-        type="button"
-        disabled={!file || pending}
-        onClick={() => void upload()}
-        className="mt-4 rounded-control bg-ink px-5 py-3 text-sm font-medium text-canvas transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        {pending ? "Uploading…" : "Upload logo"}
-      </button>
-      {result ? <p role="status" aria-live="polite" className={`mt-3 text-sm ${result.ok ? "text-brand" : "text-danger"}`}>{result.message}</p> : null}
     </div>
   );
 }
