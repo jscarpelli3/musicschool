@@ -5,9 +5,10 @@ import { TeacherInviteForm } from "@/components/teacher/teacher-invite-form";
 import { TeacherInstrumentFields } from "@/components/staff/teacher-instrument-fields";
 import { FocusedModal } from "@/components/ui/focused-modal";
 
-export function AddTeacherDialog({ instruments, action }: {
+export function AddTeacherDialog({ instruments, action, emptyMessage = "Choose school instruments in School Setup before adding staff." }: {
   instruments: string[];
   action: (formData: FormData) => Promise<{ ok: boolean; message: string }>;
+  emptyMessage?: string;
 }) {
   const [open, setOpen] = useState(false);
   const closeWithSuccess = () => {
@@ -27,6 +28,6 @@ export function AddTeacherDialog({ instruments, action }: {
         <TeacherInstrumentFields instruments={instruments} />
       </TeacherInviteForm>
     </FocusedModal>
-    {instruments.length === 0 ? <p className="mt-3 text-xs text-muted">Choose school instruments in School Setup before adding staff.</p> : null}
+    {instruments.length === 0 ? <p className="mt-3 max-w-xs text-xs leading-5 text-muted">{emptyMessage}</p> : null}
   </div>;
 }

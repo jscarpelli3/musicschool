@@ -103,8 +103,29 @@ export default async function OnboardingPage({ params, searchParams }: {
       <section className="border-t border-line py-10">
         <p className="text-xs uppercase tracking-[0.14em] text-brand">3 · Teaching team</p>
         <h2 className="mt-3 font-display text-4xl">Invite the people who teach.</h2>
-        <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted">Teachers receive a private email invitation and sign in without a password. Add everyone now, or return to Staff later.</p>
-        <div className="mx-auto mt-7 max-w-xl text-left"><InstrumentCatalogForm instruments={instrumentNames} action={updateSchoolInstrumentCatalog.bind(null, schoolId)} returnPath={`/schools/${schoolId}/onboarding`} /><div className="mt-6 flex items-center justify-between border-t border-line pt-6"><p className="text-sm text-muted">{teacherResult.count ?? 0} teachers added</p><AddTeacherDialog instruments={instrumentNames} action={createAndInviteTeacher.bind(null, schoolId)} /></div></div>
+        <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted">Set the instruments your school teaches first. Then add the people who teach them.</p>
+        <div className="mx-auto mt-8 max-w-2xl space-y-6 text-left">
+          <div className="rounded-control border border-line bg-surface p-5 sm:p-6">
+            <p className="text-xs uppercase tracking-[0.12em] text-brand">First · Choose your instruments</p>
+            <h3 className="mt-2 font-display text-3xl">What does your school teach right now?</h3>
+            <p className="mt-3 text-sm leading-6 text-muted">Select the instruments you currently offer—not everything you might add later. This list controls the choices available when you add teachers and lessons, and you can update it anytime.</p>
+            <div className="mt-6"><InstrumentCatalogForm instruments={instrumentNames} action={updateSchoolInstrumentCatalog.bind(null, schoolId)} returnPath={`/schools/${schoolId}/onboarding`} /></div>
+          </div>
+
+          <div className="rounded-control border border-line bg-surface p-5 sm:p-6">
+            <p className="text-xs uppercase tracking-[0.12em] text-brand">Next · Add teachers</p>
+            <h3 className="mt-2 font-display text-3xl">Who teaches at your school?</h3>
+            <p className="mt-3 text-sm leading-6 text-muted">Teachers receive a private email invitation and sign in without a password. Add everyone now, or return to Staff later.</p>
+            <aside className="mt-6 border-l-4 border-brand bg-brand/10 px-5 py-4">
+              <h4 className="font-display text-2xl text-ink">Are you the owner and a teacher?</h4>
+              <p className="mt-2 text-sm leading-6 text-ink">Add yourself here too. Your owner account manages the school, while your teacher record connects you to instruments, students, and lessons.</p>
+            </aside>
+            <div className="mt-6 flex flex-wrap items-start justify-between gap-5 border-t border-line pt-6">
+              <p className="pt-2 text-sm text-muted">{teacherResult.count ?? 0} teachers added</p>
+              <AddTeacherDialog instruments={instrumentNames} action={createAndInviteTeacher.bind(null, schoolId)} emptyMessage="Choose at least one instrument above and save the list before adding teachers." />
+            </div>
+          </div>
+        </div>
       </section>
 
       <section className="border-t border-line py-10">
