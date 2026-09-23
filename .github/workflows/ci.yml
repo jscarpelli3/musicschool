@@ -12,6 +12,7 @@ concurrency:
 
 permissions:
   contents: read
+  packages: read
 
 jobs:
   verify:
@@ -50,6 +51,12 @@ jobs:
       - uses: supabase/setup-cli@v2
         with:
           version: 2.90.0
+      - name: Authenticate Supabase image pulls
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Replay migrations on a clean local database
         run: supabase db start
       - name: Lint the resulting database
