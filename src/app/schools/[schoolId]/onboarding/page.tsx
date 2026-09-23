@@ -109,7 +109,7 @@ export default async function OnboardingPage({ params, searchParams }: {
             <p className="text-xs uppercase tracking-[0.12em] text-brand">First · Choose your instruments</p>
             <h3 className="mt-2 font-display text-3xl">What does your school teach right now?</h3>
             <p className="mt-3 text-sm leading-6 text-muted">Select the instruments you currently offer—not everything you might add later. This list controls the choices available when you add teachers and lessons, and you can update it anytime.</p>
-            <div className="mt-6"><InstrumentCatalogForm instruments={instrumentNames} action={updateSchoolInstrumentCatalog.bind(null, schoolId)} returnPath={`/schools/${schoolId}/onboarding`} /></div>
+            <div className="mt-6"><InstrumentCatalogForm instruments={instrumentNames} action={updateSchoolInstrumentCatalog.bind(null, schoolId)} /></div>
           </div>
 
           <div className="rounded-control border border-line bg-surface p-5 sm:p-6">
