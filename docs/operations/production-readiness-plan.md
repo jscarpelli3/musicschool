@@ -48,7 +48,7 @@ The one-time Checkout feature remains undeployed until this gate passes.
 - [ ] Expiration clears the stored Checkout URL and permits a new request.
 - [ ] Concurrent clicks converge on one open request and one Stripe idempotency key.
 - [ ] Duplicate and out-of-order webhooks are idempotent.
-- [ ] Provider acceptance followed by a failed local session-ID write is recovered through signed metadata.
+- [x] Provider acceptance followed by a failed local session-ID write is recoverable with the stable request idempotency key and signed metadata.
 - [ ] Wrong account, request ID, amount, currency, session mode, payment status, PaymentIntent status, and Charge state are rejected.
 - [ ] An already-paid lesson cannot be collected again.
 - [ ] A separately paid lesson appears on a later statement at zero newly due, with durable allocation metadata.
@@ -60,7 +60,7 @@ The one-time Checkout feature remains undeployed until this gate passes.
 
 - [ ] Unit-test all pure payment eligibility and provider-binding rules.
 - [ ] Add database tests for constraints, grants, RLS, service-role-only completion, idempotency, concurrency, and statement allocation.
-- [ ] Add mocked Stripe integration tests for creation, ambiguous failure, recovery, replay, and order changes.
+- [ ] Add mocked Stripe integration tests for creation, ambiguous failure, recovery, replay, and order changes. Creation, ambiguous provider response, local-write recovery, duplicate completion, and paid-after-expired ordering are covered; webhook lease replay remains.
 - [ ] Run the empty-database migration replay and verification migrations in CI.
 - [ ] Make every test deterministic and tenant-aware; include at least two schools and cross-tenant denial cases.
 - [ ] Block merges when tests, typecheck, lint, build, migration replay, database lint, dependency audit, or secret scanning fail.
