@@ -4,6 +4,8 @@ Production-domain URL, environment, provider-callback, verification, testing, an
 
 The gated path from supervised beta to a one-school production pilot is tracked in [`../operations/production-readiness-plan.md`](../operations/production-readiness-plan.md). That checklist is the launch authority for payment testing and production readiness; passing application CI alone does not authorize live charges or real customer data.
 
+The latest staging handoff, including the completed Stripe Connect onboarding and the exact next Checkout test, is in [`session-handoff.md`](session-handoff.md).
+
 ## 2026-09-17 beta-test checkpoint
 
 - **Decision:** ready for one supervised invitation-only beta acceptance run using synthetic/test data. Do not import real customer records, enable live charges, or represent production SMS as available.
