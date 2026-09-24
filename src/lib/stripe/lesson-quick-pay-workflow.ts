@@ -55,7 +55,7 @@ export async function openHostedLessonCheckout(input: HostedLessonCheckoutInput,
 }
 
 type CompletedCheckoutInput = {
-  request: { requestId: string; amountCents: number; currency: string };
+  request: { requestId: string; schoolId: string; lessonId: string; amountCents: number; currency: string };
   checkoutSessionId: string;
   stripeAccount: string;
   providerEventId: string;
