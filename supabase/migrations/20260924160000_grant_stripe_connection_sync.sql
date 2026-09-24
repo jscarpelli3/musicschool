@@ -2,6 +2,14 @@
 -- service client. New branch databases do not implicitly grant table access
 -- to service_role, so make the narrow persistence contract explicit.
 
+revoke all
+  on table public.school_payment_connections
+  from public, anon;
+
+revoke insert, update, delete
+  on table public.school_payment_connections
+  from authenticated;
+
 revoke delete
   on table public.school_payment_connections
   from service_role;
