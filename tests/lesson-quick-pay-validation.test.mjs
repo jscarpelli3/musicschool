@@ -1,9 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { validateCompletedLessonCheckout } from "../src/lib/stripe/lesson-quick-pay-validation.ts";
+import {
+  assertLessonCheckoutTenantBinding,
+  assertLessonPaymentConnectedAccount,
+  validateCompletedLessonCheckout,
+} from "../src/lib/stripe/lesson-quick-pay-validation.ts";
 
-const request = { requestId: "request-1", amountCents: 5500, currency: "USD" };
+const request = {
+  requestId: "request-1",
+  schoolId: "school-1",
+  lessonId: "lesson-1",
+  amountCents: 5500,
+  currency: "USD",
+};
 
 function paidSession(overrides = {}) {
   return {
@@ -12,6 +22,11 @@ function paidSession(overrides = {}) {
     client_reference_id: request.requestId,
     amount_total: request.amountCents,
     currency: "usd",
+    metadata: {
+      lesson_payment_request_id: request.requestId,
+      school_id: request.schoolId,
+      lesson_event_id: request.lessonId,
+    },
     payment_intent: {
       id: "pi_1",
       status: "succeeded",
@@ -20,6 +35,38 @@ function paidSession(overrides = {}) {
     ...overrides,
   };
 }
+
+for (const [name, metadata] of [
+  ["missing metadata", null],
+  ["wrong request metadata", { lesson_payment_request_id: "request-2", school_id: request.schoolId, lesson_event_id: request.lessonId }],
+  ["cross-school metadata", { lesson_payment_request_id: request.requestId, school_id: "school-2", lesson_event_id: request.lessonId }],
+  ["cross-school lesson metadata", { lesson_payment_request_id: request.requestId, school_id: request.schoolId, lesson_event_id: "lesson-2" }],
+]) {
+  test(`rejects ${name}`, () => {
+    assert.throws(() => validateCompletedLessonCheckout(request, paidSession({ metadata })), /tenant binding/);
+  });
+}
+
+test("accepts only the payment request's connected Stripe account", () => {
+  assert.doesNotThrow(() => assertLessonPaymentConnectedAccount("acct_school_1", "acct_school_1"));
+  assert.throws(() => assertLessonPaymentConnectedAccount("acct_school_1", "acct_school_2"), /connected account does not match/);
+  assert.throws(() => assertLessonPaymentConnectedAccount(null, "acct_school_1"), /connected account does not match/);
+});
+
+test("the tenant-binding guard is reusable for expiration events", () => {
+  const identity = { requestId: request.requestId, schoolId: request.schoolId, lessonId: request.lessonId };
+  assert.doesNotThrow(() => assertLessonCheckoutTenantBinding(identity, paidSession()));
+  assert.throws(
+    () => assertLessonCheckoutTenantBinding(identity, paidSession({
+      metadata: {
+        lesson_payment_request_id: request.requestId,
+        school_id: "school-2",
+        lesson_event_id: request.lessonId,
+      },
+    })),
+    /tenant binding/,
+  );
+});
 
 test("accepts a fully paid Checkout session bound to the local request", () => {
   assert.deepEqual(validateCompletedLessonCheckout(request, paidSession()), {
@@ -71,4 +118,3 @@ for (const [name, latestCharge] of [
     })), /charge does not match/);
   });
 }
-

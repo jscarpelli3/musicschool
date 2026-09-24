@@ -39,7 +39,7 @@ The one-time Checkout feature remains undeployed until this gate passes.
 - [x] Prove anonymous users cannot read or mutate payment requests.
 - [x] Prove authenticated users without `school.billing.manage` cannot read requests.
 - [x] Prove authenticated users cannot insert, update, delete, or directly complete requests.
-- [ ] Prove cross-school IDs and connected accounts are rejected.
+- [x] Prove cross-school IDs and connected accounts are rejected. Checkout completion and expiration validate request, school, and lesson metadata against local immutable facts; both reject any Stripe account other than the request's stored school connection.
 
 ### Checkout and webhook matrix
 

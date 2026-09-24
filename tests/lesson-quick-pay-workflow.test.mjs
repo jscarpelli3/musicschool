@@ -21,6 +21,11 @@ function paidSession() {
     client_reference_id: checkoutInput.requestId,
     amount_total: 5500,
     currency: "usd",
+    metadata: {
+      school_id: checkoutInput.schoolId,
+      lesson_event_id: checkoutInput.lessonId,
+      lesson_payment_request_id: checkoutInput.requestId,
+    },
     payment_intent: {
       id: "pi_paid",
       status: "succeeded",
@@ -132,7 +137,13 @@ test("reconciliation retrieves expanded provider state, validates it, and record
   let retrieval;
   let completion;
   const result = await completeHostedLessonCheckout({
-    request: { requestId: checkoutInput.requestId, amountCents: 5500, currency: "USD" },
+    request: {
+      requestId: checkoutInput.requestId,
+      schoolId: checkoutInput.schoolId,
+      lessonId: checkoutInput.lessonId,
+      amountCents: 5500,
+      currency: "USD",
+    },
     checkoutSessionId: "cs_test_paid",
     stripeAccount: checkoutInput.stripeAccount,
     providerEventId: "evt_test_paid",
@@ -177,7 +188,13 @@ test("duplicate paid events converge on one succeeded local payment", async () =
     },
   };
   const input = {
-    request: { requestId: checkoutInput.requestId, amountCents: 5500, currency: "USD" },
+    request: {
+      requestId: checkoutInput.requestId,
+      schoolId: checkoutInput.schoolId,
+      lessonId: checkoutInput.lessonId,
+      amountCents: 5500,
+      currency: "USD",
+    },
     checkoutSessionId: "cs_test_paid",
     stripeAccount: checkoutInput.stripeAccount,
     providerEventId: "evt_test_paid",

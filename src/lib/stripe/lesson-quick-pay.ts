@@ -2,7 +2,11 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { completeHostedLessonCheckout, openHostedLessonCheckout } from "@/lib/stripe/lesson-quick-pay-workflow";
-import { validateCompletedLessonCheckout } from "@/lib/stripe/lesson-quick-pay-validation";
+import {
+  assertLessonCheckoutTenantBinding,
+  assertLessonPaymentConnectedAccount,
+  validateCompletedLessonCheckout,
+} from "@/lib/stripe/lesson-quick-pay-validation";
 import { getStripe, getStripeMode } from "@/lib/stripe/server";
 
 function applicationUrl() {
@@ -125,15 +129,22 @@ export async function reconcileCompletedLessonPayment(checkoutSessionId: string,
   const requestId = session.metadata?.lesson_payment_request_id;
   if (!requestId || !/^[0-9a-f-]{36}$/i.test(requestId)) return false;
   const { data: request, error } = await admin.from("lesson_payment_requests")
-    .select("id,school_id,amount_cents,currency,status,provider_checkout_session_id,payment_connection_id")
+    .select("id,school_id,lesson_event_id,amount_cents,currency,status,provider_checkout_session_id,payment_connection_id")
     .eq("id", requestId).maybeSingle();
   if (error) throw error;
   if (!request) return false;
   const { data: connection, error: connectionError } = await admin.from("school_payment_connections").select("provider_account_id")
     .eq("id", request.payment_connection_id).eq("school_id", request.school_id).single();
-  if (connectionError || connection.provider_account_id !== stripeAccount) throw connectionError ?? new Error("Lesson payment connected account does not match.");
+  if (connectionError) throw connectionError;
+  assertLessonPaymentConnectedAccount(connection.provider_account_id, stripeAccount);
   await completeHostedLessonCheckout({
-    request: { requestId: request.id, amountCents: request.amount_cents, currency: request.currency },
+    request: {
+      requestId: request.id,
+      schoolId: request.school_id,
+      lessonId: request.lesson_event_id,
+      amountCents: request.amount_cents,
+      currency: request.currency,
+    },
     checkoutSessionId,
     stripeAccount,
     providerEventId,
@@ -161,13 +172,19 @@ export async function expireLessonPayment(checkoutSessionId: string, stripeAccou
   const session = await getStripe().checkout.sessions.retrieve(checkoutSessionId, {}, { stripeAccount });
   const requestId = session.metadata?.lesson_payment_request_id;
   if (!requestId || !/^[0-9a-f-]{36}$/i.test(requestId)) return false;
-  const { data: request, error: requestError } = await admin.from("lesson_payment_requests").select("id,school_id,payment_connection_id")
+  const { data: request, error: requestError } = await admin.from("lesson_payment_requests").select("id,school_id,lesson_event_id,payment_connection_id")
     .eq("id", requestId).maybeSingle();
   if (requestError) throw requestError;
   if (!request) return false;
   const { data: connection, error: connectionError } = await admin.from("school_payment_connections").select("provider_account_id")
     .eq("id", request.payment_connection_id).eq("school_id", request.school_id).single();
-  if (connectionError || connection.provider_account_id !== stripeAccount) throw connectionError ?? new Error("Lesson payment connected account does not match.");
+  if (connectionError) throw connectionError;
+  assertLessonPaymentConnectedAccount(connection.provider_account_id, stripeAccount);
+  assertLessonCheckoutTenantBinding({
+    requestId: request.id,
+    schoolId: request.school_id,
+    lessonId: request.lesson_event_id,
+  }, session);
   const { data, error } = await admin.from("lesson_payment_requests").update({ status: "expired", checkout_url: null })
     .eq("id", request.id).in("status", ["created", "open"]).select("id").maybeSingle();
   if (error) throw error;
