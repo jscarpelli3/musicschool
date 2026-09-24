@@ -33,6 +33,7 @@ The persistent staging environment exists to test migrations, authentication, pr
 - A dedicated Stripe sandbox named `Common Time Staging` exists. Previous Stripe variables are scoped only to Vercel Production; staging Stripe keys and webhook secrets must be scoped only to Preview branch `staging`.
 - The persistent staging branch owns its Auth Site URL and exact OAuth callback in `supabase/config.toml` under `[remotes.staging.auth]`. Change those values in Git rather than only in the dashboard; otherwise a later branch deployment can restore the local-development redirect.
 - The first staging Stripe Connect attempt on 2026-09-24 reached Stripe and created one idempotently keyed test account, then exposed missing explicit `service_role` grants on the branch database. Migration `20260924160000_grant_stripe_connection_sync.sql` defines and verifies the narrow connection-sync and append-only audit privileges; the existing account is reused on retry.
+- **Before inviting beta testers:** update the Stripe platform branding from the personal fallback name `Jonathan Scarpelli` to `Common Time`, and add the approved Common Time icon, logo, and brand color. The current Stripe-hosted onboarding copy says “Jonathan Scarpelli uses Stripe for secure payments” and “Return to Jonathan Scarpelli.” Make this change in the platform's Connect branding settings when leaving the sandbox; Stripe's legal and verification copy remains provider-controlled.
 
 ## Staging email gate
 
