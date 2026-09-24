@@ -87,6 +87,7 @@ The one-time Checkout feature remains undeployed until this gate passes.
 ## Gate 5 — Security and operations
 
 - [ ] Replace the Stripe platform's personal fallback branding with Common Time name, icon, logo, and brand color before beta invitations or live onboarding.
+- [ ] Add a capability-gated platform-admin payment setup view showing each school's connection stage, charges/payouts availability, safe requirement category, last synchronization time, stale-state warning, connected-account link, and recent synchronization/webhook failures. Permit an audited status refresh, but never expose identity numbers, bank details, verification documents, payment credentials, or raw provider payloads, and never let platform staff complete verification for a school owner.
 - [ ] Complete the role-by-resource matrix for owner, admin, teacher, payer, guardian, student, anonymous, service role, and platform admin across at least two schools.
 - [ ] Record and test hosted Auth session, refresh-token reuse, CAPTCHA, and rate-limit settings.
 - [ ] Validate production host/origin/security headers and webhook size/signature defenses at the edge.
