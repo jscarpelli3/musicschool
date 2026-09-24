@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { completeHostedLessonCheckout, openHostedLessonCheckout } from "@/lib/stripe/lesson-quick-pay-workflow";
 import { validateCompletedLessonCheckout } from "@/lib/stripe/lesson-quick-pay-validation";
 import { getStripe, getStripeMode } from "@/lib/stripe/server";
 
@@ -96,32 +97,31 @@ export async function createLessonQuickPayment(schoolId: string, lessonId: strin
   if (!paymentRequest) throw new Error("The payment request could not be prepared.");
   if (paymentRequest.status === "open" && paymentRequest.checkout_url) return paymentRequest;
 
-  try {
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      payment_method_types: ["card"],
-      line_items: [{ price: product.stripe_price_id, quantity: 1 }],
-      client_reference_id: paymentRequest.id,
-      metadata: { school_id: schoolId, lesson_event_id: lessonId, lesson_payment_request_id: paymentRequest.id },
-      payment_intent_data: { metadata: { school_id: schoolId, lesson_event_id: lessonId, lesson_payment_request_id: paymentRequest.id } },
-      success_url: `${applicationUrl()}/payment-complete`,
-      cancel_url: `${applicationUrl()}/payment-canceled`,
-      expires_at: Math.floor(expiresAt.getTime() / 1000),
-    }, { stripeAccount: connection.provider_account_id, idempotencyKey: `lesson-quick-payment-${paymentRequest.id}-v1` });
-    if (!session.url) throw new Error("Stripe did not return a hosted payment URL.");
-    const { data: persisted, error: persistError } = await admin.from("lesson_payment_requests").update({
-      status: "open", provider_checkout_session_id: session.id, checkout_url: session.url,
-    }).eq("id", paymentRequest.id).eq("status", "created").select("id").maybeSingle();
-    if (persistError || !persisted) throw persistError ?? new Error("The payment request state changed before Checkout could be recorded.");
-    const { error: auditError } = await admin.from("audit_log").insert({ school_id: schoolId, actor_profile_id: actorProfileId, action: "lesson_payment.opened", entity_type: "lesson_payment_request", entity_id: paymentRequest.id, metadata: { lesson_event_id: lessonId, amount_cents: snapshot.amount_cents, currency: snapshot.currency } });
-    if (auditError) console.error("Lesson payment opened without audit row", { requestId: paymentRequest.id, code: auditError.code });
-    return { id: paymentRequest.id, checkout_url: session.url, expires_at: expiresAt.toISOString(), status: "open" };
-  } catch (error) { throw error; }
+  return openHostedLessonCheckout({
+    requestId: paymentRequest.id,
+    schoolId,
+    lessonId,
+    stripeAccount: connection.provider_account_id,
+    stripePriceId: product.stripe_price_id,
+    expiresAt,
+    applicationUrl: applicationUrl(),
+  }, {
+    createSession: (parameters, options) => stripe.checkout.sessions.create(parameters, options),
+    persistSession: async ({ requestId, sessionId, checkoutUrl }) => {
+      const { data: persisted, error: persistError } = await admin.from("lesson_payment_requests").update({
+        status: "open", provider_checkout_session_id: sessionId, checkout_url: checkoutUrl,
+      }).eq("id", requestId).eq("status", "created").select("id").maybeSingle();
+      if (persistError || !persisted) throw persistError ?? new Error("The payment request state changed before Checkout could be recorded.");
+      const { error: auditError } = await admin.from("audit_log").insert({ school_id: schoolId, actor_profile_id: actorProfileId, action: "lesson_payment.opened", entity_type: "lesson_payment_request", entity_id: requestId, metadata: { lesson_event_id: lessonId, amount_cents: snapshot.amount_cents, currency: snapshot.currency } });
+      if (auditError) console.error("Lesson payment opened without audit row", { requestId, code: auditError.code });
+    },
+  });
 }
 
 export async function reconcileCompletedLessonPayment(checkoutSessionId: string, stripeAccount: string, providerEventId: string, providerCreatedAt: string) {
   const admin = createAdminClient();
-  const session = await getStripe().checkout.sessions.retrieve(checkoutSessionId, { expand: ["payment_intent.latest_charge"] }, { stripeAccount });
+  const stripe = getStripe();
+  const session = await stripe.checkout.sessions.retrieve(checkoutSessionId, { expand: ["payment_intent.latest_charge"] }, { stripeAccount });
   const requestId = session.metadata?.lesson_payment_request_id;
   if (!requestId || !/^[0-9a-f-]{36}$/i.test(requestId)) return false;
   const { data: request, error } = await admin.from("lesson_payment_requests")
@@ -132,20 +132,27 @@ export async function reconcileCompletedLessonPayment(checkoutSessionId: string,
   const { data: connection, error: connectionError } = await admin.from("school_payment_connections").select("provider_account_id")
     .eq("id", request.payment_connection_id).eq("school_id", request.school_id).single();
   if (connectionError || connection.provider_account_id !== stripeAccount) throw connectionError ?? new Error("Lesson payment connected account does not match.");
-  const providerPayment = validateCompletedLessonCheckout({
-    requestId: request.id,
-    amountCents: request.amount_cents,
-    currency: request.currency,
-  }, session);
-  const { error: completeError } = await admin.rpc("complete_lesson_payment_request", {
-    p_request_id: request.id,
-    p_checkout_session_id: checkoutSessionId,
-    p_payment_intent_id: providerPayment.paymentIntentId,
-    p_charge_id: providerPayment.chargeId,
-    p_provider_event_id: providerEventId,
-    p_succeeded_at: providerCreatedAt,
+  await completeHostedLessonCheckout({
+    request: { requestId: request.id, amountCents: request.amount_cents, currency: request.currency },
+    checkoutSessionId,
+    stripeAccount,
+    providerEventId,
+    providerCreatedAt,
+  }, {
+    retrieveSession: async () => session,
+    validateSession: validateCompletedLessonCheckout,
+    completeRequest: async (completion) => {
+      const { error: completeError } = await admin.rpc("complete_lesson_payment_request", {
+        p_request_id: completion.requestId,
+        p_checkout_session_id: completion.checkoutSessionId,
+        p_payment_intent_id: completion.paymentIntentId,
+        p_charge_id: completion.chargeId,
+        p_provider_event_id: completion.providerEventId,
+        p_succeeded_at: completion.providerCreatedAt,
+      });
+      if (completeError) throw completeError;
+    },
   });
-  if (completeError) throw completeError;
   return true;
 }
 
