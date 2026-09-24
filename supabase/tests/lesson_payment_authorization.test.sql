@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(18);
+select plan(22);
 
 select ok(
   (select relrowsecurity from pg_class where oid = 'public.lesson_payment_requests'::regclass),
@@ -112,6 +112,53 @@ set local role authenticated;
 
 select is((select count(*) from public.lesson_payment_requests), 0::bigint, 'teacher without billing authority sees no payment requests');
 select ok(not public.has_school_capability('20000000-0000-0000-0000-000000000001', 'school.billing.manage'), 'teacher does not inherit billing authority');
+
+reset role;
+update public.lesson_payment_requests
+set status = 'expired'
+where id = '30000000-0000-0000-0000-000000000001';
+select set_config('request.jwt.claim.role', 'service_role', true);
+set local role service_role;
+
+select is(
+  public.complete_lesson_payment_request(
+    '30000000-0000-0000-0000-000000000001',
+    'cs_test_paid_after_expired',
+    'pi_test_paid_after_expired',
+    'ch_test_paid_after_expired',
+    'evt_test_paid_after_expired',
+    '2098-12-31 23:59:00+00'
+  ),
+  '30000000-0000-0000-0000-000000000001'::uuid,
+  'a validated paid event recovers a request whose expiration arrived first'
+);
+select is(
+  (select status from public.lesson_payment_requests where id = '30000000-0000-0000-0000-000000000001'),
+  'succeeded',
+  'paid-after-expired reconciliation records succeeded state'
+);
+select is(
+  public.complete_lesson_payment_request(
+    '30000000-0000-0000-0000-000000000001',
+    'cs_test_paid_after_expired',
+    'pi_test_paid_after_expired',
+    'ch_test_paid_after_expired',
+    'evt_test_paid_after_expired_duplicate',
+    '2098-12-31 23:59:00+00'
+  ),
+  '30000000-0000-0000-0000-000000000001'::uuid,
+  'duplicate completion with the same provider identity is idempotent'
+);
+select is(
+  (
+    select count(*)
+    from public.audit_log
+    where entity_id = '30000000-0000-0000-0000-000000000001'
+      and action = 'lesson_payment.succeeded'
+  ),
+  1::bigint,
+  'duplicate completion writes one financial audit record'
+);
 
 reset role;
 select * from finish();
