@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { startStripeOnboarding, syncStripeConnection } from "./actions";
 import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 import { stripeConnectionPresentation } from "@/lib/stripe/connection-presentation";
+import { StripeActionButton } from "./stripe-action-button";
 
 export const dynamic = "force-dynamic";
 
@@ -137,12 +138,15 @@ export default async function SchoolPaymentsPage({ params, searchParams }: {
           <div className="flex flex-col gap-4 pt-8 sm:flex-row sm:items-center">
             {!ready && !underReview ? (
               <form action={startStripeOnboarding.bind(null, schoolId)}>
-                <button className="w-full border border-brand px-5 py-3 text-sm text-brand transition hover:bg-brand hover:text-surface sm:w-auto">{notApproved ? "Review options in Stripe →" : connection ? actionRequired ? "Provide details in Stripe →" : "Continue Stripe setup →" : "Connect with Stripe →"}</button>
+                <StripeActionButton
+                  idleLabel={notApproved ? "Review options in Stripe →" : connection ? actionRequired ? "Provide details in Stripe →" : "Continue Stripe setup →" : "Connect with Stripe →"}
+                  pendingLabel={connection ? "Opening Stripe…" : "Connecting to Stripe…"}
+                />
               </form>
             ) : null}
             {connection && (underReview || query.stripe === "sync-error") ? (
               <form action={syncStripeConnection.bind(null, schoolId)}>
-                <button className="w-full border border-line px-5 py-3 text-sm text-ink transition hover:border-brand hover:text-brand sm:w-auto">Check status</button>
+                <StripeActionButton idleLabel="Check status" pendingLabel="Checking status…" tone="secondary" />
               </form>
             ) : null}
           </div>
