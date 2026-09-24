@@ -67,6 +67,7 @@ The one-time Checkout feature remains undeployed until this gate passes.
 
 ## Gate 3 — Browser acceptance suite
 
+- [x] Establish Playwright in CI with desktop/mobile Chromium smoke coverage, failure traces, screenshots, and video.
 - [ ] Add Playwright journeys for owner onboarding, teacher invitation, payer OTP, scheduling, statement rejection/replacement/approval, and one-time test payment.
 - [ ] Cover refresh, back navigation, stale tabs, double submission, expired links, and narrow/mobile layouts.
 - [ ] Include keyboard-only checks and a focused automated accessibility scan.
