@@ -75,6 +75,9 @@ The one-time Checkout feature remains undeployed until this gate passes.
 
 ## Gate 4 — Financial operations and recovery
 
+- [ ] Add a reversible, school-level “Use Common Time without integrated payments” choice. It must suppress setup prompts without deleting provider evidence, and owners must be able to reconnect later.
+- [ ] Treat provider review, remediable requirements, rejection, and voluntary opt-out as separate durable states. A rejected or long-running review must never block scheduling, attendance, family records, or manual billing workflows.
+- [ ] Define a provider-neutral connection boundary before adding another processor. Square or an existing external Stripe workflow may be evaluated later, but the UI must not imply those integrations exist today.
 - [ ] Implement authorized, lazy retrieval of Stripe-hosted receipts; do not persist expiring receipt URLs.
 - [ ] Design and test full and partial refunds, disputes, failed payments, manual settlement, write-offs, reversals, and allocation history.
 - [ ] Rehearse Stripe downtime, timeout after provider acceptance, webhook backlog, replay, and reconciliation.
