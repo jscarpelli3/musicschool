@@ -54,7 +54,7 @@ jobs:
         run: |
           if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
             echo "required=true" >> "$GITHUB_OUTPUT"
-          elif git diff --quiet "$BASE_SHA" HEAD -- supabase/migrations; then
+          elif git diff --quiet "$BASE_SHA" HEAD -- supabase/migrations supabase/tests; then
             echo "required=false" >> "$GITHUB_OUTPUT"
           else
             echo "required=true" >> "$GITHUB_OUTPUT"
@@ -89,6 +89,9 @@ jobs:
       - name: Lint the resulting database
         if: steps.database_changes.outputs.required == 'true'
         run: supabase db lint --local --level warning
+      - name: Test database authorization boundaries
+        if: steps.database_changes.outputs.required == 'true'
+        run: supabase test db
       - name: Stop local Supabase
         if: always() && steps.database_changes.outputs.required == 'true'
         run: supabase stop --no-backup

@@ -36,9 +36,9 @@ The one-time Checkout feature remains undeployed until this gate passes.
 - [ ] Use a non-production Supabase project and Stripe test-mode connected account.
 - [ ] Apply `20260916100000_lesson_quick_pay.sql` and `20260916101000_verify_lesson_quick_pay.sql` there.
 - [ ] Replay all migrations from an empty database and run database lint.
-- [ ] Prove anonymous users cannot read or mutate payment requests.
-- [ ] Prove authenticated users without `school.billing.manage` cannot read requests.
-- [ ] Prove authenticated users cannot insert, update, delete, or directly complete requests.
+- [x] Prove anonymous users cannot read or mutate payment requests.
+- [x] Prove authenticated users without `school.billing.manage` cannot read requests.
+- [x] Prove authenticated users cannot insert, update, delete, or directly complete requests.
 - [ ] Prove cross-school IDs and connected accounts are rejected.
 
 ### Checkout and webhook matrix
@@ -105,14 +105,14 @@ The one-time Checkout feature remains undeployed until this gate passes.
 
 - Gate 0 is conditionally ready for a supervised synthetic-data beta run; the operational checklist is not yet fully evidenced.
 - Gate 1 code is committed in `a3213a4`, but its migrations and UI are not deployed and the live Stripe test matrix has not run.
-- Gate 2 has begun: CI runs unit/invariant tests, payment provider-binding tests, a production dependency audit, typecheck, lint, a production build, and a clean local Supabase migration replay with database lint. GitHub Actions run `35359611104` passed both application and database jobs on 2026-09-18. Deeper multi-tenant RLS fixtures, browser tests, and secret scanning are still incomplete.
+- Gate 2 has begun: CI runs unit/invariant tests, payment provider-binding tests, a production dependency audit, typecheck, lint, a production build, a clean local Supabase migration replay with database lint, and two-school payment-request authorization tests. Deeper role/resource coverage and secret scanning are still incomplete.
 - Gates 3–6 remain open. Therefore the product is suitable for controlled beta testing, not production handling of real families or live money.
 
 ### Updated beta checkpoint — 2026-09-23
 
 - Persistent staging now has isolated Supabase and Stripe test-mode configuration, protected Git branches, working OAuth/onboarding, and verified signed Stripe webhook intake.
 - The owner onboarding path has been exercised through school creation, first family, instruments, owner-as-teacher linking, and completion. A complete teacher-acceptance, payer-OTP, statement rejection/replacement/approval rehearsal remains open.
-- CI runs dependency audit, invariant tests, typecheck, lint, production build, and migration replay/database lint when migrations change. Browser acceptance automation, secret scanning, monitoring, backup/restore rehearsal, and the full cross-tenant matrix remain open.
+- CI runs dependency audit, invariant tests, typecheck, lint, production build, migration replay/database lint when migrations change, and required desktop/mobile browser smoke coverage. Secret scanning, monitoring, backup/restore rehearsal, authenticated browser journeys, and the full cross-tenant matrix remain open.
 - Staging transactional email must use the code-enforced recipient allowlist documented in `staging-environment.md`; production email credentials remain Production-only.
 - The decision remains: supervised beta with synthetic/test data after the complete multi-role rehearsal, not unattended production use, real family imports, live charges, or production SMS.
 
