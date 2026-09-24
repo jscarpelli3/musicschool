@@ -83,6 +83,7 @@ The one-time Checkout feature remains undeployed until this gate passes.
 
 ## Gate 5 — Security and operations
 
+- [ ] Replace the Stripe platform's personal fallback branding with Common Time name, icon, logo, and brand color before beta invitations or live onboarding.
 - [ ] Complete the role-by-resource matrix for owner, admin, teacher, payer, guardian, student, anonymous, service role, and platform admin across at least two schools.
 - [ ] Record and test hosted Auth session, refresh-token reuse, CAPTCHA, and rate-limit settings.
 - [ ] Validate production host/origin/security headers and webhook size/signature defenses at the edge.
