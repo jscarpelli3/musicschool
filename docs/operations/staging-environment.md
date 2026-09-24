@@ -32,6 +32,7 @@ The persistent staging environment exists to test migrations, authentication, pr
 - Vercel production variables are now scoped only to Production. Separate staging values for `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, and `APP_URL` are scoped to Preview branch `staging`. The Supabase project reference is verified; a fresh deployment after the `APP_URL` change remains required before callback testing.
 - A dedicated Stripe sandbox named `Common Time Staging` exists. Previous Stripe variables are scoped only to Vercel Production; staging Stripe keys and webhook secrets must be scoped only to Preview branch `staging`.
 - The persistent staging branch owns its Auth Site URL and exact OAuth callback in `supabase/config.toml` under `[remotes.staging.auth]`. Change those values in Git rather than only in the dashboard; otherwise a later branch deployment can restore the local-development redirect.
+- The first staging Stripe Connect attempt on 2026-09-24 reached Stripe and created one idempotently keyed test account, then exposed missing explicit `service_role` grants on the branch database. Migration `20260924160000_grant_stripe_connection_sync.sql` defines and verifies the narrow connection-sync and append-only audit privileges; the existing account is reused on retry.
 
 ## Staging email gate
 
