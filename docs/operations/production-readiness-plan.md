@@ -47,7 +47,7 @@ The one-time Checkout feature remains undeployed until this gate passes.
 - [ ] Cancel leaves financial truth unpaid and permits a safe retry.
 - [ ] Expiration clears the stored Checkout URL and permits a new request.
 - [ ] Concurrent clicks converge on one open request and one Stripe idempotency key.
-- [ ] Duplicate and out-of-order webhooks are idempotent.
+- [x] Duplicate and out-of-order webhooks are idempotent. The database claim lease now has deterministic CI coverage for duplicate refusal, terminal replay, failed retry, and abandoned-worker recovery; paid-after-expired ordering and duplicate financial completion are also covered.
 - [x] Provider acceptance followed by a failed local session-ID write is recoverable with the stable request idempotency key and signed metadata.
 - [ ] Wrong account, request ID, amount, currency, session mode, payment status, PaymentIntent status, and Charge state are rejected.
 - [ ] An already-paid lesson cannot be collected again.
@@ -60,7 +60,7 @@ The one-time Checkout feature remains undeployed until this gate passes.
 
 - [ ] Unit-test all pure payment eligibility and provider-binding rules.
 - [ ] Add database tests for constraints, grants, RLS, service-role-only completion, idempotency, concurrency, and statement allocation.
-- [ ] Add mocked Stripe integration tests for creation, ambiguous failure, recovery, replay, and order changes. Creation, ambiguous provider response, local-write recovery, duplicate completion, and paid-after-expired ordering are covered; webhook lease replay remains.
+- [x] Add mocked Stripe integration tests for creation, ambiguous failure, recovery, replay, and order changes. Production-used workflow tests cover creation, ambiguous provider response, local-write recovery, and duplicate completion; database tests cover paid-after-expired ordering and the actual webhook claim lease.
 - [ ] Run the empty-database migration replay and verification migrations in CI.
 - [ ] Make every test deterministic and tenant-aware; include at least two schools and cross-tenant denial cases.
 - [ ] Block merges when tests, typecheck, lint, build, migration replay, database lint, dependency audit, or secret scanning fail.
@@ -118,8 +118,8 @@ The one-time Checkout feature remains undeployed until this gate passes.
 
 ## Immediate execution order
 
-1. Add deterministic CI tests around the one-time payment provider-binding rules.
-2. Provision or identify the isolated payment test environment.
-3. Replay/apply the migrations and execute the database authorization matrix.
-4. Run the Stripe Checkout/webhook matrix and record evidence.
-5. Add the first Playwright beta journey, then expand it from defects found during the supervised run.
+1. Finish the cross-school and connected-account rejection matrix.
+2. Replay/apply the migrations in the isolated payment test environment.
+3. Run the remaining live Stripe Checkout/webhook matrix and record evidence.
+4. Add the first authenticated Playwright beta journey, then expand it from defects found during the supervised run.
+5. Add secret scanning and operational alerting before any live-money decision.
