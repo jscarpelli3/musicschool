@@ -107,6 +107,14 @@ The one-time Checkout feature remains undeployed until this gate passes.
 - Gate 2 has begun: CI runs unit/invariant tests, payment provider-binding tests, a production dependency audit, typecheck, lint, a production build, and a clean local Supabase migration replay with database lint. GitHub Actions run `35359611104` passed both application and database jobs on 2026-09-18. Deeper multi-tenant RLS fixtures, browser tests, and secret scanning are still incomplete.
 - Gates 3–6 remain open. Therefore the product is suitable for controlled beta testing, not production handling of real families or live money.
 
+### Updated beta checkpoint — 2026-09-23
+
+- Persistent staging now has isolated Supabase and Stripe test-mode configuration, protected Git branches, working OAuth/onboarding, and verified signed Stripe webhook intake.
+- The owner onboarding path has been exercised through school creation, first family, instruments, owner-as-teacher linking, and completion. A complete teacher-acceptance, payer-OTP, statement rejection/replacement/approval rehearsal remains open.
+- CI runs dependency audit, invariant tests, typecheck, lint, production build, and migration replay/database lint when migrations change. Browser acceptance automation, secret scanning, monitoring, backup/restore rehearsal, and the full cross-tenant matrix remain open.
+- Staging transactional email must use the code-enforced recipient allowlist documented in `staging-environment.md`; production email credentials remain Production-only.
+- The decision remains: supervised beta with synthetic/test data after the complete multi-role rehearsal, not unattended production use, real family imports, live charges, or production SMS.
+
 ## Immediate execution order
 
 1. Add deterministic CI tests around the one-time payment provider-binding rules.

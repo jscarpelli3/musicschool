@@ -11,7 +11,7 @@ The persistent staging environment exists to test migrations, authentication, pr
 | Database data | Empty by default; synthetic fixtures only |
 | Stripe | Test mode only, with a staging-specific webhook destination and signing secret |
 | Vercel | Branch-scoped `staging` preview/environment; never generic production credentials; Vercel Authentication remains enabled |
-| Email/SMS | Non-delivering sandbox or allowlisted test recipients only |
+| Email/SMS | Email allowlisted to named test recipients; SMS non-delivering unless separately approved |
 
 ## Non-negotiable boundaries
 
@@ -31,6 +31,16 @@ The persistent staging environment exists to test migrations, authentication, pr
 - Staging database seeding is disabled until a deterministic synthetic fixture is reviewed and committed.
 - Vercel production variables are now scoped only to Production. Separate staging values for `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, and `APP_URL` are scoped to Preview branch `staging`. The Supabase project reference is verified; a fresh deployment after the `APP_URL` change remains required before callback testing.
 - A dedicated Stripe sandbox named `Common Time Staging` exists. Previous Stripe variables are scoped only to Vercel Production; staging Stripe keys and webhook secrets must be scoped only to Preview branch `staging`.
+
+## Staging email gate
+
+Staging email delivery is fail-closed in application code. Configure all three values only for Vercel Preview branch `staging`:
+
+- `RESEND_API_KEY`: a send-only Resend key suitable for the staging rehearsal.
+- `EMAIL_DELIVERY_MODE=allowlist`
+- `EMAIL_ALLOWED_RECIPIENTS`: comma-separated exact owner, teacher, and payer test addresses.
+
+Allowlist mode is rejected in Vercel Production. In staging it permits links to the configured `APP_URL` but refuses every recipient not named in `EMAIL_ALLOWED_RECIPIENTS`. Redeploy after changing the list. Use controlled addresses only; do not add an invented or unconfirmed address.
 
 ## Protected webhook access
 
