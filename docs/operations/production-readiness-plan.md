@@ -49,7 +49,7 @@ The one-time Checkout feature remains undeployed until this gate passes.
 - [ ] Concurrent clicks converge on one open request and one Stripe idempotency key.
 - [x] Duplicate and out-of-order webhooks are idempotent. The database claim lease now has deterministic CI coverage for duplicate refusal, terminal replay, failed retry, and abandoned-worker recovery; paid-after-expired ordering and duplicate financial completion are also covered.
 - [x] Provider acceptance followed by a failed local session-ID write is recoverable with the stable request idempotency key and signed metadata.
-- [ ] Wrong account, request ID, amount, currency, session mode, payment status, PaymentIntent status, and Charge state are rejected.
+- [x] Wrong account, request ID, amount, currency, session mode, payment status, PaymentIntent status, and Charge state are rejected. Deterministic tests exercise every mismatch against the same validators and account guard used by webhook reconciliation.
 - [ ] An already-paid lesson cannot be collected again.
 - [ ] A separately paid lesson appears on a later statement at zero newly due, with durable allocation metadata.
 - [ ] Logs and responses expose no raw provider payloads, signatures, secrets, stack traces, or unnecessary customer/payment data.
