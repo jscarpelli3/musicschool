@@ -4,6 +4,16 @@ declare
   sample record; before_event uuid; after_future_event uuid; after_past_event uuid;
   period_id uuid; actual_amount bigint; blocked boolean := false;
 begin
+  if not exists (
+    select 1
+    from public.lesson_events event
+    join public.billing_account_students mapping on mapping.school_id=event.school_id and mapping.student_id=event.student_id
+    join public.school_members member on member.school_id=event.school_id and member.role='owner' and member.status='active'
+    join public.service_products product on product.school_id=event.school_id and product.id=event.product_id and product.pricing_model='per_session'
+  ) then
+    return;
+  end if;
+
   begin
     select event.school_id,event.product_id,event.teacher_id,event.student_id,event.place_id,event.created_by,
       mapping.billing_account_id,member.profile_id owner_id,product.price_cents

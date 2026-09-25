@@ -8,6 +8,7 @@ declare
   snapshot_id uuid;
   blocked boolean := false;
 begin
+  if not exists (select 1 from public.lesson_events) then return; end if;
   begin
     select * into strict sample from public.lesson_events limit 1;
 

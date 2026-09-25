@@ -6,6 +6,7 @@ declare
   message_sid constant text := 'SM' || repeat('a', 32);
   result text;
 begin
+  if not exists (select 1 from public.lesson_events) then return; end if;
   begin
     select account.school_id, account.id as billing_account_id, member.profile_id as owner_id
     into strict sample

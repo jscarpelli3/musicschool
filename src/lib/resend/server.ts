@@ -1,6 +1,6 @@
 import "server-only";
 
-import { EMAIL_SAFETY_SENTENCE } from "@/lib/resend/email-security";
+import { emailDeliveryPolicy } from "@/lib/resend/email-security";
 
 const RESEND_EMAILS_URL = "https://api.resend.com/emails";
 
@@ -39,15 +39,17 @@ export async function sendResendEmail(input: {
   const subject = input.subject.replace(/[\r\n]/g, " ").replace(/\s+/g, " ").trim().slice(0, 998);
   const recipient = input.to.trim().toLowerCase();
   const replyTo = input.replyTo?.trim().toLowerCase();
+  const policy = emailDeliveryPolicy();
   if (!/^[^<>\r\n]+ <notifications@notifications\.commontime\.studio>$/.test(from)) throw new Error("Email sender must use the authenticated Common Time notification domain.");
   if (!subject) throw new Error("Email subject is required.");
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(recipient) || recipient.length > 320) throw new Error("Email recipient is invalid.");
+  if (policy.allowedRecipients && !policy.allowedRecipients.has(recipient)) throw new Error("Email recipient is not permitted in this environment.");
   if (replyTo && (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(replyTo) || replyTo.length > 320)) throw new Error("Email reply address is invalid.");
-  if (!input.text.includes(EMAIL_SAFETY_SENTENCE) || !input.html.includes(EMAIL_SAFETY_SENTENCE)) throw new Error("Transactional email is missing the canonical-domain safety notice.");
+  if (!input.text.includes(policy.safetySentence) || !input.html.includes(policy.safetySentence)) throw new Error("Transactional email is missing the environment safety notice.");
   const urls = [...input.text.matchAll(/https?:\/\/[^\s<>"']+/g), ...input.html.matchAll(/href=["'](https?:\/\/[^"']+)["']/g)]
     .map((match) => match[1] ?? match[0]);
   if (urls.some((url) => {
-    try { return new URL(url).origin !== "https://app.commontime.studio"; }
+    try { return !policy.allowedOrigins.has(new URL(url).origin); }
     catch { return true; }
   })) throw new Error("Transactional email contains a link outside the canonical application origin.");
   let response: Response;

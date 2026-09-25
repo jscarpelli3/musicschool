@@ -34,6 +34,7 @@ export function SchoolManagementNav({ schoolId, capabilities, approvalCount = 0,
         { label: "Students", href: `${base}/students`, active: pathname.startsWith(`${base}/students`) },
         { label: "Families", href: `${base}/families`, active: pathname.startsWith(`${base}/families`) },
         ...(can("school.staff.directory_manage") ? [{ label: "Staff", href: `${base}/staff`, active: pathname.startsWith(`${base}/staff`) }] : []),
+        ...(can("school.setup.manage") ? [{ label: "Setup guide", href: `${base}/onboarding`, active: pathname.startsWith(`${base}/onboarding`) }] : []),
       ];
 
   return (

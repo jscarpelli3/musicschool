@@ -9,7 +9,9 @@ alter table public.platform_admins enable row level security;
 revoke all on public.platform_admins from public,anon,authenticated;
 
 insert into public.platform_admins(profile_id,status,notes)
-values('14e7620d-5443-4257-bc76-a8f7b4966d3c','active','Initial Common Time platform administrator');
+select profile.id,'active','Initial Common Time platform administrator'
+from public.profiles profile
+where profile.id='14e7620d-5443-4257-bc76-a8f7b4966d3c';
 
 create or replace function public.is_platform_admin()
 returns boolean language sql stable security definer set search_path='' as $$

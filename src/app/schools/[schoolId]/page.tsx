@@ -248,6 +248,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
         initialLessonId={initialLessonId}
         currentTimeMs={now}
         canReschedule={canManageSchool}
+        canCollectPayment={capabilities.has("school.billing.manage")}
         initialDate={initialDate}
         timezone={school.timezone}
         teachers={teachers}
