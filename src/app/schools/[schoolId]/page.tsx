@@ -33,8 +33,11 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
   const canManageSchool = capabilities.has("school.lessons.manage");
   const entitlementPromise = view === "dashboard" && canManageSchool ? loadServiceEntitlements(supabase, schoolId) : Promise.resolve([]);
   const invoiceSummaryPromise = view === "dashboard" && capabilities.has("school.billing.manage") ? loadSchoolInvoiceSummary(supabase, schoolId, 6) : Promise.resolve({ invoices: [], attentionCount: 0 });
+  const paidLessonsPromise = view === "dashboard" && capabilities.has("school.billing.manage")
+    ? supabase.from("lesson_payment_requests").select("lesson_event_id").eq("school_id", schoolId).eq("status", "succeeded")
+    : Promise.resolve({ data: [], error: null });
 
-  const [dashboardQueries, entitlements, invoiceSummary] = await Promise.all([Promise.all([
+  const [dashboardQueries, entitlements, invoiceSummary, paidLessonsResult] = await Promise.all([Promise.all([
     supabase.from("teachers").select("person_id, outside_availability_policy").eq("school_id", schoolId),
     supabase.from("students").select("person_id").eq("school_id", schoolId),
     supabase.from("people").select("id, first_name, last_name, preferred_name, profile_id, email, phone").eq("school_id", schoolId),
@@ -66,7 +69,9 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
     supabase.from("user_view_preferences").select("settings").eq("school_id", schoolId).eq("profile_id", profileId).eq("view_key", "student_roster").maybeSingle(),
     supabase.from("lesson_event_price_snapshots").select("lesson_event_id, billing_service_date").eq("school_id", schoolId),
     supabase.from("lesson_schedule_proposals").select("id,teacher_id,student_id,proposed_starts_at,proposed_ends_at,status,proposal_kind,schedule_type").eq("school_id",schoolId).in("status",["pending_teacher","pending_owner"]),
-  ]), entitlementPromise, invoiceSummaryPromise]);
+  ]), entitlementPromise, invoiceSummaryPromise, paidLessonsPromise]);
+
+  if (paidLessonsResult.error) throw new Error(`Paid lesson status could not load: ${paidLessonsResult.error.message}`);
 
   const failedDashboardQuery = dashboardQueries.find((result) => result.error);
   if (failedDashboardQuery?.error) throw new Error(`The dashboard could not load: ${failedDashboardQuery.error.message}`);
@@ -249,6 +254,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
         currentTimeMs={now}
         canReschedule={canManageSchool}
         canCollectPayment={capabilities.has("school.billing.manage")}
+        paidLessonIds={(paidLessonsResult.data ?? []).map((request) => request.lesson_event_id)}
         initialDate={initialDate}
         timezone={school.timezone}
         teachers={teachers}

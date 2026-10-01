@@ -5,6 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
 import { createClient } from "@/lib/supabase/server";
 import { beginLessonQuickPayment } from "./actions";
+import { PaymentCodeSubmit } from "./payment-code-submit";
 import { PaymentStatusRefresh } from "./payment-status-refresh";
 
 export const dynamic = "force-dynamic";
@@ -64,7 +65,7 @@ export default async function LessonPaymentPage({ params, searchParams }: {
       <h2 className="font-display text-3xl">Create a secure payment code</h2>
       <p className="mt-3 text-sm leading-6 text-muted">The amount comes from the lesson’s recorded Stripe price and cannot be changed here. The code lasts 30 minutes.</p>
       {query.error ? <p role="alert" className="mt-5 rounded-control bg-danger/10 p-4 text-sm text-danger">{errors[query.error] ?? errors.failed}</p> : null}
-      {snapshot.billing_mode === "per_session" && snapshot.amount_cents > 0 ? <form action={beginLessonQuickPayment.bind(null, schoolId, lessonId)}><button className="mt-6 rounded-control bg-brand px-5 py-3 text-sm text-canvas hover:bg-brand-hover">Create payment QR code</button></form> : <p className="mt-5 text-sm text-danger">Quick payment is available only for per-lesson pricing.</p>}
+      {snapshot.billing_mode === "per_session" && snapshot.amount_cents > 0 ? <form action={beginLessonQuickPayment.bind(null, schoolId, lessonId)}><PaymentCodeSubmit /></form> : <p className="mt-5 text-sm text-danger">Quick payment is available only for per-lesson pricing.</p>}
     </section>}
   </main>;
 }

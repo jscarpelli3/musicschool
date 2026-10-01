@@ -82,6 +82,7 @@ type Props = {
   schoolId: string;
   canReschedule: boolean;
   canCollectPayment?: boolean;
+  paidLessonIds?: string[];
   initialDate: string;
   timezone: string;
   teachers: Teacher[];
@@ -182,6 +183,7 @@ export function OwnerPlanner({
   schoolId,
   canReschedule,
   canCollectPayment = false,
+  paidLessonIds = [],
   initialDate,
   timezone,
   teachers,
@@ -515,6 +517,7 @@ export function OwnerPlanner({
           place={placeDetails[selectedLesson.place_id] ?? { name: "Place not set", details: null }}
           canReschedule={canReschedule}
           canCollectPayment={canCollectPayment}
+          paidSeparately={paidLessonIds.includes(selectedLesson.id)}
           canMarkReschedule={selectedLesson.can_mark_reschedule}
           onReschedule={() => beginReschedule(selectedLesson)}
           onPermissionChange={async (allowed, reason) => {
@@ -1103,6 +1106,7 @@ function LessonSheet({
   place,
   canReschedule,
   canCollectPayment,
+  paidSeparately,
   canMarkReschedule,
   onReschedule,
   onPermissionChange,
@@ -1118,6 +1122,7 @@ function LessonSheet({
   place: { name: string; details: string | null };
   canReschedule: boolean;
   canCollectPayment: boolean;
+  paidSeparately: boolean;
   canMarkReschedule: boolean;
   onReschedule: () => void;
   onPermissionChange: (allowed: boolean, reason: string) => Promise<{ ok: boolean; message: string }>;
@@ -1143,10 +1148,11 @@ function LessonSheet({
           <Detail label="Date" value={new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(fromKey(lesson.start.dateKey))} />
           <Detail label="Time" value={`${clock(lesson.start.minutes)}–${clock(lesson.end.minutes)} · ${duration} minutes`} />
           <Detail label="Place" value={place.details ? `${place.name} · ${place.details}` : place.name} />
+          {lesson.notes ? <Detail label="Internal notes" value={lesson.notes} /> : null}
           {lesson.reschedule_reason_code ? <Detail label="Last moved" value={rescheduleReasonLabel(lesson.reschedule_reason_code, lesson.reschedule_reason_detail)} /> : null}
         </dl>
 
-        {canCollectPayment ? <section className="border-b border-line py-8"><h3 className="font-display text-2xl font-normal">Payment</h3><p className="mt-3 text-xs leading-5 text-muted">Create a secure QR code for the payer to scan on their own phone.</p><Link href={`/schools/${schoolId}/lessons/${lesson.id}/payment`} className="mt-4 inline-flex rounded-control bg-brand px-4 py-2.5 text-sm text-canvas hover:bg-brand-hover">Collect payment now</Link></section> : null}
+        {canCollectPayment ? <section className="border-b border-line py-8"><h3 className="font-display text-2xl font-normal">Payment</h3>{paidSeparately ? <><p className="mt-3 text-sm text-brand">Paid separately</p><p className="mt-2 text-xs leading-5 text-muted">This lesson will remain on the family statement with $0 newly due.</p></> : <><p className="mt-3 text-xs leading-5 text-muted">Create a secure QR code for the payer to scan on their own phone.</p><Link href={`/schools/${schoolId}/lessons/${lesson.id}/payment`} className="mt-4 inline-flex rounded-control bg-brand px-4 py-2.5 text-sm text-canvas hover:bg-brand-hover">Collect payment now</Link></>}</section> : null}
 
         {canReschedule && lesson.can_reschedule ? (
           <section className="border-b border-line py-8">
