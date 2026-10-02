@@ -11,6 +11,7 @@ import { addStudentAndPayer } from "./families/actions";
 import { InvoiceList } from "@/components/billing/invoice-list";
 import { loadSchoolInvoiceSummary } from "@/lib/billing/school-invoices";
 import { StudentDirectory } from "@/components/students/student-directory";
+import { SectionHeading } from "@/components/ui/section-heading";
 
 export const dynamic = "force-dynamic";
 
@@ -246,7 +247,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
         monthLabel={monthLabel}
         addFamilyAction={capabilities.has("school.billing.manage") ? addStudentAndPayer.bind(null, schoolId) : undefined}
       /> : null}
-      {view === "dashboard" && canManageSchool ? <section className="ui-card mb-8 p-6 sm:p-8"><p className="text-xs uppercase tracking-[0.14em] text-brand">Needs scheduling</p><h2 className="mt-2 font-display text-3xl">{entitlements.length ? "Paid lessons waiting for a time" : "Nothing is waiting for a time"}</h2><p className="mt-2 text-sm text-muted">Paid replacement lessons appear here until they are placed back on the calendar.</p>{entitlements.length ? <div className="mt-5"><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} /></div> : null}</section> : null}
+      {view === "dashboard" && canManageSchool ? <section className="ui-card mb-10 p-6 sm:p-8"><SectionHeading kind="scheduling" eyebrow="Needs scheduling" title={entitlements.length ? "Paid lessons waiting for a time" : "Nothing is waiting for a time"} description="Paid replacement lessons appear here until they are placed back on the calendar." size="medium" />{entitlements.length ? <div className="mt-6 border-t border-line pt-6"><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} /></div> : null}</section> : null}
       {view === "dashboard" ? <OwnerPlanner
         key={initialLessonId ?? "school-calendar"}
         schoolId={schoolId}
@@ -285,7 +286,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
         } : undefined}
       /> : null}
       {view === "dashboard" ? <StudentRosterTable rows={studentRowsForTable} monthLabel={monthLabel} initialView={rosterPreference?.settings as Partial<RosterViewSettings> | null} saveView={saveStudentRosterView.bind(null, schoolId)} dashboard /> : null}
-      {view === "dashboard" && capabilities.has("school.billing.manage") ? <section className="ui-card mt-10 p-6 sm:p-8"><div className="flex flex-wrap items-start justify-between gap-5"><div><p className="text-xs uppercase tracking-[0.14em] text-brand">Invoices</p><h2 className="mt-2 font-display text-3xl">{invoiceSummary.attentionCount ? `${invoiceSummary.attentionCount} still in progress` : "Everything is settled"}</h2><p className="mt-2 text-sm text-muted">Recent family invoices and their current approval or payment status.</p></div><Link href={`/schools/${schoolId}/invoices`} className="text-sm text-brand hover:text-brand-hover">View all invoices →</Link></div><div className="mt-5"><InvoiceList schoolId={schoolId} invoices={invoices} compact /></div></section> : null}
+      {view === "dashboard" && capabilities.has("school.billing.manage") ? <section className="ui-card mt-16 p-6 sm:p-8"><div className="flex flex-wrap items-start justify-between gap-5"><SectionHeading kind="billing" eyebrow="Invoices" title={invoiceSummary.attentionCount ? `${invoiceSummary.attentionCount} still in progress` : "Everything is settled"} description="Recent family invoices and their current approval or payment status." size="medium" /><Link href={`/schools/${schoolId}/invoices`} className="rounded-control border border-line px-3 py-2 text-sm text-brand transition hover:border-brand hover:bg-brand/10 hover:text-brand-hover">View all invoices →</Link></div><div className="mt-6 border-t border-line pt-6"><InvoiceList schoolId={schoolId} invoices={invoices} compact /></div></section> : null}
     </main>
   );
 }
