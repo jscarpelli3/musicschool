@@ -1154,6 +1154,14 @@ function LessonSheet({
 
         {canCollectPayment ? <section className="border-b border-line py-8"><h3 className="font-display text-2xl font-normal">Payment</h3>{paidSeparately ? <><p className="mt-3 text-sm text-brand">Paid separately</p><p className="mt-2 text-xs leading-5 text-muted">This lesson will remain on the family statement with $0 newly due.</p></> : <><p className="mt-3 text-xs leading-5 text-muted">Create a secure QR code for the payer to scan on their own phone.</p><Link href={`/schools/${schoolId}/lessons/${lesson.id}/payment`} className="mt-4 inline-flex rounded-control bg-brand px-4 py-2.5 text-sm text-canvas hover:bg-brand-hover">Collect payment now</Link></>}</section> : null}
 
+        <section className="border-b border-line py-8">
+          <h3 className="font-display text-2xl font-normal">Quick actions</h3>
+          <div className="mt-4 grid gap-3">
+            <Link href={`/schools/${schoolId}/students/${lesson.student_id}`} className="rounded-control border border-line px-4 py-3 text-sm hover:border-brand hover:text-brand">Open student record</Link>
+            {student?.payers.map((payer) => payer.accountId ? <Link key={payer.accountId} href={`/schools/${schoolId}/families/${payer.accountId}#billing-history`} className="rounded-control border border-line px-4 py-3 text-sm hover:border-brand hover:text-brand">Open {payer.accountName} billing</Link> : null)}
+          </div>
+        </section>
+
         {canReschedule && lesson.can_reschedule ? (
           <section className="border-b border-line py-8">
             <button type="button" onClick={onReschedule} className="text-action text-sm text-brand hover:text-brand-hover">Reschedule on calendar →</button>
