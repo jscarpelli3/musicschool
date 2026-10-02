@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useState, type ReactNode } from "react";
 
 type CalendarView = "agenda" | "grid";
 
@@ -84,8 +86,18 @@ function buildMonths<Item>({ items, rangeStart, rangeEnd, timeZone, getItemDate 
 
 export function CalendarRange<Item>({ id, items, rangeStart, rangeEnd, timeZone, getItemDate, getItemKey, renderItem, emptyMonthLabel = "No scheduled items" }: CalendarRangeProps<Item>) {
   const months = buildMonths({ items, rangeStart, rangeEnd, timeZone, getItemDate });
-  return <div className="grid gap-section xl:grid-cols-2">
-    {months.map((month) => {
+  const [visibleMonthIndex, setVisibleMonthIndex] = useState(0);
+  const safeMonthIndex = Math.min(visibleMonthIndex, Math.max(months.length - 1, 0));
+  const visibleMonths = months[safeMonthIndex] ? [months[safeMonthIndex]] : [];
+
+  return <div>
+    {months.length > 1 ? <nav aria-label="Calendar month" className="mb-5 flex items-center justify-between border-b border-line pb-3">
+      <button type="button" disabled={safeMonthIndex === 0} onClick={() => setVisibleMonthIndex((current) => Math.max(0, current - 1))} className="text-action text-sm text-muted enabled:hover:text-ink disabled:opacity-35">← Previous</button>
+      <p className="text-sm text-brand">{months[safeMonthIndex]?.label}</p>
+      <button type="button" disabled={safeMonthIndex === months.length - 1} onClick={() => setVisibleMonthIndex((current) => Math.min(months.length - 1, current + 1))} className="text-action text-sm text-muted enabled:hover:text-ink disabled:opacity-35">Next →</button>
+    </nav> : null}
+    <div>
+    {visibleMonths.map((month) => {
       const firstWeekday = new Date(Date.UTC(month.year, month.month - 1, 1)).getUTCDay();
       const activeDays = month.days.filter((day) => day.items.length);
       return <section key={month.key} aria-labelledby={`${id}-${month.key}`} className="min-w-0">
@@ -117,5 +129,6 @@ export function CalendarRange<Item>({ id, items, rangeStart, rangeEnd, timeZone,
         </div>
       </section>;
     })}
+    </div>
   </div>;
 }
