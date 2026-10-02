@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { MdNotificationsNone } from "react-icons/md";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -78,7 +79,8 @@ export function OwnerNotifications({ schoolId, embedded = false }: { schoolId: s
     const close = () => setOpen(false);
     window.addEventListener("common-time:open-approvals", close);
     window.addEventListener("common-time:open-invoices", close);
-    return () => { window.removeEventListener("common-time:open-approvals", close); window.removeEventListener("common-time:open-invoices", close); };
+    window.addEventListener("common-time:open-lesson-drawer", close);
+    return () => { window.removeEventListener("common-time:open-approvals", close); window.removeEventListener("common-time:open-invoices", close); window.removeEventListener("common-time:open-lesson-drawer", close); };
   }, []);
 
   const unread = notices.filter((notice) => !notice.read_at).length;
@@ -108,8 +110,8 @@ export function OwnerNotifications({ schoolId, embedded = false }: { schoolId: s
   }
 
   return <>
-    <div className={embedded ? "notification-control relative z-[90] flex flex-col items-end" : "fixed right-5 top-5 z-[90]"}>
-      <button type="button" aria-expanded={open} onClick={() => setOpen((value) => { if (!value) window.dispatchEvent(new Event("common-time:open-notifications")); return !value; })} className="rounded-control border border-brand/40 bg-brand/10 px-3 py-1.5 text-sm text-brand transition hover:border-brand hover:bg-brand/15">Notifications{unread ? <span className="ml-2 inline-grid min-w-5 place-items-center rounded-full bg-brand px-1 text-xs text-canvas" aria-label={`${unread} unread notifications`}>{unread}</span> : null}</button>
+    <div className={embedded ? "notification-control relative z-30 flex flex-col items-end" : "fixed right-5 top-5 z-30"}>
+      <button type="button" aria-expanded={open} onClick={() => setOpen((value) => { if (!value) window.dispatchEvent(new Event("common-time:open-notifications")); return !value; })} className="inline-flex items-center rounded-control border border-brand/40 bg-brand/10 px-3 py-1.5 text-sm text-brand transition hover:border-brand hover:bg-brand/15"><MdNotificationsNone aria-hidden="true" className="mr-1.5 text-lg" />Notifications{unread ? <span className="ml-2 inline-grid min-w-5 place-items-center rounded-full bg-brand px-1 text-xs text-canvas" aria-label={`${unread} unread notifications`}>{unread}</span> : null}</button>
       {embedded ? <Link href={`/schools/${schoolId}/notifications`} className="mt-0.5 text-[10px] leading-none text-muted hover:text-ink">View all</Link> : null}
       {open ? <div className={`ui-card mt-2 w-[min(24rem,calc(100vw-2.5rem))] p-4 ${embedded ? "absolute top-full right-0" : ""}`}><div className="flex items-center justify-between"><p className="font-display text-2xl">Notifications</p><button onClick={() => setOpen(false)} className="text-sm text-muted">Close</button></div><div className="mt-4 max-h-[60vh] overflow-y-auto">{failedEmails.map((delivery) => { const retryAt = delivery.retry_not_before ? new Date(delivery.retry_not_before) : null; const coolingDown = retryAt ? retryAt.getTime() > clock : false; const reported = reportedDeliveryIds.has(delivery.id); return <div key={delivery.id} className="border-l-2 border-danger bg-danger/5 p-3 text-sm"><p>Email alert needs attention</p><p className="mt-1 text-xs text-muted">{delivery.subject}{delivery.failed_at ? ` · ${new Date(delivery.failed_at).toLocaleString()}` : ""}</p>{coolingDown ? <p className="mt-2 text-xs text-muted">Retry available {retryAt?.toLocaleTimeString()}</p> : null}<div className="mt-3 flex flex-wrap gap-3"><button type="button" disabled={retryingId === delivery.id || coolingDown || delivery.retry_count >= 5} onClick={() => void retryEmail(delivery.id)} className="border border-danger px-3 py-2 text-xs text-danger disabled:opacity-50">{retryingId === delivery.id ? "Retrying…" : delivery.retry_count >= 5 ? "Retry limit reached" : "Retry email"}</button><button type="button" disabled={reported || reportingId === delivery.id} onClick={() => void reportProblem(delivery.id)} className="border-b border-muted px-2 py-2 text-xs text-muted disabled:opacity-60">{reported ? "Problem reported" : reportingId === delivery.id ? "Reporting…" : "Report email problem"}</button></div></div>; })}{retryMessage ? <p role="status" className="py-3 text-xs text-muted">{retryMessage}</p> : null}{notices.length ? notices.map((notice) => <Link key={notice.id} href={notice.href} onClick={() => void markRead(notice)} className={`block rounded-control px-3 py-3 transition hover:bg-brand/10 ${notice.read_at ? "text-muted" : "text-ink"}`}><p className="text-sm">{notice.title}</p><p className="mt-1 text-xs leading-5 text-muted">{notice.message}</p></Link>) : <p className="py-6 text-sm text-muted">No notifications yet.</p>}</div></div> : null}
     </div>

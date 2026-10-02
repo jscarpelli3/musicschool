@@ -50,6 +50,7 @@ export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeE
   }, [selectedLesson]);
 
   function openLesson(lesson: RecordLessonCalendarItem, opener: HTMLButtonElement) {
+    window.dispatchEvent(new Event("common-time:open-lesson-drawer"));
     openerRef.current = opener;
     setSelectedLesson(lesson);
   }
@@ -85,13 +86,14 @@ export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeE
       <p className="mt-1 block truncate text-xs text-muted" title={lesson.teacherName}>{lesson.teacherName}</p>
     </article>}</button>}
   />
-  {selectedLesson ? <div className="fixed inset-0 z-50 flex justify-end">
+  {selectedLesson ? <div className="fixed inset-0 z-[80] flex justify-end">
     <button type="button" aria-label="Close lesson details" onClick={closeLesson} className="absolute inset-0 cursor-default bg-ink/70" />
     <aside role="dialog" aria-modal="true" aria-labelledby={`${id}-lesson-title`} className="relative z-10 h-full w-full overflow-y-auto border-l border-line bg-canvas px-6 py-7 shadow-2xl sm:max-w-md sm:px-8">
       <header className="flex items-start justify-between gap-6 border-b border-line pb-6">
         <div><p className="text-xs text-brand">{selectedLesson.status.replaceAll("_", " ")}</p><h2 id={`${id}-lesson-title`} className="mt-3 font-display text-4xl">{selectedLesson.studentName}</h2></div>
         <button ref={closeButtonRef} type="button" onClick={closeLesson} className="min-h-11 px-2 text-sm text-muted hover:text-ink">Close</button>
       </header>
+      <div className="border-b border-line"><QuickActionGrid actions={quickActions} /></div>
       <dl className="divide-y divide-line border-b border-line">
         <div className="py-5"><dt className="text-xs text-muted">Date</dt><dd className="mt-2 text-sm">{date.format(new Date(selectedLesson.startsAt))}</dd></div>
         <div className="py-5"><dt className="text-xs text-muted">Time</dt><dd className="mt-2 text-sm">{time.format(new Date(selectedLesson.startsAt))}–{time.format(new Date(selectedLesson.endsAt))}</dd></div>
@@ -99,7 +101,6 @@ export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeE
         <div className="py-5"><dt className="text-xs text-muted">Teacher</dt><dd className="mt-2 text-sm">{selectedLesson.teacherName}</dd></div>
         <div className="py-5"><dt className="text-xs text-muted">Place</dt><dd className="mt-2 text-sm">{selectedLesson.placeName}</dd></div>
       </dl>
-      <QuickActionGrid actions={quickActions} />
     </aside>
   </div> : null}</>;
 }
