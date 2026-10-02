@@ -6,7 +6,7 @@ import { DragHandle } from "@/components/ui/drag-handle";
 import { HorizontalScrollFrame } from "@/components/ui/horizontal-scroll-frame";
 import { AddFamilyDialog } from "@/components/families/add-family-dialog";
 import type { AddFamilyState } from "@/app/schools/[schoolId]/families/actions";
-import { LessonStatusStrip, type LessonOutcome } from "./lesson-status-strip";
+import { LessonStatusStrip, type LessonOutcome, type LessonStatusItem } from "./lesson-status-strip";
 import { SectionHeading } from "@/components/ui/section-heading";
 
 export type { LessonOutcome } from "./lesson-status-strip";
@@ -29,7 +29,7 @@ export type StudentRosterRow = {
   teacher: string;
   teacherId: string | null;
   place: string;
-  lessons: Array<{ id: string; outcome: LessonOutcome }>;
+  lessons: LessonStatusItem[];
 };
 
 const definitions = {
