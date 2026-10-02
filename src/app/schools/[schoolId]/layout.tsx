@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadCurrentSchoolAccess } from "@/lib/auth/school-access";
 import { loadOwnerApprovalSummary } from "@/lib/approvals/owner-approvals";
 import { loadSchoolInvoiceSummary } from "@/lib/billing/school-invoices";
+import { MdChecklist, MdSettings } from "react-icons/md";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,14 @@ export default async function SchoolLayout({ children, params }: { children: Rea
       <header className="flex items-start justify-between gap-6 border-b border-line pb-7">
         <div className="flex min-w-0 items-center gap-4">
           {logo?.signedUrl ? <img /* eslint-disable-line @next/next/no-img-element */ src={logo.signedUrl} alt={`${school.name} logo`} className="h-14 w-14 shrink-0 rounded-card border border-line bg-surface object-contain p-2" /> : <span className="grid h-14 w-14 shrink-0 place-items-center rounded-card border border-line bg-surface text-xl font-semibold text-brand">{school.name.slice(0,1).toUpperCase()}</span>}
-          <span className="min-w-0"><span className="flex min-w-0 items-center gap-2"><Link href={`/schools/${schoolId}`} className="truncate font-display text-3xl hover:text-brand sm:text-4xl">{school.name}</Link>{capabilities.has("school.setup.manage") ? <Link href={`/schools/${schoolId}/setup`} aria-label={`School setup for ${school.name}`} title="School setup" className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted transition hover:bg-surface hover:text-ink"><svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.7"><path d="M9.6 3.2h4.8l.6 2.3 2 .8 2.1-1.2 2.4 4.2-1.8 1.6.2 2.2 1.6 1.6-2.4 4.2-2.2-1-2 .8-.5 2.3H9.6L9 18.5l-2-.8-2.1 1.2-2.4-4.2 1.8-1.6-.2-2.2-1.6-1.6 2.4-4.2 2.2 1 2-.8.5-2.1Z"/><circle cx="12" cy="12" r="3"/></svg></Link> : null}</span><span className="mt-1 hidden text-xs text-muted sm:block">{school.timezone} · {school.family_billing_mode.replaceAll("_"," ")}</span></span>
+          <span className="min-w-0">
+            <Link href={`/schools/${schoolId}`} className="block truncate font-display text-3xl hover:text-brand sm:text-4xl">{school.name}</Link>
+            <span className="mt-1 block text-xs text-muted">{school.timezone} · {school.family_billing_mode.replaceAll("_"," ")}</span>
+            {capabilities.has("school.setup.manage") ? <span className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs">
+              <Link href={`/schools/${schoolId}/setup`} className="inline-flex items-center gap-1.5 text-muted transition hover:text-brand"><MdSettings aria-hidden="true" className="text-base" />School settings</Link>
+              <Link href={`/schools/${schoolId}/onboarding`} className="inline-flex items-center gap-1.5 text-muted transition hover:text-brand"><MdChecklist aria-hidden="true" className="text-base" />Setup guide</Link>
+            </span> : null}
+          </span>
         </div>
         <div className="flex shrink-0 items-end gap-4"><Link href="/support" className="mb-2.5 text-sm text-muted hover:text-ink">Help</Link><AccountMenu avatarUrl={avatarUrl} role={membership.role} /></div>
       </header>

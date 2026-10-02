@@ -254,6 +254,7 @@ export function OwnerPlanner({
 
   useEffect(() => {
     if (!selectedLessonId) return;
+    window.dispatchEvent(new Event("common-time:open-lesson-drawer"));
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") setSelectedLessonId(null);
     }
@@ -1147,6 +1148,8 @@ function LessonSheet({
           <button autoFocus type="button" onClick={onClose} className="text-action text-sm text-muted hover:text-ink">Close</button>
         </div>
 
+        <div className="border-b border-line"><QuickActionGrid actions={quickActions} description="Two taps saved. Tiny victory." /></div>
+
         <dl className="divide-y divide-line border-b border-line">
           <Detail label="Lesson" value={productName} />
           <div className="py-5"><dt className="text-xs text-muted">Teacher</dt><dd className="mt-2 text-sm"><Link href={`/schools/${schoolId}/staff/${lesson.teacher_id}`} className="hover:text-brand">{teacherName}</Link></dd></div>
@@ -1158,8 +1161,6 @@ function LessonSheet({
         </dl>
 
         {canCollectPayment ? <section className="border-b border-line py-8"><h3 className="font-display text-2xl font-normal">Payment</h3>{paidSeparately ? <><p className="mt-3 text-sm text-brand">Paid separately</p><p className="mt-2 text-xs leading-5 text-muted">This lesson will remain on the family statement with $0 newly due.</p></> : <><p className="mt-3 text-xs leading-5 text-muted">Create a secure QR code for the payer to scan on their own phone.</p><Link href={`/schools/${schoolId}/lessons/${lesson.id}/payment`} className="mt-4 inline-flex rounded-control bg-brand px-4 py-2.5 text-sm text-canvas hover:bg-brand-hover">Collect payment now</Link></>}</section> : null}
-
-        <div className="border-b border-line"><QuickActionGrid actions={quickActions} description="Two taps saved. Tiny victory." /></div>
 
         {canReschedule && lesson.can_reschedule ? (
           <section className="border-b border-line py-8">
