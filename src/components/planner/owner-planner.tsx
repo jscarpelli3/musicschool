@@ -1178,10 +1178,12 @@ function LessonSheet({
 
         {canReschedule && lesson.status === "scheduled" ? (
           <section className="border-b border-line py-8">
-            <h3 className="font-display text-2xl font-normal">School cancellation</h3>
+            <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">Optional action</p>
+            <h3 className="mt-2 font-display text-2xl font-normal">Can the school no longer provide this lesson?</h3>
+            <p className="mt-3 text-xs leading-5 text-muted">The lesson is still scheduled. Use this only when the school needs to initiate a cancellation.</p>
             <LessonChangeReport
               action={onSchoolCancellation}
-              buttonLabel="The school can’t provide this lesson"
+              buttonLabel="Start a school cancellation report"
               title="Report a school cancellation"
               description="This records the school-origin scenario for review. The lesson and all financial treatment remain unchanged until the remedy is confirmed."
               fieldLabel="Why can’t the school provide this lesson?"
