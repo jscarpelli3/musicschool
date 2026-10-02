@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { CalendarRange } from "./calendar-range";
+import { QuickActionGrid, type QuickAction } from "@/components/ui/quick-action-grid";
 
 export type RecordLessonCalendarItem = {
   id: string;
@@ -59,6 +59,13 @@ export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeE
     requestAnimationFrame(() => openerRef.current?.focus());
   }
 
+  const quickActions: QuickAction[] = selectedLesson ? [
+    { href: `/schools/${schoolId}?lesson=${selectedLesson.id}#school-calendar`, kind: "lesson", title: "Full lesson controls", detail: "Payments, changes, notes, and more." },
+    ...(selectedLesson.billingAccounts ?? []).map((account) => ({ href: `/schools/${schoolId}/families/${account.id}#billing-history`, kind: "billing" as const, title: `${account.name} billing`, detail: "Jump straight to invoices and payment history." })),
+    { href: `/schools/${schoolId}/students/${selectedLesson.studentId}`, kind: "student", title: "Student home", detail: "Contacts, schedule, and lesson plan." },
+    { href: `/schools/${schoolId}/staff/${selectedLesson.teacherId}`, kind: "teacher", title: "Teacher home", detail: "Schedule, availability, and details." },
+  ] : [];
+
   return <><CalendarRange
     id={id}
     items={lessons}
@@ -92,15 +99,7 @@ export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeE
         <div className="py-5"><dt className="text-xs text-muted">Teacher</dt><dd className="mt-2 text-sm">{selectedLesson.teacherName}</dd></div>
         <div className="py-5"><dt className="text-xs text-muted">Place</dt><dd className="mt-2 text-sm">{selectedLesson.placeName}</dd></div>
       </dl>
-      <section className="py-7">
-        <h3 className="font-display text-2xl">Quick actions</h3>
-        <div className="mt-4 grid gap-3">
-          <Link href={`/schools/${schoolId}?lesson=${selectedLesson.id}#school-calendar`} className="rounded-control bg-brand px-4 py-3 text-sm text-canvas hover:bg-brand-hover">Open full lesson controls</Link>
-          {selectedLesson.billingAccounts?.map((account) => <Link key={account.id} href={`/schools/${schoolId}/families/${account.id}#billing-history`} className="rounded-control border border-line px-4 py-3 text-sm hover:border-brand hover:text-brand">Open {account.name} billing</Link>)}
-          <Link href={`/schools/${schoolId}/students/${selectedLesson.studentId}`} className="rounded-control border border-line px-4 py-3 text-sm hover:border-brand hover:text-brand">Open student record</Link>
-          <Link href={`/schools/${schoolId}/staff/${selectedLesson.teacherId}`} className="rounded-control border border-line px-4 py-3 text-sm hover:border-brand hover:text-brand">Open teacher record</Link>
-        </div>
-      </section>
+      <QuickActionGrid actions={quickActions} />
     </aside>
   </div> : null}</>;
 }
