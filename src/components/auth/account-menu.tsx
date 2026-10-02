@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { MdPersonOutline, MdSettings } from "react-icons/md";
+import { MdPersonOutline } from "react-icons/md";
 import { AppSignOut } from "@/components/auth/app-sign-out";
 
 export function AccountMenu({ avatarUrl, role }: { avatarUrl?: string | null; role: string }) {
@@ -21,11 +21,8 @@ export function AccountMenu({ avatarUrl, role }: { avatarUrl?: string | null; ro
     <div ref={containerRef} className="relative" onMouseEnter={() => setOpen(true)}>
       <p className="mb-1 text-right text-[10px] capitalize tracking-[0.12em] text-muted">{role}</p>
       <div className="flex items-center gap-1">
-        <Link href="/profile#avatar" aria-label="Change avatar" className="grid h-10 w-10 place-items-center overflow-hidden rounded-full border border-line bg-surface text-muted transition hover:border-brand hover:text-ink">
+        <button type="button" aria-label="Open account menu" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="grid h-10 w-10 place-items-center overflow-hidden rounded-full border border-line bg-surface text-muted transition hover:border-brand hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
           {avatarUrl ? <img /* eslint-disable-line @next/next/no-img-element */ src={avatarUrl} alt="Your avatar" className="h-full w-full object-cover" /> : <MdPersonOutline aria-hidden="true" className="h-5 w-5" />}
-        </Link>
-        <button type="button" aria-label="Account settings" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="grid h-10 w-10 place-items-center rounded-full text-muted transition hover:bg-surface hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
-          <MdSettings aria-hidden="true" className="h-5 w-5" />
         </button>
       </div>
       {open ? (

@@ -36,12 +36,11 @@ export default async function SchoolLayout({ children, params }: { children: Rea
             <Link href={`/schools/${schoolId}`} className="block truncate font-display text-3xl hover:text-brand sm:text-4xl">{school.name}</Link>
             <span className="mt-1 block text-xs text-muted">{school.timezone} · {school.family_billing_mode.replaceAll("_"," ")}</span>
             {capabilities.has("school.setup.manage") ? <span className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs">
-              <Link href={`/schools/${schoolId}/setup`} className="inline-flex items-center gap-1.5 text-muted transition hover:text-brand"><MdSettings aria-hidden="true" className="text-base" />School settings</Link>
               <Link href={`/schools/${schoolId}/onboarding`} className="inline-flex items-center gap-1.5 text-muted transition hover:text-brand"><MdChecklist aria-hidden="true" className="text-base" />Setup guide</Link>
             </span> : null}
           </span>
         </div>
-        <div className="flex shrink-0 items-end gap-4"><Link href="/support" className="mb-2.5 text-sm text-muted hover:text-ink">Help</Link><AccountMenu avatarUrl={avatarUrl} role={membership.role} /></div>
+        <div className="flex shrink-0 items-end gap-3">{capabilities.has("school.setup.manage") ? <Link href={`/schools/${schoolId}/setup`} className="mb-0.5 inline-flex h-10 items-center gap-2 rounded-control px-3 text-sm text-muted transition hover:bg-surface hover:text-ink"><MdSettings aria-hidden="true" className="text-lg" /><span className="hidden sm:inline">School settings</span></Link> : null}<AccountMenu avatarUrl={avatarUrl} role={membership.role} /></div>
       </header>
       <SchoolManagementNav schoolId={schoolId} capabilities={[...capabilities]} recentApprovals={approvalSummary.items.map((item) => ({ id: item.id, kind: item.kind, teacherId: item.teacherId, studentId: item.studentId, teacher: item.teacher, student: item.student, detail: item.kind === "schedule_proposal" ? "Schedule change" : item.requestType === "cancellation" ? "Cancellation request" : "Reschedule request" }))} approvalCount={approvalSummary.count} recentInvoices={invoiceSummary.invoices.slice(0, 5)} invoiceCount={invoiceSummary.attentionCount} />
     </div>
