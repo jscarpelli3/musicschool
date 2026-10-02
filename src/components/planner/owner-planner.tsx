@@ -13,6 +13,7 @@ import { recordTeacherLessonOutcome } from "@/app/schools/[schoolId]/teacher/act
 import { lessonEventDescriptor, rescheduleReasonLabel } from "@/lib/scheduling/lesson-domain-contracts";
 import { RescheduleConfirmation, type RescheduleProposal } from "./lesson-reschedule-controls";
 import { QuickActionGrid, type QuickAction } from "@/components/ui/quick-action-grid";
+import { SectionHeading } from "@/components/ui/section-heading";
 import "./owner-planner.css";
 
 type Teacher = { id: string; name: string; isOwner: boolean };
@@ -378,10 +379,7 @@ export function OwnerPlanner({
   return (
     <section id="school-calendar" className="ui-card scroll-mt-6 overflow-hidden">
       <div className="grid gap-8 px-5 py-6 md:grid-cols-[1fr_auto] md:items-end sm:px-7">
-        <div>
-          <p className="text-xs text-muted">{contextLabel} · {timezone.replaceAll("_", " ")}</p>
-          <h2 className="mt-3 font-display text-4xl font-normal tracking-[-0.03em]">{title}</h2>
-        </div>
+        <SectionHeading kind="calendar" eyebrow={contextLabel} title={title} description={`Times shown in ${timezone.replaceAll("_", " ")}`} />
         <div className="flex flex-wrap items-end gap-8">
           {lessonCreationOptions ? (
             <button
