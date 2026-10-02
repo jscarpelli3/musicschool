@@ -212,7 +212,15 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
       else if (lesson.status === "cancelled") outcome = lesson.cancellation_timing === "timely" ? "cancelled_timely" : "cancelled_late";
       else if (lesson.status === "no_show") outcome = "no_show";
       else outcome = new Date(lesson.starts_at).getTime() >= now ? "upcoming" : "unrecorded";
-      return { id: lesson.id, outcome };
+      return {
+        id: lesson.id,
+        outcome,
+        dateLabel: new Intl.DateTimeFormat("en-US", { timeZone: school.timezone, weekday: "long", month: "short", day: "numeric" }).format(new Date(lesson.starts_at)),
+        timeLabel: `${time(lesson.starts_at)}–${time(lesson.ends_at)}`,
+        teacherName: teacherNames.get(lesson.teacher_id) ?? "Unassigned teacher",
+        productName: productNames[lesson.product_id] ?? "Lesson",
+        placeName: placeDetails[lesson.place_id]?.name ?? "No place assigned",
+      };
     });
     return [{
       id: person_id,
