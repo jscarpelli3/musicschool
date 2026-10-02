@@ -15,17 +15,20 @@ test("login presents both supported sign-in paths and accepts an email address",
   await expect(page.getByRole("main")).not.toContainText("attacker.example");
 });
 
-test("public help exposes owner, teacher, and family guidance with legal navigation", async ({ page }) => {
-  await page.goto("/support");
+test("footer help opens owner, teacher, and family guidance without leaving the page", async ({ page }) => {
+  await page.goto("/privacy");
 
-  await expect(page.getByRole("heading", { name: "How to use the app" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "For school owners" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "For teachers" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "For families and payers" })).toBeVisible();
-
-  await page.getByRole("main").getByRole("link", { name: "Privacy" }).click();
+  await page.getByRole("contentinfo").getByRole("button", { name: "Help" }).click();
+  const help = page.getByRole("dialog", { name: "What can we help with?" });
+  await expect(help).toBeVisible();
+  await expect(help.getByText("School owners", { exact: false })).toBeVisible();
+  await expect(help.getByText("Teachers", { exact: false })).toBeVisible();
+  await expect(help.getByText("Families and payers", { exact: false })).toBeVisible();
   await expect(page).toHaveURL(/\/privacy$/);
-  await expect(page.getByRole("heading", { name: "Privacy Policy" })).toBeVisible();
+
+  await help.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(help).toBeHidden();
+  await expect(page.getByRole("contentinfo").getByRole("link", { name: "Privacy" })).toBeVisible();
 });
 
 test("application responses stay out of search indexes", async ({ request }) => {
