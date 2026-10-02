@@ -3,6 +3,7 @@ import "server-only";
 import type Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { synchronizeStripeConnection } from "@/lib/stripe/connections";
+import { expireLessonPayment, reconcileCompletedLessonPayment } from "@/lib/stripe/lesson-quick-pay";
 import { expireCardSetup, reconcileCompletedCardSetup } from "@/lib/stripe/payment-method-reconciliation";
 import { getStripe, getStripeMode, getStripeWebhookSecrets } from "@/lib/stripe/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -35,12 +36,11 @@ type VerifiedEvent = {
   checkoutSetupEvent: "completed" | "expired" | null;
 };
 
-async function verifyEvent(rawBody: string, signature: string): Promise<VerifiedEvent> {
-  const stripe = getStripe();
+async function verifyEvent(rawBody: string, signature: string, stripe: ReturnType<typeof getStripe>, secrets: string[]): Promise<VerifiedEvent> {
   const parsed = JSON.parse(rawBody) as { object?: string };
   let lastVerificationError: unknown;
 
-  for (const secret of getStripeWebhookSecrets()) {
+  for (const secret of secrets) {
     try {
       if (parsed.object === "v2.core.event") {
         const notification = await stripe.parseEventNotificationAsync(rawBody, signature, secret);
@@ -73,7 +73,7 @@ async function verifyEvent(rawBody: string, signature: string): Promise<Verified
         createdAt: new Date(event.created * 1000).toISOString(),
         payload: event as unknown as Json,
         accountEvent: event.type === "account.updated",
-        checkoutSetupEvent: event.type === "checkout.session.completed"
+        checkoutSetupEvent: event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded"
           ? "completed"
           : event.type === "checkout.session.expired" ? "expired" : null,
       };
@@ -93,9 +93,25 @@ export async function POST(request: Request) {
 
   const rawBody = await request.text();
   if (rawBody.length > 1_048_576) return NextResponse.json({ error: "Payload too large." }, { status: 413 });
+  let stripe: ReturnType<typeof getStripe>;
+  let secrets: string[];
+  try {
+    stripe = getStripe();
+    secrets = getStripeWebhookSecrets();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    const variable = /^Missing required server environment variable: (STRIPE_[A-Z_]+)$/.exec(message)?.[1];
+    const reason = variable ? "missing_variable"
+      : message === "STRIPE_MODE must be either test or live." ? "invalid_mode"
+        : message.startsWith("STRIPE_SECRET_KEY does not match STRIPE_MODE=") ? "key_mode_mismatch"
+          : message === "Stripe webhook secrets must begin with whsec_." ? "invalid_signing_secret"
+            : "unknown";
+    console.error("Stripe webhook configuration failed", { reason, variable: variable ?? "none" });
+    return NextResponse.json({ error: "Webhook configuration unavailable." }, { status: 500 });
+  }
   let event: VerifiedEvent;
   try {
-    event = await verifyEvent(rawBody, signature);
+    event = await verifyEvent(rawBody, signature, stripe, secrets);
   } catch (error) {
     console.error("Stripe webhook signature verification failed", { name: error instanceof Error ? error.name : "unknown" });
     return NextResponse.json({ error: "Invalid Stripe signature." }, { status: 400 });
@@ -149,13 +165,16 @@ export async function POST(request: Request) {
       await synchronizeStripeConnection(connection.school_id, accountId, null);
     }
 
+    let lessonPaymentEvent = false;
     if (event.checkoutSetupEvent === "completed" && accountId && event.objectId) {
-      await reconcileCompletedCardSetup(event.objectId, accountId, event.createdAt);
-    } else if (event.checkoutSetupEvent === "expired" && event.objectId) {
-      await expireCardSetup(event.objectId);
+      lessonPaymentEvent = await reconcileCompletedLessonPayment(event.objectId, accountId, event.id, event.createdAt);
+      if (!lessonPaymentEvent) await reconcileCompletedCardSetup(event.objectId, accountId, event.createdAt);
+    } else if (event.checkoutSetupEvent === "expired" && accountId && event.objectId) {
+      lessonPaymentEvent = await expireLessonPayment(event.objectId, accountId);
+      if (!lessonPaymentEvent) await expireCardSetup(event.objectId);
     }
 
-    const supported = event.accountEvent || Boolean(event.checkoutSetupEvent);
+    const supported = event.accountEvent || lessonPaymentEvent || Boolean(event.checkoutSetupEvent);
     const { error: completeError } = await admin.from("payment_provider_events").update({
       processing_status: supported ? "processed" : "ignored",
       processed_at: new Date().toISOString(),

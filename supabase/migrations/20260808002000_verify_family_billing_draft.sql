@@ -14,6 +14,7 @@ declare
   manual_count integer;
   blocked boolean := false;
 begin
+  if not exists (select 1 from public.lesson_events) then return; end if;
   begin
     select
       event.school_id,

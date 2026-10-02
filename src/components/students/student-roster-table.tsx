@@ -6,7 +6,8 @@ import { DragHandle } from "@/components/ui/drag-handle";
 import { HorizontalScrollFrame } from "@/components/ui/horizontal-scroll-frame";
 import { AddFamilyDialog } from "@/components/families/add-family-dialog";
 import type { AddFamilyState } from "@/app/schools/[schoolId]/families/actions";
-import { LessonStatusStrip, type LessonOutcome } from "./lesson-status-strip";
+import { LessonStatusStrip, type LessonOutcome, type LessonStatusItem } from "./lesson-status-strip";
+import { SectionHeading } from "@/components/ui/section-heading";
 
 export type { LessonOutcome } from "./lesson-status-strip";
 
@@ -28,7 +29,7 @@ export type StudentRosterRow = {
   teacher: string;
   teacherId: string | null;
   place: string;
-  lessons: Array<{ id: string; outcome: LessonOutcome }>;
+  lessons: LessonStatusItem[];
 };
 
 const definitions = {
@@ -175,9 +176,8 @@ export function StudentRosterTable({
     <section aria-labelledby="student-roster-heading" className={dashboard ? "mt-16" : ""}>
       <header className="flex flex-wrap items-end justify-between gap-6 pb-4">
         <div>
-          {dashboard ? <h2 id="student-roster-heading" className="font-display text-4xl tracking-[-0.035em]">School matrix</h2> : <h1 id="student-roster-heading" className="font-display text-5xl tracking-[-0.04em] sm:text-6xl">Students.</h1>}
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-muted">Review student schedules, family connections, teachers, and recent lesson activity.</p>
-          <p className="mt-2 text-sm text-muted">{rows.length} active · actual occurrences in {monthLabel}</p>
+          {dashboard ? <SectionHeading id="student-roster-heading" kind="students" eyebrow="School roster" title="School matrix" description="Review student schedules, family connections, teachers, and recent lesson activity." /> : <><h1 id="student-roster-heading" className="font-display text-5xl tracking-[-0.04em] sm:text-6xl">Students.</h1><p className="mt-4 max-w-2xl text-sm leading-6 text-muted">Review student schedules, family connections, teachers, and recent lesson activity.</p></>}
+          <p className={`${dashboard ? "ml-[3.75rem]" : ""} mt-2 text-sm text-muted`}>{rows.length} active · actual occurrences in {monthLabel}</p>
         </div>
         {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add student +" /> : null}
       </header>

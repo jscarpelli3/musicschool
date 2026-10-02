@@ -3,7 +3,7 @@ begin
   select portal_auth.school_id,portal_auth.billing_account_id into account_row
   from public.payer_portal_authorizations portal_auth
   where portal_auth.normalized_email='elscarpo@gmail.com';
-  if not found then raise exception 'Davis portal test payer was not found'; end if;
+  if not found then return; end if;
   select mapping.student_id into target_student_id from public.billing_account_students mapping
   where mapping.school_id=account_row.school_id and mapping.billing_account_id=account_row.billing_account_id
   order by mapping.student_id limit 1;

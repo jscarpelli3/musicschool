@@ -91,6 +91,12 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   const products = new Map((productsResult.data ?? []).map((product) => [product.id, product.name]));
   const places = new Map((placesResult.data ?? []).map((place) => [place.id, place.name]));
   const money = (cents: number, currency: string) => new Intl.NumberFormat("en-US", { style: "currency", currency }).format(cents / 100);
+  const lineServiceWhen = (line: { source_type: string; service_date: string | null; metadata: unknown }) => {
+    if (line.source_type !== "lesson" || !line.metadata || typeof line.metadata !== "object" || Array.isArray(line.metadata)) return line.service_date ?? "Period adjustment";
+    const startsAt = "operational_starts_at" in line.metadata && typeof line.metadata.operational_starts_at === "string" ? line.metadata.operational_starts_at : null;
+    if (!startsAt || Number.isNaN(new Date(startsAt).getTime())) return line.service_date ?? "Lesson";
+    return new Intl.DateTimeFormat("en-US", { timeZone: school.timezone, weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(startsAt));
+  };
   const paidByPeriod = (attemptsResult.data ?? []).reduce<Record<string, number>>((totals, attempt) => {
     totals[attempt.billing_period_id] = (totals[attempt.billing_period_id] ?? 0) + attempt.amount_cents;
     return totals;
@@ -139,8 +145,8 @@ export default async function FamilyDetailPage({ params, searchParams }: {
       {entitlements.length?<DetailSection title="Lessons to schedule" description="Paid replacement lessons still owed to this family."><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} compact/></DetailSection>:null}
 
       <section className="ui-card mt-6 p-6 md:p-8">
-        <div className="mb-7"><h2 className="font-display text-3xl">Family lesson calendar</h2><p className="mt-3 text-sm leading-6 text-muted">Lessons for every student on this account, across the current and next two months.</p></div>
-        <RecordLessonCalendar schoolId={schoolId} id={`family-${billingAccountId}-calendar`} lessons={(familyLessons ?? []).map((lesson) => { const studentPerson = people.get(lesson.student_id); const teacherPerson = people.get(lesson.teacher_id); return { id: lesson.id, studentId: lesson.student_id, studentName: studentPerson ? name(studentPerson) : "Student", teacherId: lesson.teacher_id, teacherName: teacherPerson ? name(teacherPerson) : "Unassigned teacher", productName: products.get(lesson.product_id) ?? "Lesson", placeName: places.get(lesson.actual_place_id ?? lesson.place_id) ?? "Unassigned place", startsAt: lesson.actual_starts_at ?? lesson.starts_at, endsAt: lesson.actual_ends_at ?? lesson.ends_at, status: lesson.outcome ?? lesson.status }; })} rangeStart={calendarStart} rangeEnd={calendarEnd} timeZone={school.timezone} />
+        <div className="mb-7"><h2 className="font-display text-3xl">Family lesson calendar</h2><p className="mt-3 text-sm leading-6 text-muted">Lessons for every student on this account. Move between months without leaving the record.</p></div>
+        <RecordLessonCalendar schoolId={schoolId} id={`family-${billingAccountId}-calendar`} lessons={(familyLessons ?? []).map((lesson) => { const studentPerson = people.get(lesson.student_id); const teacherPerson = people.get(lesson.teacher_id); return { id: lesson.id, studentId: lesson.student_id, studentName: studentPerson ? name(studentPerson) : "Student", teacherId: lesson.teacher_id, teacherName: teacherPerson ? name(teacherPerson) : "Unassigned teacher", productName: products.get(lesson.product_id) ?? "Lesson", placeName: places.get(lesson.actual_place_id ?? lesson.place_id) ?? "Unassigned place", startsAt: lesson.actual_starts_at ?? lesson.starts_at, endsAt: lesson.actual_ends_at ?? lesson.ends_at, status: lesson.outcome ?? lesson.status, billingAccounts: [{ id: billingAccountId, name: account.name }] }; })} rangeStart={calendarStart} rangeEnd={calendarEnd} timeZone={school.timezone} />
       </section>
 
       <DetailSection title="Primary payer" description="The person currently responsible for this billing account.">
@@ -154,7 +160,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
         </div>
       </DetailSection>
 
-      <DetailSection title="Billing history" description="Durable monthly billing periods. Draft amounts remain visibly distinct from paid provider truth.">
+      <div id="billing-history" className="scroll-mt-6"><DetailSection title="Billing history" description="Durable monthly billing periods. Draft amounts remain visibly distinct from paid provider truth.">
         <div className="space-y-7">
           {canManagePayments ? <BillingDraftForm schoolId={schoolId} billingAccountId={billingAccountId} defaultMonth={currentMonth} /> : null}
           {billing && billingMessages[billing] ? <p role="status" className={`border-l-2 pl-4 text-sm leading-6 ${billing === "prepared" ? "border-brand text-ink" : "border-danger text-danger"}`}>{billingMessages[billing]}</p> : null}
@@ -172,7 +178,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
                   {periodLines.map((line) => {
                     const metadata = line.metadata && typeof line.metadata === "object" && !Array.isArray(line.metadata) ? line.metadata : {};
                     const disposition = "disposition" in metadata && typeof metadata.disposition === "string" ? metadata.disposition : line.source_type.replaceAll("_", " ");
-                    return <div key={line.id} className="grid gap-2 border-t border-line py-4 first:border-t-0 sm:grid-cols-[1fr_auto] sm:gap-6"><div><p className="text-sm">{line.description}</p><p className="mt-1 text-xs text-muted">{line.service_date ?? "Period adjustment"} · <span className="uppercase">{line.source_type === "manual_adjustment" ? "owner adjustment" : disposition}</span></p>{canManagePayments && periodState.editable && line.source_type === "manual_adjustment" ? <div className="mt-2"><BillingAdjustmentRemove schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} adjustmentId={line.id} /></div> : null}</div><p className={`text-sm sm:text-right ${(line.amount_cents ?? 0) < 0 ? "text-brand" : ""}`}>{money(line.amount_cents ?? 0, billingPeriod.currency)}</p></div>;
+                    return <div key={line.id} className="grid gap-2 border-t border-line py-4 first:border-t-0 sm:grid-cols-[1fr_auto] sm:gap-6"><div><p className="text-sm">{line.description}</p><p className="mt-1 text-xs text-muted">{lineServiceWhen(line)} · <span className="uppercase">{line.source_type === "manual_adjustment" ? "owner adjustment" : disposition}</span></p>{canManagePayments && periodState.editable && line.source_type === "manual_adjustment" ? <div className="mt-2"><BillingAdjustmentRemove schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} adjustmentId={line.id} /></div> : null}</div><p className={`text-sm sm:text-right ${(line.amount_cents ?? 0) < 0 ? "text-brand" : ""}`}>{money(line.amount_cents ?? 0, billingPeriod.currency)}</p></div>;
                   })}
                   {!periodLines.length ? <EmptyDetail>No line items are recorded.</EmptyDetail> : null}
                   {latestApprovalByPeriod.get(billingPeriod.id)?.approval_status === "rejected" ? <div className="my-5 border border-danger/50 p-5"><p className="text-xs uppercase tracking-[0.14em] text-danger">Payer requested review</p><p className="mt-3 text-sm">{({ lesson_did_not_happen: "A lesson did not happen", wrong_lesson_or_date: "A lesson or date is wrong", wrong_amount: "An amount is wrong", missing_credit: "A credit or discount is missing", duplicate_charge: "A charge appears twice", other: "Other" } as Record<string, string>)[latestApprovalByPeriod.get(billingPeriod.id)?.rejection_reason_code ?? ""] ?? "Charges need review"}</p>{latestApprovalByPeriod.get(billingPeriod.id)?.rejection_note ? <p className="mt-2 text-sm leading-6 text-muted">“{latestApprovalByPeriod.get(billingPeriod.id)?.rejection_note}”</p> : null}</div> : null}
@@ -189,7 +195,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
           {!(periodsResult.data ?? []).length ? <EmptyDetail>No billing periods have been prepared.</EmptyDetail> : null}
           </div>
         </div>
-      </DetailSection>
+      </DetailSection></div>
 
       <DetailSection title="Payment methods" description="Safe provider references only. Common Time never stores card numbers or bank credentials.">
         <div className="space-y-5">

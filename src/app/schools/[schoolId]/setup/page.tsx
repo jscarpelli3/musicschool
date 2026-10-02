@@ -1,8 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { SetupHeader } from "@/components/school-setup/setup-header";
 import { InstrumentCatalogForm } from "@/components/school-setup/instrument-catalog-form";
+import { SchoolLogoUploader } from "@/components/school-setup/school-logo-uploader";
 import { createClient } from "@/lib/supabase/server";
-import { uploadSchoolLogo } from "../media-actions";
 import { updateSchoolInfo } from "./actions";
 import { updateSchoolInstrumentCatalog } from "./instrument-actions";
 import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
@@ -12,7 +12,7 @@ const field = "w-full border-b border-line bg-transparent py-3 outline-none tran
 
 export default async function SchoolInfoPage({ params, searchParams }: {
   params: Promise<{ schoolId: string }>;
-  searchParams: Promise<{ status?: string; media?: string; instruments?: string }>;
+  searchParams: Promise<{ status?: string; media?: string }>;
 }) {
   const { schoolId } = await params;
   const query = await searchParams;
@@ -46,7 +46,6 @@ export default async function SchoolInfoPage({ params, searchParams }: {
       <SetupHeader schoolId={schoolId} schoolName={school.name} active="info" />
       {query.status ? <p className={`mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm ${query.status === "saved" ? "text-brand" : "text-danger"}`}>{query.status === "saved" ? "School information saved." : "School information could not be saved."}</p> : null}
       {logoMessage ? <p className={`mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm ${logoMessage.error ? "text-danger" : "text-brand"}`}>{logoMessage.text}</p> : null}
-      {query.instruments ? <p role="status" className={`mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm ${query.instruments === "saved" ? "text-brand" : "text-danger"}`}>{query.instruments === "saved" ? "School instruments saved." : "The instrument list could not be saved."}</p> : null}
       <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
         <div>
           <h2 className="font-display text-3xl">Identity</h2>
@@ -58,11 +57,7 @@ export default async function SchoolInfoPage({ params, searchParams }: {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={logo.signedUrl} alt={`${school.name} logo`} className="h-24 w-24 border border-line object-contain p-3" />
             ) : <div className="grid h-24 w-24 place-items-center border border-line font-display text-4xl text-brand">{school.name[0]}</div>}
-            <form action={uploadSchoolLogo.bind(null, schoolId)}>
-              <input type="hidden" name="return_path" value={`/schools/${schoolId}/setup`} />
-              <input required name="logo" type="file" accept="image/jpeg,image/png,image/webp" className="block max-w-60 text-sm text-muted file:mr-3 file:border-0 file:bg-surface-raised file:px-3 file:py-2 file:text-ink" />
-              <button className="mt-4 rounded-md border border-line bg-surface px-4 py-2 text-sm text-ink transition hover:border-brand hover:bg-surface-raised">Update logo</button>
-            </form>
+            <SchoolLogoUploader schoolId={schoolId} />
           </div>
         </div>
       </section>

@@ -64,6 +64,21 @@ enabled = true
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
 sql_paths = ["./seed.sql"]
 
+# The persistent staging branch is intentionally data-less until a reviewed,
+# deterministic synthetic fixture replaces the currently absent seed.sql.
+[remotes.staging]
+project_id = "plnluybazyltxtsbkxpn"
+
+[remotes.staging.db.seed]
+enabled = false
+
+# Keep the persistent staging Auth callback independent from the local defaults
+# below. Without this override, every Git-connected branch deployment restores
+# the local Site URL and sends OAuth users back to 127.0.0.1.
+[remotes.staging.auth]
+site_url = "https://musicschool-git-staging-music-school.vercel.app"
+additional_redirect_urls = ["https://musicschool-git-staging-music-school.vercel.app/auth/callback"]
+
 [db.network_restrictions]
 # Enable management of network restrictions.
 enabled = false

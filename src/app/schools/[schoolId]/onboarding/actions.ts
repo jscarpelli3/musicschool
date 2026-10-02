@@ -1,6 +1,13 @@
 "use server";
-import {revalidatePath} from "next/cache";import {redirect} from "next/navigation";
-import {ensurePortalAuthIdentity} from "@/lib/portal/auth-identities";import {protectServerAction} from "@/lib/security/request-boundary";import {createClient} from "@/lib/supabase/server";
-export type FamilyState={ok:boolean;message:string};
-export async function createFirstFamily(schoolId:string,_state:FamilyState,formData:FormData):Promise<FamilyState>{const values={studentFirst:String(formData.get("student_first")??"").trim(),studentLast:String(formData.get("student_last")??"").trim(),payerFirst:String(formData.get("payer_first")??"").trim(),payerLast:String(formData.get("payer_last")??"").trim(),email:String(formData.get("payer_email")??"").trim().toLowerCase(),relationship:String(formData.get("relationship")??"parent").trim()};if(Object.values(values).some(v=>!v)||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(values.email))return{ok:false,message:"Complete the student and payer details, including a valid email address."};const supabase=await createClient(),{data:auth}=await supabase.auth.getClaims(),profileId=auth?.claims?.sub;if(!profileId)return{ok:false,message:"Your session expired. Sign in again."};try{await protectServerAction({scope:"onboarding.first_family",subject:`actor:${profileId}|school:${schoolId}`,limit:5,windowSeconds:3600});const payerProfileId=await ensurePortalAuthIdentity(values.email);const{error}=await supabase.rpc("create_onboarding_student_and_payer",{p_school_id:schoolId,p_student_first_name:values.studentFirst,p_student_last_name:values.studentLast,p_payer_first_name:values.payerFirst,p_payer_last_name:values.payerLast,p_payer_email:values.email,p_payer_profile_id:payerProfileId,p_relationship:values.relationship});if(error)return{ok:false,message:error.message.includes("first_student_already_exists")?"Your first student is already set up.":"The family could not be saved. Nothing was partially created; check the details and try again."};revalidatePath(`/schools/${schoolId}/onboarding`);return{ok:true,message:"Student and payer added."}}catch{return{ok:false,message:"The family could not be prepared. Nothing was partially created; try again."}}}
-export async function finishOnboarding(schoolId:string){const supabase=await createClient(),{error}=await supabase.rpc("complete_school_onboarding",{p_school_id:schoolId});if(error)redirect(`/schools/${schoolId}/onboarding?finish=error`);revalidatePath("/","layout");redirect(`/schools/${schoolId}?welcome=1`)}
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+
+export async function finishOnboarding(schoolId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("complete_school_onboarding", { p_school_id: schoolId });
+  if (error) redirect(`/schools/${schoolId}/onboarding?finish=error`);
+  revalidatePath("/", "layout");
+  redirect(`/schools/${schoolId}?welcome=1`);
+}
