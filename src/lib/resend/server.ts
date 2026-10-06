@@ -18,6 +18,13 @@ export class ResendUnknownOutcomeError extends Error {
   }
 }
 
+export class EmailDeliveryPolicyError extends Error {
+  constructor(message: string, readonly code: string) {
+    super(message);
+    this.name = "EmailDeliveryPolicyError";
+  }
+}
+
 function apiKey() {
   const value = process.env.RESEND_API_KEY?.trim();
   if (!value) throw new Error("Missing required server environment variable: RESEND_API_KEY");
@@ -43,7 +50,7 @@ export async function sendResendEmail(input: {
   if (!/^[^<>\r\n]+ <notifications@notifications\.commontime\.studio>$/.test(from)) throw new Error("Email sender must use the authenticated Common Time notification domain.");
   if (!subject) throw new Error("Email subject is required.");
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(recipient) || recipient.length > 320) throw new Error("Email recipient is invalid.");
-  if (policy.allowedRecipients && !policy.allowedRecipients.has(recipient)) throw new Error("Email recipient is not permitted in this environment.");
+  if (policy.allowedRecipients && !policy.allowedRecipients.has(recipient)) throw new EmailDeliveryPolicyError("Email recipient is not permitted in this environment.", "recipient_not_allowlisted");
   if (replyTo && (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(replyTo) || replyTo.length > 320)) throw new Error("Email reply address is invalid.");
   if (!input.text.includes(policy.safetySentence) || !input.html.includes(policy.safetySentence)) throw new Error("Transactional email is missing the environment safety notice.");
   const urls = [...input.text.matchAll(/https?:\/\/[^\s<>"']+/g), ...input.html.matchAll(/href=["'](https?:\/\/[^"']+)["']/g)]

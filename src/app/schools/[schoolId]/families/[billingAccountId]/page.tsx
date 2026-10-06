@@ -24,6 +24,7 @@ import { BillingAdjustmentForm, BillingAdjustmentRemove } from "./billing-adjust
 import { RecordLessonCalendar } from "@/components/calendar/record-lesson-calendar";
 import { schoolCalendarWindow } from "@/lib/calendar/school-calendar-window";
 import { MdExpandMore } from "react-icons/md";
+import { formatCompactDate } from "@/lib/date-format";
 
 export const dynamic = "force-dynamic";
 
@@ -172,7 +173,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
             return (
               <details key={billingPeriod.id} open={billingPeriod.id === selectedPeriodId} className="group rounded-card border border-line bg-surface p-5 transition open:border-brand/40 open:bg-surface-raised sm:p-6">
                 <summary className="grid cursor-pointer list-none grid-cols-[1fr_auto] items-start gap-4 marker:hidden">
-                  <div><p className="font-display text-2xl">{billingPeriod.label}</p><div className="mt-3 flex flex-wrap items-center gap-2 text-xs"><span className="rounded-full bg-brand/10 px-2.5 py-1 text-brand">{periodState.label}</span><span className="text-muted">{billingPeriod.period_start}–{billingPeriod.period_end}</span><span className="text-muted">· {periodLines.length} lines</span></div></div>
+                  <div><p className="font-display text-2xl">{billingPeriod.label}</p><div className="mt-3 flex flex-wrap items-center gap-2 text-xs"><span className="rounded-full bg-brand/10 px-2.5 py-1 text-brand">{periodState.label}</span><span className="text-muted">{formatCompactDate(billingPeriod.period_start)}–{formatCompactDate(billingPeriod.period_end)}</span><span className="text-muted">· {periodLines.length} lines</span></div></div>
                   <div className="flex items-start gap-3 text-right"><div><p className="text-lg">{money(billingPeriod.amount_due_cents, billingPeriod.currency)}</p><p className="mt-1 text-xs text-muted">{money(paidByPeriod[billingPeriod.id] ?? 0, billingPeriod.currency)} paid</p></div><MdExpandMore aria-hidden="true" className="mt-1 text-xl text-muted transition group-open:rotate-180" /></div>
                 </summary>
                 <div className="mt-6 border-t border-line pt-2">

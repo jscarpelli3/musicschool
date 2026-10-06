@@ -11,7 +11,7 @@ import { ensurePortalAuthIdentity } from "@/lib/portal/auth-identities";
 import { billingApprovalEmail } from "@/lib/resend/billing-approval-email";
 import { billingStatementNoticeEmail } from "@/lib/resend/billing-statement-notice-email";
 import { normalizeReplyTo, schoolEmailSender } from "@/lib/resend/email-security";
-import { ResendRequestError, ResendUnknownOutcomeError, sendResendEmail } from "@/lib/resend/server";
+import { EmailDeliveryPolicyError, ResendRequestError, ResendUnknownOutcomeError, sendResendEmail } from "@/lib/resend/server";
 import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -328,11 +328,13 @@ export async function sendBillingApprovalEmail(
     }
   } catch (error) {
     const providerError = error instanceof ResendRequestError ? error : null;
+    const policyError = error instanceof EmailDeliveryPolicyError ? error : null;
     await admin.rpc("fail_email_provider_submission", {
       p_delivery_id: prepared.email_delivery_id,
-      p_provider_error_code: providerError?.code ?? (providerError?.status ? String(providerError.status) : undefined),
-      p_provider_error_message: providerError?.message ?? "Provider request failed.",
+      p_provider_error_code: providerError?.code ?? (providerError?.status ? String(providerError.status) : policyError?.code),
+      p_provider_error_message: providerError?.message ?? policyError?.message ?? "Provider request failed.",
     });
+    if (policyError?.code === "recipient_not_allowlisted") return { ok: false, message: "This payer email is not enabled for staging delivery. Use an approved test recipient, then send to the updated payer email." };
     return { ok: false, message: "Resend did not accept the email. The failed attempt was recorded and can be retried." };
   }
 
