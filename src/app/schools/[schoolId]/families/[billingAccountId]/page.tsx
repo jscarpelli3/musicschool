@@ -62,7 +62,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     supabase.from("payment_method_setup_requests").select("id, status, expires_at, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }).limit(3),
     supabase.from("school_payment_connections").select("status, charges_enabled").eq("school_id", schoolId).eq("provider", "stripe").maybeSingle(),
     supabase.from("billing_approval_requests").select("id, billing_period_id, approval_status, approved_at, rejected_at, rejection_reason_code, rejection_note, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
-    supabase.from("email_deliveries").select("approval_request_id, status, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
+    supabase.from("email_deliveries").select("approval_request_id, recipient_email, status, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
     supabase.from("service_products").select("id,name").eq("school_id", schoolId),
     supabase.from("lesson_places").select("id,name").eq("school_id", schoolId),
   ]);
@@ -134,9 +134,13 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   const latestApprovalByPeriod = new Map<string, (typeof approvalRequestsResult.data extends (infer T)[] | null ? T : never)>();
   for (const request of approvalRequestsResult.data ?? []) if (request.billing_period_id && !latestApprovalByPeriod.has(request.billing_period_id)) latestApprovalByPeriod.set(request.billing_period_id, request);
   const latestEmailStatusByPeriod = new Map<string, string>();
+  const latestEmailRecipientByPeriod = new Map<string, string>();
   for (const delivery of emailDeliveriesResult.data ?? []) {
     const billingPeriodId = periodByApprovalRequest.get(delivery.approval_request_id);
-    if (billingPeriodId && !latestEmailStatusByPeriod.has(billingPeriodId)) latestEmailStatusByPeriod.set(billingPeriodId, delivery.status);
+    if (billingPeriodId && !latestEmailStatusByPeriod.has(billingPeriodId)) {
+      latestEmailStatusByPeriod.set(billingPeriodId, delivery.status);
+      latestEmailRecipientByPeriod.set(billingPeriodId, delivery.recipient_email);
+    }
   }
 
   return (
@@ -188,7 +192,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
                   {canManagePayments && periodState.editable && billingPeriod.amount_due_cents > 0 ? <div className="border-t border-line pt-5"><p className="max-w-lg text-xs leading-5 text-muted">Lock only after reviewing every line. Locking freezes this exact amount for the separate payer-approval step.</p><BillingPeriodLock schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /></div> : null}
                   {canManagePayments && billingPeriod.status === "locked" && !latestApprovalByPeriod.get(billingPeriod.id) ? <BillingPeriodUnlock schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
                   {canManagePayments && billingPeriod.status === "approval_pending" && latestApprovalByPeriod.get(billingPeriod.id)?.approval_status === "pending" ? <BillingPeriodRevise schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
-                  {canManagePayments && periodState.canSendApproval && billingPeriod.amount_due_cents > 0 ? <BillingApprovalEmail schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} latestStatus={latestEmailStatusByPeriod.get(billingPeriod.id)} approvalStatus={latestApprovalByPeriod.get(billingPeriod.id)?.approval_status} approvedAt={latestApprovalByPeriod.get(billingPeriod.id)?.approved_at} /> : null}
+                  {canManagePayments && periodState.canSendApproval && billingPeriod.amount_due_cents > 0 ? <BillingApprovalEmail schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} latestStatus={latestEmailStatusByPeriod.get(billingPeriod.id)} latestRecipientEmail={latestEmailRecipientByPeriod.get(billingPeriod.id)} payerEmail={contact?.email ?? ""} approvalStatus={latestApprovalByPeriod.get(billingPeriod.id)?.approval_status} approvedAt={latestApprovalByPeriod.get(billingPeriod.id)?.approved_at} /> : null}
                   {canManagePayments && readinessByPeriod.get(billingPeriod.id)?.authorization_source === "active_mandate" ? <BillingStatementNotice schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} readiness={readinessByPeriod.get(billingPeriod.id)!.readiness} noticeDays={readinessByPeriod.get(billingPeriod.id)!.advance_notice_days!} /> : null}
                 </div>
               </details>
