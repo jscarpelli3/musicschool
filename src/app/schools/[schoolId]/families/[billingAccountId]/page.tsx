@@ -23,6 +23,7 @@ import { PaymentMethodRemove } from "./payment-method-remove";
 import { BillingAdjustmentForm, BillingAdjustmentRemove } from "./billing-adjustments";
 import { RecordLessonCalendar } from "@/components/calendar/record-lesson-calendar";
 import { schoolCalendarWindow } from "@/lib/calendar/school-calendar-window";
+import { MdExpandMore } from "react-icons/md";
 
 export const dynamic = "force-dynamic";
 
@@ -164,17 +165,17 @@ export default async function FamilyDetailPage({ params, searchParams }: {
         <div className="space-y-7">
           {canManagePayments ? <BillingDraftForm schoolId={schoolId} billingAccountId={billingAccountId} defaultMonth={currentMonth} /> : null}
           {billing && billingMessages[billing] ? <p role="status" className={`border-l-2 pl-4 text-sm leading-6 ${billing === "prepared" ? "border-brand text-ink" : "border-danger text-danger"}`}>{billingMessages[billing]}</p> : null}
-          <div className="space-y-1">
+          <div className="space-y-4">
           {(periodsResult.data ?? []).map((billingPeriod) => {
             const periodLines = linesByPeriod[billingPeriod.id] ?? [];
             const periodState = billingPeriodDescriptor(billingPeriod.status);
             return (
-              <details key={billingPeriod.id} open={billingPeriod.id === selectedPeriodId} className="border-b border-line py-5 first:pt-0">
-                <summary className="grid cursor-pointer list-none grid-cols-[1fr_auto] gap-4 marker:hidden">
-                  <div><p>{billingPeriod.label}</p><p className="mt-2 text-xs text-muted">{billingPeriod.period_start}–{billingPeriod.period_end} · <span>{periodState.label}</span> · {periodLines.length} lines</p></div>
-                  <div className="text-right"><p>{money(billingPeriod.amount_due_cents, billingPeriod.currency)}</p><p className="mt-2 text-xs text-muted">{money(paidByPeriod[billingPeriod.id] ?? 0, billingPeriod.currency)} paid</p></div>
+              <details key={billingPeriod.id} open={billingPeriod.id === selectedPeriodId} className="group rounded-card border border-line bg-surface p-5 transition open:border-brand/40 open:bg-surface-raised sm:p-6">
+                <summary className="grid cursor-pointer list-none grid-cols-[1fr_auto] items-start gap-4 marker:hidden">
+                  <div><p className="font-display text-2xl">{billingPeriod.label}</p><div className="mt-3 flex flex-wrap items-center gap-2 text-xs"><span className="rounded-full bg-brand/10 px-2.5 py-1 text-brand">{periodState.label}</span><span className="text-muted">{billingPeriod.period_start}–{billingPeriod.period_end}</span><span className="text-muted">· {periodLines.length} lines</span></div></div>
+                  <div className="flex items-start gap-3 text-right"><div><p className="text-lg">{money(billingPeriod.amount_due_cents, billingPeriod.currency)}</p><p className="mt-1 text-xs text-muted">{money(paidByPeriod[billingPeriod.id] ?? 0, billingPeriod.currency)} paid</p></div><MdExpandMore aria-hidden="true" className="mt-1 text-xl text-muted transition group-open:rotate-180" /></div>
                 </summary>
-                <div className="mt-5 border-l border-line pl-4 sm:pl-5">
+                <div className="mt-6 border-t border-line pt-2">
                   {periodLines.map((line) => {
                     const metadata = line.metadata && typeof line.metadata === "object" && !Array.isArray(line.metadata) ? line.metadata : {};
                     const disposition = "disposition" in metadata && typeof metadata.disposition === "string" ? metadata.disposition : line.source_type.replaceAll("_", " ");
