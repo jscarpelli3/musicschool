@@ -472,11 +472,17 @@ export async function retryBillingApprovalEmail(
     if (error) return { ok: false, message: "Resend accepted the retry, but local reconciliation failed. Do not retry again yet." };
   } catch (error) {
     const providerError = error instanceof ResendRequestError ? error : null;
+    const policyError = error instanceof EmailDeliveryPolicyError ? error : null;
     await admin.rpc("fail_email_provider_submission", {
       p_delivery_id: prepared.email_delivery_id,
-      p_provider_error_code: providerError?.code ?? (providerError?.status ? String(providerError.status) : undefined),
-      p_provider_error_message: providerError?.message ?? "Provider request failed.",
+      p_provider_error_code: providerError?.code ?? (providerError?.status ? String(providerError.status) : policyError?.code),
+      p_provider_error_message: providerError?.message ?? policyError?.message ?? (error instanceof Error ? error.message : "Provider request failed."),
     });
+    if (policyError?.code === "recipient_not_allowlisted") return { ok: false, message: "This payer email is not included in the staging email allowlist. Add it and redeploy before trying again." };
+    if (error instanceof Error && error.message.includes("RESEND_API_KEY")) return { ok: false, message: "Staging email delivery is not configured. Add a staging RESEND_API_KEY and redeploy before trying again." };
+    if (providerError?.status === 401 || providerError?.status === 403) return { ok: false, message: "Resend rejected the staging API key or its sending permission. Check the staging RESEND_API_KEY and redeploy." };
+    if (providerError?.status === 422) return { ok: false, message: `Resend rejected the email configuration${providerError.code ? ` (${providerError.code})` : ""}. Check that notifications.commontime.studio is verified for the staging Resend account.` };
+    if (providerError?.status === 429) return { ok: false, message: "Resend temporarily rate-limited this email. Wait a moment, then try again." };
     return { ok: false, message: "Resend did not accept the retry. The approval request remains pending and can be retried again." };
   }
   revalidatePath(path);
