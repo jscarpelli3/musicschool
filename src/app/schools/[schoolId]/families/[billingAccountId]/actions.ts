@@ -4,7 +4,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
-import { createFamilyCardSetup } from "@/lib/stripe/payment-methods";
+import { CardSetupWorkflowError, createFamilyCardSetup } from "@/lib/stripe/payment-methods";
 import { getStripe } from "@/lib/stripe/server";
 import { normalizeE164 } from "@/lib/phone";
 import { ensurePortalAuthIdentity } from "@/lib/portal/auth-identities";
@@ -583,6 +583,21 @@ export async function generateFamilyCardSetupLink(
     return { url, error: null };
   } catch (setupError) {
     console.error("Family card setup could not start", setupError);
+    if (setupError instanceof CardSetupWorkflowError) {
+      const messages: Record<CardSetupWorkflowError["stage"], string> = {
+        account: "The family or school Stripe connection is not ready for card setup.",
+        contact: "The primary payer record could not be loaded. Check the family’s payer details and try again.",
+        customer: "Stripe could not prepare this payer’s customer record. Check the staging Stripe connection and key.",
+        customer_record: "Stripe prepared the payer, but Common Time could not save the customer binding. Nothing was sent to the payer.",
+        setup_record: "Common Time could not record the card-setup request. Nothing was sent to Stripe Checkout.",
+        audit: "Card setup stopped because its required audit record could not be saved.",
+        checkout: "Stripe rejected the secure card-setup session. Check the staging Stripe logs for the matching Checkout request.",
+        checkout_record: "Stripe created the setup session, but Common Time could not save it. Do not retry until the failed setup record is reviewed.",
+      };
+      return { url: null, error: messages[setupError.stage] };
+    }
+    const message = setupError instanceof Error ? setupError.message : "";
+    if (message.includes("STRIPE_SECRET_KEY") || message.includes("STRIPE_MODE")) return { url: null, error: "The staging Stripe key or mode is missing or mismatched. No card information was collected." };
     return { url: null, error: "Secure card setup could not start. No card information was collected." };
   }
 }
