@@ -132,11 +132,11 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
             <RejectChargesForm token={token} />
           </>
         ) : (
-          <div className="border-l border-brand pl-5">
-            <p className="font-display text-3xl capitalize">{approval.approval_status}</p>
-            <p className="mt-2 text-sm text-muted">
+          <div className={`ui-card p-6 sm:p-7 ${approval.approval_status === "approved" ? "border border-brand/30" : ""}`}>
+            <p className="font-display text-3xl">{approval.approval_status === "approved" ? "Approved!" : approval.approval_status}</p>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
               {approval.approval_status === "approved"
-                ? "The school has your approval. This does not mean the payment has been processed."
+                ? `You approved ${approval.school_name} to charge ${money(approval.amount_cents, approval.currency)} to your card on file. The school can now collect this amount. Your card has not been charged yet.`
                 : "Contact the school if you need a new approval request."}
             </p>
           </div>
