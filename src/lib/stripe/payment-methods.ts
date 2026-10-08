@@ -7,7 +7,7 @@ import { getStripe, getStripeMode } from "@/lib/stripe/server";
 export const PAYMENT_METHOD_TERMS_VERSION = "off-session-approved-amounts-v1";
 
 export class CardSetupWorkflowError extends Error {
-  constructor(readonly stage: "account" | "contact" | "customer" | "customer_record" | "setup_record" | "audit" | "checkout" | "checkout_record", cause: unknown) {
+  constructor(readonly stage: "school_record" | "billing_account_record" | "billing_account_inactive" | "connection_record" | "connection_not_ready" | "contact" | "customer" | "customer_record" | "setup_record" | "audit" | "checkout" | "checkout_record", cause: unknown) {
     super(cause instanceof Error ? cause.message : "Card setup failed.", { cause });
     this.name = "CardSetupWorkflowError";
   }
@@ -37,15 +37,15 @@ export async function createFamilyCardSetup(schoolId: string, billingAccountId: 
     admin.from("school_payment_connections").select("id, provider_account_id, status, charges_enabled")
       .eq("school_id", schoolId).eq("provider", "stripe").eq("livemode", livemode).single(),
   ]);
-  if (schoolResult.error || accountResult.error || connectionResult.error) {
-    throw new CardSetupWorkflowError("account", schoolResult.error ?? accountResult.error ?? connectionResult.error);
-  }
+  if (schoolResult.error) throw new CardSetupWorkflowError("school_record", schoolResult.error);
+  if (accountResult.error) throw new CardSetupWorkflowError("billing_account_record", accountResult.error);
+  if (connectionResult.error) throw new CardSetupWorkflowError("connection_record", connectionResult.error);
   const school = schoolResult.data;
   const account = accountResult.data;
   const connection = connectionResult.data;
-  if (account.status !== "active") throw new CardSetupWorkflowError("account", new Error("This billing account is not active."));
+  if (account.status !== "active") throw new CardSetupWorkflowError("billing_account_inactive", new Error("This billing account is not active."));
   if (connection.status !== "enabled" || !connection.charges_enabled || !connection.provider_account_id) {
-    throw new CardSetupWorkflowError("account", new Error("The school's Stripe account is not ready to save payment methods."));
+    throw new CardSetupWorkflowError("connection_not_ready", new Error("The school's Stripe account is not ready to save payment methods."));
   }
 
   const { data: contact, error: contactError } = await admin.from("people")
