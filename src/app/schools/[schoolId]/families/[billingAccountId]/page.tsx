@@ -13,6 +13,7 @@ import { loadServiceEntitlements } from "@/lib/scheduling/service-entitlements";
 import { CardSetupControls } from "./card-setup-controls";
 import { BillingDraftForm } from "./billing-draft-form";
 import { BillingApprovalEmail } from "./billing-approval-email";
+import { BillingCollectionStatus } from "./billing-collection-status";
 import { BillingStatementNotice } from "./billing-statement-notice";
 import { BillingContactEmail } from "./billing-contact-email";
 import { BillingContactPhone } from "./billing-contact-phone";
@@ -103,6 +104,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     totals[attempt.billing_period_id] = (totals[attempt.billing_period_id] ?? 0) + attempt.amount_cents;
     return totals;
   }, {});
+  const hasActivePaymentMethod = (methodsResult.data ?? []).some((method) => method.status === "active");
   const capabilities = await loadMySchoolCapabilities(schoolId);
   const canManagePayments = capabilities.has("school.billing.manage");
   const readinessResults = canManagePayments ? await Promise.all(periodIds.map((billingPeriodId) =>
@@ -193,6 +195,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
                   {canManagePayments && billingPeriod.status === "locked" && !latestApprovalByPeriod.get(billingPeriod.id) ? <BillingPeriodUnlock schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
                   {canManagePayments && billingPeriod.status === "approval_pending" && latestApprovalByPeriod.get(billingPeriod.id)?.approval_status === "pending" ? <BillingPeriodRevise schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
                   {canManagePayments && periodState.canSendApproval && billingPeriod.amount_due_cents > 0 ? <BillingApprovalEmail schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} latestStatus={latestEmailStatusByPeriod.get(billingPeriod.id)} latestRecipientEmail={latestEmailRecipientByPeriod.get(billingPeriod.id)} payerEmail={contact?.email ?? ""} approvalStatus={latestApprovalByPeriod.get(billingPeriod.id)?.approval_status} approvedAt={latestApprovalByPeriod.get(billingPeriod.id)?.approved_at} /> : null}
+                  {canManagePayments && latestApprovalByPeriod.get(billingPeriod.id)?.approval_status === "approved" && billingPeriod.status !== "paid" ? <BillingCollectionStatus amount={money(billingPeriod.amount_due_cents, billingPeriod.currency)} hasPaymentMethod={hasActivePaymentMethod} /> : null}
                   {canManagePayments && readinessByPeriod.get(billingPeriod.id)?.authorization_source === "active_mandate" ? <BillingStatementNotice schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} readiness={readinessByPeriod.get(billingPeriod.id)!.readiness} noticeDays={readinessByPeriod.get(billingPeriod.id)!.advance_notice_days!} /> : null}
                 </div>
               </details>
@@ -203,7 +206,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
         </div>
       </DetailSection></div>
 
-      <DetailSection title="Payment methods" description="Safe provider references only. Common Time never stores card numbers or bank credentials.">
+      <div id="payment-methods" className="scroll-mt-6"><DetailSection title="Payment methods" description="Safe provider references only. Common Time never stores card numbers or bank credentials.">
         <div className="space-y-5">
           {card === "complete" ? <p className="border-l-2 border-brand pl-4 text-sm text-ink">Stripe received the setup. The saved method will appear here after verified webhook reconciliation.</p> : null}
           {card === "canceled" ? <p className="border-l-2 border-line pl-4 text-sm text-muted">Card setup was canceled. Nothing was saved.</p> : null}
@@ -213,7 +216,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
           {canManagePayments ? <CardSetupControls schoolId={schoolId} billingAccountId={billingAccountId} disabled={!stripeReady} /> : null}
           {canManagePayments && (setupRequestsResult.data ?? []).length ? <div className="border-t border-line pt-5"><p className="text-xs uppercase tracking-[0.14em] text-muted">Recent setup activity</p><div className="mt-3 space-y-2">{(setupRequestsResult.data ?? []).map((request) => <p key={request.id} className="flex justify-between gap-4 text-xs text-muted"><span>{new Date(request.created_at).toLocaleString()}</span><span className="uppercase text-brand">{request.status}</span></p>)}</div></div> : null}
         </div>
-      </DetailSection>
+      </DetailSection></div>
     </main>
   );
 }
