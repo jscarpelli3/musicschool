@@ -17,7 +17,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getTwilioMessagingServiceSid, sendTwilioMessage, TwilioRequestError } from "@/lib/twilio/server";
 
-export type CardSetupLinkState = { url: string | null; error: string | null };
+export type CardSetupLinkState = { url: string | null; error: string | null; recovery?: "payments" | null };
 export type BillingApprovalSmsState = { ok: boolean; message: string };
 export type BillingContactPhoneState = { ok: boolean; message: string };
 export type BillingApprovalEmailState = { ok: boolean; message: string };
@@ -575,17 +575,21 @@ export async function generateFamilyCardSetupLink(
   if (!profileId) redirect(`/login?next=${path}`);
 
   if (!await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) {
-    return { url: null, error: "You do not have permission to create a setup link." };
+    return { url: null, error: "You do not have permission to create a setup link.", recovery: null };
   }
 
   try {
     const url = await createFamilyCardSetup(schoolId, billingAccountId, profileId);
-    return { url, error: null };
+    return { url, error: null, recovery: null };
   } catch (setupError) {
     console.error("Family card setup could not start", setupError);
     if (setupError instanceof CardSetupWorkflowError) {
       const messages: Record<CardSetupWorkflowError["stage"], string> = {
-        account: "The family or school Stripe connection is not ready for card setup.",
+        school_record: "The school record could not be loaded for card setup. Nothing was sent to Stripe.",
+        billing_account_record: "This family billing account could not be loaded for card setup. Nothing was sent to Stripe.",
+        billing_account_inactive: "This family billing account is not active. Reactivate it before creating a card-setup link.",
+        connection_record: "No Stripe connection matching this deployment’s test/live mode was found for the school.",
+        connection_not_ready: "The matching Stripe connection is not fully enabled for payments yet.",
         contact: "The primary payer record could not be loaded. Check the family’s payer details and try again.",
         customer: "Stripe could not prepare this payer’s customer record. Check the staging Stripe connection and key.",
         customer_record: "Stripe prepared the payer, but Common Time could not save the customer binding. Nothing was sent to the payer.",
@@ -594,11 +598,11 @@ export async function generateFamilyCardSetupLink(
         checkout: "Stripe rejected the secure card-setup session. Check the staging Stripe logs for the matching Checkout request.",
         checkout_record: "Stripe created the setup session, but Common Time could not save it. Do not retry until the failed setup record is reviewed.",
       };
-      return { url: null, error: messages[setupError.stage] };
+      return { url: null, error: messages[setupError.stage], recovery: setupError.stage === "connection_record" || setupError.stage === "connection_not_ready" ? "payments" : null };
     }
     const message = setupError instanceof Error ? setupError.message : "";
-    if (message.includes("STRIPE_SECRET_KEY") || message.includes("STRIPE_MODE")) return { url: null, error: "The staging Stripe key or mode is missing or mismatched. No card information was collected." };
-    return { url: null, error: "Secure card setup could not start. No card information was collected." };
+    if (message.includes("STRIPE_SECRET_KEY") || message.includes("STRIPE_MODE")) return { url: null, error: "The staging Stripe key or mode is missing or mismatched. No card information was collected.", recovery: "payments" };
+    return { url: null, error: "Secure card setup could not start. No card information was collected.", recovery: null };
   }
 }
 

@@ -26,6 +26,7 @@ import { RecordLessonCalendar } from "@/components/calendar/record-lesson-calend
 import { schoolCalendarWindow } from "@/lib/calendar/school-calendar-window";
 import { MdExpandMore } from "react-icons/md";
 import { formatCompactDate } from "@/lib/date-format";
+import { getStripeMode } from "@/lib/stripe/server";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
 }) {
   const { schoolId, billingAccountId } = await params;
   const { card, billing, period: selectedPeriodId } = await searchParams;
+  const stripeLivemode = getStripeMode() === "live";
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
   const profileId = auth?.claims?.sub;
@@ -61,7 +63,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     supabase.from("billing_payment_methods").select("id, display_label, brand, last_four, exp_month, exp_year, is_default, status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("is_default", { ascending: false }),
     supabase.from("payment_attempts").select("billing_period_id, amount_cents, status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("status", "succeeded"),
     supabase.from("payment_method_setup_requests").select("id, status, expires_at, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }).limit(3),
-    supabase.from("school_payment_connections").select("status, charges_enabled").eq("school_id", schoolId).eq("provider", "stripe").maybeSingle(),
+    supabase.from("school_payment_connections").select("status, charges_enabled").eq("school_id", schoolId).eq("provider", "stripe").eq("livemode", stripeLivemode).maybeSingle(),
     supabase.from("billing_approval_requests").select("id, billing_period_id, approval_status, approved_at, rejected_at, rejection_reason_code, rejection_note, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
     supabase.from("email_deliveries").select("approval_request_id, recipient_email, status, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
     supabase.from("service_products").select("id,name").eq("school_id", schoolId),
