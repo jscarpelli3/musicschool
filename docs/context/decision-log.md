@@ -260,3 +260,10 @@ Use one entry per meaningful technical or product decision.
 - Context: Owners may want their workspace to feel distinct, but arbitrary color picking would weaken accessibility and make the interface difficult to maintain.
 - Decision: Offer a small set of complete, platform-defined light and dark palettes in School Setup. Apply each palette through the existing semantic tokens at the shared school layout, and permit only the school owner to change it.
 - Consequences: School routes can change atmosphere without route-specific color code. Contrast, typography, spacing, geometry, and interaction behavior remain controlled by Common Time.
+
+# 2026-10-09 — Make the verified family portal the payer entry point
+
+- Status: accepted
+- Context: Common Time promises that email links do not lead directly to card entry. Sending or encouraging owners to forward Stripe setup links would contradict that promise, even if a Common Time redirect technically hid the provider URL.
+- Decision: The school sends families to the ordinary Common Time portal. The payer verifies the email already attached to the family through the existing OTP flow; this first verification is their entry into the broader family experience and the same occasional authentication flow used later. When verified setup is needed, the portal presents payment setup first and launches Stripe only from inside the authenticated session. Keep a separately labeled payer-present setup on the owner screen, but do not offer emailed or copyable card-setup links.
+- Consequences: Portal authorization—not possession of a card-setup bearer URL—gates remote payment setup. Families without an email must add one before remote portal access is possible. Saving a card remains separate from statement approval and automatic-payment authorization.

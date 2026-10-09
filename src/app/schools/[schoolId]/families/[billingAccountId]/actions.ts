@@ -590,6 +590,7 @@ export async function generateFamilyCardSetupLink(
         billing_account_inactive: "This family billing account is not active. Reactivate it before creating a card-setup link.",
         connection_record: "No Stripe connection matching this deployment’s test/live mode was found for the school.",
         connection_not_ready: "The matching Stripe connection is not fully enabled for payments yet.",
+        method_limit: "This family already has three active payment methods. Remove one before adding another.",
         contact: "The primary payer record could not be loaded. Check the family’s payer details and try again.",
         customer: "Stripe could not prepare this payer’s customer record. Check the staging Stripe connection and key.",
         customer_record: "Stripe prepared the payer, but Common Time could not save the customer binding. Nothing was sent to the payer.",
@@ -604,6 +605,35 @@ export async function generateFamilyCardSetupLink(
     if (message.includes("STRIPE_SECRET_KEY") || message.includes("STRIPE_MODE")) return { url: null, error: "The staging Stripe key or mode is missing or mismatched. No card information was collected.", recovery: "payments" };
     return { url: null, error: "Secure card setup could not start. No card information was collected.", recovery: null };
   }
+}
+
+export async function setDefaultFamilyPaymentMethod(schoolId: string, billingAccountId: string, paymentMethodId: string) {
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId) return { ok: false, message: "Sign in again before changing the default card." };
+  const [{ data: method }, canManage] = await Promise.all([
+    supabase.from("billing_payment_methods").select("id,status,is_default").eq("id", paymentMethodId).eq("school_id", schoolId).eq("billing_account_id", billingAccountId).maybeSingle(),
+    checkSchoolCapability(supabase, schoolId, "school.billing.manage"),
+  ]);
+  if (!canManage || !method || method.status !== "active") return { ok: false, message: "This payment method cannot be made the default." };
+  if (method.is_default) return { ok: true, message: "This card is already the default." };
+
+  const admin = createAdminClient();
+  const { error } = await admin.rpc("set_default_billing_payment_method", { p_payment_method_id: paymentMethodId });
+  if (error) return { ok: false, message: "The default card could not be changed. Nothing changed." };
+  const { error: auditError } = await admin.from("audit_log").insert({
+    school_id: schoolId,
+    actor_profile_id: profileId,
+    action: "payment_method.default_changed",
+    entity_type: "billing_payment_method",
+    entity_id: paymentMethodId,
+    metadata: { billing_account_id: billingAccountId },
+  });
+  if (auditError) return { ok: false, message: "The default changed, but its audit entry needs reconciliation." };
+  revalidatePath(path);
+  return { ok: true, message: "Default card updated. Existing automatic-payment permission remains tied to its originally authorized card." };
 }
 
 export async function removeFamilyPaymentMethod(schoolId: string, billingAccountId: string, paymentMethodId: string) {
