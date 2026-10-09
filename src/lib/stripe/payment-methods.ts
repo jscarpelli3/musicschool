@@ -7,7 +7,7 @@ import { getStripe, getStripeMode } from "@/lib/stripe/server";
 export const PAYMENT_METHOD_TERMS_VERSION = "off-session-approved-amounts-v1";
 
 export class CardSetupWorkflowError extends Error {
-  constructor(readonly stage: "school_record" | "billing_account_record" | "billing_account_inactive" | "connection_record" | "connection_not_ready" | "contact" | "customer" | "customer_record" | "setup_record" | "audit" | "checkout" | "checkout_record", cause: unknown) {
+  constructor(readonly stage: "school_record" | "billing_account_record" | "billing_account_inactive" | "connection_record" | "connection_not_ready" | "method_limit" | "contact" | "customer" | "customer_record" | "setup_record" | "audit" | "checkout" | "checkout_record", cause: unknown) {
     super(cause instanceof Error ? cause.message : "Card setup failed.", { cause });
     this.name = "CardSetupWorkflowError";
   }
@@ -47,6 +47,10 @@ export async function createFamilyCardSetup(schoolId: string, billingAccountId: 
   if (connection.status !== "enabled" || !connection.charges_enabled || !connection.provider_account_id) {
     throw new CardSetupWorkflowError("connection_not_ready", new Error("The school's Stripe account is not ready to save payment methods."));
   }
+  const { count: activeMethodCount, error: activeMethodCountError } = await admin.from("billing_payment_methods")
+    .select("id", { count: "exact", head: true }).eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("status", "active");
+  if (activeMethodCountError) throw new CardSetupWorkflowError("billing_account_record", activeMethodCountError);
+  if ((activeMethodCount ?? 0) >= 3) throw new CardSetupWorkflowError("method_limit", new Error("This family already has three active payment methods."));
 
   const { data: contact, error: contactError } = await admin.from("people")
     .select("first_name, last_name, preferred_name, email, phone")

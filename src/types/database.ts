@@ -5210,6 +5210,10 @@ export type Database = {
         }
         Returns: string
       }
+      set_default_billing_payment_method: {
+        Args: { p_payment_method_id: string }
+        Returns: undefined
+      }
       complete_sms_provider_submission: {
         Args: {
           p_delivery_id: string
