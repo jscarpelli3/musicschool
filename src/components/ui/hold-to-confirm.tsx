@@ -17,6 +17,8 @@ type HoldToConfirmProps = {
   onBusyChange?: (busy: boolean) => void;
   onSuccess?: () => void;
   refreshOnSuccess?: boolean;
+  compact?: boolean;
+  centered?: boolean;
 };
 
 export function HoldToConfirm({
@@ -32,6 +34,8 @@ export function HoldToConfirm({
   onBusyChange,
   onSuccess,
   refreshOnSuccess = false,
+  compact = false,
+  centered = false,
 }: HoldToConfirmProps) {
   const router = useRouter();
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -98,7 +102,7 @@ export function HoldToConfirm({
     <div>
       <button
         type="button"
-        className="hold-confirm w-full px-5 py-5 text-left text-sm"
+        className={`hold-confirm w-full text-sm ${compact ? "px-4 py-3" : "px-5 py-5"} ${centered ? "text-center" : "text-left"}`}
         style={{ "--hold-duration": `${duration}ms` } as CSSProperties}
         data-state={state}
         disabled={buttonDisabled}
