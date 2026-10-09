@@ -13,6 +13,7 @@ import { loadServiceEntitlements } from "@/lib/scheduling/service-entitlements";
 import { CardSetupControls } from "./card-setup-controls";
 import { BillingDraftForm } from "./billing-draft-form";
 import { BillingApprovalEmail } from "./billing-approval-email";
+import { BillingCollectionStatus } from "./billing-collection-status";
 import { BillingStatementNotice } from "./billing-statement-notice";
 import { BillingContactEmail } from "./billing-contact-email";
 import { BillingContactPhone } from "./billing-contact-phone";
@@ -20,9 +21,14 @@ import { BillingPeriodLock } from "./billing-period-lock";
 import { BillingPeriodUnlock } from "./billing-period-unlock";
 import { BillingPeriodRevise } from "./billing-period-revise";
 import { PaymentMethodRemove } from "./payment-method-remove";
+import { PaymentMethodDefault } from "./payment-method-default";
 import { BillingAdjustmentForm, BillingAdjustmentRemove } from "./billing-adjustments";
+import { BillingArchive } from "./billing-archive";
 import { RecordLessonCalendar } from "@/components/calendar/record-lesson-calendar";
 import { schoolCalendarWindow } from "@/lib/calendar/school-calendar-window";
+import { MdExpandMore } from "react-icons/md";
+import { calendarMonthCutoff, formatCompactDate } from "@/lib/date-format";
+import { getStripeMode } from "@/lib/stripe/server";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +42,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
 }) {
   const { schoolId, billingAccountId } = await params;
   const { card, billing, period: selectedPeriodId } = await searchParams;
+  const stripeLivemode = getStripeMode() === "live";
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
   const profileId = auth?.claims?.sub;
@@ -50,24 +57,26 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   if (failedInitial?.error) throw new Error(`Family detail could not load: ${failedInitial.error.message}`);
   const [{ data: school }, { data: membership }, { data: account }] = initial;
   if (!school || !membership || !account) notFound();
+  const archiveCutoff = calendarMonthCutoff(school.timezone, 6);
 
   const related = await Promise.all([
     supabase.from("people").select("id, first_name, last_name, preferred_name, email, phone, status").eq("school_id", schoolId),
     supabase.from("billing_account_students").select("student_id").eq("school_id", schoolId).eq("billing_account_id", billingAccountId),
-    supabase.from("billing_periods").select("id, label, period_start, period_end, status, amount_due_cents, currency").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("period_start", { ascending: false }).limit(12),
+    supabase.from("billing_periods").select("id, label, period_start, period_end, status, amount_due_cents, currency, paid_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).or(`status.neq.paid,period_end.gte.${archiveCutoff}`).order("period_start", { ascending: false }).limit(24),
+    supabase.from("billing_periods").select("id, label, period_start, period_end, status, amount_due_cents, currency, paid_at", { count: "exact" }).eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("status", "paid").lt("period_end", archiveCutoff).order("period_start", { ascending: false }).limit(50),
     supabase.from("billing_payment_methods").select("id, display_label, brand, last_four, exp_month, exp_year, is_default, status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("is_default", { ascending: false }),
-    supabase.from("payment_attempts").select("billing_period_id, amount_cents, status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("status", "succeeded"),
+    supabase.from("payment_attempts").select("id, billing_period_id, amount_cents, status, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
     supabase.from("payment_method_setup_requests").select("id, status, expires_at, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }).limit(3),
-    supabase.from("school_payment_connections").select("status, charges_enabled").eq("school_id", schoolId).eq("provider", "stripe").maybeSingle(),
+    supabase.from("school_payment_connections").select("status, charges_enabled").eq("school_id", schoolId).eq("provider", "stripe").eq("livemode", stripeLivemode).maybeSingle(),
     supabase.from("billing_approval_requests").select("id, billing_period_id, approval_status, approved_at, rejected_at, rejection_reason_code, rejection_note, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
-    supabase.from("email_deliveries").select("approval_request_id, status, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
+    supabase.from("email_deliveries").select("approval_request_id, recipient_email, status, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
     supabase.from("service_products").select("id,name").eq("school_id", schoolId),
     supabase.from("lesson_places").select("id,name").eq("school_id", schoolId),
   ]);
   const failedRelated = related.find((result) => result.error);
   if (failedRelated?.error) throw new Error(`Family detail could not load: ${failedRelated.error.message}`);
-  const [peopleResult, studentsResult, periodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult, productsResult, placesResult] = related;
-  const periodIds = (periodsResult.data ?? []).map((period) => period.id);
+  const [peopleResult, studentsResult, periodsResult, archivedPeriodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult, productsResult, placesResult] = related;
+  const periodIds = [...(periodsResult.data ?? []), ...(archivedPeriodsResult.data ?? [])].map((period) => period.id);
   const { data: lineItems, error: lineItemsError } = periodIds.length
     ? await supabase.from("billing_line_items")
       .select("id, billing_period_id, description, service_date, amount_cents, metadata, source_type")
@@ -91,10 +100,20 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   const products = new Map((productsResult.data ?? []).map((product) => [product.id, product.name]));
   const places = new Map((placesResult.data ?? []).map((place) => [place.id, place.name]));
   const money = (cents: number, currency: string) => new Intl.NumberFormat("en-US", { style: "currency", currency }).format(cents / 100);
-  const paidByPeriod = (attemptsResult.data ?? []).reduce<Record<string, number>>((totals, attempt) => {
+  const lineServiceWhen = (line: { source_type: string; service_date: string | null; metadata: unknown }) => {
+    if (line.source_type !== "lesson" || !line.metadata || typeof line.metadata !== "object" || Array.isArray(line.metadata)) return line.service_date ?? "Period adjustment";
+    const startsAt = "operational_starts_at" in line.metadata && typeof line.metadata.operational_starts_at === "string" ? line.metadata.operational_starts_at : null;
+    if (!startsAt || Number.isNaN(new Date(startsAt).getTime())) return line.service_date ?? "Lesson";
+    return new Intl.DateTimeFormat("en-US", { timeZone: school.timezone, weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(startsAt));
+  };
+  const paidByPeriod = (attemptsResult.data ?? []).filter((attempt) => attempt.status === "succeeded").reduce<Record<string, number>>((totals, attempt) => {
     totals[attempt.billing_period_id] = (totals[attempt.billing_period_id] ?? 0) + attempt.amount_cents;
     return totals;
   }, {});
+  const latestAttemptByPeriod = new Map<string, (typeof attemptsResult.data extends (infer T)[] | null ? T : never)>();
+  for (const attempt of attemptsResult.data ?? []) if (!latestAttemptByPeriod.has(attempt.billing_period_id)) latestAttemptByPeriod.set(attempt.billing_period_id, attempt);
+  const hasActivePaymentMethod = (methodsResult.data ?? []).some((method) => method.status === "active");
+  const activePaymentMethodCount = (methodsResult.data ?? []).filter((method) => method.status === "active").length;
   const capabilities = await loadMySchoolCapabilities(schoolId);
   const canManagePayments = capabilities.has("school.billing.manage");
   const readinessResults = canManagePayments ? await Promise.all(periodIds.map((billingPeriodId) =>
@@ -126,9 +145,13 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   const latestApprovalByPeriod = new Map<string, (typeof approvalRequestsResult.data extends (infer T)[] | null ? T : never)>();
   for (const request of approvalRequestsResult.data ?? []) if (request.billing_period_id && !latestApprovalByPeriod.has(request.billing_period_id)) latestApprovalByPeriod.set(request.billing_period_id, request);
   const latestEmailStatusByPeriod = new Map<string, string>();
+  const latestEmailRecipientByPeriod = new Map<string, string>();
   for (const delivery of emailDeliveriesResult.data ?? []) {
     const billingPeriodId = periodByApprovalRequest.get(delivery.approval_request_id);
-    if (billingPeriodId && !latestEmailStatusByPeriod.has(billingPeriodId)) latestEmailStatusByPeriod.set(billingPeriodId, delivery.status);
+    if (billingPeriodId && !latestEmailStatusByPeriod.has(billingPeriodId)) {
+      latestEmailStatusByPeriod.set(billingPeriodId, delivery.status);
+      latestEmailRecipientByPeriod.set(billingPeriodId, delivery.recipient_email);
+    }
   }
 
   return (
@@ -139,8 +162,8 @@ export default async function FamilyDetailPage({ params, searchParams }: {
       {entitlements.length?<DetailSection title="Lessons to schedule" description="Paid replacement lessons still owed to this family."><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} compact/></DetailSection>:null}
 
       <section className="ui-card mt-6 p-6 md:p-8">
-        <div className="mb-7"><h2 className="font-display text-3xl">Family lesson calendar</h2><p className="mt-3 text-sm leading-6 text-muted">Lessons for every student on this account, across the current and next two months.</p></div>
-        <RecordLessonCalendar schoolId={schoolId} id={`family-${billingAccountId}-calendar`} lessons={(familyLessons ?? []).map((lesson) => { const studentPerson = people.get(lesson.student_id); const teacherPerson = people.get(lesson.teacher_id); return { id: lesson.id, studentId: lesson.student_id, studentName: studentPerson ? name(studentPerson) : "Student", teacherId: lesson.teacher_id, teacherName: teacherPerson ? name(teacherPerson) : "Unassigned teacher", productName: products.get(lesson.product_id) ?? "Lesson", placeName: places.get(lesson.actual_place_id ?? lesson.place_id) ?? "Unassigned place", startsAt: lesson.actual_starts_at ?? lesson.starts_at, endsAt: lesson.actual_ends_at ?? lesson.ends_at, status: lesson.outcome ?? lesson.status }; })} rangeStart={calendarStart} rangeEnd={calendarEnd} timeZone={school.timezone} />
+        <div className="mb-7"><h2 className="font-display text-3xl">Family lesson calendar</h2><p className="mt-3 text-sm leading-6 text-muted">Lessons for every student on this account. Move between months without leaving the record.</p></div>
+        <RecordLessonCalendar schoolId={schoolId} id={`family-${billingAccountId}-calendar`} lessons={(familyLessons ?? []).map((lesson) => { const studentPerson = people.get(lesson.student_id); const teacherPerson = people.get(lesson.teacher_id); return { id: lesson.id, studentId: lesson.student_id, studentName: studentPerson ? name(studentPerson) : "Student", teacherId: lesson.teacher_id, teacherName: teacherPerson ? name(teacherPerson) : "Unassigned teacher", productName: products.get(lesson.product_id) ?? "Lesson", placeName: places.get(lesson.actual_place_id ?? lesson.place_id) ?? "Unassigned place", startsAt: lesson.actual_starts_at ?? lesson.starts_at, endsAt: lesson.actual_ends_at ?? lesson.ends_at, status: lesson.outcome ?? lesson.status, billingAccounts: [{ id: billingAccountId, name: account.name }] }; })} rangeStart={calendarStart} rangeEnd={calendarEnd} timeZone={school.timezone} />
       </section>
 
       <DetailSection title="Primary payer" description="The person currently responsible for this billing account.">
@@ -154,25 +177,25 @@ export default async function FamilyDetailPage({ params, searchParams }: {
         </div>
       </DetailSection>
 
-      <DetailSection title="Billing history" description="Durable monthly billing periods. Draft amounts remain visibly distinct from paid provider truth.">
+      <div id="billing-history" className="scroll-mt-6"><DetailSection title="Billing history" description="Durable monthly billing periods. Draft amounts remain visibly distinct from paid provider truth.">
         <div className="space-y-7">
           {canManagePayments ? <BillingDraftForm schoolId={schoolId} billingAccountId={billingAccountId} defaultMonth={currentMonth} /> : null}
           {billing && billingMessages[billing] ? <p role="status" className={`border-l-2 pl-4 text-sm leading-6 ${billing === "prepared" ? "border-brand text-ink" : "border-danger text-danger"}`}>{billingMessages[billing]}</p> : null}
-          <div className="space-y-1">
+          <div className="space-y-4">
           {(periodsResult.data ?? []).map((billingPeriod) => {
             const periodLines = linesByPeriod[billingPeriod.id] ?? [];
             const periodState = billingPeriodDescriptor(billingPeriod.status);
             return (
-              <details key={billingPeriod.id} open={billingPeriod.id === selectedPeriodId} className="border-b border-line py-5 first:pt-0">
-                <summary className="grid cursor-pointer list-none grid-cols-[1fr_auto] gap-4 marker:hidden">
-                  <div><p>{billingPeriod.label}</p><p className="mt-2 text-xs text-muted">{billingPeriod.period_start}–{billingPeriod.period_end} · <span>{periodState.label}</span> · {periodLines.length} lines</p></div>
-                  <div className="text-right"><p>{money(billingPeriod.amount_due_cents, billingPeriod.currency)}</p><p className="mt-2 text-xs text-muted">{money(paidByPeriod[billingPeriod.id] ?? 0, billingPeriod.currency)} paid</p></div>
+              <details key={billingPeriod.id} open={billingPeriod.id === selectedPeriodId} className={`group rounded-card border p-5 transition sm:p-6 ${billingPeriod.status === "paid" ? "border-line/60 bg-surface/50 opacity-60 hover:opacity-80 open:opacity-80" : "border-line bg-surface open:border-brand/40 open:bg-surface-raised"}`}>
+                <summary className="grid cursor-pointer list-none grid-cols-[1fr_auto] items-start gap-4 marker:hidden">
+                  <div><p className="font-display text-2xl">{billingPeriod.label}</p><div className="mt-3 flex flex-wrap items-center gap-2 text-xs"><span className="rounded-full bg-brand/10 px-2.5 py-1 text-brand">{periodState.label}</span><span className="text-muted">{formatCompactDate(billingPeriod.period_start)}–{formatCompactDate(billingPeriod.period_end)}</span><span className="text-muted">· {periodLines.length} lines</span></div></div>
+                  <div className="flex items-start gap-3 text-right"><div><p className="text-lg">{money(billingPeriod.amount_due_cents, billingPeriod.currency)}</p><p className="mt-1 text-xs text-muted">{money(paidByPeriod[billingPeriod.id] ?? 0, billingPeriod.currency)} paid</p></div><MdExpandMore aria-hidden="true" className="mt-1 text-xl text-muted transition group-open:rotate-180" /></div>
                 </summary>
-                <div className="mt-5 border-l border-line pl-4 sm:pl-5">
+                <div className="mt-6 border-t border-line pt-2">
                   {periodLines.map((line) => {
                     const metadata = line.metadata && typeof line.metadata === "object" && !Array.isArray(line.metadata) ? line.metadata : {};
                     const disposition = "disposition" in metadata && typeof metadata.disposition === "string" ? metadata.disposition : line.source_type.replaceAll("_", " ");
-                    return <div key={line.id} className="grid gap-2 border-t border-line py-4 first:border-t-0 sm:grid-cols-[1fr_auto] sm:gap-6"><div><p className="text-sm">{line.description}</p><p className="mt-1 text-xs text-muted">{line.service_date ?? "Period adjustment"} · <span className="uppercase">{line.source_type === "manual_adjustment" ? "owner adjustment" : disposition}</span></p>{canManagePayments && periodState.editable && line.source_type === "manual_adjustment" ? <div className="mt-2"><BillingAdjustmentRemove schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} adjustmentId={line.id} /></div> : null}</div><p className={`text-sm sm:text-right ${(line.amount_cents ?? 0) < 0 ? "text-brand" : ""}`}>{money(line.amount_cents ?? 0, billingPeriod.currency)}</p></div>;
+                    return <div key={line.id} className="grid gap-2 border-t border-line py-4 first:border-t-0 sm:grid-cols-[1fr_auto] sm:gap-6"><div><p className="text-sm">{line.description}</p><p className="mt-1 text-xs text-muted">{lineServiceWhen(line)} · <span className="uppercase">{line.source_type === "manual_adjustment" ? "owner adjustment" : disposition}</span></p>{canManagePayments && periodState.editable && line.source_type === "manual_adjustment" ? <div className="mt-2"><BillingAdjustmentRemove schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} adjustmentId={line.id} /></div> : null}</div><p className={`text-sm sm:text-right ${(line.amount_cents ?? 0) < 0 ? "text-brand" : ""}`}>{money(line.amount_cents ?? 0, billingPeriod.currency)}</p></div>;
                   })}
                   {!periodLines.length ? <EmptyDetail>No line items are recorded.</EmptyDetail> : null}
                   {latestApprovalByPeriod.get(billingPeriod.id)?.approval_status === "rejected" ? <div className="my-5 border border-danger/50 p-5"><p className="text-xs uppercase tracking-[0.14em] text-danger">Payer requested review</p><p className="mt-3 text-sm">{({ lesson_did_not_happen: "A lesson did not happen", wrong_lesson_or_date: "A lesson or date is wrong", wrong_amount: "An amount is wrong", missing_credit: "A credit or discount is missing", duplicate_charge: "A charge appears twice", other: "Other" } as Record<string, string>)[latestApprovalByPeriod.get(billingPeriod.id)?.rejection_reason_code ?? ""] ?? "Charges need review"}</p>{latestApprovalByPeriod.get(billingPeriod.id)?.rejection_note ? <p className="mt-2 text-sm leading-6 text-muted">“{latestApprovalByPeriod.get(billingPeriod.id)?.rejection_note}”</p> : null}</div> : null}
@@ -180,28 +203,30 @@ export default async function FamilyDetailPage({ params, searchParams }: {
                   {canManagePayments && periodState.editable && billingPeriod.amount_due_cents > 0 ? <div className="border-t border-line pt-5"><p className="max-w-lg text-xs leading-5 text-muted">Lock only after reviewing every line. Locking freezes this exact amount for the separate payer-approval step.</p><BillingPeriodLock schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /></div> : null}
                   {canManagePayments && billingPeriod.status === "locked" && !latestApprovalByPeriod.get(billingPeriod.id) ? <BillingPeriodUnlock schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
                   {canManagePayments && billingPeriod.status === "approval_pending" && latestApprovalByPeriod.get(billingPeriod.id)?.approval_status === "pending" ? <BillingPeriodRevise schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
-                  {canManagePayments && periodState.canSendApproval && billingPeriod.amount_due_cents > 0 ? <BillingApprovalEmail schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} latestStatus={latestEmailStatusByPeriod.get(billingPeriod.id)} approvalStatus={latestApprovalByPeriod.get(billingPeriod.id)?.approval_status} approvedAt={latestApprovalByPeriod.get(billingPeriod.id)?.approved_at} /> : null}
+                  {canManagePayments && periodState.canSendApproval && billingPeriod.amount_due_cents > 0 ? <BillingApprovalEmail schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} latestStatus={latestEmailStatusByPeriod.get(billingPeriod.id)} latestRecipientEmail={latestEmailRecipientByPeriod.get(billingPeriod.id)} payerEmail={contact?.email ?? ""} approvalStatus={latestApprovalByPeriod.get(billingPeriod.id)?.approval_status} approvedAt={latestApprovalByPeriod.get(billingPeriod.id)?.approved_at} /> : null}
+                  {canManagePayments && latestApprovalByPeriod.get(billingPeriod.id)?.approval_status === "approved" && billingPeriod.status !== "paid" ? <BillingCollectionStatus schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} amount={money(billingPeriod.amount_due_cents, billingPeriod.currency)} hasPaymentMethod={hasActivePaymentMethod} readiness={readinessByPeriod.get(billingPeriod.id)?.readiness ?? null} attemptStatus={latestAttemptByPeriod.get(billingPeriod.id)?.status ?? null} /> : null}
                   {canManagePayments && readinessByPeriod.get(billingPeriod.id)?.authorization_source === "active_mandate" ? <BillingStatementNotice schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} readiness={readinessByPeriod.get(billingPeriod.id)!.readiness} noticeDays={readinessByPeriod.get(billingPeriod.id)!.advance_notice_days!} /> : null}
                 </div>
               </details>
             );
           })}
-          {!(periodsResult.data ?? []).length ? <EmptyDetail>No billing periods have been prepared.</EmptyDetail> : null}
+          {archivedPeriodsResult.count ? <div className="pt-1"><BillingArchive periods={(archivedPeriodsResult.data ?? []).map((archived) => ({ id: archived.id, label: archived.label, period_start: archived.period_start, period_end: archived.period_end, amount_due_cents: archived.amount_due_cents, currency: archived.currency, paid_at: archived.paid_at }))} lines={billingLines.filter((line) => (archivedPeriodsResult.data ?? []).some((archived) => archived.id === line.billing_period_id)).map((line) => ({ id: line.id, billing_period_id: line.billing_period_id, description: line.description, service_label: lineServiceWhen(line), amount_cents: line.amount_cents ?? 0 }))} totalCount={archivedPeriodsResult.count} /></div> : null}
+          {!(periodsResult.data ?? []).length && !archivedPeriodsResult.count ? <EmptyDetail>No billing periods have been prepared.</EmptyDetail> : null}
           </div>
         </div>
-      </DetailSection>
+      </DetailSection></div>
 
-      <DetailSection title="Payment methods" description="Safe provider references only. Common Time never stores card numbers or bank credentials.">
+      <div id="payment-methods" className="scroll-mt-6"><DetailSection title="Payment methods" description="Safe provider references only. Common Time never stores card numbers or bank credentials.">
         <div className="space-y-5">
           {card === "complete" ? <p className="border-l-2 border-brand pl-4 text-sm text-ink">Stripe received the setup. The saved method will appear here after verified webhook reconciliation.</p> : null}
           {card === "canceled" ? <p className="border-l-2 border-line pl-4 text-sm text-muted">Card setup was canceled. Nothing was saved.</p> : null}
           {card === "error" ? <p className="border-l-2 border-danger pl-4 text-sm text-danger">Secure card setup could not start. No card information was collected.</p> : null}
-          {(methodsResult.data ?? []).map((method) => <div key={method.id} className="grid gap-4 border-b border-line pb-5 last:border-0 sm:grid-cols-[1fr_auto]"><div><p className="capitalize">{method.brand ?? "Payment method"}{method.last_four ? ` ending in ${method.last_four}` : ""}</p>{method.exp_month && method.exp_year ? <p className="mt-2 text-xs text-muted">Expires {method.exp_month}/{method.exp_year}</p> : null}<span className="mt-3 block text-xs uppercase tracking-[0.14em] text-brand">{method.is_default ? "Default" : method.status}</span></div>{canManagePayments && method.status !== "detached" ? <div className="w-full sm:w-48"><PaymentMethodRemove schoolId={schoolId} billingAccountId={billingAccountId} paymentMethodId={method.id} /></div> : null}</div>)}
+          {(methodsResult.data ?? []).map((method) => <div key={method.id} className="grid gap-4 border-b border-line pb-5 last:border-0 sm:grid-cols-[1fr_auto]"><div><p className="capitalize">{method.brand ?? "Payment method"}{method.last_four ? ` ending in ${method.last_four}` : ""}</p>{method.exp_month && method.exp_year ? <p className="mt-2 text-xs text-muted">Expires {method.exp_month}/{method.exp_year}</p> : null}<span className="mt-3 block text-xs uppercase tracking-[0.14em] text-brand">{method.is_default ? "Default" : method.status}</span></div>{canManagePayments && method.status !== "detached" ? <div className="grid w-full gap-3 sm:w-40">{method.status === "active" && !method.is_default ? <PaymentMethodDefault schoolId={schoolId} billingAccountId={billingAccountId} paymentMethodId={method.id} /> : null}<PaymentMethodRemove schoolId={schoolId} billingAccountId={billingAccountId} paymentMethodId={method.id} /></div> : null}</div>)}
           {!(methodsResult.data ?? []).length ? <EmptyDetail>No payment method has been set up.</EmptyDetail> : null}
-          {canManagePayments ? <CardSetupControls schoolId={schoolId} billingAccountId={billingAccountId} disabled={!stripeReady} /> : null}
+          {canManagePayments ? <CardSetupControls schoolId={schoolId} billingAccountId={billingAccountId} activeMethodCount={activePaymentMethodCount} disabled={!stripeReady} /> : null}
           {canManagePayments && (setupRequestsResult.data ?? []).length ? <div className="border-t border-line pt-5"><p className="text-xs uppercase tracking-[0.14em] text-muted">Recent setup activity</p><div className="mt-3 space-y-2">{(setupRequestsResult.data ?? []).map((request) => <p key={request.id} className="flex justify-between gap-4 text-xs text-muted"><span>{new Date(request.created_at).toLocaleString()}</span><span className="uppercase text-brand">{request.status}</span></p>)}</div></div> : null}
         </div>
-      </DetailSection>
+      </DetailSection></div>
     </main>
   );
 }

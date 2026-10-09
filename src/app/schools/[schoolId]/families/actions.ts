@@ -33,6 +33,7 @@ export async function addStudentAndPayer(schoolId: string, _state: AddFamilyStat
     revalidatePath(`/schools/${schoolId}`);
     revalidatePath(`/schools/${schoolId}/students`);
     revalidatePath(`/schools/${schoolId}/families`);
+    revalidatePath(`/schools/${schoolId}/onboarding`);
     return { ok: true, message: "Student and payer added." };
   } catch {
     return { ok: false, message: "The student and payer could not be prepared. Nothing was partially created; try again." };

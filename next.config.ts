@@ -10,6 +10,10 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Browser acceptance tests build beside an active local dev server. Keeping
+  // their output separate prevents concurrent Next processes from sharing and
+  // corrupting the same build directory.
+  distDir: process.env.NEXT_DIST_DIR ?? ".next",
   experimental: {
     // Avatar uploads accept 5 MB images. Multipart encoding adds a small amount
     // of overhead to the raw file size before the Server Action receives it.

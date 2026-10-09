@@ -4,26 +4,66 @@ import { createHash, randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
-import { createFamilyCardSetup } from "@/lib/stripe/payment-methods";
+import { CardSetupWorkflowError, createFamilyCardSetup } from "@/lib/stripe/payment-methods";
 import { getStripe } from "@/lib/stripe/server";
+import { collectApprovedInvoice } from "@/lib/stripe/invoice-collection";
 import { normalizeE164 } from "@/lib/phone";
 import { ensurePortalAuthIdentity } from "@/lib/portal/auth-identities";
 import { billingApprovalEmail } from "@/lib/resend/billing-approval-email";
 import { billingStatementNoticeEmail } from "@/lib/resend/billing-statement-notice-email";
 import { normalizeReplyTo, schoolEmailSender } from "@/lib/resend/email-security";
-import { ResendRequestError, ResendUnknownOutcomeError, sendResendEmail } from "@/lib/resend/server";
+import { EmailDeliveryPolicyError, ResendRequestError, ResendUnknownOutcomeError, sendResendEmail } from "@/lib/resend/server";
 import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getTwilioMessagingServiceSid, sendTwilioMessage, TwilioRequestError } from "@/lib/twilio/server";
 
-export type CardSetupLinkState = { url: string | null; error: string | null };
+export type CardSetupLinkState = { url: string | null; error: string | null; recovery?: "payments" | null };
 export type BillingApprovalSmsState = { ok: boolean; message: string };
 export type BillingContactPhoneState = { ok: boolean; message: string };
 export type BillingApprovalEmailState = { ok: boolean; message: string };
 export type BillingStatementNoticeState = { ok: boolean; message: string };
 export type BillingContactEmailState = { ok: boolean; message: string };
 export type BillingAdjustmentState = { ok: boolean; message: string };
+
+export async function collectFamilyInvoice(schoolId: string, billingAccountId: string, billingPeriodId: string) {
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId) return { ok: false, message: "Sign in again before collecting this payment." };
+  if (!await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) return { ok: false, message: "You do not have permission to collect this payment." };
+  try {
+    await protectServerAction({ scope: "billing.invoice.collect", subject: `actor:${profileId}|school:${schoolId}|period:${billingPeriodId}`, limit: 3, windowSeconds: 3600 });
+    const { data: readiness, error } = await supabase.rpc("get_billing_collection_readiness", {
+      p_school_id: schoolId,
+      p_billing_period_id: billingPeriodId,
+    }).maybeSingle();
+    if (error || !readiness || readiness.readiness !== "ready" || readiness.authorization_source !== "exact_approval" || !readiness.approval_request_id) {
+      return { ok: false, message: "This exact statement is not currently approved and ready to collect." };
+    }
+    const result = await collectApprovedInvoice({
+      schoolId,
+      billingAccountId,
+      billingPeriodId,
+      approvalRequestId: readiness.approval_request_id,
+      actorProfileId: profileId,
+      amountCents: readiness.amount_cents,
+      currency: readiness.currency,
+    });
+    revalidatePath(path);
+    if (result.status === "succeeded" || result.status === "processing" || result.status === "submitted") return { ok: true, message: "Payment submitted. Stripe's verified confirmation will mark the statement paid." };
+    if (result.status === "requires_action") return { ok: false, message: "The bank requires payer authentication. No second charge was attempted; ask the payer to update or authenticate their method." };
+    return { ok: false, message: "The payment was declined. The statement remains unpaid and can be retried after the payment method is corrected." };
+  } catch (caught) {
+    console.error("Approved invoice collection failed", { schoolId, billingAccountId, billingPeriodId, name: caught instanceof Error ? caught.name : "unknown" });
+    const message = caught instanceof Error ? caught.message : "";
+    if (caught instanceof RequestBoundaryError && caught.code === "rate_limited") return { ok: false, message: "Too many collection attempts were requested. Review the existing payment status before trying later." };
+    if (message.includes("already in progress or has succeeded")) return { ok: false, message: "This statement already has a payment in progress or completed. Refresh to see its status." };
+    if (message.includes("Do not retry")) return { ok: false, message };
+    return { ok: false, message: message || "The payment could not be submitted. Nothing was marked paid." };
+  }
+}
 
 function appOrigin() {
   const value = process.env.APP_URL?.trim();
@@ -328,11 +368,13 @@ export async function sendBillingApprovalEmail(
     }
   } catch (error) {
     const providerError = error instanceof ResendRequestError ? error : null;
+    const policyError = error instanceof EmailDeliveryPolicyError ? error : null;
     await admin.rpc("fail_email_provider_submission", {
       p_delivery_id: prepared.email_delivery_id,
-      p_provider_error_code: providerError?.code ?? (providerError?.status ? String(providerError.status) : undefined),
-      p_provider_error_message: providerError?.message ?? "Provider request failed.",
+      p_provider_error_code: providerError?.code ?? (providerError?.status ? String(providerError.status) : policyError?.code),
+      p_provider_error_message: providerError?.message ?? policyError?.message ?? "Provider request failed.",
     });
+    if (policyError?.code === "recipient_not_allowlisted") return { ok: false, message: "This payer email is not enabled for staging delivery. Use an approved test recipient, then send to the updated payer email." };
     return { ok: false, message: "Resend did not accept the email. The failed attempt was recorded and can be retried." };
   }
 
@@ -470,11 +512,17 @@ export async function retryBillingApprovalEmail(
     if (error) return { ok: false, message: "Resend accepted the retry, but local reconciliation failed. Do not retry again yet." };
   } catch (error) {
     const providerError = error instanceof ResendRequestError ? error : null;
+    const policyError = error instanceof EmailDeliveryPolicyError ? error : null;
     await admin.rpc("fail_email_provider_submission", {
       p_delivery_id: prepared.email_delivery_id,
-      p_provider_error_code: providerError?.code ?? (providerError?.status ? String(providerError.status) : undefined),
-      p_provider_error_message: providerError?.message ?? "Provider request failed.",
+      p_provider_error_code: providerError?.code ?? (providerError?.status ? String(providerError.status) : policyError?.code),
+      p_provider_error_message: providerError?.message ?? policyError?.message ?? (error instanceof Error ? error.message : "Provider request failed."),
     });
+    if (policyError?.code === "recipient_not_allowlisted") return { ok: false, message: "This payer email is not included in the staging email allowlist. Add it and redeploy before trying again." };
+    if (error instanceof Error && error.message.includes("RESEND_API_KEY")) return { ok: false, message: "Staging email delivery is not configured. Add a staging RESEND_API_KEY and redeploy before trying again." };
+    if (providerError?.status === 401 || providerError?.status === 403) return { ok: false, message: "Resend rejected the staging API key or its sending permission. Check the staging RESEND_API_KEY and redeploy." };
+    if (providerError?.status === 422) return { ok: false, message: `Resend rejected the email configuration${providerError.code ? ` (${providerError.code})` : ""}. Check that notifications.commontime.studio is verified for the staging Resend account.` };
+    if (providerError?.status === 429) return { ok: false, message: "Resend temporarily rate-limited this email. Wait a moment, then try again." };
     return { ok: false, message: "Resend did not accept the retry. The approval request remains pending and can be retried again." };
   }
   revalidatePath(path);
@@ -567,16 +615,65 @@ export async function generateFamilyCardSetupLink(
   if (!profileId) redirect(`/login?next=${path}`);
 
   if (!await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) {
-    return { url: null, error: "You do not have permission to create a setup link." };
+    return { url: null, error: "You do not have permission to create a setup link.", recovery: null };
   }
 
   try {
     const url = await createFamilyCardSetup(schoolId, billingAccountId, profileId);
-    return { url, error: null };
+    return { url, error: null, recovery: null };
   } catch (setupError) {
     console.error("Family card setup could not start", setupError);
-    return { url: null, error: "Secure card setup could not start. No card information was collected." };
+    if (setupError instanceof CardSetupWorkflowError) {
+      const messages: Record<CardSetupWorkflowError["stage"], string> = {
+        school_record: "The school record could not be loaded for card setup. Nothing was sent to Stripe.",
+        billing_account_record: "This family billing account could not be loaded for card setup. Nothing was sent to Stripe.",
+        billing_account_inactive: "This family billing account is not active. Reactivate it before creating a card-setup link.",
+        connection_record: "No Stripe connection matching this deployment’s test/live mode was found for the school.",
+        connection_not_ready: "The matching Stripe connection is not fully enabled for payments yet.",
+        method_limit: "This family already has three active payment methods. Remove one before adding another.",
+        contact: "The primary payer record could not be loaded. Check the family’s payer details and try again.",
+        customer: "Stripe could not prepare this payer’s customer record. Check the staging Stripe connection and key.",
+        customer_record: "Stripe prepared the payer, but Common Time could not save the customer binding. Nothing was sent to the payer.",
+        setup_record: "Common Time could not record the card-setup request. Nothing was sent to Stripe Checkout.",
+        audit: "Card setup stopped because its required audit record could not be saved.",
+        checkout: "Stripe rejected the secure card-setup session. Check the staging Stripe logs for the matching Checkout request.",
+        checkout_record: "Stripe created the setup session, but Common Time could not save it. Do not retry until the failed setup record is reviewed.",
+      };
+      return { url: null, error: messages[setupError.stage], recovery: setupError.stage === "connection_record" || setupError.stage === "connection_not_ready" ? "payments" : null };
+    }
+    const message = setupError instanceof Error ? setupError.message : "";
+    if (message.includes("STRIPE_SECRET_KEY") || message.includes("STRIPE_MODE")) return { url: null, error: "The staging Stripe key or mode is missing or mismatched. No card information was collected.", recovery: "payments" };
+    return { url: null, error: "Secure card setup could not start. No card information was collected.", recovery: null };
   }
+}
+
+export async function setDefaultFamilyPaymentMethod(schoolId: string, billingAccountId: string, paymentMethodId: string) {
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId) return { ok: false, message: "Sign in again before changing the default card." };
+  const [{ data: method }, canManage] = await Promise.all([
+    supabase.from("billing_payment_methods").select("id,status,is_default").eq("id", paymentMethodId).eq("school_id", schoolId).eq("billing_account_id", billingAccountId).maybeSingle(),
+    checkSchoolCapability(supabase, schoolId, "school.billing.manage"),
+  ]);
+  if (!canManage || !method || method.status !== "active") return { ok: false, message: "This payment method cannot be made the default." };
+  if (method.is_default) return { ok: true, message: "This card is already the default." };
+
+  const admin = createAdminClient();
+  const { error } = await admin.rpc("set_default_billing_payment_method", { p_payment_method_id: paymentMethodId });
+  if (error) return { ok: false, message: "The default card could not be changed. Nothing changed." };
+  const { error: auditError } = await admin.from("audit_log").insert({
+    school_id: schoolId,
+    actor_profile_id: profileId,
+    action: "payment_method.default_changed",
+    entity_type: "billing_payment_method",
+    entity_id: paymentMethodId,
+    metadata: { billing_account_id: billingAccountId },
+  });
+  if (auditError) return { ok: false, message: "The default changed, but its audit entry needs reconciliation." };
+  revalidatePath(path);
+  return { ok: true, message: "Default card updated. Existing automatic-payment permission remains tied to its originally authorized card." };
 }
 
 export async function removeFamilyPaymentMethod(schoolId: string, billingAccountId: string, paymentMethodId: string) {

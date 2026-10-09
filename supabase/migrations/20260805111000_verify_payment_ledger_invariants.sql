@@ -16,6 +16,16 @@ declare
   attempt_key uuid := gen_random_uuid();
   calculated bigint;
 begin
+  -- Hosted development already had demo billing data when this rehearsal was
+  -- introduced. A clean schema replay must still install the ledger itself.
+  if not exists (
+    select 1
+    from public.billing_accounts account
+    join public.schools school on school.id = account.school_id
+  ) then
+    return;
+  end if;
+
   begin
     select school.id, school.created_by, school.currency
       into target_school_id, target_profile_id, target_currency
@@ -28,10 +38,6 @@ begin
     where account.school_id = target_school_id
     order by account.created_at
     limit 1;
-
-    if target_school_id is null or target_billing_account_id is null then
-      raise exception 'Payment ledger invariant check requires one school and billing account';
-    end if;
 
     insert into public.school_payment_connections (
       id, school_id, livemode, provider_account_id, status,

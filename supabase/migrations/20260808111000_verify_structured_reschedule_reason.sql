@@ -7,6 +7,7 @@ declare
   target_local timestamp;
   moving_id uuid;
 begin
+  if not exists (select 1 from public.lesson_events) then return; end if;
   begin
     select event.school_id, event.product_id, event.teacher_id, event.student_id,
       event.place_id, event.created_by, event.ends_at - event.starts_at as duration,

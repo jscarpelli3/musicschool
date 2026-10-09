@@ -48,7 +48,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
       </header>
       {message ? <p className={`border-b border-line py-4 text-sm ${message.error ? "text-danger" : "text-brand"}`}>{message.text}</p> : null}
 
-      <section className="grid border-b border-line md:grid-cols-[1fr_2fr]">
+      <section id="avatar" className="scroll-mt-8 grid border-b border-line md:grid-cols-[1fr_2fr]">
         <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">
           <h2 className="font-display text-3xl">Avatar</h2>
           <p className="mt-3 text-sm leading-6 text-muted">Your image follows you across the schools where you work.</p>
@@ -56,7 +56,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         <div className="py-10 md:pl-10"><AvatarUploader currentUrl={avatarUrl ?? null} initial={profile.full_name?.[0] ?? "?"} /></div>
       </section>
 
-      <form action={updateProfile} className="grid md:grid-cols-[1fr_2fr]">
+      <form id="profile-info" action={updateProfile} className="scroll-mt-8 grid md:grid-cols-[1fr_2fr]">
         <div className="border-b border-line py-10 md:border-r md:border-b-0 md:pr-10">
           <h2 className="font-display text-3xl">Contact</h2>
           <p className="mt-3 text-sm text-muted">{profile.email}</p>

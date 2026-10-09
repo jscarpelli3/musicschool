@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
+import { formatCompactDate } from "@/lib/date-format";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { MdCalendarMonth, MdCheckCircleOutline, MdFamilyRestroom, MdReceiptLong } from "react-icons/md";
 import { approveBillingRequest } from "./actions";
 import { AutoChargeEnrollment } from "./auto-charge-enrollment";
 import { RejectChargesForm } from "./reject-charges-form";
@@ -23,7 +25,10 @@ type LineItem = {
 type Approval = {
   school_name: string;
   billing_account_name: string;
+  student_names: string[];
   period_label: string;
+  period_start: string | null;
+  period_end: string | null;
   line_items: LineItem[];
   amount_cents: number;
   currency: string;
@@ -74,12 +79,9 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
 
   return (
     <main className="mx-auto min-h-screen max-w-3xl px-5 py-10 sm:px-8 sm:py-16">
-      <header className="border-b border-line pb-8 sm:flex sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm text-muted">{approval.school_name}</p>
-          <h1 className="mt-3 font-display text-4xl leading-none sm:text-6xl">{invalidated ? "Statement unavailable" : "Review this month"}</h1>
-        </div>
-        <p className="mt-5 text-sm text-muted sm:mt-0">{approval.period_label}</p>
+      <header className="border-b border-line pb-7">
+        <p className="text-xs uppercase tracking-[0.16em] text-brand">{approval.school_name}</p>
+        <h1 className="mt-2 font-display text-3xl leading-none sm:text-4xl">{invalidated ? "Statement unavailable" : "Review lesson charges"}</h1>
       </header>
 
       {invalidated ? (
@@ -89,47 +91,52 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
           <p className="mt-6 max-w-xl text-lg leading-8 text-muted">{invalidatedMessage}</p>
         </section>
       ) : <>
-      <section className="py-8 sm:py-12" aria-labelledby="charge-breakdown">
-        <div className="flex items-baseline justify-between gap-6 border-b border-line pb-5">
-          <div>
-            <h2 id="charge-breakdown" className="text-lg">Charge breakdown</h2>
-            <p className="mt-1 text-sm text-muted">For {approval.billing_account_name}</p>
-          </div>
-          <p className="font-display text-3xl text-brand sm:text-4xl">
-            {money(approval.amount_cents, approval.currency)}
-          </p>
+      <section className="py-8 sm:py-10" aria-labelledby="charge-breakdown">
+        <div className="ui-card grid gap-6 p-6 sm:grid-cols-[1.25fr_1fr_auto] sm:items-center sm:p-7">
+          <div className="flex items-start gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand/10 text-xl text-brand"><MdFamilyRestroom aria-hidden="true" /></span><div><p className="text-xs uppercase tracking-[0.14em] text-muted">Family</p><p className="mt-1 font-display text-2xl">{approval.billing_account_name}</p><p className="mt-1 text-sm text-muted">{approval.student_names.length ? approval.student_names.join(", ") : "Student details unavailable"}</p></div></div>
+          <div className="flex items-start gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand/10 text-xl text-brand"><MdCalendarMonth aria-hidden="true" /></span><div><p className="text-xs uppercase tracking-[0.14em] text-muted">Billing period</p><p className="mt-1 text-lg">{approval.period_label}</p>{approval.period_start && approval.period_end ? <p className="mt-1 text-sm text-muted">{formatCompactDate(approval.period_start)}–{formatCompactDate(approval.period_end)}</p> : null}</div></div>
+          <div className="border-t border-line pt-5 text-left sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0 sm:text-right"><p className="text-xs uppercase tracking-[0.14em] text-muted">Amount to approve</p><p className="mt-1 font-display text-4xl text-brand">{money(approval.amount_cents, approval.currency)}</p></div>
         </div>
+
+        <div className="ui-card mt-6 overflow-hidden p-6 sm:p-7">
+          <div className="flex items-center gap-3 border-b border-line pb-5">
+            <span className="grid size-10 place-items-center rounded-full bg-brand/10 text-xl text-brand"><MdReceiptLong aria-hidden="true" /></span>
+            <div>
+              <h2 id="charge-breakdown" className="font-display text-2xl">Charge breakdown</h2>
+              <p className="mt-1 text-sm text-muted">Review each lesson included in this amount.</p>
+            </div>
+          </div>
 
         <ul>
           {approval.line_items.map((item, index) => (
             <li key={`${item.label}-${index}`} className="grid grid-cols-[1fr_auto] gap-5 border-b border-line py-5">
               <div>
                 <p>{item.label}</p>
-                {item.detail ? <p className="mt-1 text-sm text-muted">{item.detail}</p> : null}
+                {item.detail ? <p className="mt-1 text-sm text-muted">{formatCompactDate(item.detail)}</p> : null}
               </div>
               <p>{money(item.amount_cents, approval.currency)}</p>
             </li>
           ))}
         </ul>
+        </div>
       </section>
 
-      <section className="border-t border-line pt-8">
+      <section>
         {canApprove ? (
           <>
-            <p className="max-w-xl text-sm leading-6 text-muted">
-              Hold below to approve this exact amount. The school may then charge the payment method you authorized them to keep on file. Approval itself does not charge your card.
-            </p>
-            <div className="mt-6">
-              <HoldToConfirm action={approve} idleLabel={`Hold to approve ${money(approval.amount_cents, approval.currency)}`} refreshOnSuccess />
+            <div className="ui-card border border-brand/30 p-6 sm:p-7">
+              <div className="flex items-start gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand/10 text-xl text-brand"><MdCheckCircleOutline aria-hidden="true" /></span><div><p className="text-xs uppercase tracking-[0.14em] text-brand">Everything looks right</p><h2 className="mt-1 font-display text-2xl">Approve {money(approval.amount_cents, approval.currency)}</h2></div></div>
+              <p className="mt-4 max-w-xl text-sm leading-6 text-muted">Hold below to approve this exact amount. Approval itself does not charge your card; it allows the school to collect it separately.</p>
+              <div className="mt-6"><HoldToConfirm action={approve} idleLabel={`Hold to approve ${money(approval.amount_cents, approval.currency)}`} refreshOnSuccess /></div>
             </div>
             <RejectChargesForm token={token} />
           </>
         ) : (
-          <div className="border-l border-brand pl-5">
-            <p className="font-display text-3xl capitalize">{approval.approval_status}</p>
-            <p className="mt-2 text-sm text-muted">
+          <div className={`ui-card p-6 sm:p-7 ${approval.approval_status === "approved" ? "border border-brand/30" : ""}`}>
+            <p className="font-display text-3xl">{approval.approval_status === "approved" ? "Approved!" : approval.approval_status}</p>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
               {approval.approval_status === "approved"
-                ? "The school has your approval. This does not mean the payment has been processed."
+                ? `You approved ${approval.school_name} to charge ${money(approval.amount_cents, approval.currency)} to your card on file. The school can now collect this amount. Your card has not been charged yet.`
                 : "Contact the school if you need a new approval request."}
             </p>
           </div>

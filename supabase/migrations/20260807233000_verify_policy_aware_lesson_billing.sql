@@ -9,6 +9,7 @@ declare
   result jsonb;
   blocked boolean;
 begin
+  if not exists (select 1 from public.lesson_events) then return; end if;
   begin
     select event.id as event_id, event.school_id, event.product_id, school.created_by
     into strict sample

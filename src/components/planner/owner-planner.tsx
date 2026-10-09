@@ -12,6 +12,8 @@ import { LessonOutcomeForm } from "@/components/teacher/lesson-outcome-form";
 import { recordTeacherLessonOutcome } from "@/app/schools/[schoolId]/teacher/actions";
 import { lessonEventDescriptor, rescheduleReasonLabel } from "@/lib/scheduling/lesson-domain-contracts";
 import { RescheduleConfirmation, type RescheduleProposal } from "./lesson-reschedule-controls";
+import { QuickActionGrid, type QuickAction } from "@/components/ui/quick-action-grid";
+import { SectionHeading } from "@/components/ui/section-heading";
 import "./owner-planner.css";
 
 type Teacher = { id: string; name: string; isOwner: boolean };
@@ -81,6 +83,8 @@ type StudentDetail = {
 type Props = {
   schoolId: string;
   canReschedule: boolean;
+  canCollectPayment?: boolean;
+  paidLessonIds?: string[];
   initialDate: string;
   timezone: string;
   teachers: Teacher[];
@@ -180,6 +184,8 @@ function timeMinutes(value: string) {
 export function OwnerPlanner({
   schoolId,
   canReschedule,
+  canCollectPayment = false,
+  paidLessonIds = [],
   initialDate,
   timezone,
   teachers,
@@ -249,6 +255,7 @@ export function OwnerPlanner({
 
   useEffect(() => {
     if (!selectedLessonId) return;
+    window.dispatchEvent(new Event("common-time:open-lesson-drawer"));
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") setSelectedLessonId(null);
     }
@@ -372,10 +379,7 @@ export function OwnerPlanner({
   return (
     <section id="school-calendar" className="ui-card scroll-mt-6 overflow-hidden">
       <div className="grid gap-8 px-5 py-6 md:grid-cols-[1fr_auto] md:items-end sm:px-7">
-        <div>
-          <p className="text-xs text-muted">{contextLabel} · {timezone.replaceAll("_", " ")}</p>
-          <h2 className="mt-3 font-display text-4xl font-normal tracking-[-0.03em]">{title}</h2>
-        </div>
+        <SectionHeading kind="calendar" eyebrow={contextLabel} title={title} description={`Times shown in ${timezone.replaceAll("_", " ")}`} />
         <div className="flex flex-wrap items-end gap-8">
           {lessonCreationOptions ? (
             <button
@@ -512,6 +516,8 @@ export function OwnerPlanner({
           productName={productNames[selectedLesson.product_id] ?? "Lesson"}
           place={placeDetails[selectedLesson.place_id] ?? { name: "Place not set", details: null }}
           canReschedule={canReschedule}
+          canCollectPayment={canCollectPayment}
+          paidSeparately={paidLessonIds.includes(selectedLesson.id)}
           canMarkReschedule={selectedLesson.can_mark_reschedule}
           onReschedule={() => beginReschedule(selectedLesson)}
           onPermissionChange={async (allowed, reason) => {
@@ -1099,6 +1105,8 @@ function LessonSheet({
   productName,
   place,
   canReschedule,
+  canCollectPayment,
+  paidSeparately,
   canMarkReschedule,
   onReschedule,
   onPermissionChange,
@@ -1113,6 +1121,8 @@ function LessonSheet({
   productName: string;
   place: { name: string; details: string | null };
   canReschedule: boolean;
+  canCollectPayment: boolean;
+  paidSeparately: boolean;
   canMarkReschedule: boolean;
   onReschedule: () => void;
   onPermissionChange: (allowed: boolean, reason: string) => Promise<{ ok: boolean; message: string }>;
@@ -1120,6 +1130,10 @@ function LessonSheet({
   onClose: () => void;
 }) {
   const duration = lesson.end.minutes - lesson.start.minutes;
+  const quickActions: QuickAction[] = [
+    { href: `/schools/${schoolId}/students/${lesson.student_id}`, kind: "student", title: "Student home", detail: "Contacts, schedule, and lesson plan." },
+    ...(student?.payers.flatMap((payer) => payer.accountId ? [{ href: `/schools/${schoolId}/families/${payer.accountId}#billing-history`, kind: "billing" as const, title: `${payer.accountName} billing`, detail: "Invoices and payment history, no detour." }] : []) ?? []),
+  ];
   return (
     <>
       <button type="button" aria-label="Close lesson details" className="lesson-sheet-backdrop" onClick={onClose} />
@@ -1132,14 +1146,19 @@ function LessonSheet({
           <button autoFocus type="button" onClick={onClose} className="text-action text-sm text-muted hover:text-ink">Close</button>
         </div>
 
+        <div className="border-b border-line"><QuickActionGrid actions={quickActions} description="Two taps saved. Tiny victory." /></div>
+
         <dl className="divide-y divide-line border-b border-line">
           <Detail label="Lesson" value={productName} />
           <div className="py-5"><dt className="text-xs text-muted">Teacher</dt><dd className="mt-2 text-sm"><Link href={`/schools/${schoolId}/staff/${lesson.teacher_id}`} className="hover:text-brand">{teacherName}</Link></dd></div>
           <Detail label="Date" value={new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(fromKey(lesson.start.dateKey))} />
           <Detail label="Time" value={`${clock(lesson.start.minutes)}–${clock(lesson.end.minutes)} · ${duration} minutes`} />
           <Detail label="Place" value={place.details ? `${place.name} · ${place.details}` : place.name} />
+          {lesson.notes ? <Detail label="Internal notes" value={lesson.notes} /> : null}
           {lesson.reschedule_reason_code ? <Detail label="Last moved" value={rescheduleReasonLabel(lesson.reschedule_reason_code, lesson.reschedule_reason_detail)} /> : null}
         </dl>
+
+        {canCollectPayment ? <section className="border-b border-line py-8"><h3 className="font-display text-2xl font-normal">Payment</h3>{paidSeparately ? <><p className="mt-3 text-sm text-brand">Paid separately</p><p className="mt-2 text-xs leading-5 text-muted">This lesson will remain on the family statement with $0 newly due.</p></> : <><p className="mt-3 text-xs leading-5 text-muted">Create a secure QR code for the payer to scan on their own phone.</p><Link href={`/schools/${schoolId}/lessons/${lesson.id}/payment`} className="mt-4 inline-flex rounded-control bg-brand px-4 py-2.5 text-sm text-canvas hover:bg-brand-hover">Collect payment now</Link></>}</section> : null}
 
         {canReschedule && lesson.can_reschedule ? (
           <section className="border-b border-line py-8">
@@ -1159,10 +1178,12 @@ function LessonSheet({
 
         {canReschedule && lesson.status === "scheduled" ? (
           <section className="border-b border-line py-8">
-            <h3 className="font-display text-2xl font-normal">School cancellation</h3>
+            <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">Optional action</p>
+            <h3 className="mt-2 font-display text-2xl font-normal">Can the school no longer provide this lesson?</h3>
+            <p className="mt-3 text-xs leading-5 text-muted">The lesson is still scheduled. Use this only when the school needs to initiate a cancellation.</p>
             <LessonChangeReport
               action={onSchoolCancellation}
-              buttonLabel="The school can’t provide this lesson"
+              buttonLabel="Start a school cancellation report"
               title="Report a school cancellation"
               description="This records the school-origin scenario for review. The lesson and all financial treatment remain unchanged until the remedy is confirmed."
               fieldLabel="Why can’t the school provide this lesson?"

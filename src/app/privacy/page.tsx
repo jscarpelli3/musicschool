@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 export const metadata: Metadata = { title: "Privacy Policy · Common Time" };
 
@@ -10,7 +9,7 @@ export default function PrivacyPage() {
     <h2>How we use information</h2><p>We use this information to deliver requested scheduling notices, billing-approval links, payment updates, reminders, secure account links, and compliance responses. We do not use transactional SMS consent for unrelated marketing.</p>
     <h2>Sharing and processors</h2><p>Service providers such as communications, hosting, database, and payment processors may process information only to provide Common Time services. We do not sell mobile numbers or SMS consent data. All the above categories exclude text messaging originator opt-in data and consent; this information won’t be shared with any third parties.</p>
     <h2>Choices and retention</h2><p>Reply STOP to opt out or HELP for assistance. We retain consent and opt-out evidence as needed to honor preferences, resolve disputes, and meet legal and carrier requirements.</p>
-    <h2>Questions</h2><p>Visit <Link href="/support">Common Time Support</Link> or contact the music school identified in your messages.</p>
+    <h2>Questions</h2><p>Use Help in the footer or contact the music school identified in your messages.</p>
   </PolicyPage>;
 }
 
