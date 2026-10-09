@@ -23,10 +23,11 @@ import { BillingPeriodRevise } from "./billing-period-revise";
 import { PaymentMethodRemove } from "./payment-method-remove";
 import { PaymentMethodDefault } from "./payment-method-default";
 import { BillingAdjustmentForm, BillingAdjustmentRemove } from "./billing-adjustments";
+import { BillingArchive } from "./billing-archive";
 import { RecordLessonCalendar } from "@/components/calendar/record-lesson-calendar";
 import { schoolCalendarWindow } from "@/lib/calendar/school-calendar-window";
 import { MdExpandMore } from "react-icons/md";
-import { formatCompactDate } from "@/lib/date-format";
+import { calendarMonthCutoff, formatCompactDate } from "@/lib/date-format";
 import { getStripeMode } from "@/lib/stripe/server";
 
 export const dynamic = "force-dynamic";
@@ -56,11 +57,13 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   if (failedInitial?.error) throw new Error(`Family detail could not load: ${failedInitial.error.message}`);
   const [{ data: school }, { data: membership }, { data: account }] = initial;
   if (!school || !membership || !account) notFound();
+  const archiveCutoff = calendarMonthCutoff(school.timezone, 6);
 
   const related = await Promise.all([
     supabase.from("people").select("id, first_name, last_name, preferred_name, email, phone, status").eq("school_id", schoolId),
     supabase.from("billing_account_students").select("student_id").eq("school_id", schoolId).eq("billing_account_id", billingAccountId),
-    supabase.from("billing_periods").select("id, label, period_start, period_end, status, amount_due_cents, currency").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("period_start", { ascending: false }).limit(12),
+    supabase.from("billing_periods").select("id, label, period_start, period_end, status, amount_due_cents, currency, paid_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).or(`status.neq.paid,period_end.gte.${archiveCutoff}`).order("period_start", { ascending: false }).limit(24),
+    supabase.from("billing_periods").select("id, label, period_start, period_end, status, amount_due_cents, currency, paid_at", { count: "exact" }).eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("status", "paid").lt("period_end", archiveCutoff).order("period_start", { ascending: false }).limit(50),
     supabase.from("billing_payment_methods").select("id, display_label, brand, last_four, exp_month, exp_year, is_default, status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("is_default", { ascending: false }),
     supabase.from("payment_attempts").select("id, billing_period_id, amount_cents, status, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
     supabase.from("payment_method_setup_requests").select("id, status, expires_at, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }).limit(3),
@@ -72,8 +75,8 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   ]);
   const failedRelated = related.find((result) => result.error);
   if (failedRelated?.error) throw new Error(`Family detail could not load: ${failedRelated.error.message}`);
-  const [peopleResult, studentsResult, periodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult, productsResult, placesResult] = related;
-  const periodIds = (periodsResult.data ?? []).map((period) => period.id);
+  const [peopleResult, studentsResult, periodsResult, archivedPeriodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult, productsResult, placesResult] = related;
+  const periodIds = [...(periodsResult.data ?? []), ...(archivedPeriodsResult.data ?? [])].map((period) => period.id);
   const { data: lineItems, error: lineItemsError } = periodIds.length
     ? await supabase.from("billing_line_items")
       .select("id, billing_period_id, description, service_date, amount_cents, metadata, source_type")
@@ -207,7 +210,8 @@ export default async function FamilyDetailPage({ params, searchParams }: {
               </details>
             );
           })}
-          {!(periodsResult.data ?? []).length ? <EmptyDetail>No billing periods have been prepared.</EmptyDetail> : null}
+          {archivedPeriodsResult.count ? <div className="pt-1"><BillingArchive periods={(archivedPeriodsResult.data ?? []).map((archived) => ({ id: archived.id, label: archived.label, period_start: archived.period_start, period_end: archived.period_end, amount_due_cents: archived.amount_due_cents, currency: archived.currency, paid_at: archived.paid_at }))} lines={billingLines.filter((line) => (archivedPeriodsResult.data ?? []).some((archived) => archived.id === line.billing_period_id)).map((line) => ({ id: line.id, billing_period_id: line.billing_period_id, description: line.description, service_label: lineServiceWhen(line), amount_cents: line.amount_cents ?? 0 }))} totalCount={archivedPeriodsResult.count} /></div> : null}
+          {!(periodsResult.data ?? []).length && !archivedPeriodsResult.count ? <EmptyDetail>No billing periods have been prepared.</EmptyDetail> : null}
           </div>
         </div>
       </DetailSection></div>
