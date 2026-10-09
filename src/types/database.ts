@@ -5114,6 +5114,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      apply_invoice_payment_intent_event: {
+        Args: {
+          p_charge_id?: string | null
+          p_failure_code?: string | null
+          p_failure_message?: string | null
+          p_payment_attempt_id: string
+          p_payment_intent_id: string
+          p_provider_account_id: string
+          p_provider_event_id?: string | null
+          p_status: string
+        }
+        Returns: undefined
+      }
       apply_pending_account_adjustments_to_period: {
         Args: {
           p_actor_id: string

@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
 import { CardSetupWorkflowError, createFamilyCardSetup } from "@/lib/stripe/payment-methods";
 import { getStripe } from "@/lib/stripe/server";
+import { collectApprovedInvoice } from "@/lib/stripe/invoice-collection";
 import { normalizeE164 } from "@/lib/phone";
 import { ensurePortalAuthIdentity } from "@/lib/portal/auth-identities";
 import { billingApprovalEmail } from "@/lib/resend/billing-approval-email";
@@ -24,6 +25,45 @@ export type BillingApprovalEmailState = { ok: boolean; message: string };
 export type BillingStatementNoticeState = { ok: boolean; message: string };
 export type BillingContactEmailState = { ok: boolean; message: string };
 export type BillingAdjustmentState = { ok: boolean; message: string };
+
+export async function collectFamilyInvoice(schoolId: string, billingAccountId: string, billingPeriodId: string) {
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId) return { ok: false, message: "Sign in again before collecting this payment." };
+  if (!await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) return { ok: false, message: "You do not have permission to collect this payment." };
+  try {
+    await protectServerAction({ scope: "billing.invoice.collect", subject: `actor:${profileId}|school:${schoolId}|period:${billingPeriodId}`, limit: 3, windowSeconds: 3600 });
+    const { data: readiness, error } = await supabase.rpc("get_billing_collection_readiness", {
+      p_school_id: schoolId,
+      p_billing_period_id: billingPeriodId,
+    }).maybeSingle();
+    if (error || !readiness || readiness.readiness !== "ready" || readiness.authorization_source !== "exact_approval" || !readiness.approval_request_id) {
+      return { ok: false, message: "This exact statement is not currently approved and ready to collect." };
+    }
+    const result = await collectApprovedInvoice({
+      schoolId,
+      billingAccountId,
+      billingPeriodId,
+      approvalRequestId: readiness.approval_request_id,
+      actorProfileId: profileId,
+      amountCents: readiness.amount_cents,
+      currency: readiness.currency,
+    });
+    revalidatePath(path);
+    if (result.status === "succeeded" || result.status === "processing" || result.status === "submitted") return { ok: true, message: "Payment submitted. Stripe's verified confirmation will mark the statement paid." };
+    if (result.status === "requires_action") return { ok: false, message: "The bank requires payer authentication. No second charge was attempted; ask the payer to update or authenticate their method." };
+    return { ok: false, message: "The payment was declined. The statement remains unpaid and can be retried after the payment method is corrected." };
+  } catch (caught) {
+    console.error("Approved invoice collection failed", { schoolId, billingAccountId, billingPeriodId, name: caught instanceof Error ? caught.name : "unknown" });
+    const message = caught instanceof Error ? caught.message : "";
+    if (caught instanceof RequestBoundaryError && caught.code === "rate_limited") return { ok: false, message: "Too many collection attempts were requested. Review the existing payment status before trying later." };
+    if (message.includes("already in progress or has succeeded")) return { ok: false, message: "This statement already has a payment in progress or completed. Refresh to see its status." };
+    if (message.includes("Do not retry")) return { ok: false, message };
+    return { ok: false, message: message || "The payment could not be submitted. Nothing was marked paid." };
+  }
+}
 
 function appOrigin() {
   const value = process.env.APP_URL?.trim();
