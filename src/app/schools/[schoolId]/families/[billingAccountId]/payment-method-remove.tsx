@@ -11,5 +11,5 @@ export function PaymentMethodRemove({ schoolId, billingAccountId, paymentMethodI
 }) {
   const router = useRouter();
   const action = removeFamilyPaymentMethod.bind(null, schoolId, billingAccountId, paymentMethodId);
-  return <HoldToConfirm action={action} idleLabel="Hold to remove" holdingLabel="Keep holding to revoke…" duration={1200} onSuccess={() => router.refresh()} />;
+  return <HoldToConfirm action={action} idleLabel="Hold to remove" holdingLabel="Keep holding…" duration={1200} compact centered onSuccess={() => router.refresh()} />;
 }
