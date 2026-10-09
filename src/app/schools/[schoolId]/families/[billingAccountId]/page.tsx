@@ -62,7 +62,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     supabase.from("billing_account_students").select("student_id").eq("school_id", schoolId).eq("billing_account_id", billingAccountId),
     supabase.from("billing_periods").select("id, label, period_start, period_end, status, amount_due_cents, currency").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("period_start", { ascending: false }).limit(12),
     supabase.from("billing_payment_methods").select("id, display_label, brand, last_four, exp_month, exp_year, is_default, status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("is_default", { ascending: false }),
-    supabase.from("payment_attempts").select("billing_period_id, amount_cents, status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("status", "succeeded"),
+    supabase.from("payment_attempts").select("id, billing_period_id, amount_cents, status, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
     supabase.from("payment_method_setup_requests").select("id, status, expires_at, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }).limit(3),
     supabase.from("school_payment_connections").select("status, charges_enabled").eq("school_id", schoolId).eq("provider", "stripe").eq("livemode", stripeLivemode).maybeSingle(),
     supabase.from("billing_approval_requests").select("id, billing_period_id, approval_status, approved_at, rejected_at, rejection_reason_code, rejection_note, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
@@ -103,10 +103,12 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     if (!startsAt || Number.isNaN(new Date(startsAt).getTime())) return line.service_date ?? "Lesson";
     return new Intl.DateTimeFormat("en-US", { timeZone: school.timezone, weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(startsAt));
   };
-  const paidByPeriod = (attemptsResult.data ?? []).reduce<Record<string, number>>((totals, attempt) => {
+  const paidByPeriod = (attemptsResult.data ?? []).filter((attempt) => attempt.status === "succeeded").reduce<Record<string, number>>((totals, attempt) => {
     totals[attempt.billing_period_id] = (totals[attempt.billing_period_id] ?? 0) + attempt.amount_cents;
     return totals;
   }, {});
+  const latestAttemptByPeriod = new Map<string, (typeof attemptsResult.data extends (infer T)[] | null ? T : never)>();
+  for (const attempt of attemptsResult.data ?? []) if (!latestAttemptByPeriod.has(attempt.billing_period_id)) latestAttemptByPeriod.set(attempt.billing_period_id, attempt);
   const hasActivePaymentMethod = (methodsResult.data ?? []).some((method) => method.status === "active");
   const activePaymentMethodCount = (methodsResult.data ?? []).filter((method) => method.status === "active").length;
   const capabilities = await loadMySchoolCapabilities(schoolId);
@@ -199,7 +201,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
                   {canManagePayments && billingPeriod.status === "locked" && !latestApprovalByPeriod.get(billingPeriod.id) ? <BillingPeriodUnlock schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
                   {canManagePayments && billingPeriod.status === "approval_pending" && latestApprovalByPeriod.get(billingPeriod.id)?.approval_status === "pending" ? <BillingPeriodRevise schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
                   {canManagePayments && periodState.canSendApproval && billingPeriod.amount_due_cents > 0 ? <BillingApprovalEmail schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} latestStatus={latestEmailStatusByPeriod.get(billingPeriod.id)} latestRecipientEmail={latestEmailRecipientByPeriod.get(billingPeriod.id)} payerEmail={contact?.email ?? ""} approvalStatus={latestApprovalByPeriod.get(billingPeriod.id)?.approval_status} approvedAt={latestApprovalByPeriod.get(billingPeriod.id)?.approved_at} /> : null}
-                  {canManagePayments && latestApprovalByPeriod.get(billingPeriod.id)?.approval_status === "approved" && billingPeriod.status !== "paid" ? <BillingCollectionStatus amount={money(billingPeriod.amount_due_cents, billingPeriod.currency)} hasPaymentMethod={hasActivePaymentMethod} /> : null}
+                  {canManagePayments && latestApprovalByPeriod.get(billingPeriod.id)?.approval_status === "approved" && billingPeriod.status !== "paid" ? <BillingCollectionStatus schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} amount={money(billingPeriod.amount_due_cents, billingPeriod.currency)} hasPaymentMethod={hasActivePaymentMethod} readiness={readinessByPeriod.get(billingPeriod.id)?.readiness ?? null} attemptStatus={latestAttemptByPeriod.get(billingPeriod.id)?.status ?? null} /> : null}
                   {canManagePayments && readinessByPeriod.get(billingPeriod.id)?.authorization_source === "active_mandate" ? <BillingStatementNotice schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} readiness={readinessByPeriod.get(billingPeriod.id)!.readiness} noticeDays={readinessByPeriod.get(billingPeriod.id)!.advance_notice_days!} /> : null}
                 </div>
               </details>
