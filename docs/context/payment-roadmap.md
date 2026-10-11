@@ -136,13 +136,15 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 - Cancellation disables sends immediately, preserves compliance evidence, retains the number for a defined grace period, and releases/transfers it only through an explicit offboarding operation.
 - The currently rejected toll-free number may become the first school's dedicated test/production sender after a school-specific public consent page and corrected end-business resubmission. It may not be used as a shared multi-school sender.
 
-### 9. Owner charge queue — PENDING
+### 9. Owner charge queue — IN PROGRESS
 
 - Ready-to-charge work queue containing either an exact approved request or an active mandate that covers the exact locked amount.
 - Durable attempt record created before the Stripe call.
 - Stable idempotency key and duplicate-charge prevention.
 - Decline and customer-authentication recovery.
 - Resolve the exact connected-account Stripe Price and verify product, currency, amount, and active state before constructing every provider charge; do not use a browser amount or `service_products.price_cents` alone.
+- Deployed staging checkpoint: exact-approved-period saved-card execution now creates the durable attempt first, uses a stable Stripe idempotency key, blocks duplicate open/succeeded attempts, and validates signed PaymentIntent settlement against the connected account, tenant, statement, amount, currency, Customer, and PaymentMethod.
+- First synthetic $2.00 test charge succeeded at Stripe and proved fail-closed missing-webhook behavior. Because the endpoint subscription was corrected only afterward and the attempt required manual reconciliation, automatic webhook settlement is still the immediate open acceptance row.
 
 ### 10. Settlement, receipts, and operations — PENDING
 
@@ -159,4 +161,4 @@ The append-only evidence trail for every pre-step and exit audit is `docs/audits
 
 ## Current next action
 
-Run the full security audit and onboarding work before the broad UI pass. The charge-readiness contract is frozen: future Step 9 work must consume its exact approval, mandate, cap, scope, saved-method, delivery, and elapsed-notice states rather than reimplementing them. Complete one genuine provider-delivered beta statement before enabling Stripe charge execution. Twilio remains an optional per-school add-on rather than a payment-roadmap blocker.
+Run one new exact-approved staging statement through saved-card collection and prove automatic signed PaymentIntent webhook settlement with no manual reconciliation. Then test decline, authentication-required, duplicate/concurrent submission, and unknown-outcome recovery before expanding collection beyond the exact-approval path. Twilio remains an optional per-school add-on rather than a payment-roadmap blocker.
