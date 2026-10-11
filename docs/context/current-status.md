@@ -4,7 +4,14 @@ Production-domain URL, environment, provider-callback, verification, testing, an
 
 The gated path from supervised beta to a one-school production pilot is tracked in [`../operations/production-readiness-plan.md`](../operations/production-readiness-plan.md). That checklist is the launch authority for payment testing and production readiness; passing application CI alone does not authorize live charges or real customer data.
 
-The latest staging handoff, including the completed Stripe Connect onboarding and the exact next Checkout test, is in [`session-handoff.md`](session-handoff.md).
+The latest staging handoff, including the first approved-statement test and the exact next automatic-webhook test, is in [`session-handoff.md`](session-handoff.md). Read it before resuming payment work after any context reset.
+
+## 2026-10-11 approved-statement checkpoint
+
+- Exact approved-statement saved-card collection is deployed to staging through merge commit `61db86a`; the charge implementation itself entered at PR #71 / merge `eccd77a`.
+- One synthetic $2.00 off-session test charge succeeded in Stripe on the correct connected account. The app correctly stayed pending because the staging webhook endpoint lacked PaymentIntent event subscriptions; those subscriptions are now enabled and that attempt was manually reconciled after authoritative Stripe read-back.
+- Automatic PaymentIntent webhook settlement after the subscription correction remains the immediate next acceptance test. Do not repeat initial card setup or count the manually reconciled charge as automatic-webhook proof.
+- Paid cards are visually subdued. Paid statements older than six school-calendar months are hidden from the main stack and available through an archive modal without changing their durable `paid` state.
 
 ## 2026-09-17 beta-test checkpoint
 

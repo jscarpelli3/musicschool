@@ -1,10 +1,16 @@
 # Active Session Handoff
 
-Updated 2026-09-24 after staging Stripe Connect onboarding reached the ready state. This file is the quickest restart point after a lost conversation; the authoritative launch gates remain in [`../operations/production-readiness-plan.md`](../operations/production-readiness-plan.md).
+Updated 2026-10-11 after the first approved-statement saved-card charge succeeded in staging. This file is the quickest restart point after a lost conversation; the authoritative launch gates remain in [`../operations/production-readiness-plan.md`](../operations/production-readiness-plan.md).
+
+## Restart rule
+
+- Read this file before proposing the next payment test. Do not infer progress from old chat context.
+- After every implemented, deployed, or human-tested payment step, update this handoff and append evidence to [`../audits/payment-roadmap-audit-log.md`](../audits/payment-roadmap-audit-log.md) before calling the step complete.
+- Keep `implemented`, `deployed`, `provider-configured`, and `live-tested` distinct. A successful provider mutation is not webhook acceptance, and a successful UI render is not a money-state test.
 
 ## Current branch and deployment
 
-- Working baseline: protected `staging` branch at merge commit `360dbc2` (PR #44) or later.
+- Working baseline: protected `staging` branch at merge commit `61db86a` (PR #73) or later.
 - Persistent staging uses the isolated Supabase staging branch and the `Common Time Staging` Stripe sandbox. Vercel Preview variables for branch `staging` point to those systems; Production variables remain Production-only.
 - Never copy secret values into documentation. Relevant variable names and rotation procedures are in [`../operations/staging-environment.md`](../operations/staging-environment.md).
 - Preserve unrelated local untracked files. At this checkpoint they include an August screenshot, `docs/fromanotheragent.md`, `docs/ig screenshots_for WINS/`, `icon-test.png`, `pnpm-lock.yaml`, and `pnpm-workspace.yaml`.
@@ -31,20 +37,28 @@ Updated 2026-09-24 after staging Stripe Connect onboarding reached the ready sta
 - The handler accepts classic `account.updated` and Accounts v2 `v2.core.account.updated`/related account events, resolves the durable school connection, re-retrieves the account from Stripe, and persists current requirements/capabilities.
 - The database can therefore update automatically when Stripe changes account status. An already-open browser page is not live-subscribed; it must refresh/reopen or use `Check status` to display the stored update.
 
-## Immediate next test: first hosted lesson payment
+## Approved-statement collection checkpoint
 
-The next human action is an end-to-end successful Stripe Checkout transaction in staging. Do not switch to live mode and do not use a real card.
+- The earlier payer-present $1.00 hosted lesson Checkout passed on 2026-09-29. Do not repeat it as the next test; its remaining failure-matrix rows are still open separately.
+- PR #69 deployed family payment-method management: up to three active methods, explicit default selection, and a smaller add-another-method surface. PR #70 refined the hold-to-remove control.
+- PR #71 deployed owner-initiated collection for an exact approved billing period. It creates a durable attempt before Stripe, uses one stable idempotency key, prevents an open/succeeded duplicate for the period, charges the connected school account off-session, and refuses to mark success from the immediate API response.
+- Signed `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.processing`, and `payment_intent.requires_action` events re-retrieve and bind the PaymentIntent to the exact local school, family, period, amount, currency, connected account, Customer, and PaymentMethod before updating the statement.
+- On 2026-10-09, the synthetic staging family referred to during testing as `TestFamily` submitted one exact approved $2.00 statement using the saved `4242` test card. Stripe created a succeeded test-mode PaymentIntent and Charge on the correct connected account.
+- The staging endpoint had not yet subscribed to PaymentIntent event types. Common Time therefore remained at `Payment submitted — awaiting confirmation` and did not offer a duplicate charge. The missing subscription was diagnosed, the four required PaymentIntent event types were enabled on the staging endpoint, the succeeded intent was authoritatively re-read, and the local attempt/period were manually reconciled to `succeeded`/`paid`.
+- This first $2.00 run proves charge submission, provider binding, durable duplicate prevention, and fail-closed missing-webhook behavior. It does **not** prove automatic PaymentIntent webhook settlement after the subscription correction.
+- PR #72 visually de-emphasizes paid statement cards. PR #73 keeps recent paid statements in the main history and presents paid statements whose service-period end is more than six school-calendar months old through `View archived invoices`; this is presentation-only and never changes ledger status. The archive UI has automated date-boundary/build coverage but no live old-invoice fixture yet.
 
-1. Confirm the staging Payments page still reports payments and payouts enabled.
-2. Confirm a positive, per-session school offering is synchronized to the same connected Stripe account.
-3. Confirm a scheduled or completed lesson uses that offering and its student belongs to exactly one active billing account.
-4. Open the lesson and choose `Collect payment now`, then `Create payment QR code`.
-5. Open Stripe Checkout separately (an incognito window or payer phone is appropriate) and use Stripe's successful test card `4242 4242 4242 4242`, any future expiry, any three-digit CVC, and any valid postal code.
-6. Keep the Common Time payment page open. Its 2.5-second refresh should change `Waiting for Stripe confirmation…` to `Payment confirmed` after the signed connected-account webhook is reconciled.
-7. Verify in Common Time that the lesson is paid separately and cannot be collected again.
-8. Verify in the Stripe sandbox that the Checkout Session, PaymentIntent, and Charge belong to the connected school account—not merely the platform account.
-9. Record non-secret provider IDs, the local payment-request/audit IDs, timestamps, deployment commit, and actual results as Gate 1 evidence.
-10. Next run cancellation/no-charge, expiration/retry, duplicate/concurrent click, already-paid, and later-statement-zero-due cases from the matrix in the readiness plan.
+## Immediate next test: automatic invoice webhook settlement
+
+Do not redo card setup or the first $2.00 charge. The next human action is one new exact approved statement in staging, using synthetic data and Stripe test mode only.
+
+1. Prepare a different billing month for the same synthetic family. Add a small explained test adjustment if the month has no billable lesson.
+2. Lock the statement, send/open its payer approval path, and approve the exact amount.
+3. Confirm the owner UI reads `Approved — ready to collect`, then hold the charge control exactly once.
+4. Refresh/reopen the family page. The expected result is an automatic transition from `Payment submitted — awaiting confirmation` to a faint `Paid` card through the signed PaymentIntent webhook. No manual database reconciliation is allowed for this acceptance run.
+5. Verify the durable provider event is `processed`, the attempt is `succeeded`, the period is `paid`, and the Stripe PaymentIntent/Charge are test-mode objects on the connected school account with the exact amount and metadata.
+6. Record the deployment commit, local attempt/period IDs, non-secret Stripe event/intent/charge IDs, timestamps, and outcome in the payment audit log.
+7. Only after this passes, select the next saved-card failure row: a decline test, authentication-required test, duplicate/concurrent submission test, or unknown-outcome recovery. Do not treat those rows as already tested.
 
 ## Decisions and open work
 

@@ -148,3 +148,9 @@ Use this file for short chronological notes about meaningful work.
 - Expanded the domain model to include configurable billable service types such as lessons, rehearsals, group classes, and space rentals.
 - Built the first billing-consent vertical slice: hashed single-use approval URLs, exact monthly line items, separate approval/payment state, audit events, and a responsive hold-to-approve page. Live SMS, Stripe charging, and Stripe receipts remain provider-integration work.
 - Reorganized owner configuration into a shared five-tab School Setup shell, moved owner-facing language from products to lessons/classes/offerings, added School Info and Staff views, and modeled versioned policies plus planned-versus-actual lesson occurrences.
+## 2026-10-11 — Payment restart checkpoint
+
+- Reconciled the repository handoff after the approved-statement work in PRs #69–#73.
+- Recorded the successful synthetic $2.00 Stripe charge, the initially missing PaymentIntent webhook subscription, the app's fail-closed pending state, the subscription correction, and the manual authoritative reconciliation.
+- Recorded that automatic webhook settlement is not yet accepted and is the single next human payment test.
+- Established the rule that every implemented, deployed, provider-configured, and human-tested payment step must update `session-handoff.md` and append the payment audit log before being called complete.
