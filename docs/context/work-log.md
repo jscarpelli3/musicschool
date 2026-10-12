@@ -163,3 +163,6 @@ Use this file for short chronological notes about meaningful work.
 - Added simple search to the full student and family pages.
 - Recorded that this is a workflow/navigation step only; the next payment acceptance remains a new approved `TestFamily` statement settling automatically through the signed Stripe PaymentIntent webhook.
 - Validation passed: TypeScript, ESLint, production build, and all 60 local Node tests.
+- Follow-up: made in-place lesson creation a calendar-wide owner interaction rule. Student and family calendars now open the creation sheet over the visible calendar with context-scoped students, matching the existing overall/teacher calendar workflow.
+- Follow-up: removed the navigation dropdown hover gap and made the dropdowns smaller and more visually distinct.
+- Follow-up validation passed: TypeScript, ESLint, production build, and all 60 local Node tests.
