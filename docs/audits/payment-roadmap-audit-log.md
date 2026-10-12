@@ -720,3 +720,13 @@ Recorded on 2026-10-11 for work performed and deployed through 2026-10-09.
 - **Acceptance decision:** charge creation, exact provider binding, durable attempt creation, and duplicate-safe missing-webhook behavior pass. Automatic signed PaymentIntent webhook settlement remains open because this event occurred before the subscription correction and required manual reconciliation.
 - PR #72 / merge `616345c` de-emphasized paid cards. PR #73 / merge `61db86a` moved paid periods older than six school-calendar months behind an accessible archive modal without mutating ledger status. Archive month-end/timezone tests, TypeScript, lint, build, browser checks, and deployment passed; live archive-fixture inspection remains open.
 - **Next evidence required:** create and approve a different synthetic statement, submit one saved-card charge, and prove automatic `payment_intent.succeeded` intake and settlement without manual reconciliation. Record the local period/attempt, provider event/intent/charge IDs, timestamps, and connected-account/amount assertions before selecting a decline or authentication-required test.
+
+### Step 9 fixture — second exact-approved statement preparation
+
+Recorded on 2026-10-12.
+
+- Added two synthetic one-time lessons for the isolated staging family account `TestStudent1Last family` (conversation shorthand `TestFamily`) through the normal `create_single_lesson` RPC under the staging owner’s authority.
+- Lessons `894cab5c-973a-46fa-acf9-a820af61c07b` and `9f77d3a4-cedc-41d0-bb83-35abf29cc840` are scheduled October 19 and 26, 2026 from 10:00–10:30 AM America/Chicago with test teacher `JONATHAN ME`, place `TestPlaceA`, and offering `Staging Checkout Test – 30 min`.
+- The teacher’s saved Monday availability is 9:00 AM–12:00 PM, and the scheduling RPC accepted both without an outside-availability override or overlap.
+- Each occurrence has a durable 100 USD-cent price snapshot and matching October billing service date. No statement, approval, payment attempt, or Stripe object was created by this fixture step.
+- Next human action: prepare the October statement from these lessons, review the exact lines, and proceed through the already-recorded approval and automatic signed-webhook settlement acceptance. Do not recreate the lessons or redo payer/card setup.

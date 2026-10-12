@@ -169,3 +169,4 @@ Use this file for short chronological notes about meaningful work.
 - Fixed the inert record-calendar Add lesson regression by moving the creation overlay presentation into a dialog-owned CSS module that loads on every host page.
 - Added the searchable, scrollable quick directory to Staff while preserving the Staff label as the full-directory link.
 - Regression validation passed: TypeScript, ESLint, production build, and all 60 local Node tests.
+- Created two normal-RPC synthetic October lessons for the staging test family at non-overlapping times inside the teacher’s saved availability; verified both immutable $1.00 price snapshots and recorded their IDs in the handoff/payment audit.

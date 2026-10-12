@@ -60,6 +60,13 @@ Do not redo card setup or the first $2.00 charge. The next human action is one n
 6. Record the deployment commit, local attempt/period IDs, non-secret Stripe event/intent/charge IDs, timestamps, and outcome in the payment audit log.
 7. Only after this passes, select the next saved-card failure row: a decline test, authentication-required test, duplicate/concurrent submission test, or unknown-outcome recovery. Do not treat those rows as already tested.
 
+### New October staging fixture
+
+- On 2026-10-12, two synthetic one-time lessons were created through `create_single_lesson` for the sole staging family account (`TestStudent1Last family`, referred to in conversation as `TestFamily`).
+- Both use `Staging Checkout Test – 30 min`, primary test teacher `JONATHAN ME`, and `TestPlaceA`: October 19 and October 26, 2026 at 10:00–10:30 AM America/Chicago.
+- Lesson IDs are `894cab5c-973a-46fa-acf9-a820af61c07b` and `9f77d3a4-cedc-41d0-bb83-35abf29cc840`. Each has a $1.00 immutable price snapshot and October billing service date.
+- Do not create these lessons again. The owner’s next action is to use them to prepare the new October statement, then continue the approval/automatic-webhook acceptance sequence above.
+
 ## Owner navigation checkpoint
 
 - The calendar interaction rule is now consistent for owners: create a lesson in place from the calendar currently being viewed. The overall calendar can schedule any student, a family calendar limits the picker to that family, and a student calendar fixes the student. Record-level creation opens over the current page rather than navigating away.
@@ -69,7 +76,15 @@ Do not redo card setup or the first $2.00 charge. The next human action is one n
 - A staging regression where record-calendar Add lesson clicks appeared inert was traced to dialog CSS being bundled only with the main planner. The creation dialog now owns its overlay CSS module, so student/family calendar creation does not depend on the planner bundle.
 - Both full directory pages now have a simple search. Students match student, family, or teacher; families match family name, payer name, email, or phone.
 - This work changes navigation and form defaults only. It does not change billing, approval, collection, webhook, or ledger behavior.
-- Immediate human action remains: create the new synthetic lessons for `TestFamily`, prepare and approve a different billing month, then perform the automatic invoice webhook settlement test above. Do not repeat payer/card setup or the already-reconciled first $2.00 charge.
+- The synthetic lessons now exist. Immediate human action is to prepare and approve the new October statement, then perform the automatic invoice webhook settlement test above. Do not recreate the lessons, repeat payer/card setup, or repeat the already-reconciled first $2.00 charge.
+
+## Lesson-composer direction agreed in discussion
+
+- Model an explicit primary-teacher relationship for each student. Selecting a student defaults the lesson teacher from that relationship, while an individual lesson may override it.
+- Service type/duration must be known before availability suggestions can be accurate. The intended helper supports either direction: choose service/student and see fitting openings, or ask for a desired time and see which teacher/service durations fit.
+- Teacher or student overlaps are not allowed. Outside regular availability may remain an explicit warned exception, but overlap is a hard conflict.
+- Week/day calendars enter focused add mode and let the owner choose an empty slot; month view goes directly to a compact composer because it cannot express time placement precisely.
+- Quick student creation returns to the unfinished lesson. It does not send payment-method verification; payment setup remains a separate owner decision.
 
 ## Decisions and open work
 
