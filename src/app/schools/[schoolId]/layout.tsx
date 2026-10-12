@@ -16,17 +16,25 @@ export default async function SchoolLayout({ children, params }: { children: Rea
   const supabase = await createClient();
   const { profileId, school, membership, capabilities } = await loadCurrentSchoolAccess(schoolId);
   if (!profileId) redirect(`/login?next=/schools/${schoolId}`);
-  const [{ data: profile }, approvalSummary, invoiceSummary] = await Promise.all([
+  const [{ data: profile }, approvalSummary, invoiceSummary, studentsResult, familiesResult, peopleResult] = await Promise.all([
     supabase.from("profiles").select("avatar_url, avatar_path").eq("id", profileId).maybeSingle(),
     capabilities.has("school.approvals.review") ? loadOwnerApprovalSummary(supabase, schoolId) : Promise.resolve({ items: [], count: 0 }),
     capabilities.has("school.billing.manage") ? loadSchoolInvoiceSummary(supabase, schoolId, 6) : Promise.resolve({ invoices: [], attentionCount: 0 }),
+    capabilities.has("school.workspace.view") ? supabase.from("students").select("person_id").eq("school_id", schoolId).in("enrollment_status", ["active", "prospect"]) : Promise.resolve({ data: [], error: null }),
+    capabilities.has("school.workspace.view") ? supabase.from("billing_accounts").select("id,name").eq("school_id", schoolId).eq("status", "active").order("name") : Promise.resolve({ data: [], error: null }),
+    capabilities.has("school.workspace.view") ? supabase.from("people").select("id,first_name,last_name,preferred_name").eq("school_id", schoolId).eq("status", "active") : Promise.resolve({ data: [], error: null }),
   ]);
+  const directoryError = studentsResult.error ?? familiesResult.error ?? peopleResult.error;
+  if (directoryError) throw new Error(`School navigation directory could not load: ${directoryError.message}`);
   if (!school || !membership) notFound();
   const [{ data: avatar }, { data: logo }] = await Promise.all([
     profile?.avatar_path ? supabase.storage.from("avatars").createSignedUrl(profile.avatar_path, 3600) : Promise.resolve({ data: null }),
     school.logo_path ? supabase.storage.from("school-logos").createSignedUrl(school.logo_path, 3600) : Promise.resolve({ data: null }),
   ]);
   const avatarUrl = avatar?.signedUrl ?? profile?.avatar_url;
+  const people = new Map((peopleResult.data ?? []).map((person) => [person.id, person]));
+  const studentDirectory = (studentsResult.data ?? []).flatMap((student) => { const person = people.get(student.person_id); return person ? [{ id: person.id, label: `${person.preferred_name || person.first_name} ${person.last_name}` }] : []; }).sort((a, b) => a.label.localeCompare(b.label));
+  const familyDirectory = (familiesResult.data ?? []).map((family) => ({ id: family.id, label: family.name }));
   return <div data-school-theme={school.theme_key} data-school-font={school.font_key} className="min-h-screen bg-canvas text-ink">
     <div className="mx-auto max-w-7xl px-5 pt-8 sm:px-8 sm:pt-10">
       <header className="flex items-start justify-between gap-6 border-b border-line pb-7">
@@ -42,7 +50,7 @@ export default async function SchoolLayout({ children, params }: { children: Rea
         </div>
         <div className="flex shrink-0 items-end gap-3">{capabilities.has("school.setup.manage") ? <Link href={`/schools/${schoolId}/setup`} className="mb-0.5 inline-flex h-10 items-center gap-2 rounded-control px-3 text-sm text-muted transition hover:bg-surface hover:text-ink"><MdSettings aria-hidden="true" className="text-lg" /><span className="hidden sm:inline">School settings</span></Link> : null}<AccountMenu avatarUrl={avatarUrl} role={membership.role} /></div>
       </header>
-      <SchoolManagementNav schoolId={schoolId} capabilities={[...capabilities]} recentApprovals={approvalSummary.items.map((item) => ({ id: item.id, kind: item.kind, teacherId: item.teacherId, studentId: item.studentId, teacher: item.teacher, student: item.student, detail: item.kind === "schedule_proposal" ? "Schedule change" : item.requestType === "cancellation" ? "Cancellation request" : "Reschedule request" }))} approvalCount={approvalSummary.count} recentInvoices={invoiceSummary.invoices.slice(0, 5)} invoiceCount={invoiceSummary.attentionCount} />
+      <SchoolManagementNav schoolId={schoolId} capabilities={[...capabilities]} students={studentDirectory} families={familyDirectory} recentApprovals={approvalSummary.items.map((item) => ({ id: item.id, kind: item.kind, teacherId: item.teacherId, studentId: item.studentId, teacher: item.teacher, student: item.student, detail: item.kind === "schedule_proposal" ? "Schedule change" : item.requestType === "cancellation" ? "Cancellation request" : "Reschedule request" }))} approvalCount={approvalSummary.count} recentInvoices={invoiceSummary.invoices.slice(0, 5)} invoiceCount={invoiceSummary.attentionCount} />
     </div>
     {children}
   </div>;

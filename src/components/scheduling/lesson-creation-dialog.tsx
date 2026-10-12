@@ -13,6 +13,7 @@ export type LessonCreationOptions = {
   availability: LessonFormAvailability[];
   today: string;
   minimumTimeToday?: string;
+  defaultStudentId?: string;
   entitlement?: { id: string; studentId: string; productId: string; teacherId: string | null; durationMinutes: number };
 };
 
@@ -46,6 +47,7 @@ export function LessonCreationDialog({ schoolId, slot, options, lockTeacher, onC
           initialState={initialState}
           {...options}
           defaultTeacherId={slot.teacherId}
+          defaultStudentId={options.defaultStudentId}
           lockedTeacherId={lockTeacher ? slot.teacherId : undefined}
           initialDate={slot.dateKey}
           initialTime={slot.time}

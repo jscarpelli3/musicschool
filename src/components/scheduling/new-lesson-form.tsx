@@ -79,6 +79,7 @@ export function NewLessonForm({
   availability,
   today,
   defaultTeacherId,
+  defaultStudentId,
   initialDate,
   initialTime = "",
   lockedTeacherId,
@@ -96,6 +97,7 @@ export function NewLessonForm({
   availability: LessonFormAvailability[];
   today: string;
   defaultTeacherId?: string;
+  defaultStudentId?: string;
   initialDate?: string;
   initialTime?: string;
   lockedTeacherId?: string;
@@ -146,7 +148,7 @@ export function NewLessonForm({
     </div> : null}
     <div className={`grid gap-7 md:grid-cols-2 ${compact ? "py-2" : "py-9 md:pl-10"}`}>
       {state.message ? <p ref={errorRef} role={state.status === "error" ? "alert" : "status"} className={`md:col-span-2 border p-4 text-sm ${state.status === "success" ? "border-brand/40 bg-brand/10 text-brand" : "border-danger/40 bg-danger/10 text-danger"}`}>{state.message}{state.status === "error" ? " Nothing was added; correct the highlighted field and try again." : ""}</p> : null}
-      <label className="md:col-span-2"><span className="text-xs text-muted">Student</span><select required name="student_id" defaultValue={entitlement?.studentId ?? ""} disabled={Boolean(entitlement)} className={field}><option value="" disabled>Select a student</option>{students.map((student) => <option key={student.id} value={student.id}>{student.label}</option>)}</select>{entitlement ? <><input type="hidden" name="student_id" value={entitlement.studentId} /><span className="mt-2 block text-xs text-brand">Paid replacement lesson · this student is fixed</span></> : null}</label>
+      <label className="md:col-span-2"><span className="text-xs text-muted">Student</span><select required name="student_id" defaultValue={entitlement?.studentId ?? defaultStudentId ?? ""} disabled={Boolean(entitlement)} className={field}><option value="" disabled>Select a student</option>{students.map((student) => <option key={student.id} value={student.id}>{student.label}</option>)}</select>{entitlement ? <><input type="hidden" name="student_id" value={entitlement.studentId} /><span className="mt-2 block text-xs text-brand">Paid replacement lesson · this student is fixed</span></> : null}</label>
       {lockedTeacherId ? <div><span className="text-xs text-muted">Teacher</span><p className="border-b border-line py-3">{teacher?.label}</p><input type="hidden" name="teacher_id" value={lockedTeacherId} /></div> : <label><span className="text-xs text-muted">Teacher</span><select required name="teacher_id" value={teacherId} onChange={(event) => setTeacherId(event.target.value)} className={field}><option value="" disabled>Select a teacher</option>{teachers.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>}
       <label><span className="text-xs text-muted">Lesson offering</span><select required name="product_id" value={productId} disabled={Boolean(entitlement)} onChange={(event) => setProductId(event.target.value)} className={field}><option value="" disabled>Select an offering</option>{products.map((option) => <option key={option.id} value={option.id}>{option.label} · {option.durationMinutes} min · {option.priceLabel}</option>)}</select>{entitlement ? <input type="hidden" name="product_id" value={entitlement.productId} /> : null}</label>
       <label><span className="text-xs text-muted">Date</span><input required name="date" type="date" min={today} value={date} onChange={(event) => setDate(event.target.value)} className={field} /></label>

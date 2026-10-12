@@ -1,6 +1,6 @@
 # Active Session Handoff
 
-Updated 2026-10-11 after the first approved-statement saved-card charge succeeded in staging. This file is the quickest restart point after a lost conversation; the authoritative launch gates remain in [`../operations/production-readiness-plan.md`](../operations/production-readiness-plan.md).
+Updated 2026-10-12 after adding owner navigation and contextual lesson-entry improvements for the next automatic-settlement test. This file is the quickest restart point after a lost conversation; the authoritative launch gates remain in [`../operations/production-readiness-plan.md`](../operations/production-readiness-plan.md).
 
 ## Restart rule
 
@@ -59,6 +59,14 @@ Do not redo card setup or the first $2.00 charge. The next human action is one n
 5. Verify the durable provider event is `processed`, the attempt is `succeeded`, the period is `paid`, and the Stripe PaymentIntent/Charge are test-mode objects on the connected school account with the exact amount and metadata.
 6. Record the deployment commit, local attempt/period IDs, non-secret Stripe event/intent/charge IDs, timestamps, and outcome in the payment audit log.
 7. Only after this passes, select the next saved-card failure row: a decline test, authentication-required test, duplicate/concurrent submission test, or unknown-outcome recovery. Do not treat those rows as already tested.
+
+## Owner navigation checkpoint
+
+- The next staging build adds `Add lesson` beside the lesson calendar on both student and family records. Student entry preselects that student; family entry limits the picker to students connected to that family and preselects when there is only one.
+- The owner Students and Families navigation labels still open their full list pages. Hover, keyboard focus, or the adjacent disclosure control opens a scrollable quick directory with search and direct record links.
+- Both full directory pages now have a simple search. Students match student, family, or teacher; families match family name, payer name, email, or phone.
+- This work changes navigation and form defaults only. It does not change billing, approval, collection, webhook, or ledger behavior.
+- Immediate human action remains: create the new synthetic lessons for `TestFamily`, prepare and approve a different billing month, then perform the automatic invoice webhook settlement test above. Do not repeat payer/card setup or the already-reconciled first $2.00 charge.
 
 ## Decisions and open work
 
