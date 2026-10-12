@@ -65,6 +65,8 @@ Do not redo card setup or the first $2.00 charge. The next human action is one n
 - The calendar interaction rule is now consistent for owners: create a lesson in place from the calendar currently being viewed. The overall calendar can schedule any student, a family calendar limits the picker to that family, and a student calendar fixes the student. Record-level creation opens over the current page rather than navigating away.
 - The owner Students and Families navigation labels still open their full list pages. Hover, keyboard focus, or the adjacent disclosure control opens a scrollable quick directory with search and direct record links.
 - The quick-directory hover bridge has no dead gap; its panel is slightly smaller and uses a higher-contrast raised background.
+- The Staff label now has the same quick directory, populated with active people who have teacher records; clicking Staff itself still opens the full staff page.
+- A staging regression where record-calendar Add lesson clicks appeared inert was traced to dialog CSS being bundled only with the main planner. The creation dialog now owns its overlay CSS module, so student/family calendar creation does not depend on the planner bundle.
 - Both full directory pages now have a simple search. Students match student, family, or teacher; families match family name, payer name, email, or phone.
 - This work changes navigation and form defaults only. It does not change billing, approval, collection, webhook, or ledger behavior.
 - Immediate human action remains: create the new synthetic lessons for `TestFamily`, prepare and approve a different billing month, then perform the automatic invoice webhook settlement test above. Do not repeat payer/card setup or the already-reconciled first $2.00 charge.

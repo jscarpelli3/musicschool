@@ -11,11 +11,11 @@ type RecentApproval = { id: string; kind: "schedule_proposal" | "lesson_change_r
 
 type DirectoryItem = { id: string; label: string };
 
-export function SchoolManagementNav({ schoolId, capabilities, approvalCount = 0, recentApprovals = [], invoiceCount = 0, recentInvoices = [], students = [], families = [] }: { schoolId: string; capabilities: string[]; approvalCount?: number; recentApprovals?: RecentApproval[]; invoiceCount?: number; recentInvoices?: SchoolInvoice[]; students?: DirectoryItem[]; families?: DirectoryItem[] }) {
+export function SchoolManagementNav({ schoolId, capabilities, approvalCount = 0, recentApprovals = [], invoiceCount = 0, recentInvoices = [], students = [], families = [], staff = [] }: { schoolId: string; capabilities: string[]; approvalCount?: number; recentApprovals?: RecentApproval[]; invoiceCount?: number; recentInvoices?: SchoolInvoice[]; students?: DirectoryItem[]; families?: DirectoryItem[]; staff?: DirectoryItem[] }) {
   const pathname = usePathname();
   const [approvalsOpen, setApprovalsOpen] = useState(false);
   const [invoicesOpen, setInvoicesOpen] = useState(false);
-  const [directoryOpen, setDirectoryOpen] = useState<"students" | "families" | null>(null);
+  const [directoryOpen, setDirectoryOpen] = useState<"students" | "families" | "staff" | null>(null);
   const [directorySearch, setDirectorySearch] = useState("");
   const approvalsRef = useRef<HTMLDivElement>(null);
   const invoicesRef = useRef<HTMLDivElement>(null);
@@ -68,7 +68,7 @@ export function SchoolManagementNav({ schoolId, capabilities, approvalCount = 0,
         { label: "Dashboard", href: dashboardHref, active: pathname === dashboardHref },
         { label: "Students", href: `${base}/students`, active: pathname.startsWith(`${base}/students`), directory: "students" as const },
         { label: "Families", href: `${base}/families`, active: pathname.startsWith(`${base}/families`), directory: "families" as const },
-        ...(can("school.staff.directory_manage") ? [{ label: "Staff", href: `${base}/staff`, active: pathname.startsWith(`${base}/staff`) }] : []),
+        ...(can("school.staff.directory_manage") ? [{ label: "Staff", href: `${base}/staff`, active: pathname.startsWith(`${base}/staff`), directory: "staff" as const }] : []),
       ];
 
   return (
@@ -77,7 +77,7 @@ export function SchoolManagementNav({ schoolId, capabilities, approvalCount = 0,
         const directory = "directory" in item ? item.directory : null;
         if (!directory) return <Link key={item.href} href={item.href} aria-current={item.active ? "page" : undefined} className={`relative py-1 text-sm transition-colors after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:bg-brand ${item.active ? "text-ink after:scale-x-100" : "text-muted after:scale-x-0 hover:text-ink"}`}>{item.label}</Link>;
         const open = directoryOpen === directory;
-        const choices = directory === "students" ? students : families;
+        const choices = directory === "students" ? students : directory === "families" ? families : staff;
         const filtered = choices.filter((choice) => choice.label.toLocaleLowerCase().includes(directorySearch.trim().toLocaleLowerCase()));
         return <div key={item.href} ref={open ? directoryRef : undefined} className="relative z-40 flex items-center" onMouseEnter={() => { setDirectorySearch(""); setDirectoryOpen(directory); window.dispatchEvent(new Event("common-time:open-directory")); }} onMouseLeave={() => setDirectoryOpen(null)} onFocusCapture={() => { if (!open) { setDirectorySearch(""); setDirectoryOpen(directory); window.dispatchEvent(new Event("common-time:open-directory")); } }} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setDirectoryOpen(null); }}>
           <Link href={item.href} aria-current={item.active ? "page" : undefined} className={`relative py-1 text-sm transition-colors after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:bg-brand ${item.active ? "text-ink after:scale-x-100" : "text-muted after:scale-x-0 hover:text-ink"}`}>{item.label}</Link>
