@@ -11,7 +11,7 @@ function name(person: { first_name: string; last_name: string; preferred_name: s
 
 export default async function NewLessonPage({ params, searchParams }: {
   params: Promise<{ schoolId: string }>;
-  searchParams: Promise<{ teacher?: string; entitlement?: string }>;
+  searchParams: Promise<{ teacher?: string; student?: string; family?: string; entitlement?: string }>;
 }) {
   const { schoolId } = await params;
   const query = await searchParams;
@@ -30,10 +30,11 @@ export default async function NewLessonPage({ params, searchParams }: {
     supabase.from("lesson_places").select("id, name").eq("school_id", schoolId).eq("status", "active").order("name"),
     supabase.from("teacher_availability_rules").select("id, teacher_id, weekday, start_time, end_time, effective_from, effective_until").eq("school_id", schoolId).order("weekday").order("start_time"),
     supabase.from("lesson_events").select("id, product_id, teacher_id, student_id, starts_at, ends_at, status, notes, place_id, reschedule_allowed, reschedule_blocked_reason, reschedule_reason_code, reschedule_reason_detail").eq("school_id",schoolId).order("starts_at"),
+    supabase.from("billing_account_students").select("billing_account_id,student_id").eq("school_id",schoolId),
     loadMySchoolCapabilities(schoolId),
   ]);
-  const [{ data: school }, { data: membership }, teachersResult, studentsResult, peopleResult, productsResult, placesResult, availabilityResult, lessonsResult, capabilities] = results;
-  const failed = [results[0], results[1], teachersResult, studentsResult, peopleResult, productsResult, placesResult, availabilityResult, lessonsResult]
+  const [{ data: school }, { data: membership }, teachersResult, studentsResult, peopleResult, productsResult, placesResult, availabilityResult, lessonsResult, billingLinksResult, capabilities] = results;
+  const failed = [results[0], results[1], teachersResult, studentsResult, peopleResult, productsResult, placesResult, availabilityResult, lessonsResult, billingLinksResult]
     .find((result) => result.error);
   if (failed?.error) throw new Error(`New lesson setup could not load: ${failed.error.message}`);
   if (!school || !membership) notFound();
@@ -41,6 +42,11 @@ export default async function NewLessonPage({ params, searchParams }: {
   const people = new Map((peopleResult.data ?? []).map((person) => [person.id, person]));
   const teachers = (teachersResult.data ?? []).flatMap(({ person_id, outside_availability_policy }) => people.has(person_id) ? [{ id: person_id, label: name(people.get(person_id)!), outsideAvailabilityPolicy: outside_availability_policy === "require_approval" ? "require_approval" as const : "notify_only" as const }] : []).sort((a, b) => a.label.localeCompare(b.label));
   const students = (studentsResult.data ?? []).flatMap(({ person_id }) => people.has(person_id) ? [{ id: person_id, label: name(people.get(person_id)!) }] : []).sort((a, b) => a.label.localeCompare(b.label));
+  const requestedFamily = /^[0-9a-f-]{36}$/i.test(query.family ?? "") ? query.family : null;
+  const familyStudentIds = requestedFamily ? new Set((billingLinksResult.data ?? []).filter((link) => link.billing_account_id === requestedFamily).map((link) => link.student_id)) : null;
+  const visibleStudents = familyStudentIds ? students.filter((student) => familyStudentIds.has(student.id)) : students;
+  const requestedStudent = visibleStudents.some((student) => student.id === query.student) ? query.student : "";
+  const defaultStudentId = requestedStudent || (visibleStudents.length === 1 ? visibleStudents[0].id : "");
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: school.timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const minimumTimeToday = new Intl.DateTimeFormat("en-GB", { timeZone: school.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
   const teacherChoices = teachers.map((teacher) => ({id:teacher.id,name:teacher.label,isOwner:false}));
@@ -79,7 +85,7 @@ export default async function NewLessonPage({ params, searchParams }: {
         availability={availabilityResult.data ?? []}
         lessons={(lessonsResult.data ?? []).map((lesson) => ({...lesson,billing_service_date:lesson.starts_at.slice(0,10),can_reschedule:false,can_mark_reschedule:false}))}
         contextLabel={entitlement ? "Choose a time for this paid replacement lesson" : "Choose a teacher, then a time"}
-        lessonCreationOptions={{students,teachers:visibleTeachers,products:(productsResult.data ?? []).map((product) => ({id:product.id,label:product.name,durationMinutes:product.duration_minutes,priceLabel:new Intl.NumberFormat("en-US",{style:"currency",currency:product.currency}).format(product.price_cents/100)})),places:(placesResult.data ?? []).map((place) => ({id:place.id,label:place.name})),availability:availabilityResult.data ?? [],today,minimumTimeToday,
+        lessonCreationOptions={{students:visibleStudents,defaultStudentId,teachers:visibleTeachers,products:(productsResult.data ?? []).map((product) => ({id:product.id,label:product.name,durationMinutes:product.duration_minutes,priceLabel:new Intl.NumberFormat("en-US",{style:"currency",currency:product.currency}).format(product.price_cents/100)})),places:(placesResult.data ?? []).map((place) => ({id:place.id,label:place.name})),availability:availabilityResult.data ?? [],today,minimumTimeToday,
           entitlement: entitlement && sourceLesson ? {id:entitlement.id,studentId:entitlement.student_id,productId:sourceLesson.product_id,teacherId:entitlement.assigned_teacher_id,durationMinutes:entitlement.duration_minutes} : undefined}}
       />
     </main>

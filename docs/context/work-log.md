@@ -154,3 +154,12 @@ Use this file for short chronological notes about meaningful work.
 - Recorded the successful synthetic $2.00 Stripe charge, the initially missing PaymentIntent webhook subscription, the app's fail-closed pending state, the subscription correction, and the manual authoritative reconciliation.
 - Recorded that automatic webhook settlement is not yet accepted and is the single next human payment test.
 - Established the rule that every implemented, deployed, provider-configured, and human-tested payment step must update `session-handoff.md` and append the payment audit log before being called complete.
+
+## 2026-10-12 — Contextual lesson entry and directory navigation
+
+- Added lesson-entry actions directly to student and family calendars while retaining the global New Lesson action.
+- Scoped contextual lesson entry safely: student records preselect their student, and family records show only students linked to that school-scoped family.
+- Added searchable, scrollable Students and Families navigation directories without changing the main-label links to the full directories.
+- Added simple search to the full student and family pages.
+- Recorded that this is a workflow/navigation step only; the next payment acceptance remains a new approved `TestFamily` statement settling automatically through the signed Stripe PaymentIntent webhook.
+- Validation passed: TypeScript, ESLint, production build, and all 60 local Node tests.

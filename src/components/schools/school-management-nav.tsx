@@ -5,35 +5,43 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { OwnerNotifications } from "@/components/notifications/owner-notifications";
 import type { SchoolInvoice } from "@/lib/billing/school-invoices";
-import { MdAddCircleOutline, MdApproval, MdReceiptLong } from "react-icons/md";
+import { MdAddCircleOutline, MdApproval, MdExpandMore, MdReceiptLong, MdSearch } from "react-icons/md";
 
 type RecentApproval = { id: string; kind: "schedule_proposal" | "lesson_change_request"; teacherId: string; studentId: string; teacher: string; student: string; detail: string };
 
-export function SchoolManagementNav({ schoolId, capabilities, approvalCount = 0, recentApprovals = [], invoiceCount = 0, recentInvoices = [] }: { schoolId: string; capabilities: string[]; approvalCount?: number; recentApprovals?: RecentApproval[]; invoiceCount?: number; recentInvoices?: SchoolInvoice[] }) {
+type DirectoryItem = { id: string; label: string };
+
+export function SchoolManagementNav({ schoolId, capabilities, approvalCount = 0, recentApprovals = [], invoiceCount = 0, recentInvoices = [], students = [], families = [] }: { schoolId: string; capabilities: string[]; approvalCount?: number; recentApprovals?: RecentApproval[]; invoiceCount?: number; recentInvoices?: SchoolInvoice[]; students?: DirectoryItem[]; families?: DirectoryItem[] }) {
   const pathname = usePathname();
   const [approvalsOpen, setApprovalsOpen] = useState(false);
   const [invoicesOpen, setInvoicesOpen] = useState(false);
+  const [directoryOpen, setDirectoryOpen] = useState<"students" | "families" | null>(null);
+  const [directorySearch, setDirectorySearch] = useState("");
   const approvalsRef = useRef<HTMLDivElement>(null);
   const invoicesRef = useRef<HTMLDivElement>(null);
+  const directoryRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const close = () => setApprovalsOpen(false);
     window.addEventListener("common-time:open-notifications", close);
     window.addEventListener("common-time:open-invoices", close);
     window.addEventListener("common-time:open-lesson-drawer", close);
-    return () => { window.removeEventListener("common-time:open-notifications", close); window.removeEventListener("common-time:open-invoices", close); window.removeEventListener("common-time:open-lesson-drawer", close); };
+    window.addEventListener("common-time:open-directory", close);
+    return () => { window.removeEventListener("common-time:open-notifications", close); window.removeEventListener("common-time:open-invoices", close); window.removeEventListener("common-time:open-lesson-drawer", close); window.removeEventListener("common-time:open-directory", close); };
   }, []);
   useEffect(() => {
-    if (!approvalsOpen && !invoicesOpen) return;
+    if (!approvalsOpen && !invoicesOpen && !directoryOpen) return;
     const dismiss = (event: PointerEvent) => {
       if (!(event.target instanceof Node)) return;
-      if (approvalsRef.current?.contains(event.target) || invoicesRef.current?.contains(event.target)) return;
+      if (approvalsRef.current?.contains(event.target) || invoicesRef.current?.contains(event.target) || directoryRef.current?.contains(event.target)) return;
       setApprovalsOpen(false);
       setInvoicesOpen(false);
+      setDirectoryOpen(null);
     };
     const escape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setApprovalsOpen(false);
         setInvoicesOpen(false);
+        setDirectoryOpen(null);
       }
     };
     document.addEventListener("pointerdown", dismiss);
@@ -42,13 +50,14 @@ export function SchoolManagementNav({ schoolId, capabilities, approvalCount = 0,
       document.removeEventListener("pointerdown", dismiss);
       document.removeEventListener("keydown", escape);
     };
-  }, [approvalsOpen, invoicesOpen]);
+  }, [approvalsOpen, invoicesOpen, directoryOpen]);
   useEffect(() => {
     const close = () => setInvoicesOpen(false);
     window.addEventListener("common-time:open-notifications", close);
     window.addEventListener("common-time:open-approvals", close);
     window.addEventListener("common-time:open-lesson-drawer", close);
-    return () => { window.removeEventListener("common-time:open-notifications", close); window.removeEventListener("common-time:open-approvals", close); window.removeEventListener("common-time:open-lesson-drawer", close); };
+    window.addEventListener("common-time:open-directory", close);
+    return () => { window.removeEventListener("common-time:open-notifications", close); window.removeEventListener("common-time:open-approvals", close); window.removeEventListener("common-time:open-lesson-drawer", close); window.removeEventListener("common-time:open-directory", close); };
   }, []);
   const base = `/schools/${schoolId}`;
   const can = (capability: string) => capabilities.includes(capability);
@@ -57,14 +66,29 @@ export function SchoolManagementNav({ schoolId, capabilities, approvalCount = 0,
     ? [{ label: "My schedule", href: dashboardHref, active: pathname.startsWith(dashboardHref) }]
     : [
         { label: "Dashboard", href: dashboardHref, active: pathname === dashboardHref },
-        { label: "Students", href: `${base}/students`, active: pathname.startsWith(`${base}/students`) },
-        { label: "Families", href: `${base}/families`, active: pathname.startsWith(`${base}/families`) },
+        { label: "Students", href: `${base}/students`, active: pathname.startsWith(`${base}/students`), directory: "students" as const },
+        { label: "Families", href: `${base}/families`, active: pathname.startsWith(`${base}/families`), directory: "families" as const },
         ...(can("school.staff.directory_manage") ? [{ label: "Staff", href: `${base}/staff`, active: pathname.startsWith(`${base}/staff`) }] : []),
       ];
 
   return (
     <nav className="flex flex-wrap items-center gap-x-6 gap-y-4 border-b border-line py-5" aria-label="School management">
-      {items.map((item) => <Link key={item.href} href={item.href} aria-current={item.active ? "page" : undefined} className={`relative py-1 text-sm transition-colors after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:bg-brand ${item.active ? "text-ink after:scale-x-100" : "text-muted after:scale-x-0 hover:text-ink"}`}>{item.label}</Link>)}
+      {items.map((item) => {
+        const directory = "directory" in item ? item.directory : null;
+        if (!directory) return <Link key={item.href} href={item.href} aria-current={item.active ? "page" : undefined} className={`relative py-1 text-sm transition-colors after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:bg-brand ${item.active ? "text-ink after:scale-x-100" : "text-muted after:scale-x-0 hover:text-ink"}`}>{item.label}</Link>;
+        const open = directoryOpen === directory;
+        const choices = directory === "students" ? students : families;
+        const filtered = choices.filter((choice) => choice.label.toLocaleLowerCase().includes(directorySearch.trim().toLocaleLowerCase()));
+        return <div key={item.href} ref={open ? directoryRef : undefined} className="relative z-40 flex items-center" onMouseEnter={() => { setDirectorySearch(""); setDirectoryOpen(directory); window.dispatchEvent(new Event("common-time:open-directory")); }} onMouseLeave={() => setDirectoryOpen(null)} onFocusCapture={() => { if (!open) { setDirectorySearch(""); setDirectoryOpen(directory); window.dispatchEvent(new Event("common-time:open-directory")); } }} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setDirectoryOpen(null); }}>
+          <Link href={item.href} aria-current={item.active ? "page" : undefined} className={`relative py-1 text-sm transition-colors after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:bg-brand ${item.active ? "text-ink after:scale-x-100" : "text-muted after:scale-x-0 hover:text-ink"}`}>{item.label}</Link>
+          <button type="button" aria-label={`Browse ${item.label.toLowerCase()}`} aria-expanded={open} onClick={() => { setDirectorySearch(""); setDirectoryOpen(open ? null : directory); if (!open) window.dispatchEvent(new Event("common-time:open-directory")); }} className="ml-1 grid min-h-8 min-w-8 place-items-center text-muted hover:text-ink"><MdExpandMore aria-hidden="true" className={`transition ${open ? "rotate-180" : ""}`} /></button>
+          {open ? <div className="ui-card absolute left-0 top-full mt-2 w-[min(20rem,calc(100vw-2.5rem))] p-3">
+            <label className="flex items-center gap-2 border-b border-line px-2"><MdSearch aria-hidden="true" className="shrink-0 text-muted" /><span className="sr-only">Search {item.label.toLowerCase()}</span><input autoFocus={false} value={directorySearch} onChange={(event) => setDirectorySearch(event.target.value)} placeholder={`Quick search ${item.label.toLowerCase()}…`} className="min-w-0 flex-1 bg-transparent py-3 text-sm outline-none placeholder:text-muted" /></label>
+            <div className="mt-2 max-h-72 overflow-y-auto overscroll-contain">{filtered.length ? filtered.map((choice) => <Link key={choice.id} href={`${item.href}/${choice.id}`} onClick={() => setDirectoryOpen(null)} className="block rounded-control px-3 py-2.5 text-sm transition hover:bg-brand/10 hover:text-brand">{choice.label}</Link>) : <p className="px-3 py-5 text-sm text-muted">No matches.</p>}</div>
+            <Link href={item.href} onClick={() => setDirectoryOpen(null)} className="mt-2 block border-t border-line px-3 pt-3 text-xs text-brand">View all {item.label.toLowerCase()} →</Link>
+          </div> : null}
+        </div>;
+      })}
       {can("school.lessons.manage") ? <Link href={`${base}/lessons/new`} className="inline-flex items-center gap-1.5 text-sm text-brand hover:text-brand-hover"><MdAddCircleOutline aria-hidden="true" className="text-lg" />New lesson</Link> : null}
       <div className="ml-auto flex flex-wrap items-start justify-end gap-3 sm:gap-4">
         {can("school.billing.manage") ? <div ref={invoicesRef} className="relative z-30 flex flex-col items-end">

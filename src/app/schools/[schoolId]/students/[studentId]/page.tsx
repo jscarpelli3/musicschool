@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadServiceEntitlements } from "@/lib/scheduling/service-entitlements";
 import { RecordLessonCalendar } from "@/components/calendar/record-lesson-calendar";
 import { schoolCalendarWindow } from "@/lib/calendar/school-calendar-window";
+import { MdAddCircleOutline } from "react-icons/md";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,7 @@ export default async function StudentDetailPage({ params }: {
   }).format(new Date(value));
   const capabilities = await loadMySchoolCapabilities(schoolId);
   const canViewSupport = capabilities.has("school.student_support.view");
+  const canManageLessons = capabilities.has("school.lessons.manage");
   const approvals = canViewSupport ? await loadOwnerApprovals(supabase,schoolId,{studentIds:[studentId]}) : [];
   const entitlements = canViewSupport ? await loadServiceEntitlements(supabase,schoolId,{studentIds:[studentId]}) : [];
 
@@ -73,7 +75,7 @@ export default async function StudentDetailPage({ params }: {
       {entitlements.length?<DetailSection title="Lessons to schedule" description="Paid replacement lessons still owed to this student."><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} compact/></DetailSection>:null}
 
       <section className="ui-card mt-6 p-6 md:p-8">
-        <div className="mb-7"><h2 className="font-display text-3xl">Lesson calendar</h2><p className="mt-3 text-sm leading-6 text-muted">This student’s scheduled lessons. Move between months without leaving the record.</p></div>
+        <div className="mb-7 flex flex-wrap items-start justify-between gap-5"><div><h2 className="font-display text-3xl">Lesson calendar</h2><p className="mt-3 text-sm leading-6 text-muted">This student’s scheduled lessons. Move between months without leaving the record.</p></div>{canManageLessons ? <Link href={`/schools/${schoolId}/lessons/new?student=${studentId}`} className="inline-flex items-center gap-2 rounded-control border border-brand px-4 py-2.5 text-sm text-brand transition hover:bg-brand hover:text-canvas"><MdAddCircleOutline aria-hidden="true" className="text-lg" />Add lesson</Link> : null}</div>
         <RecordLessonCalendar schoolId={schoolId} id={`student-${studentId}-calendar`} lessons={(calendarLessonsResult.data ?? []).map((lesson) => ({ id: lesson.id, studentId, studentName: displayName(person), teacherId: lesson.teacher_id, teacherName: people.get(lesson.teacher_id) ? displayName(people.get(lesson.teacher_id)!) : "Unassigned teacher", productName: products.get(lesson.product_id)?.name ?? "Lesson", placeName: places.get(lesson.actual_place_id ?? lesson.place_id)?.name ?? "Unassigned place", startsAt: lesson.actual_starts_at ?? lesson.starts_at, endsAt: lesson.actual_ends_at ?? lesson.ends_at, status: lesson.outcome ?? lesson.status, billingAccounts: accounts.map((account) => ({ id: account.id, name: account.name })) }))} rangeStart={calendarStart} rangeEnd={calendarEnd} timeZone={school.timezone} />
       </section>
 

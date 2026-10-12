@@ -26,7 +26,7 @@ import { BillingAdjustmentForm, BillingAdjustmentRemove } from "./billing-adjust
 import { BillingArchive } from "./billing-archive";
 import { RecordLessonCalendar } from "@/components/calendar/record-lesson-calendar";
 import { schoolCalendarWindow } from "@/lib/calendar/school-calendar-window";
-import { MdExpandMore } from "react-icons/md";
+import { MdAddCircleOutline, MdExpandMore } from "react-icons/md";
 import { calendarMonthCutoff, formatCompactDate } from "@/lib/date-format";
 import { getStripeMode } from "@/lib/stripe/server";
 
@@ -116,6 +116,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   const activePaymentMethodCount = (methodsResult.data ?? []).filter((method) => method.status === "active").length;
   const capabilities = await loadMySchoolCapabilities(schoolId);
   const canManagePayments = capabilities.has("school.billing.manage");
+  const canManageLessons = capabilities.has("school.lessons.manage");
   const readinessResults = canManagePayments ? await Promise.all(periodIds.map((billingPeriodId) =>
     supabase.rpc("get_billing_collection_readiness", { p_school_id: schoolId, p_billing_period_id: billingPeriodId }).maybeSingle()
   )) : [];
@@ -162,7 +163,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
       {entitlements.length?<DetailSection title="Lessons to schedule" description="Paid replacement lessons still owed to this family."><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} compact/></DetailSection>:null}
 
       <section className="ui-card mt-6 p-6 md:p-8">
-        <div className="mb-7"><h2 className="font-display text-3xl">Family lesson calendar</h2><p className="mt-3 text-sm leading-6 text-muted">Lessons for every student on this account. Move between months without leaving the record.</p></div>
+        <div className="mb-7 flex flex-wrap items-start justify-between gap-5"><div><h2 className="font-display text-3xl">Family lesson calendar</h2><p className="mt-3 text-sm leading-6 text-muted">Lessons for every student on this account. Move between months without leaving the record.</p></div>{canManageLessons ? <Link href={`/schools/${schoolId}/lessons/new?family=${billingAccountId}`} className="inline-flex items-center gap-2 rounded-control border border-brand px-4 py-2.5 text-sm text-brand transition hover:bg-brand hover:text-canvas"><MdAddCircleOutline aria-hidden="true" className="text-lg" />Add lesson</Link> : null}</div>
         <RecordLessonCalendar schoolId={schoolId} id={`family-${billingAccountId}-calendar`} lessons={(familyLessons ?? []).map((lesson) => { const studentPerson = people.get(lesson.student_id); const teacherPerson = people.get(lesson.teacher_id); return { id: lesson.id, studentId: lesson.student_id, studentName: studentPerson ? name(studentPerson) : "Student", teacherId: lesson.teacher_id, teacherName: teacherPerson ? name(teacherPerson) : "Unassigned teacher", productName: products.get(lesson.product_id) ?? "Lesson", placeName: places.get(lesson.actual_place_id ?? lesson.place_id) ?? "Unassigned place", startsAt: lesson.actual_starts_at ?? lesson.starts_at, endsAt: lesson.actual_ends_at ?? lesson.ends_at, status: lesson.outcome ?? lesson.status, billingAccounts: [{ id: billingAccountId, name: account.name }] }; })} rangeStart={calendarStart} rangeEnd={calendarEnd} timeZone={school.timezone} />
       </section>
 
