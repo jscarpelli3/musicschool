@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { CalendarRange } from "./calendar-range";
 import { QuickActionGrid, type QuickAction } from "@/components/ui/quick-action-grid";
+import { LessonCreationDialog, type LessonCreationOptions } from "@/components/scheduling/lesson-creation-dialog";
+import { MdAddCircleOutline } from "react-icons/md";
 
 export type RecordLessonCalendarItem = {
   id: string;
@@ -18,15 +20,17 @@ export type RecordLessonCalendarItem = {
   billingAccounts?: Array<{ id: string; name: string }>;
 };
 
-export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeEnd, timeZone }: {
+export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeEnd, timeZone, lessonCreationOptions }: {
   schoolId: string;
   id: string;
   lessons: RecordLessonCalendarItem[];
   rangeStart: Date;
   rangeEnd: Date;
   timeZone: string;
+  lessonCreationOptions?: LessonCreationOptions;
 }) {
   const [selectedLesson, setSelectedLesson] = useState<RecordLessonCalendarItem | null>(null);
+  const [creatingLesson, setCreatingLesson] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLButtonElement | null>(null);
   const time = new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", minute: "2-digit" });
@@ -67,7 +71,7 @@ export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeE
     { href: `/schools/${schoolId}/staff/${selectedLesson.teacherId}`, kind: "teacher", title: "Teacher home", detail: "Schedule, availability, and details." },
   ] : [];
 
-  return <><CalendarRange
+  return <>{lessonCreationOptions ? <div className="mb-4 flex justify-end"><button type="button" onClick={() => setCreatingLesson(true)} className="inline-flex items-center gap-2 rounded-control border border-brand px-4 py-2.5 text-sm text-brand transition hover:bg-brand hover:text-canvas"><MdAddCircleOutline aria-hidden="true" className="text-lg" />Add lesson</button></div> : null}<CalendarRange
     id={id}
     items={lessons}
     rangeStart={rangeStart}
@@ -86,6 +90,7 @@ export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeE
       <p className="mt-1 block truncate text-xs text-muted" title={lesson.teacherName}>{lesson.teacherName}</p>
     </article>}</button>}
   />
+  {creatingLesson && lessonCreationOptions ? <LessonCreationDialog schoolId={schoolId} slot={{ dateKey: lessonCreationOptions.today, time: "", teacherId: "" }} options={lessonCreationOptions} lockTeacher={false} onClose={() => setCreatingLesson(false)} /> : null}
   {selectedLesson ? <div className="fixed inset-0 z-[80] flex justify-end">
     <button type="button" aria-label="Close lesson details" onClick={closeLesson} className="absolute inset-0 cursor-default bg-ink/70" />
     <aside role="dialog" aria-modal="true" aria-labelledby={`${id}-lesson-title`} className="relative z-10 h-full w-full overflow-y-auto border-l border-line bg-canvas px-6 py-7 shadow-2xl sm:max-w-md sm:px-8">

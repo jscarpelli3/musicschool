@@ -9,7 +9,6 @@ import { createClient } from "@/lib/supabase/server";
 import { loadServiceEntitlements } from "@/lib/scheduling/service-entitlements";
 import { RecordLessonCalendar } from "@/components/calendar/record-lesson-calendar";
 import { schoolCalendarWindow } from "@/lib/calendar/school-calendar-window";
-import { MdAddCircleOutline } from "react-icons/md";
 
 export const dynamic = "force-dynamic";
 
@@ -48,10 +47,12 @@ export default async function StudentDetailPage({ params }: {
     supabase.from("lesson_places").select("id, name").eq("school_id", schoolId),
     supabase.from("billing_accounts").select("id, name, billing_contact_person_id, status").eq("school_id", schoolId),
     supabase.from("lesson_events").select("id, starts_at, ends_at, status, outcome, teacher_id, product_id, place_id, actual_starts_at, actual_ends_at, actual_place_id").eq("school_id", schoolId).eq("student_id", studentId).gte("starts_at", queryStart).lt("starts_at", queryEnd).order("starts_at"),
+    supabase.from("teachers").select("person_id,outside_availability_policy").eq("school_id", schoolId),
+    supabase.from("teacher_availability_rules").select("id,teacher_id,weekday,start_time,end_time,effective_from,effective_until").eq("school_id", schoolId).order("weekday").order("start_time"),
   ]);
   const failedRelated = related.find((result) => result.error);
   if (failedRelated?.error) throw new Error(`Student detail could not load: ${failedRelated.error.message}`);
-  const [contactsResult, billingLinksResult, lessonsResult, seriesResult, peopleResult, productsResult, placesResult, accountsResult, calendarLessonsResult] = related;
+  const [contactsResult, billingLinksResult, lessonsResult, seriesResult, peopleResult, productsResult, placesResult, accountsResult, calendarLessonsResult, teachersResult, availabilityResult] = related;
 
   const people = new Map((peopleResult.data ?? []).map((row) => [row.id, row]));
   const products = new Map((productsResult.data ?? []).map((row) => [row.id, row]));
@@ -66,6 +67,9 @@ export default async function StudentDetailPage({ params }: {
   const canManageLessons = capabilities.has("school.lessons.manage");
   const approvals = canViewSupport ? await loadOwnerApprovals(supabase,schoolId,{studentIds:[studentId]}) : [];
   const entitlements = canViewSupport ? await loadServiceEntitlements(supabase,schoolId,{studentIds:[studentId]}) : [];
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: school.timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const minimumTimeToday = new Intl.DateTimeFormat("en-GB", { timeZone: school.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
+  const lessonCreationOptions = canManageLessons ? { students: [{ id: studentId, label: displayName(person) }], defaultStudentId: studentId, teachers: (teachersResult.data ?? []).flatMap((teacher) => { const teacherPerson = people.get(teacher.person_id); return teacherPerson ? [{ id: teacher.person_id, label: displayName(teacherPerson), outsideAvailabilityPolicy: teacher.outside_availability_policy === "require_approval" ? "require_approval" as const : "notify_only" as const }] : []; }), products: (productsResult.data ?? []).map((product) => ({ id: product.id, label: product.name, durationMinutes: product.duration_minutes, priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price_cents / 100) })), places: (placesResult.data ?? []).map((place) => ({ id: place.id, label: place.name })), availability: availabilityResult.data ?? [], today, minimumTimeToday } : undefined;
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
@@ -75,8 +79,8 @@ export default async function StudentDetailPage({ params }: {
       {entitlements.length?<DetailSection title="Lessons to schedule" description="Paid replacement lessons still owed to this student."><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} compact/></DetailSection>:null}
 
       <section className="ui-card mt-6 p-6 md:p-8">
-        <div className="mb-7 flex flex-wrap items-start justify-between gap-5"><div><h2 className="font-display text-3xl">Lesson calendar</h2><p className="mt-3 text-sm leading-6 text-muted">This student’s scheduled lessons. Move between months without leaving the record.</p></div>{canManageLessons ? <Link href={`/schools/${schoolId}/lessons/new?student=${studentId}`} className="inline-flex items-center gap-2 rounded-control border border-brand px-4 py-2.5 text-sm text-brand transition hover:bg-brand hover:text-canvas"><MdAddCircleOutline aria-hidden="true" className="text-lg" />Add lesson</Link> : null}</div>
-        <RecordLessonCalendar schoolId={schoolId} id={`student-${studentId}-calendar`} lessons={(calendarLessonsResult.data ?? []).map((lesson) => ({ id: lesson.id, studentId, studentName: displayName(person), teacherId: lesson.teacher_id, teacherName: people.get(lesson.teacher_id) ? displayName(people.get(lesson.teacher_id)!) : "Unassigned teacher", productName: products.get(lesson.product_id)?.name ?? "Lesson", placeName: places.get(lesson.actual_place_id ?? lesson.place_id)?.name ?? "Unassigned place", startsAt: lesson.actual_starts_at ?? lesson.starts_at, endsAt: lesson.actual_ends_at ?? lesson.ends_at, status: lesson.outcome ?? lesson.status, billingAccounts: accounts.map((account) => ({ id: account.id, name: account.name })) }))} rangeStart={calendarStart} rangeEnd={calendarEnd} timeZone={school.timezone} />
+        <div className="mb-7"><h2 className="font-display text-3xl">Lesson calendar</h2><p className="mt-3 text-sm leading-6 text-muted">This student’s scheduled lessons. Move between months without leaving the record.</p></div>
+        <RecordLessonCalendar schoolId={schoolId} id={`student-${studentId}-calendar`} lessons={(calendarLessonsResult.data ?? []).map((lesson) => ({ id: lesson.id, studentId, studentName: displayName(person), teacherId: lesson.teacher_id, teacherName: people.get(lesson.teacher_id) ? displayName(people.get(lesson.teacher_id)!) : "Unassigned teacher", productName: products.get(lesson.product_id)?.name ?? "Lesson", placeName: places.get(lesson.actual_place_id ?? lesson.place_id)?.name ?? "Unassigned place", startsAt: lesson.actual_starts_at ?? lesson.starts_at, endsAt: lesson.actual_ends_at ?? lesson.ends_at, status: lesson.outcome ?? lesson.status, billingAccounts: accounts.map((account) => ({ id: account.id, name: account.name })) }))} rangeStart={calendarStart} rangeEnd={calendarEnd} timeZone={school.timezone} lessonCreationOptions={lessonCreationOptions} />
       </section>
 
       <DetailSection title="Student record" description="School-facing identity and enrollment information.">

@@ -26,7 +26,7 @@ import { BillingAdjustmentForm, BillingAdjustmentRemove } from "./billing-adjust
 import { BillingArchive } from "./billing-archive";
 import { RecordLessonCalendar } from "@/components/calendar/record-lesson-calendar";
 import { schoolCalendarWindow } from "@/lib/calendar/school-calendar-window";
-import { MdAddCircleOutline, MdExpandMore } from "react-icons/md";
+import { MdExpandMore } from "react-icons/md";
 import { calendarMonthCutoff, formatCompactDate } from "@/lib/date-format";
 import { getStripeMode } from "@/lib/stripe/server";
 
@@ -70,12 +70,14 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     supabase.from("school_payment_connections").select("status, charges_enabled").eq("school_id", schoolId).eq("provider", "stripe").eq("livemode", stripeLivemode).maybeSingle(),
     supabase.from("billing_approval_requests").select("id, billing_period_id, approval_status, approved_at, rejected_at, rejection_reason_code, rejection_note, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
     supabase.from("email_deliveries").select("approval_request_id, recipient_email, status, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
-    supabase.from("service_products").select("id,name").eq("school_id", schoolId),
+    supabase.from("service_products").select("id,name,duration_minutes,price_cents,currency").eq("school_id", schoolId).eq("status", "active").order("name"),
     supabase.from("lesson_places").select("id,name").eq("school_id", schoolId),
+    supabase.from("teachers").select("person_id,outside_availability_policy").eq("school_id", schoolId),
+    supabase.from("teacher_availability_rules").select("id,teacher_id,weekday,start_time,end_time,effective_from,effective_until").eq("school_id", schoolId).order("weekday").order("start_time"),
   ]);
   const failedRelated = related.find((result) => result.error);
   if (failedRelated?.error) throw new Error(`Family detail could not load: ${failedRelated.error.message}`);
-  const [peopleResult, studentsResult, periodsResult, archivedPeriodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult, productsResult, placesResult] = related;
+  const [peopleResult, studentsResult, periodsResult, archivedPeriodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult, productsResult, placesResult, teachersResult, availabilityResult] = related;
   const periodIds = [...(periodsResult.data ?? []), ...(archivedPeriodsResult.data ?? [])].map((period) => period.id);
   const { data: lineItems, error: lineItemsError } = periodIds.length
     ? await supabase.from("billing_line_items")
@@ -128,6 +130,9 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   const entitlements = canManagePayments ? await loadServiceEntitlements(supabase,schoolId,{studentIds:students.map(student=>student.id)}) : [];
   const stripeReady = connectionResult.data?.status === "enabled" && connectionResult.data.charges_enabled;
   const currentMonth = new Intl.DateTimeFormat("en-CA", { timeZone: school.timezone, year: "numeric", month: "2-digit" }).format(new Date());
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: school.timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const minimumTimeToday = new Intl.DateTimeFormat("en-GB", { timeZone: school.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
+  const lessonCreationOptions = canManageLessons ? { students: students.map((student) => ({ id: student.id, label: name(student.person) })), defaultStudentId: students.length === 1 ? students[0].id : "", teachers: (teachersResult.data ?? []).flatMap((teacher) => { const teacherPerson = people.get(teacher.person_id); return teacherPerson ? [{ id: teacher.person_id, label: name(teacherPerson), outsideAvailabilityPolicy: teacher.outside_availability_policy === "require_approval" ? "require_approval" as const : "notify_only" as const }] : []; }), products: (productsResult.data ?? []).map((product) => ({ id: product.id, label: product.name, durationMinutes: product.duration_minutes, priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price_cents / 100) })), places: (placesResult.data ?? []).map((place) => ({ id: place.id, label: place.name })), availability: availabilityResult.data ?? [], today, minimumTimeToday } : undefined;
   const billingMessages: Record<string, string> = {
     prepared: "Draft prepared from the current schedule and saved to the billing ledger.",
     needs_review: "Draft stopped without changing the ledger. At least one lesson needs an outcome or an effective cancellation policy.",
@@ -163,8 +168,8 @@ export default async function FamilyDetailPage({ params, searchParams }: {
       {entitlements.length?<DetailSection title="Lessons to schedule" description="Paid replacement lessons still owed to this family."><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} compact/></DetailSection>:null}
 
       <section className="ui-card mt-6 p-6 md:p-8">
-        <div className="mb-7 flex flex-wrap items-start justify-between gap-5"><div><h2 className="font-display text-3xl">Family lesson calendar</h2><p className="mt-3 text-sm leading-6 text-muted">Lessons for every student on this account. Move between months without leaving the record.</p></div>{canManageLessons ? <Link href={`/schools/${schoolId}/lessons/new?family=${billingAccountId}`} className="inline-flex items-center gap-2 rounded-control border border-brand px-4 py-2.5 text-sm text-brand transition hover:bg-brand hover:text-canvas"><MdAddCircleOutline aria-hidden="true" className="text-lg" />Add lesson</Link> : null}</div>
-        <RecordLessonCalendar schoolId={schoolId} id={`family-${billingAccountId}-calendar`} lessons={(familyLessons ?? []).map((lesson) => { const studentPerson = people.get(lesson.student_id); const teacherPerson = people.get(lesson.teacher_id); return { id: lesson.id, studentId: lesson.student_id, studentName: studentPerson ? name(studentPerson) : "Student", teacherId: lesson.teacher_id, teacherName: teacherPerson ? name(teacherPerson) : "Unassigned teacher", productName: products.get(lesson.product_id) ?? "Lesson", placeName: places.get(lesson.actual_place_id ?? lesson.place_id) ?? "Unassigned place", startsAt: lesson.actual_starts_at ?? lesson.starts_at, endsAt: lesson.actual_ends_at ?? lesson.ends_at, status: lesson.outcome ?? lesson.status, billingAccounts: [{ id: billingAccountId, name: account.name }] }; })} rangeStart={calendarStart} rangeEnd={calendarEnd} timeZone={school.timezone} />
+        <div className="mb-7"><h2 className="font-display text-3xl">Family lesson calendar</h2><p className="mt-3 text-sm leading-6 text-muted">Lessons for every student on this account. Move between months without leaving the record.</p></div>
+        <RecordLessonCalendar schoolId={schoolId} id={`family-${billingAccountId}-calendar`} lessons={(familyLessons ?? []).map((lesson) => { const studentPerson = people.get(lesson.student_id); const teacherPerson = people.get(lesson.teacher_id); return { id: lesson.id, studentId: lesson.student_id, studentName: studentPerson ? name(studentPerson) : "Student", teacherId: lesson.teacher_id, teacherName: teacherPerson ? name(teacherPerson) : "Unassigned teacher", productName: products.get(lesson.product_id) ?? "Lesson", placeName: places.get(lesson.actual_place_id ?? lesson.place_id) ?? "Unassigned place", startsAt: lesson.actual_starts_at ?? lesson.starts_at, endsAt: lesson.actual_ends_at ?? lesson.ends_at, status: lesson.outcome ?? lesson.status, billingAccounts: [{ id: billingAccountId, name: account.name }] }; })} rangeStart={calendarStart} rangeEnd={calendarEnd} timeZone={school.timezone} lessonCreationOptions={lessonCreationOptions} />
       </section>
 
       <DetailSection title="Primary payer" description="The person currently responsible for this billing account.">
