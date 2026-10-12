@@ -166,3 +166,6 @@ Use this file for short chronological notes about meaningful work.
 - Follow-up: made in-place lesson creation a calendar-wide owner interaction rule. Student and family calendars now open the creation sheet over the visible calendar with context-scoped students, matching the existing overall/teacher calendar workflow.
 - Follow-up: removed the navigation dropdown hover gap and made the dropdowns smaller and more visually distinct.
 - Follow-up validation passed: TypeScript, ESLint, production build, and all 60 local Node tests.
+- Fixed the inert record-calendar Add lesson regression by moving the creation overlay presentation into a dialog-owned CSS module that loads on every host page.
+- Added the searchable, scrollable quick directory to Staff while preserving the Staff label as the full-directory link.
+- Regression validation passed: TypeScript, ESLint, production build, and all 60 local Node tests.

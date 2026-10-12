@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createSingleLesson, type CreateLessonState } from "@/app/schools/[schoolId]/lessons/new/actions";
 import { NewLessonForm, type LessonFormAvailability, type LessonFormOption, type LessonFormProduct, type LessonFormTeacher } from "./new-lesson-form";
+import styles from "./lesson-creation-dialog.module.css";
 
 export type LessonCreationOptions = {
   students: LessonFormOption[];
@@ -33,9 +34,9 @@ export function LessonCreationDialog({ schoolId, slot, options, lockTeacher, onC
     return () => window.removeEventListener("keydown", close);
   }, [onClose]);
 
-  return <div className="reschedule-confirm-layer" role="dialog" aria-modal="true" aria-labelledby="new-lesson-dialog-title">
-    <button type="button" aria-label="Return to calendar" className="lesson-sheet-backdrop" onClick={onClose} />
-    <section className="reschedule-confirm-panel max-h-[92vh] overflow-y-auto">
+  return <div className={styles.layer} role="dialog" aria-modal="true" aria-labelledby="new-lesson-dialog-title">
+    <button type="button" aria-label="Return to calendar" className={styles.backdrop} onClick={onClose} />
+    <section className={styles.panel}>
       <div className="flex items-start justify-between gap-5 border-b border-line pb-6">
         <div><p className="text-xs uppercase tracking-[0.14em] text-brand">New lesson</p><h3 id="new-lesson-dialog-title" className="mt-3 font-display text-4xl">Add to the calendar.</h3></div>
         <button type="button" onClick={onClose} className="text-action text-sm text-muted hover:text-ink">Close</button>
