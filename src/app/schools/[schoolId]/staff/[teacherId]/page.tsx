@@ -37,7 +37,7 @@ export default async function StaffTeacherPage({ params }: {
   const rangeEnd = new Date(now.getTime() + 90 * 86_400_000).toISOString();
   const schedule = await loadTeacherCalendar(supabase, schoolId, teacherId, { rangeStart, rangeEnd });
   const [studentRowsResult, peopleResult, productsResult, placesResult, membersResult, teacherInstrumentsResult, instrumentsResult] = await Promise.all([
-    supabase.from("students").select("person_id").eq("school_id",schoolId).in("enrollment_status",["active","prospect"]),
+    supabase.from("students").select("person_id,primary_teacher_id").eq("school_id",schoolId).in("enrollment_status",["active","prospect"]),
     supabase.from("people").select("id,first_name,last_name,preferred_name").eq("school_id",schoolId).eq("status","active"),
     supabase.from("service_products").select("id,name,duration_minutes,price_cents,currency").eq("school_id",schoolId).eq("status","active").eq("format","private_lesson").order("name"),
     supabase.from("lesson_places").select("id,name").eq("school_id",schoolId).eq("status","active").order("name"),
@@ -94,10 +94,12 @@ export default async function StaffTeacherPage({ params }: {
       proposalHref="#pending-schedule-proposals"
       lessonCreationOptions={{
         students: (studentRowsResult.data ?? []).flatMap(({person_id}) => { const person=peopleById.get(person_id); return person ? [{id:person_id,label:personDisplayName(person)}] : []; }),
+        primaryTeacherByStudent: Object.fromEntries((studentRowsResult.data ?? []).flatMap((student) => student.primary_teacher_id ? [[student.person_id, student.primary_teacher_id]] : [])),
         teachers: [{id:teacherId,label:teacherName,outsideAvailabilityPolicy:teacherRecord.outside_availability_policy === "require_approval" ? "require_approval" : "notify_only"}],
         products: (productsResult.data ?? []).map((product) => ({id:product.id,label:product.name,durationMinutes:product.duration_minutes,priceLabel:new Intl.NumberFormat("en-US",{style:"currency",currency:product.currency}).format(product.price_cents/100)})),
         places: (placesResult.data ?? []).map((place) => ({id:place.id,label:place.name})),
         availability: schedule.availability,
+        busyLessons: schedule.lessons.map((lesson) => ({teacherId,studentId:lesson.student_id,startsAt:lesson.starts_at,endsAt:lesson.ends_at,status:lesson.status})),
         today: initialDate,
         minimumTimeToday,
       }}

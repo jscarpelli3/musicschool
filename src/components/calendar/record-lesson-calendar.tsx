@@ -81,6 +81,7 @@ export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeE
     getItemDate={(lesson) => new Date(lesson.startsAt)}
     getItemKey={(lesson) => lesson.id}
     emptyMonthLabel="No lessons this month"
+    onSelectDate={lessonCreationOptions ? (dateKey) => setCreationSlot({ dateKey, time: "", teacherId: "" }) : undefined}
     renderItem={(lesson, { view }) => <button type="button" onClick={(event) => openLesson(lesson, event.currentTarget)} aria-label={`Open ${lesson.studentName}'s ${lesson.productName} lesson`} className="block w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2">{view === "agenda" ? <article className="rounded-control bg-surface px-4 py-3 transition hover:bg-surface/70">
       <p className="text-sm"><span className="text-brand">{time.format(new Date(lesson.startsAt))}</span> · {lesson.studentName}</p>
       <p className="mt-1 text-xs leading-5 text-muted">{lesson.productName} with {lesson.teacherName}</p>
@@ -91,7 +92,7 @@ export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeE
       <p className="mt-1 block truncate text-xs text-muted" title={lesson.teacherName}>{lesson.teacherName}</p>
     </article>}</button>}
   />
-  {creationSlot && lessonCreationOptions ? <LessonCreationDialog schoolId={schoolId} slot={creationSlot} options={lessonCreationOptions} lockTeacher={false} onClose={() => setCreationSlot(null)} /> : null}
+  {creationSlot && lessonCreationOptions ? <LessonCreationDialog schoolId={schoolId} slot={creationSlot} options={lessonCreationOptions} lockTeacher={false} timeZone={timeZone} onClose={() => setCreationSlot(null)} /> : null}
   {selectedLesson ? <div className="fixed inset-0 z-[80] flex justify-end">
     <button type="button" aria-label="Close lesson details" onClick={closeLesson} className="absolute inset-0 cursor-default bg-ink/70" />
     <aside role="dialog" aria-modal="true" aria-labelledby={`${id}-lesson-title`} className="relative z-10 h-full w-full overflow-y-auto border-l border-line bg-canvas px-6 py-7 shadow-2xl sm:max-w-md sm:px-8">

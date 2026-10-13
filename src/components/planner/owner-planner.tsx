@@ -110,7 +110,7 @@ type Props = {
 
 type LessonWithParts = Lesson & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> };
 type RescheduleNotice = { id: string; message: string };
-type CreationSlot = { dateKey: string; time: string; teacherId: string; minutes: number; productId?: string };
+type CreationSlot = { dateKey: string; time: string; teacherId: string; minutes: number; productId?: string; pointerX?: number };
 
 const views = ["day", "week", "month"] as const;
 type View = (typeof views)[number];
@@ -478,6 +478,7 @@ export function OwnerPlanner({
             setView("day");
             if (window.matchMedia("(max-width: 639px)").matches && teacherId === "all" && teachers[0]) setTeacherId(teachers[0].id);
           }}
+          onCreateDate={lessonCreationOptions ? (dateKey) => setCreationSlot({ dateKey, time: "", teacherId: teacherId !== "all" ? teacherId : "", minutes: 0 }) : undefined}
         />
       ) : (
         <TimelineView
@@ -560,7 +561,7 @@ export function OwnerPlanner({
           }}
         />
       ) : null}
-      {creationSlot && lessonCreationOptions ? <LessonCreationDialog schoolId={schoolId} slot={creationSlot} options={lessonCreationOptions} lockTeacher={!showTeacherFilter && teachers.length === 1} onClose={() => setCreationSlot(null)} /> : null}
+      {creationSlot && lessonCreationOptions ? <LessonCreationDialog schoolId={schoolId} slot={creationSlot} options={lessonCreationOptions} lockTeacher={!showTeacherFilter && teachers.length === 1} timeZone={timezone} onClose={() => setCreationSlot(null)} /> : null}
     </section>
   );
 }
@@ -681,10 +682,10 @@ function TimelineView({
     const teacherElement = document.elementsFromPoint(event.clientX,event.clientY).find((element): element is HTMLElement => element instanceof HTMLElement && Boolean(element.dataset.teacherId));
     const teacherId = teacherElement?.dataset.teacherId && columnTeachers.some((teacher) => teacher.id === teacherElement.dataset.teacherId)
       ? teacherElement.dataset.teacherId
-      : columnTeachers[0].id;
+      : columnTeachers.length === 1 ? columnTeachers[0].id : "";
     const rawMinutes = timelineStart + event.clientY - rect.top;
     const minutes = Math.max(timelineStart, Math.min(timelineEnd - 30, Math.round(rawMinutes / 5) * 5));
-    return { dateKey, teacherId, minutes, time: `${String(Math.floor(minutes / 60)).padStart(2,"0")}:${String(minutes % 60).padStart(2,"0")}` };
+    return { dateKey, teacherId, minutes, time: `${String(Math.floor(minutes / 60)).padStart(2,"0")}:${String(minutes % 60).padStart(2,"0")}`, pointerX: Math.max(8, Math.min(rect.width - 8, event.clientX - rect.left)) };
   }
 
   function candidateFromPointer(clientX: number, clientY: number, movingLesson: LessonWithParts) {
@@ -828,8 +829,8 @@ function TimelineView({
                       setExpandedTrack({ dateKey, teacherId: teacherElement.dataset.teacherId });
                     }
                   }
-                  if (!canCreateLesson || !creationMode || !column.teachers.length || rescheduleLesson || dragging || event.pointerType === "touch") return;
-                  if (event.target instanceof Element && event.target.closest(".lesson-block")) { setHoverSlot(null); return; }
+                  if (!canCreateLesson || !column.teachers.length || rescheduleLesson || dragging || event.pointerType === "touch") return;
+                  if (event.target instanceof Element && event.target.closest(".lesson-block,.proposal-block")) { setHoverSlot(null); return; }
                   setHoverSlot(creationSlotFromPointer(event, dateKey, column.teachers));
                 }}
                 onPointerLeave={(event) => {
@@ -838,14 +839,13 @@ function TimelineView({
                   if (!expandedWeek && !creationMode && !rescheduleLesson && !dragging) setExpandedTrack(null);
                 }}
                 onClick={(event) => {
-                  if (!creationMode) { setExpandedTrack(null); setPinnedTrack(null); return; }
                   if (!canCreateLesson || !column.teachers.length || rescheduleLesson || event.detail === 0) return;
-                  if (event.target instanceof Element && event.target.closest(".lesson-block")) return;
+                  if (event.target instanceof Element && event.target.closest(".lesson-block,.proposal-block")) return;
                   onCreateSlot(creationSlotFromPointer(event, dateKey, column.teachers));
                   setHoverSlot(null);
                 }}
               >
-                {hoverSlot?.dateKey === dateKey && column.teachers.some((teacher) => teacher.id === hoverSlot.teacherId) ? <div className="new-lesson-slot" style={lessonTrackStyle(hoverSlot.minutes, hoverSlot.minutes + 30, 0, 1, -1)}><span>+ {clock(hoverSlot.minutes)}</span></div> : null}
+                {hoverSlot?.dateKey === dateKey && (!hoverSlot.teacherId || column.teachers.some((teacher) => teacher.id === hoverSlot.teacherId)) ? <div aria-hidden="true" className="pointer-events-none absolute z-30 -translate-y-1/2 rounded-control bg-ink/75 px-2 py-1 text-[10px] text-canvas shadow-sm" style={{ top: `${hoverSlot.minutes - timelineStart}px`, left: `${hoverSlot.pointerX ?? 8}px` }}>{clock(hoverSlot.minutes)}</div> : null}
                 {column.teachers.flatMap((teacher, teacherIndex) => availability
                   .filter((rule) => rule.teacher_id === teacher.id && rule.weekday === column.date.getDay() && rule.effective_from <= dateKey && (!rule.effective_until || rule.effective_until >= dateKey))
                   .map((rule) => {
@@ -866,7 +866,7 @@ function TimelineView({
                         }}
                         onFocus={() => { if (!expandedWeek && !creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: teacher.id }); }}
                         onClick={(event) => {
-                          if (creationMode) return;
+                          if (canCreateLesson && !rescheduleLesson) return;
                           event.stopPropagation();
                           if (expandedWeek) return;
                           setPinnedTrack((current) => current?.dateKey === dateKey && current.teacherId === teacher.id ? null : { dateKey, teacherId: teacher.id });
@@ -1037,6 +1037,7 @@ function MonthView({
   studentNames,
   onSelectLesson,
   onOpenDay,
+  onCreateDate,
 }: {
   anchor: Date;
   activeTeacherIds: Set<string>;
@@ -1046,6 +1047,7 @@ function MonthView({
   studentNames: Record<string, string>;
   onSelectLesson: (lessonId: string) => void;
   onOpenDay: (dateKey: string) => void;
+  onCreateDate?: (dateKey: string) => void;
 }) {
   const dates = monthDates(anchor);
   return (
@@ -1064,9 +1066,11 @@ function MonthView({
           const occupancy = availableMinutes ? Math.min(100, Math.round((bookedMinutes / availableMinutes) * 100)) : 0;
           const inMonth = date.getMonth() === anchor.getMonth();
           return (
-            <div key={dateKey} className={`month-day min-h-36 border-b border-l border-line p-3 first:border-l-0 ${inMonth ? "" : "opacity-30"}`}>
+            <div key={dateKey} className={`month-day relative min-h-36 border-b border-l border-line p-3 first:border-l-0 ${inMonth ? "" : "opacity-30"}`}>
+              {onCreateDate ? <button type="button" onClick={() => onCreateDate(dateKey)} aria-label={`Add a lesson on ${dateKey}`} className="absolute inset-0 z-0 transition hover:bg-brand/5" /> : null}
+              <div className="relative z-[1] pointer-events-none">
               <div className="flex items-baseline justify-between">
-                <button type="button" onClick={() => onOpenDay(dateKey)} className="month-date text-sm" aria-label={`Open ${dateKey} day view, ${dayLessons.length} lessons`}>{date.getDate()}</button>
+                <button type="button" onClick={() => onOpenDay(dateKey)} className="month-date pointer-events-auto text-sm" aria-label={`Open ${dateKey} day view, ${dayLessons.length} lessons`}>{date.getDate()}</button>
                 {availableMinutes ? <span className="month-open text-[10px] text-muted">{Math.round(availableMinutes / 60)}h open</span> : null}
               </div>
               <div className="month-lesson-list mt-5 space-y-1">
@@ -1075,21 +1079,22 @@ function MonthView({
                     key={lesson.id}
                     type="button"
                     onClick={() => onSelectLesson(lesson.id)}
-                    className="block w-full truncate text-left text-[11px] text-muted hover:text-brand-hover"
+                    className="pointer-events-auto block w-full truncate text-left text-[11px] text-muted hover:text-brand-hover"
                   >
                     {clock(lesson.start.minutes)} · {studentNames[lesson.student_id]}
                   </button>
                 ))}
                 {dayLessons.length > 2 ? <p className="text-[10px] text-brand">+{dayLessons.length - 2} more</p> : null}
-                {dayProposals.length ? <button type="button" onClick={() => onOpenDay(dateKey)} className="block text-left text-[10px] font-medium text-brand">{dayProposals.length} pending {dayProposals.length === 1 ? "proposal" : "proposals"}</button> : null}
+                {dayProposals.length ? <button type="button" onClick={() => onOpenDay(dateKey)} className="pointer-events-auto block text-left text-[10px] font-medium text-brand">{dayProposals.length} pending {dayProposals.length === 1 ? "proposal" : "proposals"}</button> : null}
               </div>
-              <button type="button" onClick={() => onOpenDay(dateKey)} className="month-touch-count mt-3 w-full text-left text-[10px] text-brand">{dayLessons.length} {dayLessons.length === 1 ? "lesson" : "lessons"}</button>
+              <button type="button" onClick={() => onOpenDay(dateKey)} className="month-touch-count pointer-events-auto mt-3 w-full text-left text-[10px] text-brand">{dayLessons.length} {dayLessons.length === 1 ? "lesson" : "lessons"}</button>
               {availableMinutes ? (
                 <div className="month-capacity mt-5">
                   <div className="occupancy-line" style={{ "--occupancy": `${occupancy}%` } as CSSProperties} />
                   <p className="mt-2 text-[10px] text-muted">{dayLessons.length} booked · {occupancy}%</p>
                 </div>
               ) : null}
+              </div>
             </div>
           );
         })}

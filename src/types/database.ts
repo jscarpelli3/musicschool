@@ -4757,6 +4757,7 @@ export type Database = {
           enrollment_status: string
           notes: string | null
           person_id: string
+          primary_teacher_id: string | null
           school_id: string
           updated_at: string
         }
@@ -4766,6 +4767,7 @@ export type Database = {
           enrollment_status?: string
           notes?: string | null
           person_id: string
+          primary_teacher_id?: string | null
           school_id: string
           updated_at?: string
         }
@@ -4775,10 +4777,18 @@ export type Database = {
           enrollment_status?: string
           notes?: string | null
           person_id?: string
+          primary_teacher_id?: string | null
           school_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "students_primary_teacher_school_fk"
+            columns: ["school_id", "primary_teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["school_id", "person_id"]
+          },
           {
             foreignKeyName: "students_school_id_person_id_fkey"
             columns: ["school_id", "person_id"]

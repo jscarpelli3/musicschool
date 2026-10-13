@@ -80,6 +80,13 @@ Do not redo card setup or the first $2.00 charge. The next human action is one n
 - Selecting an offering does not remove shorter openings. A window that cannot fit the selected duration remains visible but muted and cannot be selected; its label explains that it is too short, allowing the owner to reconsider the lesson length.
 - Past days are omitted consistently, and today's first open window is clipped to the scheduling minimum whether or not an offering is selected.
 
+### Direct calendar lesson entry
+
+- Week/day planner calendars now expose a subtle five-minute hover time and open the lesson modal directly when an empty point is clicked; the separate Add lesson button remains a straightforward manual-entry affordance.
+- A click inside a teacher-specific availability track carries that teacher into the modal. Teacher-record calendars always carry their teacher. Month calendars carry only the clicked date, intentionally leaving time unset.
+- Student records now have an explicit `primary_teacher_id` scheduling default. Existing students are backfilled from their latest active series or lesson; selecting a student in lesson creation fills that teacher unless a teacher-specific calendar context already supplied one. Individual lessons may still override it.
+- The modal greys out five-minute choices that would overlap the selected teacher's lessons. If an owner chose the time first and a later teacher, date, student, or offering choice makes it conflict, the time is cleared with both an inline danger message and a toast.
+
 ## Owner navigation checkpoint
 
 - The calendar interaction rule is now consistent for owners: create a lesson in place from the calendar currently being viewed. The overall calendar can schedule any student, a family calendar limits the picker to that family, and a student calendar fixes the student. Record-level creation opens over the current page rather than navigating away.
