@@ -177,3 +177,4 @@ Use this file for short chronological notes about meaningful work.
 - Darkened the filter control surface and removed competing underlines/dividers around the finder controls and results.
 - Weekly finder validation passed: TypeScript, ESLint, production build, and all 60 local Node tests.
 - Seeded isolated staging with three realistic demo teachers, four unbilled demo students, six teacher availability blocks, and thirteen normal-RPC lessons to exercise weekly filtering. Verified the demo students have zero billing-account links and recorded that all payment testing remains on the Jonathan/test-student/test-payer path.
+- Changed lesson-finder results from generated start-time increments to continuous teacher availability windows. Offering duration now mutes too-short windows without hiding them, and past/today constraints apply consistently with or without a selected offering.

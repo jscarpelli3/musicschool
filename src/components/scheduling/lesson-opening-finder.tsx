@@ -6,6 +6,7 @@ import { clockTime, minutesFromTime } from "@/lib/scheduling/time-options";
 import { MdSearch } from "react-icons/md";
 
 type Opening = { dateKey: string; time: string; teacherId: string; productId?: string; label: string; detail: string };
+type DisplayOpening = Opening & { end: number; fitsLesson: boolean; availableMinutes: number };
 const addDays = (key: string, days: number) => { const date = new Date(`${key}T12:00:00Z`); date.setUTCDate(date.getUTCDate() + days); return date.toISOString().slice(0, 10); };
 const weekStart = (key: string) => addDays(key, -((new Date(`${key}T12:00:00Z`).getUTCDay() + 6) % 7));
 
@@ -15,11 +16,27 @@ function localParts(value: string, timeZone: string) {
   return { dateKey: `${part("year")}-${part("month")}-${part("day")}`, minutes: Number(part("hour")) * 60 + Number(part("minute")) };
 }
 
-function timeMatches(start: number, preference: string, requested: number) {
-  if (preference === "morning") return start < 720;
-  if (preference === "afternoon") return start >= 720 && start < 1020;
-  if (preference === "evening") return start >= 1020;
-  return preference !== "specific" || start === requested;
+function mergeWindows(windows: Array<{ start: number; end: number }>) {
+  const merged: Array<{ start: number; end: number }> = [];
+  for (const window of windows.sort((a, b) => a.start - b.start)) {
+    const previous = merged.at(-1);
+    if (previous && window.start <= previous.end) previous.end = Math.max(previous.end, window.end);
+    else merged.push({ ...window });
+  }
+  return merged;
+}
+
+function filterWindowByTime(window: { start: number; end: number }, preference: string, requested: number) {
+  if (preference === "specific") return requested >= window.start && requested < window.end ? window : null;
+  const range = preference === "morning" ? { start: 0, end: 720 } : preference === "afternoon" ? { start: 720, end: 1020 } : preference === "evening" ? { start: 1020, end: 1440 } : { start: 0, end: 1440 };
+  return Math.max(window.start, range.start) < Math.min(window.end, range.end) ? window : null;
+}
+
+function startingMinute(windowStart: number, preference: string, requested: number) {
+  if (preference === "specific") return requested;
+  if (preference === "afternoon") return Math.max(windowStart, 720);
+  if (preference === "evening") return Math.max(windowStart, 1020);
+  return windowStart;
 }
 
 export function LessonOpeningFinder({ options, timeZone, onChoose }: { options: LessonCreationOptions; timeZone: string; onChoose: (opening: Opening) => void }) {
@@ -39,29 +56,28 @@ export function LessonOpeningFinder({ options, timeZone, onChoose }: { options: 
     if (!activeFilter) return [];
     const teachers = teacherId ? options.teachers.filter((item) => item.id === teacherId) : options.teachers;
     const requested = minutesFromTime(specificTime);
-    const results: Opening[] = [];
+    const results: DisplayOpening[] = [];
     for (const dateKey of dates) {
+      if (dateKey < options.today) continue;
       const day = new Date(`${dateKey}T12:00:00Z`).getUTCDay();
       if ((dateMode === "weekday" && day !== Number(weekday)) || (dateMode === "date" && dateKey !== specificDate)) continue;
       for (const teacher of teachers) {
-        const rules = options.availability.filter((rule) => rule.teacher_id === teacher.id && rule.weekday === day && rule.effective_from <= dateKey && (!rule.effective_until || rule.effective_until >= dateKey));
+        const rules = mergeWindows(options.availability.filter((rule) => rule.teacher_id === teacher.id && rule.weekday === day && rule.effective_from <= dateKey && (!rule.effective_until || rule.effective_until >= dateKey)).map((rule) => ({ start: minutesFromTime(rule.start_time), end: minutesFromTime(rule.end_time) })));
         const busy = (options.busyLessons ?? []).filter((lesson) => lesson.status !== "cancelled" && (lesson.teacherId === teacher.id || lesson.studentId === options.defaultStudentId)).flatMap((lesson) => { const start = localParts(lesson.startsAt, timeZone); const end = localParts(lesson.endsAt, timeZone); return start.dateKey === dateKey ? [{ start: start.minutes, end: end.minutes }] : []; }).sort((a, b) => a.start - b.start);
         for (const rule of rules) {
-          const ruleStart = minutesFromTime(rule.start_time), ruleEnd = minutesFromTime(rule.end_time);
+          const ruleStart = rule.start, ruleEnd = rule.end;
           const gaps: Array<{ start: number; end: number }> = []; let cursor = ruleStart;
           for (const item of busy.filter((entry) => entry.end > ruleStart && entry.start < ruleEnd)) { if (item.start > cursor) gaps.push({ start: cursor, end: Math.min(item.start, ruleEnd) }); cursor = Math.max(cursor, item.end); }
           if (cursor < ruleEnd) gaps.push({ start: cursor, end: ruleEnd });
           for (const gap of gaps) {
-            if (!product) {
-              const start = timePreference === "specific" ? requested : gap.start;
-              if (start < gap.start || start >= gap.end || !timeMatches(start, timePreference, requested)) continue;
-              const time = `${String(Math.floor(start / 60)).padStart(2, "0")}:${String(start % 60).padStart(2, "0")}`;
-              results.push({ dateKey, time, teacherId: teacher.id, label: teacher.label, detail: `${clockTime(start)}–${clockTime(gap.end)} open` });
-            } else for (let start = gap.start; start + product.durationMinutes <= gap.end; start += 15) {
-              if (!timeMatches(start, timePreference, requested) || (dateKey === options.today && options.minimumTimeToday && start < minutesFromTime(options.minimumTimeToday))) continue;
-              const time = `${String(Math.floor(start / 60)).padStart(2, "0")}:${String(start % 60).padStart(2, "0")}`;
-              results.push({ dateKey, time, teacherId: teacher.id, productId: product.id, label: teacher.label, detail: `${clockTime(start)}–${clockTime(start + product.durationMinutes)}` });
-            }
+            const earliest = dateKey === options.today && options.minimumTimeToday ? Math.max(gap.start, minutesFromTime(options.minimumTimeToday)) : gap.start;
+            const visible = filterWindowByTime({ start: earliest, end: gap.end }, timePreference, requested);
+            if (!visible) continue;
+            const start = startingMinute(visible.start, timePreference, requested);
+            const availableMinutes = visible.end - start;
+            const fitsLesson = !product || availableMinutes >= product.durationMinutes;
+            const time = `${String(Math.floor(start / 60)).padStart(2, "0")}:${String(start % 60).padStart(2, "0")}`;
+            results.push({ dateKey, time, teacherId: teacher.id, productId: fitsLesson ? product?.id : undefined, label: teacher.label, detail: `${clockTime(visible.start)}–${clockTime(visible.end)} open`, end: visible.end, fitsLesson, availableMinutes });
           }
         }
       }
@@ -79,6 +95,6 @@ export function LessonOpeningFinder({ options, timeZone, onChoose }: { options: 
       <label><span className="mb-1.5 block text-xs text-muted">Day</span><select value={dateMode} onChange={(event) => setDateMode(event.target.value as typeof dateMode)} className={control}><option value="any">Any day this week</option><option value="weekday">Day of week</option><option value="date">Specific date</option></select>{dateMode === "weekday" ? <select aria-label="Day of week" value={weekday} onChange={(event) => setWeekday(event.target.value)} className={`${control} mt-2`}>{["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"].map((label,index)=><option key={label} value={index}>{label}</option>)}</select> : null}{dateMode === "date" ? <input aria-label="Specific date" type="date" min={options.today} value={specificDate} onChange={(event) => { setSpecificDate(event.target.value); setSelectedWeek(weekStart(event.target.value)); }} className={`${control} mt-2`} /> : null}</label>
       <label><span className="mb-1.5 block text-xs text-muted">Time</span><select value={timePreference} onChange={(event) => setTimePreference(event.target.value as typeof timePreference)} className={control}><option value="any">Any time</option><option value="morning">Morning</option><option value="afternoon">Afternoon</option><option value="evening">Evening</option><option value="specific">Specific time</option></select>{timePreference === "specific" ? <input aria-label="Specific time" type="time" step={900} value={specificTime} onChange={(event) => setSpecificTime(event.target.value)} className={`${control} mt-2`} /> : null}</label>
     </div>
-    {activeFilter ? <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-7">{dates.map((dateKey) => { const dayOpenings = openings.filter((item) => item.dateKey === dateKey); return <div key={dateKey} className="min-w-0 rounded-control bg-canvas/45 p-2"><p className="px-1 py-1 text-xs text-muted">{formatDay(dateKey, true)}</p><div className="mt-1 space-y-1.5">{dayOpenings.map((opening,index) => <button key={`${opening.teacherId}-${opening.time}-${index}`} type="button" onClick={() => onChoose(opening)} className="block w-full rounded-control bg-surface px-2 py-2 text-left transition hover:bg-brand/15"><strong className="block truncate text-xs font-medium">{opening.label}</strong><span className="mt-1 block text-[0.68rem] text-muted">{opening.detail}</span></button>)}{!dayOpenings.length ? <p className="px-1 py-3 text-[0.68rem] text-muted">No openings</p> : null}</div></div>; })}</div> : <p className="mt-5 text-sm text-muted">Choose any filter to reveal the week’s matching openings.</p>}
+    {activeFilter ? <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-7">{dates.map((dateKey) => { const dayOpenings = openings.filter((item) => item.dateKey === dateKey); return <div key={dateKey} className="min-w-0 rounded-control bg-canvas/45 p-2"><p className="px-1 py-1 text-xs text-muted">{formatDay(dateKey, true)}</p><div className="mt-1 space-y-1.5">{dayOpenings.map((opening,index) => opening.fitsLesson ? <button key={`${opening.teacherId}-${opening.time}-${opening.end}-${index}`} type="button" onClick={() => onChoose(opening)} className="block w-full rounded-control bg-surface px-2 py-2 text-left transition hover:bg-brand/15"><strong className="block truncate text-xs font-medium">{opening.label}</strong><span className="mt-1 block text-[0.68rem] text-muted">{opening.detail}</span></button> : <div key={`${opening.teacherId}-${opening.time}-${opening.end}-${index}`} className="block w-full rounded-control bg-surface/40 px-2 py-2 text-left opacity-45" title={`Only ${opening.availableMinutes} minutes are open`}><strong className="block truncate text-xs font-medium">{opening.label}</strong><span className="mt-1 block text-[0.68rem] text-muted">{opening.detail}</span><span className="mt-1 block text-[0.64rem] text-muted">Too short for {product?.durationMinutes} min</span></div>)}{!dayOpenings.length ? <p className="px-1 py-3 text-[0.68rem] text-muted">No openings</p> : null}</div></div>; })}</div> : <p className="mt-5 text-sm text-muted">Choose any filter to reveal the week’s matching openings.</p>}
   </section>;
 }
