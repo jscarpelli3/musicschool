@@ -13,6 +13,8 @@ export function FocusedModal({
   open: controlledOpen,
   onOpenChange,
   hideTrigger = false,
+  triggerContent,
+  triggerClassName,
 }: {
   triggerLabel: string;
   eyebrow?: string;
@@ -24,6 +26,8 @@ export function FocusedModal({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   hideTrigger?: boolean;
+  triggerContent?: ReactNode;
+  triggerClassName?: string;
 }) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
@@ -53,8 +57,8 @@ export function FocusedModal({
   }, [open]);
 
   return <>
-    {!hideTrigger ? <button ref={triggerRef} type="button" disabled={disabled} onClick={() => setOpen(true)} className={`border px-5 py-3 text-sm transition disabled:cursor-not-allowed disabled:border-line disabled:bg-transparent disabled:text-muted ${variant === "primary" ? "border-brand bg-brand text-canvas hover:bg-brand-hover" : "border-line bg-transparent text-ink hover:border-brand hover:text-brand"}`}>
-      {triggerLabel}
+    {!hideTrigger ? <button ref={triggerRef} type="button" disabled={disabled} onClick={() => setOpen(true)} className={triggerClassName ?? `border px-5 py-3 text-sm transition disabled:cursor-not-allowed disabled:border-line disabled:bg-transparent disabled:text-muted ${variant === "primary" ? "border-brand bg-brand text-canvas hover:bg-brand-hover" : "border-line bg-transparent text-ink hover:border-brand hover:text-brand"}`}>
+      {triggerContent ?? triggerLabel}
     </button> : null}
     {open ? <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <button type="button" aria-label={`Close ${title}`} onClick={() => setOpen(false)} className="fixed inset-0 border-0 bg-[var(--ui-overlay)]" />

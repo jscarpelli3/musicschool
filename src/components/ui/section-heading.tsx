@@ -22,13 +22,12 @@ const sectionStyles: Record<SectionKind, { icon: IconType; badge: string }> = {
   },
 };
 
-export function SectionHeading({ kind, eyebrow, title, description, id, size = "large" }: {
+export function SectionHeading({ kind, eyebrow, title, description, id }: {
   kind: SectionKind;
   eyebrow: string;
   title: string;
   description?: string;
   id?: string;
-  size?: "medium" | "large";
 }) {
   const { icon: Icon, badge } = sectionStyles[kind];
 
@@ -39,7 +38,7 @@ export function SectionHeading({ kind, eyebrow, title, description, id, size = "
       </span>
       <div className="min-w-0">
         <p className="text-[0.68rem] font-medium uppercase tracking-[0.17em] text-brand">{eyebrow}</p>
-        <h2 id={id} className={`mt-1 font-display font-normal tracking-[-0.03em] text-ink ${size === "large" ? "text-4xl" : "text-3xl"}`}>{title}</h2>
+        <h2 id={id} className="mt-1 font-display text-3xl font-normal tracking-[-0.03em] text-ink">{title}</h2>
         {description ? <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{description}</p> : null}
       </div>
     </div>

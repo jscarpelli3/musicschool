@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import type { CancellationPolicyState } from "@/app/schools/[schoolId]/policies/actions";
+import { AppSelect } from "@/components/ui/app-select";
 
 type InitialPolicy = {
   name: string;
@@ -43,13 +44,13 @@ export function CancellationPolicyForm({ initial, action }: {
 
     <section className="border-l-2 border-brand pl-5">
       <h3 className="font-display text-2xl">Within the notice window</h3>
-      <label className="mt-5 block"><span className="text-sm font-medium">Normal accounting result</span><select name="timely_disposition" defaultValue={initial.timelyDisposition} className={field}><option value="waive">Do not count or charge for the canceled lesson</option><option value="credit">Issue a lesson credit</option><option value="manual_review">Always ask the owner to decide</option><option value="charge">Count the lesson as serviced</option></select></label>
+      <label className="mt-5 block"><span className="text-sm font-medium">Normal accounting result</span><AppSelect name="timely_disposition" defaultValue={initial.timelyDisposition} className={field}><option value="waive">Do not count or charge for the canceled lesson</option><option value="credit">Issue a lesson credit</option><option value="manual_review">Always ask the owner to decide</option><option value="charge">Count the lesson as serviced</option></AppSelect></label>
       <label className="mt-5 block"><span className="text-sm font-medium">Message shown to families</span><textarea name="timely_guidance" required maxLength={1000} rows={3} defaultValue={initial.timelyGuidance} className="mt-2 w-full border border-line bg-transparent p-3 outline-none focus:border-brand" /></label>
     </section>
 
     <section className="border-l-2 border-danger pl-5">
       <h3 className="font-display text-2xl">Outside the notice window</h3>
-      <label className="mt-5 block"><span className="text-sm font-medium">What normally happens to the lesson?</span><select name="late_lesson_resolution" value={lateResolution} onChange={(event) => setLateResolution(event.target.value)} className={field}><option value="count_as_serviced">Count it as serviced; no replacement lesson</option><option value="retain_for_reschedule">Keep the lesson and require it to be rescheduled</option><option value="waive">Cancel it without counting or charging it</option><option value="manual_review">Always ask the owner to decide</option></select></label>
+      <label className="mt-5 block"><span className="text-sm font-medium">What normally happens to the lesson?</span><AppSelect name="late_lesson_resolution" value={lateResolution} onChange={(event) => setLateResolution(event.target.value)} className={field}><option value="count_as_serviced">Count it as serviced; no replacement lesson</option><option value="retain_for_reschedule">Keep the lesson and require it to be rescheduled</option><option value="waive">Cancel it without counting or charging it</option><option value="manual_review">Always ask the owner to decide</option></AppSelect></label>
       {lateResolution === "retain_for_reschedule" ? <div className="mt-5 grid gap-6 sm:grid-cols-2">
         <label><span className="text-sm font-medium">Late reschedule fee</span><span className="mt-1 block text-xs text-muted">Added to the next editable invoice; enter 0 for none</span><div className="relative"><span className="absolute left-0 top-5 text-muted">$</span><input name="late_reschedule_fee_dollars" type="number" min="0" max="10000" step="1" required defaultValue={initial.lateRescheduleFeeCents / 100} className={`${field} pl-5`} /></div></label>
         <label><span className="text-sm font-medium">Replacement deadline</span><span className="mt-1 block text-xs text-muted">Days to schedule the retained lesson</span><input name="replacement_window_days" type="number" min="0" max="365" required defaultValue={initial.replacementWindowDays} className={field} /></label>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { AppSelect } from "@/components/ui/app-select";
 import "./interactions.css";
 
 const views = ["Day", "Week", "Month"];
@@ -92,11 +93,11 @@ export function InteractionStudy() {
           </div>
           <div className="line-field pb-3">
             <label htmlFor="instrument" className="block text-xs text-muted">Instrument</label>
-            <select id="instrument" className="mt-2 w-full bg-transparent text-lg outline-none" defaultValue="Piano">
+            <AppSelect id="instrument" className="mt-2 w-full bg-transparent text-lg outline-none" defaultValue="Piano">
               <option>Piano</option>
               <option>Guitar</option>
               <option>Voice</option>
-            </select>
+            </AppSelect>
           </div>
         </div>
       </section>

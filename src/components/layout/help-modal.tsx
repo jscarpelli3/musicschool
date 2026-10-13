@@ -8,7 +8,7 @@ const sections = [
   { title: "School owners", steps: [
     "Use the dashboard for lessons needing a time, the school calendar, student records, and invoice activity.",
     "Open a lesson for payment, rescheduling, family billing, and student shortcuts.",
-    "Use School settings beside your avatar for school details, offerings, spaces, policies, payments, and appearance.",
+    "Use School settings beneath the school name for details, the setup guide, offerings, spaces, policies, payments, and appearance.",
   ] },
   { title: "Teachers", steps: [
     "Open My schedule for assigned lessons, proposed times, availability, and recent lessons.",

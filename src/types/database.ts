@@ -5353,6 +5353,19 @@ export type Database = {
         }
         Returns: Json
       }
+      create_payer_for_existing_student: {
+        Args: {
+          p_operation_id?: string
+          p_payer_email: string
+          p_payer_first_name: string
+          p_payer_last_name: string
+          p_payer_profile_id: string
+          p_relationship?: string
+          p_school_id: string
+          p_student_id: string
+        }
+        Returns: Json
+      }
       create_student_and_payer: {
         Args: {
           p_operation_id?: string

@@ -1,6 +1,7 @@
 "use client";
 
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
+import { AppSelect } from "@/components/ui/app-select";
 import { rescheduleReasonOptions } from "@/lib/scheduling/lesson-domain-contracts";
 
 export type RescheduleProposal = {
@@ -81,10 +82,10 @@ function ReasonField({ value, onChange, className = "", autoFocus = false }: { v
   return (
     <div className={className}>
       <label><span className="block text-xs text-muted">Reason recorded on this lesson <span className="text-brand">· required</span></span>
-        <select autoFocus={autoFocus} required value={code} onChange={(event) => onChange(`${event.target.value}::`)} className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand">
+        <AppSelect autoFocus={autoFocus} required value={code} onChange={(event) => onChange(`${event.target.value}::`)} className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand">
           <option value="">Select a reason</option>
           {rescheduleReasonOptions.map(({ value: reasonCode, label }) => <option key={reasonCode} value={reasonCode}>{label}</option>)}
-        </select>
+        </AppSelect>
       </label>
       {code === "other" ? <label><span className="sr-only">Other reason</span><input required maxLength={400} value={detail} onChange={(event) => onChange(`${code}::${event.target.value}`)} placeholder="Enter the reason" className="mt-3 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand" /></label> : null}
     </div>

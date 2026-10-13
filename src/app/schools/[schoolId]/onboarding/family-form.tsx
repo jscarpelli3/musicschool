@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FocusedModal } from "@/components/ui/focused-modal";
+import { AppSelect } from "@/components/ui/app-select";
 import { addStudentAndPayer, type AddFamilyState } from "../families/actions";
 
 export type OnboardingFamily = {
@@ -91,7 +92,7 @@ export function FamilyForm({ schoolId, families }: { schoolId: string; families:
           <label><span className="mb-2 block text-sm text-muted">Payer first name</span><input required readOnly={Boolean(activePayer)} name="payer_first" defaultValue={activePayer?.firstName ?? ""} autoComplete="given-name" className={field} /></label>
           <label><span className="mb-2 block text-sm text-muted">Payer last name</span><input required readOnly={Boolean(activePayer)} name="payer_last" defaultValue={activePayer?.lastName ?? ""} autoComplete="family-name" className={field} /></label>
           <label className="sm:col-span-2"><span className="mb-2 block text-sm text-muted">Payer email</span><input required readOnly={Boolean(activePayer)} name="payer_email" type="email" defaultValue={activePayer?.email ?? ""} autoComplete="email" className={field} /><span className="mt-2 block text-xs leading-5 text-muted">Billing summaries, approvals, and portal access go to this address.</span></label>
-          <label><span className="mb-2 block text-sm text-muted">Relationship to student</span><select name="relationship" className={field}><option value="parent">Parent</option><option value="guardian">Guardian</option><option value="self">Self</option><option value="other">Other</option></select></label>
+          <label><span className="mb-2 block text-sm text-muted">Relationship to student</span><AppSelect name="relationship" className={field}><option value="parent">Parent</option><option value="guardian">Guardian</option><option value="self">Self</option><option value="other">Other</option></AppSelect></label>
           <div className="flex items-end"><button disabled={pending} className="w-full rounded-control bg-ink px-5 py-3 text-sm text-canvas disabled:opacity-50">{pending ? "Adding…" : activePayer ? "Add student" : "Add student and payer"}</button></div>
           {state.message ? <p role="status" aria-live="polite" className={`sm:col-span-2 text-sm ${state.ok ? "text-brand" : "text-danger"}`}>{state.message}</p> : null}
         </form>

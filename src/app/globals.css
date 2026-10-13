@@ -391,6 +391,13 @@ body::before {
   box-shadow: var(--ui-shadow-soft);
 }
 
+.needs-scheduling-card[data-empty="true"] {
+  background: color-mix(in srgb, var(--ui-surface-raised) 72%, var(--ui-canvas));
+  box-shadow: none;
+  filter: saturate(0.15);
+  opacity: 0.62;
+}
+
 .coming-soon {
   min-height: 100svh;
 }
@@ -404,6 +411,167 @@ button,
 input,
 select {
   font: inherit;
+}
+
+select:not([multiple]) {
+  appearance: none;
+  cursor: pointer;
+  padding-right: 2rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 0.9rem) 50%,
+    calc(100% - 0.6rem) 50%;
+  background-repeat: no-repeat;
+  background-size: 0.3rem 0.3rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+select:not([multiple]):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ui-brand) 45%, transparent);
+}
+
+select option {
+  background: var(--ui-surface-raised);
+  color: var(--ui-ink);
+}
+
+.app-select-root {
+  position: relative;
+  width: 100%;
+}
+
+.app-select-native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.app-select-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.app-select-caret {
+  flex: none;
+  font-size: 1.15rem;
+  transition: transform 160ms ease;
+}
+
+.app-select-menu {
+  position: absolute;
+  z-index: 150;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  width: max(100%, max-content);
+  min-width: 100%;
+  max-width: min(28rem, calc(100vw - 2rem));
+  max-height: 18rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius-control);
+  background: var(--ui-surface-raised);
+  padding: 0.3rem;
+  box-shadow: var(--ui-shadow-soft);
+}
+
+.app-select-option {
+  display: block;
+  width: 100%;
+  border-radius: calc(var(--ui-radius-control) * 0.75);
+  padding: 0.55rem 0.7rem;
+  color: var(--ui-ink);
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  text-align: left;
+  white-space: normal;
+}
+
+.app-select-option[aria-selected="true"] {
+  background: color-mix(in srgb, var(--ui-brand) 15%, transparent);
+  color: var(--ui-brand);
+}
+
+.app-select-option:hover:not(:disabled),
+.app-select-option:focus-visible {
+  background: color-mix(in srgb, var(--ui-brand) 11%, var(--ui-surface-raised));
+}
+
+.planner-column-switch {
+  position: relative;
+  width: 7rem;
+  height: 2.1rem;
+  flex: none;
+  border: 1px solid color-mix(in srgb, var(--ui-line) 75%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ui-canvas) 88%, black);
+  padding: 0.225rem;
+}
+
+.planner-column-switch-thumb {
+  display: flex;
+  width: 1.5rem;
+  height: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  border-radius: 999px;
+  background: var(--ui-surface-raised);
+  color: var(--ui-muted);
+  box-shadow: 0 1px 3px color-mix(in srgb, black 22%, transparent);
+  transition: transform 360ms ease, background-color 360ms ease, color 360ms ease;
+}
+
+.planner-column-switch-thumb > span {
+  width: 2.4px;
+  height: 0.84rem;
+  border-radius: 1px;
+  background: currentColor;
+  transition: width 360ms ease, height 360ms ease;
+}
+
+.planner-column-switch[data-expanded="true"] .planner-column-switch-thumb {
+  transform: translateX(4.925rem);
+  background: var(--ui-brand);
+  color: var(--ui-canvas);
+  gap: 2px;
+}
+
+.planner-column-switch[data-expanded="true"] .planner-column-switch-thumb > span {
+  width: 3.6px;
+  height: 1.02rem;
+}
+
+.planner-column-switch-label {
+  position: absolute;
+  inset-block: 0;
+  left: 1.95rem;
+  right: 0.35rem;
+  display: grid;
+  place-items: center;
+  color: var(--ui-muted);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  line-height: 1;
+  transition: opacity 140ms ease;
+}
+
+.planner-column-switch[data-expanded="true"] .planner-column-switch-label {
+  left: 0.35rem;
+  right: 1.95rem;
+}
+
+.planner-column-switch[data-animating="true"] .planner-column-switch-label {
+  opacity: 0;
 }
 
 button,
