@@ -845,7 +845,7 @@ function TimelineView({
                   setHoverSlot(null);
                 }}
               >
-                {hoverSlot?.dateKey === dateKey && (!hoverSlot.teacherId || column.teachers.some((teacher) => teacher.id === hoverSlot.teacherId)) ? <div aria-hidden="true" className="pointer-events-none absolute z-30 -translate-y-1/2 rounded-control bg-ink/75 px-2 py-1 text-[10px] text-canvas shadow-sm" style={{ top: `${hoverSlot.minutes - timelineStart}px`, left: `${hoverSlot.pointerX ?? 8}px` }}>{clock(hoverSlot.minutes)}</div> : null}
+                {hoverSlot?.dateKey === dateKey && (!hoverSlot.teacherId || column.teachers.some((teacher) => teacher.id === hoverSlot.teacherId)) ? <div aria-hidden="true" className="pointer-events-none absolute z-30 -translate-y-1/2 rounded-control bg-surface/80 px-2 py-1 text-[10px] font-normal text-muted ring-1 ring-line/50" style={{ top: `${hoverSlot.minutes - timelineStart}px`, left: `${hoverSlot.pointerX ?? 8}px` }}>{clock(hoverSlot.minutes)}</div> : null}
                 {column.teachers.flatMap((teacher, teacherIndex) => availability
                   .filter((rule) => rule.teacher_id === teacher.id && rule.weekday === column.date.getDay() && rule.effective_from <= dateKey && (!rule.effective_until || rule.effective_until >= dateKey))
                   .map((rule) => {
