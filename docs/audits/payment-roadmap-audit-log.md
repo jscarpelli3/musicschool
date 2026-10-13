@@ -730,3 +730,13 @@ Recorded on 2026-10-12.
 - The teacher’s saved Monday availability is 9:00 AM–12:00 PM, and the scheduling RPC accepted both without an outside-availability override or overlap.
 - Each occurrence has a durable 100 USD-cent price snapshot and matching October billing service date. No statement, approval, payment attempt, or Stripe object was created by this fixture step.
 - Next human action: prepare the October statement from these lessons, review the exact lines, and proceed through the already-recorded approval and automatic signed-webhook settlement acceptance. Do not recreate the lessons or redo payer/card setup.
+
+### Staging branch loss and synthetic fixture replacement
+
+Recorded on 2026-10-13.
+
+- Merging the long-lived staging-to-main promotion PR caused Supabase to delete preview branch `plnluybazyltxtsbkxpn`. The repository described that branch as persistent, but the Supabase control plane reported it had actually been `persistent: false`; production project `twhexxokrjwzsoxgzlme` remained healthy and untouched.
+- The deleted branch returned `Preview branch not found` from Supabase's scheduled-deletion restore endpoint. All former staging Auth, tenant, billing, saved-method, local provider-connection, and webhook records are historical evidence only and cannot support subsequent acceptance claims.
+- Replacement project `iubmheectmsoavztbzma` was created explicitly with `persistent: true`, `with_data: false`, and Git branch `staging`. Its full migration deployment passed, Vercel staging was rebuilt with branch-scoped credentials, and the deployed login bundle resolves the replacement hostname.
+- New synthetic fixtures contain school `fc760892-4b3a-4602-9931-0715c2a033fc`, `TestFamily` billing account `fa7602df-dcaa-46fa-9af4-fcc68b97e50e`, payer/owner `elscarpo@gmail.com`, `Test Student`, five teachers, seven students, ten availability windows, three offerings, one place, and eight October lessons. The two TestFamily lessons are $1.00 occurrences on October 19 and 26 at 10:00 AM America/Chicago.
+- Payment acceptance has stepped back to provider setup for the replacement environment. Reconnect staging Stripe, set up a new test card, prepare and approve the new October statement, and only then resume the automatic PaymentIntent webhook settlement test.
