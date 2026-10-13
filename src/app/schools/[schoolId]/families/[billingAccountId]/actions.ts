@@ -25,6 +25,8 @@ export type BillingApprovalEmailState = { ok: boolean; message: string };
 export type BillingStatementNoticeState = { ok: boolean; message: string };
 export type BillingContactEmailState = { ok: boolean; message: string };
 export type BillingAdjustmentState = { ok: boolean; message: string };
+export type BillingDraftState = { ok: boolean; message: string; periodId: string | null };
+export type BillingLineDeferState = { ok: boolean; message: string };
 
 export async function collectFamilyInvoice(schoolId: string, billingAccountId: string, billingPeriodId: string) {
   const path = `/schools/${schoolId}/families/${billingAccountId}`;
@@ -71,14 +73,14 @@ function appOrigin() {
   return new URL(value).origin;
 }
 
-export async function prepareFamilyBillingDraft(schoolId: string, billingAccountId: string, formData: FormData) {
+export async function prepareFamilyBillingDraft(schoolId: string, billingAccountId: string, _state: BillingDraftState, formData: FormData): Promise<BillingDraftState> {
   const path = `/schools/${schoolId}/families/${billingAccountId}`;
   const month = String(formData.get("month") ?? "");
-  if (!/^\d{4}-\d{2}$/.test(month)) redirect(`${path}?billing=invalid_month`);
+  if (!/^\d{4}-\d{2}$/.test(month)) return { ok: false, message: "Choose a valid invoice month.", periodId: null };
 
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
-  if (!auth?.claims?.sub) redirect(`/login?next=${path}`);
+  if (!auth?.claims?.sub) return { ok: false, message: "Sign in again before preparing an invoice.", periodId: null };
 
   const { data: periodId, error } = await supabase.rpc("prepare_family_billing_draft", {
     p_school_id: schoolId,
@@ -88,17 +90,34 @@ export async function prepareFamilyBillingDraft(schoolId: string, billingAccount
 
   if (error || !periodId) {
     const detail = error?.message ?? "";
-    const status = detail.includes("lesson_requires_owner_review")
+    const message = detail.includes("lesson_requires_owner_review")
       || detail.includes("requires_owner_review")
       || detail.includes("missing_effective_cancellation_policy")
-      ? "needs_review"
-      : detail.includes("after_service_period_is_not_complete") ? "period_incomplete"
-      : detail.includes("billing_period_is_not_refreshable") ? "not_refreshable" : "error";
-    redirect(`${path}?billing=${status}`);
+      ? "A lesson needs an accounting decision before this invoice can be prepared."
+      : detail.includes("after_service_period_is_not_complete") ? "That after-service billing month is not complete yet."
+      : "The invoice could not be prepared. Nothing was changed.";
+    return { ok: false, message, periodId: null };
   }
 
   revalidatePath(path);
-  redirect(`${path}?billing=prepared&period=${periodId}`);
+  return { ok: true, message: "Invoice prepared. Review each included item before locking it.", periodId };
+}
+
+export async function removeLineFromInvoice(schoolId: string, billingAccountId: string, billingPeriodId: string, lineItemId: string, _state: BillingLineDeferState, formData: FormData): Promise<BillingLineDeferState> {
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) return { ok: false, message: "Sign in again before changing this invoice." };
+  const reason = String(formData.get("reason") ?? "").trim();
+  const { error } = await supabase.rpc("remove_source_from_billing_draft", {
+    p_school_id: schoolId,
+    p_billing_period_id: billingPeriodId,
+    p_line_item_id: lineItemId,
+    p_reason: reason || undefined,
+  });
+  if (error) return { ok: false, message: "That item could not be removed. Refresh and confirm the invoice is still editable." };
+  revalidatePath(path);
+  return { ok: true, message: "Removed from this invoice. It remains unpaid and can be included on a later invoice." };
 }
 
 export async function lockFamilyBillingPeriod(schoolId: string, billingAccountId: string, billingPeriodId: string) {

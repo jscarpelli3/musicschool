@@ -40,7 +40,7 @@ function startingMinute(windowStart: number, preference: string, requested: numb
   return windowStart;
 }
 
-export function LessonOpeningFinder({ options, timeZone, onChoose }: { options: LessonCreationOptions; timeZone: string; onChoose: (opening: Opening) => void }) {
+export function LessonOpeningFinder({ options, timeZone, onChoose, size = "dashboard" }: { options: LessonCreationOptions; timeZone: string; onChoose: (opening: Opening) => void; size?: "dashboard" | "directory" | "detail" }) {
   const [open, setOpen] = useState(false);
   const [teacherId, setTeacherId] = useState(options.teachers.length === 1 ? options.teachers[0].id : "");
   const [productId, setProductId] = useState("");
@@ -133,11 +133,15 @@ export function LessonOpeningFinder({ options, timeZone, onChoose }: { options: 
     {activeFilter ? <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-7">{dates.map((dateKey) => { const dayOpenings = openings.filter((item) => item.dateKey === dateKey); return <div key={dateKey} className="min-w-0 rounded-control bg-canvas/45 p-2"><p className="px-1 py-1 text-xs text-muted">{formatDay(dateKey, true)}</p><div className="mt-1 space-y-1.5">{dayOpenings.map((opening,index) => opening.fitsLesson ? <button key={`${opening.teacherId}-${opening.time}-${opening.end}-${index}`} type="button" onClick={() => chooseOpening(opening)} className="block w-full rounded-control bg-surface px-2 py-2 text-left transition hover:bg-brand/15"><strong className="block truncate text-xs font-medium">{opening.label}</strong><span className="mt-1 block text-[0.68rem] text-muted">{opening.detail}</span></button> : <div key={`${opening.teacherId}-${opening.time}-${opening.end}-${index}`} className="block w-full rounded-control bg-surface/40 px-2 py-2 text-left opacity-45" title={`Only ${opening.availableMinutes} minutes are open`}><strong className="block truncate text-xs font-medium">{opening.label}</strong><span className="mt-1 block text-[0.68rem] text-muted">{opening.detail}</span><span className="mt-1 block text-[0.64rem] text-muted">Too short for {product?.durationMinutes} min</span></div>)}{!dayOpenings.length ? <p className="px-1 py-3 text-[0.68rem] text-muted">No openings</p> : null}</div></div>; })}</div> : <p className="mt-5 text-sm text-muted">Choose any filter to reveal the week’s matching openings.</p>}
   </>;
 
+  const triggerSize = size === "dashboard" ? "min-h-40 px-6 py-7" : size === "directory" ? "min-h-24 px-5 py-4" : "min-h-20 px-4 py-3";
+  const iconSize = size === "dashboard" ? "mb-2 text-3xl" : size === "directory" ? "mb-1 text-2xl" : "mb-1 text-xl";
+  const titleSize = size === "dashboard" ? "text-3xl" : size === "directory" ? "text-2xl" : "text-xl";
+
   return <>
-    <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className="flex h-full min-h-40 w-full flex-col items-center justify-center rounded-card border border-transparent bg-surface-raised/55 px-6 py-7 text-center shadow-[var(--ui-shadow-soft)] transition duration-200 hover:-translate-y-1 hover:scale-[1.025] hover:border-brand/50 hover:bg-surface-raised hover:text-brand hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
-      <MdSearch aria-hidden="true" className="mb-2 text-3xl text-brand" />
-      <span className="font-display text-3xl font-normal tracking-[-0.03em]">Find an opening</span>
-      <span className="mt-2 max-w-xl text-xs leading-5 text-muted">Filter a week by teacher, lesson, day, or time to see exactly what is available.</span>
+    <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className={`flex h-full w-full flex-col items-center justify-center rounded-card border border-transparent bg-surface-raised/55 text-center shadow-[var(--ui-shadow-soft)] transition duration-200 hover:-translate-y-1 hover:scale-[1.025] hover:border-brand/50 hover:bg-surface-raised hover:text-brand hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${triggerSize}`}>
+      <MdSearch aria-hidden="true" className={`${iconSize} text-brand`} />
+      <span className={`font-display font-normal tracking-[-0.03em] ${titleSize}`}>Find an opening</span>
+      {size === "dashboard" ? <span className="mt-2 max-w-xl text-xs leading-5 text-muted">Filter a week by teacher, lesson, day, or time to see exactly what is available.</span> : null}
     </button>
     {open ? <div className="fixed inset-0 z-[120]" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <button type="button" aria-label="Close opening finder" onClick={closeFinder} className="fixed inset-0 border-0 bg-[var(--ui-overlay)]" />

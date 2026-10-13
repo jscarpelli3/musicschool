@@ -7,11 +7,16 @@ import type { AddFamilyState } from "@/app/schools/[schoolId]/families/actions";
 import type { StudentRosterRow } from "./student-roster-table";
 import { LessonStatusStrip } from "./lesson-status-strip";
 import { MdPersonOutline, MdSchedule, MdSearch } from "react-icons/md";
+import { DirectoryLessonFinder } from "@/components/scheduling/directory-lesson-finder";
+import type { LessonCreationOptions } from "@/components/scheduling/lesson-creation-dialog";
 
-export function StudentDirectory({ rows, monthLabel, addFamilyAction }: {
+export function StudentDirectory({ rows, monthLabel, addFamilyAction, lessonCreationOptions, timeZone, schoolId }: {
   rows: StudentRosterRow[];
   monthLabel: string;
   addFamilyAction?: (state: AddFamilyState, formData: FormData) => Promise<AddFamilyState>;
+  lessonCreationOptions?: LessonCreationOptions;
+  timeZone: string;
+  schoolId: string;
 }) {
   const [search, setSearch] = useState("");
   const filteredRows = useMemo(() => {
@@ -26,6 +31,7 @@ export function StudentDirectory({ rows, monthLabel, addFamilyAction }: {
       <div><h1 id="student-directory-heading" className="font-display text-5xl tracking-[-0.04em] sm:text-6xl">Students.</h1><p className="mt-4 max-w-2xl text-sm leading-6 text-muted">Open a student record to see their family, lesson calendar, teachers, and recent activity.</p><p className="mt-2 text-sm text-muted">{rows.length} students</p></div>
       {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add student +" /> : null}
     </header>
+    {lessonCreationOptions ? <DirectoryLessonFinder schoolId={schoolId} timeZone={timeZone} options={lessonCreationOptions} /> : null}
     <label className="mt-8 block max-w-xl text-xs font-medium uppercase tracking-[0.14em] text-muted">
       Search students
       <span className="mt-2 flex items-center gap-2 rounded-control border border-line bg-surface px-3 focus-within:border-brand">

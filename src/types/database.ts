@@ -5836,6 +5836,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      remove_source_from_billing_draft: {
+        Args: {
+          p_billing_period_id: string
+          p_line_item_id: string
+          p_reason?: string
+          p_school_id: string
+        }
+        Returns: string
+      }
       replace_teacher_weekly_availability: {
         Args: { p_blocks: Json; p_school_id: string; p_teacher_id: string }
         Returns: undefined

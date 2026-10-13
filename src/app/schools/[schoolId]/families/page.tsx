@@ -5,6 +5,7 @@ import { AddFamilyDialog } from "@/components/families/add-family-dialog";
 import { addStudentAndPayer } from "./actions";
 import { invoiceNeedsAttention, loadSchoolInvoices } from "@/lib/billing/school-invoices";
 import { FamilyDirectory, type FamilyDirectoryRow } from "@/components/families/family-directory";
+import { loadLessonCreationOptions } from "@/lib/scheduling/lesson-creation-options";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export default async function FamiliesPage({ params }: { params: Promise<{ schoo
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/families`);
 
   const results = await Promise.all([
-    supabase.from("schools").select("id, name").eq("id", schoolId).maybeSingle(),
+    supabase.from("schools").select("id, name, timezone").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("billing_accounts").select("id, name, status, billing_contact_person_id").eq("school_id", schoolId).order("name"),
     supabase.from("people").select("id, first_name, last_name, preferred_name, email, phone").eq("school_id", schoolId),
@@ -32,6 +33,7 @@ export default async function FamiliesPage({ params }: { params: Promise<{ schoo
   if (failed && "error" in failed && failed.error) throw new Error(`Families could not load: ${failed.error.message}`);
   const [{ data: school }, { data: membership }, { data: accounts }, { data: people }, { data: studentLinks }, capabilities, invoices] = results;
   if (!school || !membership) notFound();
+  const lessonCreationOptions = capabilities.has("school.lessons.manage") ? await loadLessonCreationOptions(supabase, schoolId, school.timezone) : undefined;
 
   const peopleById = new Map((people ?? []).map((person) => [person.id, person]));
   const studentCount = (studentLinks ?? []).reduce<Record<string, number>>((counts, link) => {
@@ -67,7 +69,7 @@ export default async function FamiliesPage({ params }: { params: Promise<{ schoo
         <div><h1 className="font-display text-5xl tracking-[-0.04em] sm:text-6xl">Families.</h1><p className="mt-4 max-w-2xl text-sm leading-6 text-muted">Review payer accounts, contact details, and the students connected to each family.</p><p className="mt-2 text-sm text-muted">{accounts?.length ?? 0} payer accounts</p></div>
         {capabilities.has("school.billing.manage") ? <AddFamilyDialog action={addStudentAndPayer.bind(null, schoolId)} triggerLabel="Add family +" /> : null}
       </header>
-      <FamilyDirectory rows={directoryRows} />
+      <FamilyDirectory rows={directoryRows} schoolId={schoolId} timeZone={school.timezone} lessonCreationOptions={lessonCreationOptions} />
     </main>
   );
 }

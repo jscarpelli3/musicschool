@@ -21,7 +21,7 @@ export type RecordLessonCalendarItem = {
   billingAccounts?: Array<{ id: string; name: string }>;
 };
 
-export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeEnd, timeZone, lessonCreationOptions }: {
+export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeEnd, timeZone, lessonCreationOptions, title, description }: {
   schoolId: string;
   id: string;
   lessons: RecordLessonCalendarItem[];
@@ -29,6 +29,8 @@ export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeE
   rangeEnd: Date;
   timeZone: string;
   lessonCreationOptions?: LessonCreationOptions;
+  title: string;
+  description: string;
 }) {
   const [selectedLesson, setSelectedLesson] = useState<RecordLessonCalendarItem | null>(null);
   const [creationSlot, setCreationSlot] = useState<{ dateKey: string; time: string; teacherId: string; productId?: string } | null>(null);
@@ -72,7 +74,7 @@ export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeE
     { href: `/schools/${schoolId}/staff/${selectedLesson.teacherId}`, kind: "teacher", title: "Teacher home", detail: "Schedule, availability, and details." },
   ] : [];
 
-  return <>{lessonCreationOptions ? <><div className="mb-10 flex justify-center"><div className="w-[min(34rem,100%)]"><LessonOpeningFinder options={lessonCreationOptions} timeZone={timeZone} onChoose={(opening) => setCreationSlot(opening)} /></div></div><div className="mb-4 flex justify-end"><button type="button" onClick={() => setCreationSlot({ dateKey: lessonCreationOptions.today, time: "", teacherId: "" })} className="inline-flex items-center gap-2 rounded-control border border-brand px-4 py-2.5 text-sm text-brand transition hover:bg-brand hover:text-canvas"><MdAddCircleOutline aria-hidden="true" className="text-lg" />Add without finding a time</button></div></> : null}<CalendarRange
+  return <>{lessonCreationOptions ? <div className="my-6 flex justify-center"><div className="w-[min(22rem,100%)]"><LessonOpeningFinder size="detail" options={lessonCreationOptions} timeZone={timeZone} onChoose={(opening) => setCreationSlot(opening)} /></div></div> : null}<section className="ui-card mt-6 p-6 md:p-8"><div className="mb-7 flex flex-wrap items-end justify-between gap-5"><div><h2 className="font-display text-3xl">{title}</h2><p className="mt-3 text-sm leading-6 text-muted">{description}</p></div>{lessonCreationOptions ? <button type="button" onClick={() => setCreationSlot({ dateKey: lessonCreationOptions.today, time: "", teacherId: "" })} className="inline-flex items-center gap-2 rounded-control border border-brand px-4 py-2.5 text-sm text-brand transition hover:bg-brand hover:text-canvas"><MdAddCircleOutline aria-hidden="true" className="text-lg" />Add without finding a time</button> : null}</div><CalendarRange
     id={id}
     items={lessons}
     rangeStart={rangeStart}
@@ -91,7 +93,7 @@ export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeE
       <p className="mt-1 block truncate text-xs text-ink" title={lesson.studentName}>{lesson.studentName}</p>
       <p className="mt-1 block truncate text-xs text-muted" title={lesson.teacherName}>{lesson.teacherName}</p>
     </article>}</button>}
-  />
+  /></section>
   {creationSlot && lessonCreationOptions ? <LessonCreationDialog schoolId={schoolId} slot={creationSlot} options={lessonCreationOptions} lockTeacher={false} timeZone={timeZone} onClose={() => setCreationSlot(null)} /> : null}
   {selectedLesson ? <div className="fixed inset-0 z-[80] flex justify-end">
     <button type="button" aria-label="Close lesson details" onClick={closeLesson} className="absolute inset-0 cursor-default bg-ink/70" />

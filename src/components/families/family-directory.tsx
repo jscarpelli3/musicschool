@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { MdReceiptLong, MdSearch } from "react-icons/md";
+import { DirectoryLessonFinder } from "@/components/scheduling/directory-lesson-finder";
+import type { LessonCreationOptions } from "@/components/scheduling/lesson-creation-dialog";
 
 export type FamilyDirectoryRow = {
   id: string;
@@ -19,7 +21,7 @@ export type FamilyDirectoryRow = {
   };
 };
 
-export function FamilyDirectory({ rows }: { rows: FamilyDirectoryRow[] }) {
+export function FamilyDirectory({ rows, schoolId, timeZone, lessonCreationOptions }: { rows: FamilyDirectoryRow[]; schoolId: string; timeZone: string; lessonCreationOptions?: LessonCreationOptions }) {
   const [search, setSearch] = useState("");
   const filteredRows = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
@@ -29,6 +31,7 @@ export function FamilyDirectory({ rows }: { rows: FamilyDirectoryRow[] }) {
   }, [rows, search]);
 
   return <>
+    {lessonCreationOptions ? <DirectoryLessonFinder schoolId={schoolId} timeZone={timeZone} options={lessonCreationOptions} /> : null}
     <label className="mt-8 block max-w-xl text-xs font-medium uppercase tracking-[0.14em] text-muted">
       Search families
       <span className="mt-2 flex items-center gap-2 rounded-control border border-line bg-surface px-3 focus-within:border-brand">

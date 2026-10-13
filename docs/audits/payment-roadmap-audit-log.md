@@ -750,3 +750,16 @@ Recorded on 2026-10-13.
 - Stripe connected-account read-back on `acct_1UQCmbPxyWsGAVln` confirmed test mode (`livemode=false`), PaymentIntent `pi_3UQDQpPxyWsGAVln2U6MN9C5` succeeded for exactly 200 USD cents, and Charge `ch_3UQDQpPxyWsGAVln2tQsLDig` succeeded, was paid, and captured exactly 200 USD cents. Local and provider IDs match.
 - Signed webhook event `evt_3UQDQpPxyWsGAVln2J21rYUp` (`payment_intent.succeeded`) was received at `2026-10-13T21:40:25.498242Z` and marked `processed` on its first processing attempt at `2026-10-13T21:40:26.495Z`, with no error. No manual reconciliation was performed.
 - **Acceptance decision:** automatic exact-approved saved-card settlement passes. The formerly open Step 9 automatic-webhook requirement is satisfied. Do not repeat this successful invoice or charge; select a failure-path row next, beginning with a controlled decline unless priorities change.
+
+### Flexible invoice batching and scheduling-entry UI — staging implementation
+
+Recorded on 2026-10-13.
+
+- Replaced the database's one-invoice-per-family/service-month constraint with one-editable-draft-per-month plus durable source allocation. A locked or later invoice reserves each lesson/monthly-tuition source; allocation uniqueness makes duplicate billing fail closed. Unlock/review and void transitions release the reservation through a protected trigger.
+- An owner may now remove an automatic lesson or monthly-tuition line from an editable invoice. The draft-specific exclusion survives refresh, deletes only that draft line, records an audit event and optional reason, and leaves the source unpaid for a later invoice. It does not waive the source or create a credit.
+- Preparing the same service month reuses its editable draft; when none exists, it creates a later numbered invoice and gathers only eligible sources that are neither excluded from that draft nor allocated to another active invoice.
+- Invoice preparation moved to a focused modal outside the invoice list and preserves scroll when the prepared invoice is selected. The family section is now `Invoices`, not `Billing history`. Editable automatic lines expose the explicit `Remove from this invoice` explanation.
+- `Find an opening` remains dashboard-sized only on the main dashboard, uses a smaller directory treatment near the top of Families, Students, and Staff, and uses a compact standalone treatment outside student, family, and teacher calendar cards.
+- Staging migrations `20261013170000` through `20261013172000` applied successfully. Verification asserts the old uniqueness constraint is gone, one editable draft is enforced, allocation/source-removal guards exist, anonymous/browser mutation is denied, and service diagnostics are read-only. Database lint reports only the two pre-existing unused-variable warnings.
+- Existing paid replacement invoice `c8d584c2-f181-429d-9054-15018e4e4d73` remained paid for 200 cents and backfilled exactly two lesson-source reservations. TypeScript, ESLint, `git diff --check`, and the Next.js 16.3 production build pass.
+- Browser acceptance remains required for modal behavior, finder sizing, deferral followed by a same-month later invoice, and duplicate protection. The next functional regression track must also repeat the payer lesson-cancellation request flow end to end before payment decline testing resumes.

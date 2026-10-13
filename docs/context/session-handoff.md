@@ -1,6 +1,6 @@
 # Active Session Handoff
 
-Updated 2026-10-12 after adding owner navigation and contextual lesson-entry improvements for the next automatic-settlement test. This file is the quickest restart point after a lost conversation; the authoritative launch gates remain in [`../operations/production-readiness-plan.md`](../operations/production-readiness-plan.md).
+Updated 2026-10-13 after automatic saved-card settlement passed and flexible invoice batching entered staging verification. This file is the quickest restart point after a lost conversation; the authoritative launch gates remain in [`../operations/production-readiness-plan.md`](../operations/production-readiness-plan.md).
 
 ## Restart rule
 
@@ -49,17 +49,14 @@ Updated 2026-10-12 after adding owner navigation and contextual lesson-entry imp
 - This first $2.00 run proves charge submission, provider binding, durable duplicate prevention, and fail-closed missing-webhook behavior. It does **not** prove automatic PaymentIntent webhook settlement after the subscription correction.
 - PR #72 visually de-emphasizes paid statement cards. PR #73 keeps recent paid statements in the main history and presents paid statements whose service-period end is more than six school-calendar months old through `View archived invoices`; this is presentation-only and never changes ledger status. The archive UI has automated date-boundary/build coverage but no live old-invoice fixture yet.
 
-## Immediate next test: automatic invoice webhook settlement
+## Immediate next tests
 
-Do not redo card setup or the first $2.00 charge. The next human action is one new exact approved statement in staging, using synthetic data and Stripe test mode only.
+Do not redo card setup or either successful $2.00 charge. Automatic signed-webhook settlement passed on replacement staging.
 
-1. Prepare a different billing month for the same synthetic family. Add a small explained test adjustment if the month has no billable lesson.
-2. Lock the statement, send/open its payer approval path, and approve the exact amount.
-3. Confirm the owner UI reads `Approved — ready to collect`, then hold the charge control exactly once.
-4. Refresh/reopen the family page. The expected result is an automatic transition from `Payment submitted — awaiting confirmation` to a faint `Paid` card through the signed PaymentIntent webhook. No manual database reconciliation is allowed for this acceptance run.
-5. Verify the durable provider event is `processed`, the attempt is `succeeded`, the period is `paid`, and the Stripe PaymentIntent/Charge are test-mode objects on the connected school account with the exact amount and metadata.
-6. Record the deployment commit, local attempt/period IDs, non-secret Stripe event/intent/charge IDs, timestamps, and outcome in the payment audit log.
-7. Only after this passes, select the next saved-card failure row: a decline test, authentication-required test, duplicate/concurrent submission test, or unknown-outcome recovery. Do not treat those rows as already tested.
+1. Visually accept the new finder placement/sizing and invoice-preparation modal on staging.
+2. Create fresh synthetic lesson charges, remove one from the first draft, lock the remaining invoice, and prove the deferred lesson alone appears on a later invoice for the same service month. Confirm no locked source can appear twice and that remove/defer is not presented as waiver or credit.
+3. Rehearse the payer lesson-cancellation request end to end again: payer access and submission, owner visibility/decision, calendar result, accounting disposition, notification, and any resulting invoice/credit behavior. Record every outcome; do not assume the earlier cancellation work still passes after invoice batching.
+4. After the UI/billing/cancellation pass, resume the saved-card failure matrix with a controlled decline, followed by authentication-required, duplicate/concurrent submission, and unknown-outcome recovery.
 
 ### Replacement October staging fixture
 
@@ -112,7 +109,7 @@ Do not redo card setup or the first $2.00 charge. The next human action is one n
 
 ## Decisions and open work
 
-- Replace the current one-family-invoice-per-service-month assumption with flexible invoice batching. Preparing an invoice should gather unpaid eligible lessons, while letting the owner remove a lesson from this invoice without waiving it; that lesson remains unbilled and available for a later invoice, including another invoice covering the same service month. Keep `remove/defer`, `waive`, and `credit` as distinct durable accounting decisions, and prevent both silent disappearance and duplicate billing. Design and migrate this only after the current replacement-staging $2.00 automatic-webhook acceptance run.
+- Flexible invoice batching is implemented and migrated on replacement staging but still needs browser acceptance. Preparing gathers unpaid eligible sources; removing a source records a draft-specific deferral rather than a waiver/credit; locked invoices reserve sources against duplicate billing; unlocking/review or voiding releases reservations; and later invoices may cover deferred lessons from the same service month.
 - Integrated payments remain optional. The plan now requires a durable, reversible school opt-out that suppresses prompts without deleting provider evidence and allows later reconnection.
 - Provider review, remediable action, rejection, and voluntary opt-out must remain separate states. Payment failure must never block unrelated school operations.
 - Before adding Square or support for an existing external Stripe workflow, define a provider-neutral connection boundary; no such alternate integration is currently promised.

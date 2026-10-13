@@ -103,6 +103,7 @@ type Props = {
   showTeacherFilter?: boolean;
   showAvailabilityLabels?: boolean;
   lessonCreationOptions?: LessonCreationOptions;
+  finderSize?: "dashboard" | "directory" | "detail";
   initialTeacherId?: string;
   allowAllTeachers?: boolean;
   rescheduleMode?: "apply" | "propose";
@@ -207,6 +208,7 @@ export function OwnerPlanner({
   showTeacherFilter = true,
   showAvailabilityLabels = true,
   lessonCreationOptions,
+  finderSize = "dashboard",
   initialTeacherId = "all",
   allowAllTeachers = true,
   rescheduleMode = "apply",
@@ -414,7 +416,7 @@ export function OwnerPlanner({
   return (
     <>
     {lessonCreationOptions ? <div className={`mb-10 items-stretch gap-4 ${addFamilyAction ? "grid md:grid-cols-3" : "flex justify-center"}`}>
-      <div className={addFamilyAction ? "" : "w-[min(34rem,100%)]"}><LessonOpeningFinder options={lessonCreationOptions} timeZone={timezone} onChoose={(opening) => { setCreatingLesson(false); setCreationSlot({ ...opening, minutes: timeMinutes(opening.time) }); }} /></div>
+      <div className={addFamilyAction ? "" : finderSize === "detail" ? "w-[min(22rem,100%)]" : "w-[min(34rem,100%)]"}><LessonOpeningFinder size={finderSize} options={lessonCreationOptions} timeZone={timezone} onChoose={(opening) => { setCreatingLesson(false); setCreationSlot({ ...opening, minutes: timeMinutes(opening.time) }); }} /></div>
       {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add student" largeKind="student" existingPayers={existingPayers} unconnectedStudents={unconnectedStudents} /> : null}
       {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add payer" largeKind="payer" existingPayers={existingPayers} unconnectedStudents={unconnectedStudents} /> : null}
     </div> : null}
