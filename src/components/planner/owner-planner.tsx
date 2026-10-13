@@ -380,27 +380,9 @@ export function OwnerPlanner({
   return (
     <section id="school-calendar" className="ui-card scroll-mt-6 overflow-hidden">
       {lessonCreationOptions ? <div className="px-5 pt-6 sm:px-7"><LessonOpeningFinder options={lessonCreationOptions} timeZone={timezone} onChoose={(opening) => { setCreatingLesson(false); setCreationSlot({ ...opening, minutes: timeMinutes(opening.time) }); }} /></div> : null}
-      <div className="grid gap-8 px-5 py-6 md:grid-cols-[1fr_auto] md:items-end sm:px-7">
-        <SectionHeading kind="calendar" eyebrow={contextLabel} title={title} description={`Times shown in ${timezone.replaceAll("_", " ")}`} />
-        <div className="flex flex-wrap items-end gap-8">
-          {lessonCreationOptions ? (
-            <button
-              type="button"
-              aria-pressed={creatingLesson}
-              onClick={toggleCreationMode}
-              className={`rounded-control border px-4 py-2 text-sm transition hover:-translate-y-px ${creatingLesson ? "border-brand bg-brand text-canvas" : "border-brand text-brand hover:bg-brand hover:text-canvas"}`}
-            >
-              <span aria-hidden="true" className="mr-2 text-base">+</span>{creatingLesson ? "Cancel adding" : "Add lesson"}
-            </button>
-          ) : null}
-          {showTeacherFilter ? <label className="border-b border-line pb-2 text-sm">
-            <span className="mr-3 text-muted">Teacher</span>
-            <select value={teacherId} onChange={(event) => setTeacherId(event.target.value)} className="bg-transparent outline-none">
-              {initialTeacherId === "" ? <option value="">Choose a teacher</option> : null}
-              {allowAllTeachers ? <option value="all">All teachers</option> : null}
-              {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}{teacher.isOwner ? " · you" : ""}</option>)}
-            </select>
-          </label> : null}
+      <div className="grid gap-4 px-5 py-6 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center sm:px-7">
+        <div className="flex flex-wrap items-end gap-x-5 gap-y-3">
+          <SectionHeading kind="calendar" eyebrow={contextLabel} title={title} description={`Times shown in ${timezone.replaceAll("_", " ")}`} />
           <div className="flex items-center gap-2" role="group" aria-label="Planner view">
             {views.map((option) => (
               <button
@@ -408,20 +390,40 @@ export function OwnerPlanner({
                 type="button"
                 aria-pressed={view === option}
                 onClick={() => setView(option)}
-                className={`rounded-control capitalize transition hover:-translate-y-px ${option === "week" ? `border px-4 py-2 text-sm ${view === option ? "border-brand bg-brand text-canvas" : "border-line text-ink hover:border-brand hover:bg-surface"}` : `px-2 py-1 text-xs ${view === option ? "bg-surface text-ink" : "text-muted hover:text-ink"}`}`}
+                className={`rounded-control px-2.5 py-1.5 text-xs capitalize transition hover:-translate-y-px ${view === option ? "bg-surface text-ink" : "text-muted hover:bg-surface/60 hover:text-ink"}`}
               >{option}</button>
             ))}
           </div>
+        </div>
+        {lessonCreationOptions ? (
+          <button
+            type="button"
+            aria-pressed={creatingLesson}
+            onClick={toggleCreationMode}
+            className={`w-fit rounded-control border px-3 py-1.5 text-xs transition hover:-translate-y-px ${creatingLesson ? "border-brand bg-brand text-canvas" : "border-brand text-brand hover:bg-brand hover:text-canvas"}`}
+          >
+            <span aria-hidden="true" className="mr-1.5 text-sm">+</span>{creatingLesson ? "Cancel adding" : "Add lesson"}
+          </button>
+        ) : null}
+        <div className="flex min-w-44 flex-col items-stretch gap-1.5 justify-self-start lg:justify-self-end">
           {view === "week" && visibleTeachers.length > 1 ? (
             <button
               type="button"
               aria-pressed={expandedWeek}
               onClick={() => setExpandedWeek((current) => !current)}
-              className={`rounded-control border px-4 py-2 text-sm transition hover:-translate-y-px ${expandedWeek ? "border-brand bg-brand text-canvas" : "border-line text-muted hover:border-brand hover:text-ink"}`}
+              className={`self-end rounded-control border px-2.5 py-1 text-[11px] transition hover:-translate-y-px ${expandedWeek ? "border-brand bg-brand text-canvas" : "border-line text-muted hover:border-brand hover:text-ink"}`}
             >
               {expandedWeek ? "Compact week" : "Expand all teachers"}
             </button>
           ) : null}
+          {showTeacherFilter ? <label className="flex items-center justify-between gap-2 border-b border-line pb-1.5 text-xs">
+            <span className="text-muted">Teacher</span>
+            <select value={teacherId} onChange={(event) => setTeacherId(event.target.value)} className="min-w-0 bg-transparent text-right outline-none">
+              {initialTeacherId === "" ? <option value="">Choose a teacher</option> : null}
+              {allowAllTeachers ? <option value="all">All teachers</option> : null}
+              {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}{teacher.isOwner ? " · you" : ""}</option>)}
+            </select>
+          </label> : null}
         </div>
       </div>
 
