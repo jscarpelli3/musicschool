@@ -74,6 +74,12 @@ Do not redo card setup or the first $2.00 charge. The next human action is one n
 - Thirteen one-time lessons were created through `create_single_lesson` across October 13–24 using the staging 30-minute offering and test place. These populate occupied/free time for filter evaluation without entering `TestFamily` billing.
 - Payment acceptance remains exclusively `JONATHAN ME` + `TestStudent1 TestStudent1Last` + the existing test payer. Do not use the scheduling-only fixtures for invoice or Stripe testing.
 
+### Lesson finder availability windows
+
+- The finder now presents each teacher's continuous free windows rather than generating 15-minute or lesson-duration start increments.
+- Selecting an offering does not remove shorter openings. A window that cannot fit the selected duration remains visible but muted and cannot be selected; its label explains that it is too short, allowing the owner to reconsider the lesson length.
+- Past days are omitted consistently, and today's first open window is clipped to the scheduling minimum whether or not an offering is selected.
+
 ## Owner navigation checkpoint
 
 - The calendar interaction rule is now consistent for owners: create a lesson in place from the calendar currently being viewed. The overall calendar can schedule any student, a family calendar limits the picker to that family, and a student calendar fixes the student. Record-level creation opens over the current page rather than navigating away.
