@@ -85,6 +85,8 @@ Do not redo card setup or the first $2.00 charge. The next human action is one n
 - Teacher or student overlaps are not allowed. Outside regular availability may remain an explicit warned exception, but overlap is a hard conflict.
 - Week/day calendars enter focused add mode and let the owner choose an empty slot; month view goes directly to a compact composer because it cannot express time placement precisely.
 - Quick student creation returns to the unfinished lesson. It does not send payment-method verification; payment setup remains a separate owner decision.
+- First finder slice: a shared `Find an opening` panel now sits above owner, student, and family calendars. The owner chooses teacher, offered service, any/day-of-week/specific date, and any/daypart/specific time; results cover six weeks in 15-minute starts, fit the full service duration inside saved availability, and subtract real occupied teacher time plus the known student’s conflicts.
+- Selecting a result carries teacher, service, date, and time into the existing lesson composer. This is the availability foundation, not the final unified composer: explicit primary-teacher persistence/defaulting, quick student creation/resume, focused week masking, and month-cell entry remain follow-up work.
 
 ## Decisions and open work
 

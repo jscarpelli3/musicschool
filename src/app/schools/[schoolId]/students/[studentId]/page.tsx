@@ -49,10 +49,11 @@ export default async function StudentDetailPage({ params }: {
     supabase.from("lesson_events").select("id, starts_at, ends_at, status, outcome, teacher_id, product_id, place_id, actual_starts_at, actual_ends_at, actual_place_id").eq("school_id", schoolId).eq("student_id", studentId).gte("starts_at", queryStart).lt("starts_at", queryEnd).order("starts_at"),
     supabase.from("teachers").select("person_id,outside_availability_policy").eq("school_id", schoolId),
     supabase.from("teacher_availability_rules").select("id,teacher_id,weekday,start_time,end_time,effective_from,effective_until").eq("school_id", schoolId).order("weekday").order("start_time"),
+    supabase.from("lesson_events").select("teacher_id,student_id,starts_at,ends_at,status").eq("school_id", schoolId).gte("starts_at", queryStart).lt("starts_at", queryEnd),
   ]);
   const failedRelated = related.find((result) => result.error);
   if (failedRelated?.error) throw new Error(`Student detail could not load: ${failedRelated.error.message}`);
-  const [contactsResult, billingLinksResult, lessonsResult, seriesResult, peopleResult, productsResult, placesResult, accountsResult, calendarLessonsResult, teachersResult, availabilityResult] = related;
+  const [contactsResult, billingLinksResult, lessonsResult, seriesResult, peopleResult, productsResult, placesResult, accountsResult, calendarLessonsResult, teachersResult, availabilityResult, busyLessonsResult] = related;
 
   const people = new Map((peopleResult.data ?? []).map((row) => [row.id, row]));
   const products = new Map((productsResult.data ?? []).map((row) => [row.id, row]));
@@ -69,7 +70,7 @@ export default async function StudentDetailPage({ params }: {
   const entitlements = canViewSupport ? await loadServiceEntitlements(supabase,schoolId,{studentIds:[studentId]}) : [];
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: school.timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const minimumTimeToday = new Intl.DateTimeFormat("en-GB", { timeZone: school.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
-  const lessonCreationOptions = canManageLessons ? { students: [{ id: studentId, label: displayName(person) }], defaultStudentId: studentId, teachers: (teachersResult.data ?? []).flatMap((teacher) => { const teacherPerson = people.get(teacher.person_id); return teacherPerson ? [{ id: teacher.person_id, label: displayName(teacherPerson), outsideAvailabilityPolicy: teacher.outside_availability_policy === "require_approval" ? "require_approval" as const : "notify_only" as const }] : []; }), products: (productsResult.data ?? []).map((product) => ({ id: product.id, label: product.name, durationMinutes: product.duration_minutes, priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price_cents / 100) })), places: (placesResult.data ?? []).map((place) => ({ id: place.id, label: place.name })), availability: availabilityResult.data ?? [], today, minimumTimeToday } : undefined;
+  const lessonCreationOptions = canManageLessons ? { students: [{ id: studentId, label: displayName(person) }], defaultStudentId: studentId, teachers: (teachersResult.data ?? []).flatMap((teacher) => { const teacherPerson = people.get(teacher.person_id); return teacherPerson ? [{ id: teacher.person_id, label: displayName(teacherPerson), outsideAvailabilityPolicy: teacher.outside_availability_policy === "require_approval" ? "require_approval" as const : "notify_only" as const }] : []; }), products: (productsResult.data ?? []).map((product) => ({ id: product.id, label: product.name, durationMinutes: product.duration_minutes, priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price_cents / 100) })), places: (placesResult.data ?? []).map((place) => ({ id: place.id, label: place.name })), availability: availabilityResult.data ?? [], busyLessons: (busyLessonsResult.data ?? []).map((lesson) => ({ teacherId: lesson.teacher_id, studentId: lesson.student_id, startsAt: lesson.starts_at, endsAt: lesson.ends_at, status: lesson.status })), today, minimumTimeToday } : undefined;
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">

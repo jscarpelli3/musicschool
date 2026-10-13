@@ -289,6 +289,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
           products: (productRows ?? []).filter((product) => product.status === "active" && product.format === "private_lesson").map((product) => ({ id: product.id, label: product.name, durationMinutes: product.duration_minutes, priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price_cents / 100) })),
           places: (placeRows ?? []).filter((place) => place.status === "active").map((place) => ({ id: place.id, label: place.name })),
           availability: availabilityRows ?? [],
+          busyLessons: (lessonRows ?? []).map((lesson) => ({ teacherId: lesson.teacher_id, studentId: lesson.student_id, startsAt: lesson.starts_at, endsAt: lesson.ends_at, status: lesson.status })),
           today: initialDate,
           minimumTimeToday,
         } : undefined}
