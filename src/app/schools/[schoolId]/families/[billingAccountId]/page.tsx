@@ -58,6 +58,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   const [{ data: school }, { data: membership }, { data: account }] = initial;
   if (!school || !membership || !account) notFound();
   const archiveCutoff = calendarMonthCutoff(school.timezone, 6);
+  const { rangeStart: calendarStart, rangeEnd: calendarEnd, queryStart, queryEnd } = schoolCalendarWindow(school.timezone);
 
   const related = await Promise.all([
     supabase.from("people").select("id, first_name, last_name, preferred_name, email, phone, status").eq("school_id", schoolId),
@@ -74,10 +75,11 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     supabase.from("lesson_places").select("id,name").eq("school_id", schoolId),
     supabase.from("teachers").select("person_id,outside_availability_policy").eq("school_id", schoolId),
     supabase.from("teacher_availability_rules").select("id,teacher_id,weekday,start_time,end_time,effective_from,effective_until").eq("school_id", schoolId).order("weekday").order("start_time"),
+    supabase.from("lesson_events").select("teacher_id,student_id,starts_at,ends_at,status").eq("school_id", schoolId).gte("starts_at", queryStart).lt("starts_at", queryEnd),
   ]);
   const failedRelated = related.find((result) => result.error);
   if (failedRelated?.error) throw new Error(`Family detail could not load: ${failedRelated.error.message}`);
-  const [peopleResult, studentsResult, periodsResult, archivedPeriodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult, productsResult, placesResult, teachersResult, availabilityResult] = related;
+  const [peopleResult, studentsResult, periodsResult, archivedPeriodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult, productsResult, placesResult, teachersResult, availabilityResult, busyLessonsResult] = related;
   const periodIds = [...(periodsResult.data ?? []), ...(archivedPeriodsResult.data ?? [])].map((period) => period.id);
   const { data: lineItems, error: lineItemsError } = periodIds.length
     ? await supabase.from("billing_line_items")
@@ -96,7 +98,6 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     const person = people.get(link.student_id);
     return person ? [{ id: link.student_id, person }] : [];
   });
-  const { rangeStart: calendarStart, rangeEnd: calendarEnd, queryStart, queryEnd } = schoolCalendarWindow(school.timezone);
   const { data: familyLessons, error: familyLessonsError } = students.length ? await supabase.from("lesson_events").select("id,student_id,teacher_id,product_id,place_id,starts_at,ends_at,status,outcome,actual_starts_at,actual_ends_at,actual_place_id").eq("school_id", schoolId).in("student_id", students.map((student) => student.id)).gte("starts_at", queryStart).lt("starts_at", queryEnd).order("starts_at") : { data: [], error: null };
   if (familyLessonsError) throw new Error(`Family lesson calendar could not load: ${familyLessonsError.message}`);
   const products = new Map((productsResult.data ?? []).map((product) => [product.id, product.name]));
@@ -132,7 +133,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   const currentMonth = new Intl.DateTimeFormat("en-CA", { timeZone: school.timezone, year: "numeric", month: "2-digit" }).format(new Date());
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: school.timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const minimumTimeToday = new Intl.DateTimeFormat("en-GB", { timeZone: school.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
-  const lessonCreationOptions = canManageLessons ? { students: students.map((student) => ({ id: student.id, label: name(student.person) })), defaultStudentId: students.length === 1 ? students[0].id : "", teachers: (teachersResult.data ?? []).flatMap((teacher) => { const teacherPerson = people.get(teacher.person_id); return teacherPerson ? [{ id: teacher.person_id, label: name(teacherPerson), outsideAvailabilityPolicy: teacher.outside_availability_policy === "require_approval" ? "require_approval" as const : "notify_only" as const }] : []; }), products: (productsResult.data ?? []).map((product) => ({ id: product.id, label: product.name, durationMinutes: product.duration_minutes, priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price_cents / 100) })), places: (placesResult.data ?? []).map((place) => ({ id: place.id, label: place.name })), availability: availabilityResult.data ?? [], today, minimumTimeToday } : undefined;
+  const lessonCreationOptions = canManageLessons ? { students: students.map((student) => ({ id: student.id, label: name(student.person) })), defaultStudentId: students.length === 1 ? students[0].id : "", teachers: (teachersResult.data ?? []).flatMap((teacher) => { const teacherPerson = people.get(teacher.person_id); return teacherPerson ? [{ id: teacher.person_id, label: name(teacherPerson), outsideAvailabilityPolicy: teacher.outside_availability_policy === "require_approval" ? "require_approval" as const : "notify_only" as const }] : []; }), products: (productsResult.data ?? []).map((product) => ({ id: product.id, label: product.name, durationMinutes: product.duration_minutes, priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price_cents / 100) })), places: (placesResult.data ?? []).map((place) => ({ id: place.id, label: place.name })), availability: availabilityResult.data ?? [], busyLessons: (busyLessonsResult.data ?? []).map((lesson) => ({ teacherId: lesson.teacher_id, studentId: lesson.student_id, startsAt: lesson.starts_at, endsAt: lesson.ends_at, status: lesson.status })), today, minimumTimeToday } : undefined;
   const billingMessages: Record<string, string> = {
     prepared: "Draft prepared from the current schedule and saved to the billing ledger.",
     needs_review: "Draft stopped without changing the ledger. At least one lesson needs an outcome or an effective cancellation policy.",

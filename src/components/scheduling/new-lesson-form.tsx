@@ -80,6 +80,7 @@ export function NewLessonForm({
   today,
   defaultTeacherId,
   defaultStudentId,
+  defaultProductId,
   initialDate,
   initialTime = "",
   lockedTeacherId,
@@ -98,6 +99,7 @@ export function NewLessonForm({
   today: string;
   defaultTeacherId?: string;
   defaultStudentId?: string;
+  defaultProductId?: string;
   initialDate?: string;
   initialTime?: string;
   lockedTeacherId?: string;
@@ -109,7 +111,7 @@ export function NewLessonForm({
   const [state, formAction] = useActionState(action, initialState);
   const startingTeacherId = lockedTeacherId ?? (teachers.some((teacher) => teacher.id === defaultTeacherId) ? defaultTeacherId! : "");
   const [teacherId, setTeacherId] = useState(startingTeacherId);
-  const [productId, setProductId] = useState(entitlement?.productId ?? "");
+  const [productId, setProductId] = useState(entitlement?.productId ?? (products.some((product) => product.id === defaultProductId) ? defaultProductId! : ""));
   const [date, setDate] = useState(initialDate ?? today);
   const [time, setTime] = useState(initialTime);
   const [scheduleType, setScheduleType] = useState("one_time");

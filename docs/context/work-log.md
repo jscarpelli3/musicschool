@@ -170,3 +170,6 @@ Use this file for short chronological notes about meaningful work.
 - Added the searchable, scrollable quick directory to Staff while preserving the Staff label as the full-directory link.
 - Regression validation passed: TypeScript, ESLint, production build, and all 60 local Node tests.
 - Created two normal-RPC synthetic October lessons for the staging test family at non-overlapping times inside the teacher’s saved availability; verified both immutable $1.00 price snapshots and recorded their IDs in the handoff/payment audit.
+- Added the first reusable lesson-opening finder above owner, student, and family calendars. It uses service duration, teacher availability, date/day/time preferences, and occupied lesson intervals to return selectable six-week openings that prefill the existing composer.
+- Preserved direct calendar add mode and an explicit `Add without finding a time` escape hatch while the broader composer is refined.
+- Finder validation passed: TypeScript, ESLint, production build, and all 60 local Node tests.

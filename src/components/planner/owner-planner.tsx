@@ -14,6 +14,7 @@ import { lessonEventDescriptor, rescheduleReasonLabel } from "@/lib/scheduling/l
 import { RescheduleConfirmation, type RescheduleProposal } from "./lesson-reschedule-controls";
 import { QuickActionGrid, type QuickAction } from "@/components/ui/quick-action-grid";
 import { SectionHeading } from "@/components/ui/section-heading";
+import { LessonOpeningFinder } from "@/components/scheduling/lesson-opening-finder";
 import "./owner-planner.css";
 
 type Teacher = { id: string; name: string; isOwner: boolean };
@@ -109,7 +110,7 @@ type Props = {
 
 type LessonWithParts = Lesson & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> };
 type RescheduleNotice = { id: string; message: string };
-type CreationSlot = { dateKey: string; time: string; teacherId: string; minutes: number };
+type CreationSlot = { dateKey: string; time: string; teacherId: string; minutes: number; productId?: string };
 
 const views = ["day", "week", "month"] as const;
 type View = (typeof views)[number];
@@ -378,6 +379,7 @@ export function OwnerPlanner({
 
   return (
     <section id="school-calendar" className="ui-card scroll-mt-6 overflow-hidden">
+      {lessonCreationOptions ? <div className="px-5 pt-6 sm:px-7"><LessonOpeningFinder options={lessonCreationOptions} timeZone={timezone} onChoose={(opening) => { setCreatingLesson(false); setCreationSlot({ ...opening, minutes: timeMinutes(opening.time) }); }} /></div> : null}
       <div className="grid gap-8 px-5 py-6 md:grid-cols-[1fr_auto] md:items-end sm:px-7">
         <SectionHeading kind="calendar" eyebrow={contextLabel} title={title} description={`Times shown in ${timezone.replaceAll("_", " ")}`} />
         <div className="flex flex-wrap items-end gap-8">
