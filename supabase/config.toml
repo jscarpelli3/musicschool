@@ -77,7 +77,11 @@ enabled = false
 # the local Site URL and sends OAuth users back to 127.0.0.1.
 [remotes.staging.auth]
 site_url = "https://musicschool-git-staging-music-school.vercel.app"
-additional_redirect_urls = ["https://musicschool-git-staging-music-school.vercel.app/auth/callback"]
+additional_redirect_urls = [
+  "https://musicschool-git-staging-music-school.vercel.app/auth/callback",
+  "http://localhost:3001/auth/callback",
+  "http://127.0.0.1:3001/auth/callback"
+]
 
 [db.network_restrictions]
 # Enable management of network restrictions.

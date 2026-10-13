@@ -15,6 +15,9 @@ import { RescheduleConfirmation, type RescheduleProposal } from "./lesson-resche
 import { QuickActionGrid, type QuickAction } from "@/components/ui/quick-action-grid";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { LessonOpeningFinder } from "@/components/scheduling/lesson-opening-finder";
+import { AppSelect } from "@/components/ui/app-select";
+import { AddFamilyDialog } from "@/components/families/add-family-dialog";
+import type { AddFamilyState } from "@/app/schools/[schoolId]/families/actions";
 import "./owner-planner.css";
 
 type Teacher = { id: string; name: string; isOwner: boolean };
@@ -106,6 +109,9 @@ type Props = {
   rescheduleAction?: (input: { lessonId: string; localStart: string; reason: string }) => Promise<{ ok: boolean; message: string }>;
   initialLessonId?: string;
   currentTimeMs?: number;
+  addFamilyAction?: (state: AddFamilyState, formData: FormData) => Promise<AddFamilyState>;
+  existingPayers?: Array<{ id: string; label: string; firstName: string; lastName: string; email: string }>;
+  unconnectedStudents?: Array<{ id: string; label: string }>;
 };
 
 type LessonWithParts = Lesson & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> };
@@ -207,6 +213,9 @@ export function OwnerPlanner({
   rescheduleAction,
   initialLessonId,
   currentTimeMs = 0,
+  addFamilyAction,
+  existingPayers = [],
+  unconnectedStudents = [],
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<View>("week");
@@ -224,8 +233,27 @@ export function OwnerPlanner({
   const [creationSlot, setCreationSlot] = useState<CreationSlot | null>(null);
   const [creatingLesson, setCreatingLesson] = useState(false);
   const [expandedWeek, setExpandedWeek] = useState(false);
+  const [layoutSwitchAnimating, setLayoutSwitchAnimating] = useState(false);
+  const layoutSwitchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const compactInitialized = useRef(false);
   const anchor = fromKey(anchorKey);
+
+  useEffect(() => () => {
+    if (layoutSwitchTimer.current) clearTimeout(layoutSwitchTimer.current);
+  }, []);
+
+  useEffect(() => {
+    let frame: number | null = null;
+    try {
+      const storedExpandedWeek = window.localStorage.getItem(`lessons:planner:${schoolId}:week-density`) === "expanded";
+      frame = requestAnimationFrame(() => setExpandedWeek(storedExpandedWeek));
+    } catch {
+      // The planner still works when storage is unavailable or blocked.
+    }
+    return () => {
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
+  }, [schoolId]);
 
   const lessonDetails = useMemo(
     () => lessons.map((lesson) => ({ ...lesson, start: zonedParts(lesson.starts_at, timezone), end: zonedParts(lesson.ends_at, timezone) })),
@@ -382,22 +410,27 @@ export function OwnerPlanner({
     : view === "week"
       ? key(weekDates(anchor)[0]) === key(weekDates(todayAnchor)[0])
       : anchor.getFullYear() === todayAnchor.getFullYear() && anchor.getMonth() === todayAnchor.getMonth();
-  const teacherDisplayValue = expandedWeek && teacherId === "all" ? "expanded" : teacherId;
 
   return (
+    <>
+    {lessonCreationOptions ? <div className={`mb-10 items-stretch gap-4 ${addFamilyAction ? "grid md:grid-cols-3" : "flex justify-center"}`}>
+      <div className={addFamilyAction ? "" : "w-[min(34rem,100%)]"}><LessonOpeningFinder options={lessonCreationOptions} timeZone={timezone} onChoose={(opening) => { setCreatingLesson(false); setCreationSlot({ ...opening, minutes: timeMinutes(opening.time) }); }} /></div>
+      {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add student" largeKind="student" existingPayers={existingPayers} unconnectedStudents={unconnectedStudents} /> : null}
+      {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add payer" largeKind="payer" existingPayers={existingPayers} unconnectedStudents={unconnectedStudents} /> : null}
+    </div> : null}
     <section id="school-calendar" className="ui-card scroll-mt-6 overflow-hidden">
-      {lessonCreationOptions ? <div className="px-5 pt-6 sm:px-7"><LessonOpeningFinder options={lessonCreationOptions} timeZone={timezone} onChoose={(opening) => { setCreatingLesson(false); setCreationSlot({ ...opening, minutes: timeMinutes(opening.time) }); }} /></div> : null}
-      <div className="grid gap-4 px-5 py-6 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center sm:px-7">
+      <div className="planner-calendar-chrome pt-2">
+      <div className="grid gap-4 px-5 pt-6 pb-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end sm:px-7">
         <div className="flex flex-wrap items-end gap-x-5 gap-y-3">
           <SectionHeading kind="calendar" eyebrow={contextLabel} title={title} />
-          <div className="flex items-center gap-2" role="group" aria-label="Planner view">
+          <div className="planner-view-choices flex h-7 items-center gap-1" role="group" aria-label="Planner view">
             {views.map((option) => (
               <button
                 key={option}
                 type="button"
                 aria-pressed={view === option}
-                onClick={() => { setView(option); if (option !== "week") setExpandedWeek(false); }}
-                className={`rounded-control px-2.5 py-1.5 text-xs capitalize transition hover:-translate-y-px ${view === option ? "bg-surface text-ink" : "text-muted hover:bg-surface/60 hover:text-ink"}`}
+                onClick={() => setView(option)}
+                className={`h-7 rounded-control px-2 py-0.5 text-[11px] capitalize transition hover:-translate-y-px ${view === option ? "bg-surface text-ink" : "text-muted hover:bg-surface/60 hover:text-ink"}`}
               >{option}</button>
             ))}
           </div>
@@ -407,33 +440,62 @@ export function OwnerPlanner({
             type="button"
             aria-pressed={creatingLesson}
             onClick={toggleCreationMode}
-            className={`w-fit rounded-control border px-3 py-1.5 text-xs transition hover:-translate-y-px ${creatingLesson ? "border-brand bg-brand text-canvas" : "border-brand text-brand hover:bg-brand hover:text-canvas"}`}
+            className={`h-7 w-fit rounded-control border px-2.5 py-0.5 text-[11px] transition hover:-translate-y-px ${creatingLesson ? "border-brand bg-brand text-canvas" : "border-brand text-brand hover:bg-brand hover:text-canvas"}`}
           >
-            <span aria-hidden="true" className="mr-1.5 text-sm">+</span>{creatingLesson ? "Cancel adding" : "Add lesson"}
+            <span aria-hidden="true" className="mr-1 text-xs">+</span>{creatingLesson ? "Cancel adding" : "Add lesson"}
           </button>
         ) : null}
-        <div className="min-w-48 justify-self-start lg:justify-self-end">
-          {showTeacherFilter ? <label className="flex items-center justify-between gap-2 border-b border-line pb-1.5 text-xs">
-            <span className="text-muted">Teacher</span>
-            <select value={teacherDisplayValue} onChange={(event) => { const value = event.target.value; if (value === "expanded") { setTeacherId("all"); setExpandedWeek(true); setView("week"); } else { setTeacherId(value); setExpandedWeek(false); } }} className="min-w-0 bg-transparent text-right outline-none">
-              {initialTeacherId === "" ? <option value="">Choose a teacher</option> : null}
-              {allowAllTeachers ? <option value="all">All teachers</option> : null}
-              {allowAllTeachers ? <option value="expanded">Expanded all teachers</option> : null}
-              {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}{teacher.isOwner ? " · you" : ""}</option>)}
-            </select>
-          </label> : null}
-        </div>
       </div>
 
-      <div className="mx-5 grid min-h-12 grid-cols-[1fr_auto_1fr] items-center border-t border-line/60 py-2 sm:mx-7">
-        <div>{!showingCurrentPeriod ? <button type="button" onClick={() => setAnchorKey(initialDate)} className="text-xs text-brand hover:text-brand-hover">
-          {view === "day" ? "Go to today" : view === "week" ? "Go to this week" : "Go to this month"}
+      <div className="mx-5 grid min-h-11 grid-cols-[1fr_auto_1fr] items-center gap-3 pb-2 sm:mx-7">
+        <div className="min-w-0">{showTeacherFilter ? <div className="flex max-w-96 items-center gap-2">
+          <label className="min-w-0 flex-1">
+            <span className="sr-only">Calendar teacher display</span>
+            <AppSelect aria-label="Calendar teacher display" value={teacherId} onChange={(event) => setTeacherId(event.target.value)} className="planner-teacher-select h-9 w-full rounded-control px-3 text-sm font-medium text-ink outline-none ring-1 ring-line/60 transition focus:ring-brand">
+              {initialTeacherId === "" ? <option value="">Choose a teacher</option> : null}
+              {allowAllTeachers ? <option value="all">All teachers</option> : null}
+              {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}{teacher.isOwner ? " · you" : ""}</option>)}
+            </AppSelect>
+          </label>
+          {view === "week" && visibleTeachers.length > 0 ? (
+            <button
+              type="button"
+              aria-label={expandedWeek ? "Use compact teacher columns" : "Expand every teacher column"}
+              title={expandedWeek ? "Compact teacher columns" : "Expand every teacher column"}
+              aria-pressed={expandedWeek}
+              onClick={() => {
+                if (layoutSwitchTimer.current) clearTimeout(layoutSwitchTimer.current);
+                setLayoutSwitchAnimating(true);
+                setExpandedWeek((current) => {
+                  const next = !current;
+                  try {
+                    window.localStorage.setItem(`lessons:planner:${schoolId}:week-density`, next ? "expanded" : "compact");
+                  } catch {
+                    // Keep the in-memory preference when storage is unavailable.
+                  }
+                  return next;
+                });
+                layoutSwitchTimer.current = setTimeout(() => setLayoutSwitchAnimating(false), 540);
+              }}
+              className="planner-column-switch"
+              data-expanded={expandedWeek}
+              data-animating={layoutSwitchAnimating}
+            >
+              <span className="planner-column-switch-thumb" aria-hidden="true">
+                <span /><span /><span />
+              </span>
+              <span className="planner-column-switch-label" aria-hidden="true">{expandedWeek ? "Expanded" : "Compact"}</span>
+            </button>
+          ) : null}
+        </div> : null}</div>
+        <div className="text-center">{!showingCurrentPeriod ? <button type="button" onClick={() => setAnchorKey(initialDate)} className="text-xs text-brand hover:text-brand-hover">
+          {view === "day" ? "Jump back to today" : view === "week" ? "Jump back to this week" : "Jump back to this month"}
         </button> : null}</div>
-        <div className="flex items-center justify-center gap-4">
+        <div className="flex items-center justify-end gap-4">
           <button type="button" onClick={() => move(-1)} className="text-action text-xs text-muted hover:text-ink">← Previous</button>
           <button type="button" onClick={() => move(1)} className="text-action text-xs text-muted hover:text-ink">Next →</button>
         </div>
-        <p className="justify-self-end text-[10px] text-muted/70">{timezone.replaceAll("_", " ")}</p>
+      </div>
       </div>
 
       {rescheduleNotices.length ? (
@@ -463,10 +525,11 @@ export function OwnerPlanner({
         </div>
       ) : expandedWeek && view === "week" ? (
         <div role="status" className="border-b border-line px-4 py-3 text-sm text-muted">
-          <strong className="text-ink">Expanded week.</strong> Every teacher has a full column for each day. Scroll horizontally to move across the week.
+          <strong className="text-ink">Expanded week.</strong> {visibleTeachers.length === 1 ? "Each day is widened so lesson blocks are easier to read." : "Every teacher has a full column for each day."} Scroll horizontally to move across the week.
         </div>
       ) : null}
 
+      <div className="planner-grid-frame" data-layout={expandedWeek ? "expanded" : "compact"} data-layout-animating={layoutSwitchAnimating}>
       {view === "month" ? (
         <MonthView
           anchor={anchor}
@@ -512,6 +575,7 @@ export function OwnerPlanner({
           onCreateSlot={(slot) => { setCreatingLesson(false); setCreationSlot(slot); }}
         />
       )}
+      </div>
       {selectedLesson ? (
         <LessonSheet
           schoolId={schoolId}
@@ -566,6 +630,7 @@ export function OwnerPlanner({
       ) : null}
       {creationSlot && lessonCreationOptions ? <LessonCreationDialog schoolId={schoolId} slot={creationSlot} options={lessonCreationOptions} lockTeacher={!showTeacherFilter && teachers.length === 1} timeZone={timezone} onClose={() => setCreationSlot(null)} /> : null}
     </section>
+    </>
   );
 }
 
@@ -674,11 +739,11 @@ function TimelineView({
       ? dates.flatMap((date) => teachers.map((teacher) => ({
           date,
           teachers: [teacher],
-          label: `${new Intl.DateTimeFormat("en-US", { weekday: "short", day: "numeric" }).format(date)} · ${teacher.name}`,
+          label: teacher.name,
         })))
       : dates.map((date) => ({ date, teachers, label: new Intl.DateTimeFormat("en-US", { weekday: "short", day: "numeric" }).format(date) }));
   const hourCount = (timelineEnd - timelineStart) / 60;
-  const minimumColumnWidth = expandedWeek ? 190 : view === "week" ? Math.max(150, teachers.length * 14 + 100) : 150;
+  const minimumColumnWidth = expandedWeek ? (teachers.length === 1 ? 280 : 190) : view === "week" ? Math.max(150, teachers.length * 14 + 100) : 150;
 
   function creationSlotFromPointer(event: { currentTarget: HTMLDivElement; clientX: number; clientY: number }, dateKey: string, columnTeachers: Teacher[]) {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -790,14 +855,31 @@ function TimelineView({
     <div ref={scrollFrame} className="planner-scroll overflow-x-auto">
       {dropError ? <div role="alert" className="sticky left-0 z-40 border-b border-danger px-4 py-3 text-sm text-danger">Move blocked: {dropError}</div> : null}
       <div style={{ minWidth: `${Math.max(view === "day" && columns.length === 1 ? 360 : 760, columns.length * minimumColumnWidth)}px` }}>
-        <div className="grid border-b border-line" style={{ gridTemplateColumns: `4.5rem repeat(${columns.length}, minmax(0, 1fr))` }}>
-          <div />
-          {columns.map((column, columnIndex) => <div key={`${key(column.date)}-${column.label}`} className="planner-column-boundary border-l border-line px-3 py-3 text-sm" data-expanded-week={expandedWeek} data-day-start={expandedWeek && columnIndex % teachers.length === 0}>{column.label}</div>)}
-        </div>
+        {expandedWeek ? (
+          <div className="border-b border-line">
+            <div className="grid" style={{ gridTemplateColumns: `4.5rem repeat(${columns.length}, minmax(0, 1fr))` }}>
+              <div />
+              {dates.map((date) => (
+                <div key={key(date)} className="px-3 pb-1 pt-3 text-sm font-medium" style={{ gridColumn: `span ${teachers.length}` }}>
+                  {new Intl.DateTimeFormat("en-US", { weekday: "short", day: "numeric" }).format(date)}
+                </div>
+              ))}
+            </div>
+            <div className="grid" style={{ gridTemplateColumns: `4.5rem repeat(${columns.length}, minmax(0, 1fr))` }}>
+              <div />
+              {columns.map((column) => <div key={`${key(column.date)}-${column.label}`} className="px-3 pb-3 pt-1 text-xs text-muted">{column.label}</div>)}
+            </div>
+          </div>
+        ) : (
+          <div className="grid border-b border-line" style={{ gridTemplateColumns: `4.5rem repeat(${columns.length}, minmax(0, 1fr))` }}>
+            <div />
+            {columns.map((column) => <div key={`${key(column.date)}-${column.label}`} className="px-3 py-3 text-sm">{column.label}</div>)}
+          </div>
+        )}
         <div className="grid" style={{ gridTemplateColumns: `4.5rem repeat(${columns.length}, minmax(0, 1fr))` }}>
           <div className="relative" style={{ height: `${hourCount * 60}px` }}>
             {Array.from({ length: hourCount }, (_, index) => (
-              <span key={index} className="absolute right-3 text-[10px] text-muted" style={{ top: `${index * 60 - 6}px` }}>{clock(timelineStart + index * 60)}</span>
+              <span key={index} className="absolute right-3 text-[10px] text-muted" style={{ top: `${index === 0 ? 6 : index * 60 - 6}px` }}>{clock(timelineStart + index * 60)}</span>
             ))}
           </div>
           {columns.map((column, columnIndex) => {
@@ -947,6 +1029,7 @@ function TimelineView({
                         </span>
                         <span className="lesson-block-content">
                           <span className="lesson-student-name">{studentNames[lesson.student_id]}</span>
+                          {expandedWeek ? <span className="lesson-block-time">{clock(lesson.start.minutes)}–{clock(lesson.end.minutes)}</span> : null}
                         </span>
                         <span aria-hidden="true" className="lesson-student-initials">{studentInitials(studentNames[lesson.student_id] ?? "Student")}</span>
                         <QuickView>
@@ -1056,7 +1139,7 @@ function MonthView({
   return (
     <div>
       <div className="month-weekdays grid grid-cols-7 border-b border-line">
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => <div key={day} className="border-l border-line px-3 py-2 text-xs text-muted first:border-l-0"><span className="month-weekday-long">{day}</span><span className="month-weekday-short" aria-hidden="true">{day[0]}</span></div>)}
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => <div key={day} className="px-3 py-2 text-xs text-muted"><span className="month-weekday-long">{day}</span><span className="month-weekday-short" aria-hidden="true">{day[0]}</span></div>)}
       </div>
       <div className="grid grid-cols-7">
         {dates.map((date) => {

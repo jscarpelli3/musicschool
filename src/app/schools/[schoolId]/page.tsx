@@ -247,6 +247,15 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
   }).sort((a, b) => a.family.localeCompare(b.family) || a.student.localeCompare(b.student));
 
   const invoices = invoiceSummary.invoices;
+  const invoiceSection = view === "dashboard" && capabilities.has("school.billing.manage") ? (
+    <section className={`ui-card p-6 sm:p-8 ${invoiceSummary.attentionCount ? "mb-10" : "mt-16"}`}>
+      <div className="flex flex-wrap items-start justify-between gap-5">
+        <SectionHeading kind="billing" eyebrow="Invoices" title={invoiceSummary.attentionCount ? `${invoiceSummary.attentionCount} still in progress` : "Everything is settled"} description="Recent family invoices and their current approval or payment status." />
+        <Link href={`/schools/${schoolId}/invoices`} className="rounded-control border border-line px-3 py-2 text-sm text-brand transition hover:border-brand hover:bg-brand/10 hover:text-brand-hover">View all invoices →</Link>
+      </div>
+      <div className="mt-6 border-t border-line pt-6"><InvoiceList schoolId={schoolId} invoices={invoices} compact /></div>
+    </section>
+  ) : null;
 
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-6 py-section">
@@ -255,7 +264,8 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
         monthLabel={monthLabel}
         addFamilyAction={capabilities.has("school.billing.manage") ? addStudentAndPayer.bind(null, schoolId) : undefined}
       /> : null}
-      {view === "dashboard" && canManageSchool ? <section className="ui-card mb-10 p-6 sm:p-8"><SectionHeading kind="scheduling" eyebrow="Needs scheduling" title={entitlements.length ? "Paid lessons waiting for a time" : "Nothing is waiting for a time"} description="Paid replacement lessons appear here until they are placed back on the calendar." size="medium" />{entitlements.length ? <div className="mt-6 border-t border-line pt-6"><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} /></div> : null}</section> : null}
+      {view === "dashboard" && canManageSchool ? <section className={`needs-scheduling-card ui-card p-6 sm:p-8 ${invoiceSummary.attentionCount ? "mb-6" : "mb-10"}`} data-empty={entitlements.length === 0}><SectionHeading kind="scheduling" eyebrow="Needs scheduling" title={entitlements.length ? "Paid lessons waiting for a time" : "Nothing is waiting for a time"} description="Paid replacement lessons appear here until they are placed back on the calendar." />{entitlements.length ? <div className="mt-6 border-t border-line pt-6"><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} /></div> : null}</section> : null}
+      {invoiceSummary.attentionCount ? invoiceSection : null}
       {view === "dashboard" ? <OwnerPlanner
         key={initialLessonId ?? "school-calendar"}
         schoolId={schoolId}
@@ -294,9 +304,19 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
           today: initialDate,
           minimumTimeToday,
         } : undefined}
+        addFamilyAction={capabilities.has("school.billing.manage") ? addStudentAndPayer.bind(null, schoolId) : undefined}
+        existingPayers={(billingAccountRows ?? []).flatMap((account) => {
+          const payer = people.get(account.billing_contact_person_id);
+          return payer?.email ? [{ id: account.id, label: `${account.name} · ${payer.preferred_name || payer.first_name} ${payer.last_name}`, firstName: payer.first_name, lastName: payer.last_name, email: payer.email }] : [];
+        })}
+        unconnectedStudents={(studentRows ?? []).flatMap((student) => {
+          if ((billingLinkRows ?? []).some((link) => link.student_id === student.person_id)) return [];
+          const person = people.get(student.person_id);
+          return person ? [{ id: student.person_id, label: `${person.preferred_name || person.first_name} ${person.last_name}` }] : [];
+        })}
       /> : null}
+      {!invoiceSummary.attentionCount ? invoiceSection : null}
       {view === "dashboard" ? <StudentRosterTable rows={studentRowsForTable} monthLabel={monthLabel} initialView={rosterPreference?.settings as Partial<RosterViewSettings> | null} saveView={saveStudentRosterView.bind(null, schoolId)} dashboard /> : null}
-      {view === "dashboard" && capabilities.has("school.billing.manage") ? <section className="ui-card mt-16 p-6 sm:p-8"><div className="flex flex-wrap items-start justify-between gap-5"><SectionHeading kind="billing" eyebrow="Invoices" title={invoiceSummary.attentionCount ? `${invoiceSummary.attentionCount} still in progress` : "Everything is settled"} description="Recent family invoices and their current approval or payment status." size="medium" /><Link href={`/schools/${schoolId}/invoices`} className="rounded-control border border-line px-3 py-2 text-sm text-brand transition hover:border-brand hover:bg-brand/10 hover:text-brand-hover">View all invoices →</Link></div><div className="mt-6 border-t border-line pt-6"><InvoiceList schoolId={schoolId} invoices={invoices} compact /></div></section> : null}
     </main>
   );
 }

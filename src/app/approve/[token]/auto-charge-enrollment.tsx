@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
+import { AppSelect } from "@/components/ui/app-select";
 import { enrollAutoChargeMandate, revokeAutoChargeMandate } from "./actions";
 
 export function AutoChargeEnrollment({ token, schoolName, accountName, methodLabel, lastFour, amountCents, currency, eligible, activeMandate, initialCapCents, initialNoticeDays }: {
@@ -22,7 +23,7 @@ export function AutoChargeEnrollment({ token, schoolName, accountName, methodLab
       <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">You can keep reviewing and approving each month, or authorize automatic payment after receiving the itemized statement.</p>
       <div className="mt-6 grid gap-5 sm:grid-cols-2">
         <label><span className="block text-xs text-muted">Monthly maximum</span><span className={`mt-2 flex border-b border-line focus-within:border-brand ${noCap ? "opacity-40" : ""}`}><span className="py-2 text-muted">$</span><input value={cap} onChange={(event) => setCap(event.target.value)} disabled={noCap} inputMode="decimal" className="min-w-0 flex-1 bg-transparent py-2 pl-1 outline-none" /></span></label>
-        <label><span className="block text-xs text-muted">Statement notice before charge</span><select value={noticeDays} onChange={(event) => setNoticeDays(Number(event.target.value))} className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand"><option value={1}>1 day</option><option value={3}>3 days</option><option value={5}>5 days</option><option value={7}>7 days</option><option value={14}>14 days</option></select></label>
+        <label><span className="block text-xs text-muted">Statement notice before charge</span><AppSelect value={noticeDays} onChange={(event) => setNoticeDays(Number(event.target.value))} className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand"><option value={1}>1 day</option><option value={3}>3 days</option><option value={5}>5 days</option><option value={7}>7 days</option><option value={14}>14 days</option></AppSelect></label>
         <label className="flex items-start gap-3 text-sm text-muted sm:col-span-2"><input type="checkbox" checked={noCap} onChange={(event) => setNoCap(event.target.checked)} className="mt-1 accent-[var(--color-brand)]" /><span>Do not set a monthly maximum</span></label>
       </div>
       <div className="mt-6 border-l border-line pl-5"><p className="text-xs leading-6 text-muted">{terms}</p></div>

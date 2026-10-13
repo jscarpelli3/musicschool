@@ -21,8 +21,8 @@ export function AccountMenu({ avatarUrl, role }: { avatarUrl?: string | null; ro
     <div ref={containerRef} className="relative" onMouseEnter={() => setOpen(true)}>
       <p className="mb-1 text-right text-[10px] capitalize tracking-[0.12em] text-muted">{role}</p>
       <div className="flex items-center gap-1">
-        <button type="button" aria-label="Open account menu" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="grid h-10 w-10 place-items-center overflow-hidden rounded-full border border-line bg-surface text-muted transition hover:border-brand hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
-          {avatarUrl ? <img /* eslint-disable-line @next/next/no-img-element */ src={avatarUrl} alt="Your avatar" className="h-full w-full object-cover" /> : <MdPersonOutline aria-hidden="true" className="h-5 w-5" />}
+        <button type="button" aria-label="Open account menu" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="grid h-12 w-12 place-items-center overflow-hidden rounded-full border border-line bg-surface text-muted transition hover:border-brand hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
+          {avatarUrl ? <img /* eslint-disable-line @next/next/no-img-element */ src={avatarUrl} alt="Your avatar" className="h-full w-full object-cover" /> : <MdPersonOutline aria-hidden="true" className="h-6 w-6" />}
         </button>
       </div>
       {open ? (

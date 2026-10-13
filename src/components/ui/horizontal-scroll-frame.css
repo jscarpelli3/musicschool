@@ -13,13 +13,11 @@
 
 .horizontal-scroll-rail {
   height: 16px;
-  border-block: 1px solid var(--ui-line);
   background: var(--ui-surface);
 }
 
 .horizontal-scroll-body {
   -webkit-overflow-scrolling: touch;
-  border-bottom: 1px solid var(--ui-line);
 }
 
 .horizontal-scroll-rail::-webkit-scrollbar,
@@ -42,7 +40,7 @@
 .horizontal-scroll-frame::after {
   position: absolute;
   z-index: 5;
-  top: 53px;
+  top: 16px;
   bottom: 12px;
   width: 2px;
   pointer-events: none;
