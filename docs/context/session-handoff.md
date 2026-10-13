@@ -12,6 +12,7 @@ Updated 2026-10-12 after adding owner navigation and contextual lesson-entry imp
 
 - Working baseline: protected `staging` branch at merge commit `61db86a` (PR #73) or later.
 - Persistent staging uses the isolated Supabase staging branch and the `Common Time Staging` Stripe sandbox. Vercel Preview variables for branch `staging` point to those systems; Production variables remain Production-only.
+- On 2026-10-13, merging the long-lived staging-to-main PR deleted the former Supabase preview branch because its actual control-plane setting was ephemeral despite the repository describing it as persistent. Self-service restoration returned `Preview branch not found`. Replacement branch `iubmheectmsoavztbzma` was created explicitly with `persistent: true` and `with_data: false`; never reuse former ref `plnluybazyltxtsbkxpn`.
 - Never copy secret values into documentation. Relevant variable names and rotation procedures are in [`../operations/staging-environment.md`](../operations/staging-environment.md).
 - Preserve unrelated local untracked files. At this checkpoint they include an August screenshot, `docs/fromanotheragent.md`, `docs/ig screenshots_for WINS/`, `icon-test.png`, `pnpm-lock.yaml`, and `pnpm-workspace.yaml`.
 

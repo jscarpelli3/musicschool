@@ -25,7 +25,7 @@ The persistent staging environment exists to test migrations, authentication, pr
 
 ## Current state — 2026-09-19
 
-- Supabase successfully mapped its persistent staging project to Git `staging` and applied the repository migrations.
+- Supabase staging project `iubmheectmsoavztbzma` is explicitly persistent, mapped to Git `staging`, and data-less by design. It replaced the accidentally ephemeral branch deleted when the staging-to-main promotion PR merged on 2026-10-13.
 - The Git `staging` branch and `main` require pull requests, current `verify` and `database` checks, resolved conversations, and linear history.
 - All Git branches reject deletion and force pushes.
 - Staging database seeding is disabled until a deterministic synthetic fixture is reviewed and committed.
@@ -91,4 +91,4 @@ The Supabase variables and application origin are configured. Complete the remai
 - `STRIPE_MODE=test`
 - staging-specific Stripe secret and webhook signing secrets
 
-After configuration, redeploy `staging` and verify server-side that its Supabase project reference is `plnluybazyltxtsbkxpn` before creating any test users or payment fixtures.
+After configuration, redeploy `staging` and verify server-side that its Supabase project reference is `iubmheectmsoavztbzma` before creating any test users or payment fixtures.
