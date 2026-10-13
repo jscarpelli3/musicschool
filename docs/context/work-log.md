@@ -173,3 +173,6 @@ Use this file for short chronological notes about meaningful work.
 - Added the first reusable lesson-opening finder above owner, student, and family calendars. It uses service duration, teacher availability, date/day/time preferences, and occupied lesson intervals to return selectable six-week openings that prefill the existing composer.
 - Preserved direct calendar add mode and an explicit `Add without finding a time` escape hatch while the broader composer is refined.
 - Finder validation passed: TypeScript, ESLint, production build, and all 60 local Node tests.
+- Replaced the initial six-week result list with a filter-driven weekly picture and week picker. Teacher-only selection immediately exposes free blocks; service duration, day, and time progressively narrow those same possibilities in any selection order.
+- Darkened the filter control surface and removed competing underlines/dividers around the finder controls and results.
+- Weekly finder validation passed: TypeScript, ESLint, production build, and all 60 local Node tests.
