@@ -61,19 +61,18 @@ Do not redo card setup or the first $2.00 charge. The next human action is one n
 6. Record the deployment commit, local attempt/period IDs, non-secret Stripe event/intent/charge IDs, timestamps, and outcome in the payment audit log.
 7. Only after this passes, select the next saved-card failure row: a decline test, authentication-required test, duplicate/concurrent submission test, or unknown-outcome recovery. Do not treat those rows as already tested.
 
-### New October staging fixture
+### Replacement October staging fixture
 
-- On 2026-10-12, two synthetic one-time lessons were created through `create_single_lesson` for the sole staging family account (`TestStudent1Last family`, referred to in conversation as `TestFamily`).
-- Both use `Staging Checkout Test – 30 min`, primary test teacher `JONATHAN ME`, and `TestPlaceA`: October 19 and October 26, 2026 at 10:00–10:30 AM America/Chicago.
-- Lesson IDs are `894cab5c-973a-46fa-acf9-a820af61c07b` and `9f77d3a4-cedc-41d0-bb83-35abf29cc840`. Each has a $1.00 immutable price snapshot and October billing service date.
-- Do not create these lessons again. The owner’s next action is to use them to prepare the new October statement, then continue the approval/automatic-webhook acceptance sequence above.
+- The 2026-10-12 fixtures and all former staging Auth/database records were deleted with ephemeral branch `plnluybazyltxtsbkxpn` on 2026-10-13. Their IDs are historical only and must never be used as current evidence.
+- Persistent, data-less replacement branch `iubmheectmsoavztbzma` contains synthetic school `fc760892-4b3a-4602-9931-0715c2a033fc`, billing account `fa7602df-dcaa-46fa-9af4-fcc68b97e50e` named `TestFamily`, payer/owner login `elscarpo@gmail.com`, and student `Test Student` with primary teacher `JONATHAN ME`.
+- Two new one-time lessons use `Staging Checkout Test – 30 min` at $1.00 and `TestPlaceA`: October 19 and October 26, 2026 at 10:00–10:30 AM America/Chicago. Their insert triggers created new immutable price snapshots.
+- The former saved payment method, billing period, payment attempt, local Stripe connection, and webhook evidence were not recoverable. Do not claim the replacement fixture has a saved card or approved statement. Reconnect the staging Stripe account, set up a test payment method, and prepare a fresh October statement before resuming automatic-webhook acceptance.
 
-### Scheduling-only staging fixtures
+### Replacement scheduling-only staging fixtures
 
-- On 2026-10-12, three realistic demo teachers were added for calendar/finder evaluation: Maya Chen, Elena Rodriguez, and Marcus Bennett. Each has two recurring availability blocks; existing teacher Jerry Seinfeld also received a Tuesday 9:00 AM–12:00 PM block.
-- Four scheduling-only students were added: Sophie Walsh, Liam Brooks, Ava Patel, and Noah Williams. They are explicitly marked synthetic and have **zero billing-account links**.
-- Thirteen one-time lessons were created through `create_single_lesson` across October 13–24 using the staging 30-minute offering and test place. These populate occupied/free time for filter evaluation without entering `TestFamily` billing.
-- Payment acceptance remains exclusively `JONATHAN ME` + `TestStudent1 TestStudent1Last` + the existing test payer. Do not use the scheduling-only fixtures for invoice or Stripe testing.
+- Replacement staging contains teachers Maya Chen, Elena Rodriguez, Marcus Bennett, Jerry Seinfeld, and JONATHAN ME, each with two recurring availability blocks.
+- Scheduling-only students are Sophie Walsh, Liam Brooks, Ava Patel, Noah Williams, Emma Thompson, and Lucas Martin. They have **zero billing-account links**.
+- Six filler lessons plus the two TestFamily lessons populate October 14–26. Payment acceptance remains exclusively `JONATHAN ME` + `Test Student` + `TestFamily`/`elscarpo@gmail.com`.
 
 ### Lesson finder availability windows
 
