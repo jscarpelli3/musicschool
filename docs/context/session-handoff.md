@@ -64,7 +64,7 @@ Do not redo card setup or the first $2.00 charge. The next human action is one n
 ### Replacement October staging fixture
 
 - The 2026-10-12 fixtures and all former staging Auth/database records were deleted with ephemeral branch `plnluybazyltxtsbkxpn` on 2026-10-13. Their IDs are historical only and must never be used as current evidence.
-- Persistent, data-less replacement branch `iubmheectmsoavztbzma` contains synthetic school `fc760892-4b3a-4602-9931-0715c2a033fc`, billing account `fa7602df-dcaa-46fa-9af4-fcc68b97e50e` named `TestFamily`, payer/owner login `elscarpo@gmail.com`, and student `Test Student` with primary teacher `JONATHAN ME`.
+- Persistent, data-less replacement branch `iubmheectmsoavztbzma` contains synthetic school `fc760892-4b3a-4602-9931-0715c2a033fc`, billing account `fa7602df-dcaa-46fa-9af4-fcc68b97e50e` named `TestFamily`, owner login `scarpelli.jon@gmail.com`, payer login `elscarpo@gmail.com`, and student `Test Student` with primary teacher `JONATHAN ME`. These identities are deliberately separate.
 - Two new one-time lessons use `Staging Checkout Test – 30 min` at $1.00 and `TestPlaceA`: October 19 and October 26, 2026 at 10:00–10:30 AM America/Chicago. Their insert triggers created new immutable price snapshots.
 - The former saved payment method, billing period, payment attempt, local Stripe connection, and webhook evidence were not recoverable. Do not claim the replacement fixture has a saved card or approved statement. Reconnect the staging Stripe account, set up a test payment method, and prepare a fresh October statement before resuming automatic-webhook acceptance.
 
