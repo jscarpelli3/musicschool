@@ -111,6 +111,7 @@ Do not redo card setup or the first $2.00 charge. The next human action is one n
 
 ## Decisions and open work
 
+- Replace the current one-family-invoice-per-service-month assumption with flexible invoice batching. Preparing an invoice should gather unpaid eligible lessons, while letting the owner remove a lesson from this invoice without waiving it; that lesson remains unbilled and available for a later invoice, including another invoice covering the same service month. Keep `remove/defer`, `waive`, and `credit` as distinct durable accounting decisions, and prevent both silent disappearance and duplicate billing. Design and migrate this only after the current replacement-staging $2.00 automatic-webhook acceptance run.
 - Integrated payments remain optional. The plan now requires a durable, reversible school opt-out that suppresses prompts without deleting provider evidence and allows later reconnection.
 - Provider review, remediable action, rejection, and voluntary opt-out must remain separate states. Payment failure must never block unrelated school operations.
 - Before adding Square or support for an existing external Stripe workflow, define a provider-neutral connection boundary; no such alternate integration is currently promised.
