@@ -24,7 +24,7 @@ export default async function NewLessonPage({ params, searchParams }: {
     supabase.from("schools").select("id, name, timezone").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("teachers").select("person_id, outside_availability_policy").eq("school_id", schoolId),
-    supabase.from("students").select("person_id").eq("school_id", schoolId).in("enrollment_status", ["active", "prospect"]),
+    supabase.from("students").select("person_id,primary_teacher_id").eq("school_id", schoolId).in("enrollment_status", ["active", "prospect"]),
     supabase.from("people").select("id, first_name, last_name, preferred_name").eq("school_id", schoolId).eq("status", "active"),
     supabase.from("service_products").select("id, name, duration_minutes, price_cents, currency").eq("school_id", schoolId).eq("status", "active").eq("format", "private_lesson").order("name"),
     supabase.from("lesson_places").select("id, name").eq("school_id", schoolId).eq("status", "active").order("name"),
@@ -85,7 +85,7 @@ export default async function NewLessonPage({ params, searchParams }: {
         availability={availabilityResult.data ?? []}
         lessons={(lessonsResult.data ?? []).map((lesson) => ({...lesson,billing_service_date:lesson.starts_at.slice(0,10),can_reschedule:false,can_mark_reschedule:false}))}
         contextLabel={entitlement ? "Choose a time for this paid replacement lesson" : "Choose a teacher, then a time"}
-        lessonCreationOptions={{students:visibleStudents,defaultStudentId,teachers:visibleTeachers,products:(productsResult.data ?? []).map((product) => ({id:product.id,label:product.name,durationMinutes:product.duration_minutes,priceLabel:new Intl.NumberFormat("en-US",{style:"currency",currency:product.currency}).format(product.price_cents/100)})),places:(placesResult.data ?? []).map((place) => ({id:place.id,label:place.name})),availability:availabilityResult.data ?? [],today,minimumTimeToday,
+        lessonCreationOptions={{students:visibleStudents,defaultStudentId,primaryTeacherByStudent:Object.fromEntries((studentsResult.data ?? []).flatMap((student) => student.primary_teacher_id ? [[student.person_id,student.primary_teacher_id]] : [])),teachers:visibleTeachers,products:(productsResult.data ?? []).map((product) => ({id:product.id,label:product.name,durationMinutes:product.duration_minutes,priceLabel:new Intl.NumberFormat("en-US",{style:"currency",currency:product.currency}).format(product.price_cents/100)})),places:(placesResult.data ?? []).map((place) => ({id:place.id,label:place.name})),availability:availabilityResult.data ?? [],busyLessons:(lessonsResult.data ?? []).map((lesson)=>({teacherId:lesson.teacher_id,studentId:lesson.student_id,startsAt:lesson.starts_at,endsAt:lesson.ends_at,status:lesson.status})),today,minimumTimeToday,
           entitlement: entitlement && sourceLesson ? {id:entitlement.id,studentId:entitlement.student_id,productId:sourceLesson.product_id,teacherId:entitlement.assigned_teacher_id,durationMinutes:entitlement.duration_minutes} : undefined}}
       />
     </main>

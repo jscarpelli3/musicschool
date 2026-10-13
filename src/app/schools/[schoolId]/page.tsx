@@ -40,7 +40,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
 
   const [dashboardQueries, entitlements, invoiceSummary, paidLessonsResult] = await Promise.all([Promise.all([
     supabase.from("teachers").select("person_id, outside_availability_policy").eq("school_id", schoolId),
-    supabase.from("students").select("person_id").eq("school_id", schoolId),
+    supabase.from("students").select("person_id,primary_teacher_id").eq("school_id", schoolId),
     supabase.from("people").select("id, first_name, last_name, preferred_name, profile_id, email, phone").eq("school_id", schoolId),
     supabase
       .from("teacher_availability_rules")
@@ -285,6 +285,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
         }))}
         lessonCreationOptions={canManageSchool ? {
           students: Object.entries(studentNames).map(([id,label]) => ({ id, label })),
+          primaryTeacherByStudent: Object.fromEntries((studentRows ?? []).flatMap((student) => student.primary_teacher_id ? [[student.person_id, student.primary_teacher_id]] : [])),
           teachers: teachers.map((teacher) => ({ id: teacher.id, label: teacher.name, outsideAvailabilityPolicy: teacher.outsideAvailabilityPolicy })),
           products: (productRows ?? []).filter((product) => product.status === "active" && product.format === "private_lesson").map((product) => ({ id: product.id, label: product.name, durationMinutes: product.duration_minutes, priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price_cents / 100) })),
           places: (placeRows ?? []).filter((place) => place.status === "active").map((place) => ({ id: place.id, label: place.name })),

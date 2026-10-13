@@ -15,17 +15,19 @@ export type LessonCreationOptions = {
   today: string;
   minimumTimeToday?: string;
   defaultStudentId?: string;
+  primaryTeacherByStudent?: Record<string, string>;
   busyLessons?: Array<{ teacherId: string; studentId: string; startsAt: string; endsAt: string; status: string }>;
   entitlement?: { id: string; studentId: string; productId: string; teacherId: string | null; durationMinutes: number };
 };
 
 const initialState: CreateLessonState = { status: "idle", message: "" };
 
-export function LessonCreationDialog({ schoolId, slot, options, lockTeacher, onClose }: {
+export function LessonCreationDialog({ schoolId, slot, options, lockTeacher, timeZone, onClose }: {
   schoolId: string;
   slot: { dateKey: string; time: string; teacherId: string; productId?: string };
   options: LessonCreationOptions;
   lockTeacher: boolean;
+  timeZone: string;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -50,12 +52,15 @@ export function LessonCreationDialog({ schoolId, slot, options, lockTeacher, onC
           {...options}
           defaultTeacherId={slot.teacherId}
           defaultStudentId={options.defaultStudentId}
+          primaryTeacherByStudent={options.primaryTeacherByStudent}
           defaultProductId={slot.productId}
           lockedTeacherId={lockTeacher ? slot.teacherId : undefined}
           initialDate={slot.dateKey}
           initialTime={slot.time}
           entitlement={options.entitlement}
           minimumTimeToday={options.minimumTimeToday}
+          busyLessons={options.busyLessons}
+          timeZone={timeZone}
           compact
           onCreated={(result) => {
             onClose();
