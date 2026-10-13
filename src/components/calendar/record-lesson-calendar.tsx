@@ -72,7 +72,7 @@ export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeE
     { href: `/schools/${schoolId}/staff/${selectedLesson.teacherId}`, kind: "teacher", title: "Teacher home", detail: "Schedule, availability, and details." },
   ] : [];
 
-  return <>{lessonCreationOptions ? <><LessonOpeningFinder options={lessonCreationOptions} timeZone={timeZone} onChoose={(opening) => setCreationSlot(opening)} /><div className="mb-4 flex justify-end"><button type="button" onClick={() => setCreationSlot({ dateKey: lessonCreationOptions.today, time: "", teacherId: "" })} className="inline-flex items-center gap-2 rounded-control border border-brand px-4 py-2.5 text-sm text-brand transition hover:bg-brand hover:text-canvas"><MdAddCircleOutline aria-hidden="true" className="text-lg" />Add without finding a time</button></div></> : null}<CalendarRange
+  return <>{lessonCreationOptions ? <><div className="mb-10 flex justify-center"><div className="w-[min(34rem,100%)]"><LessonOpeningFinder options={lessonCreationOptions} timeZone={timeZone} onChoose={(opening) => setCreationSlot(opening)} /></div></div><div className="mb-4 flex justify-end"><button type="button" onClick={() => setCreationSlot({ dateKey: lessonCreationOptions.today, time: "", teacherId: "" })} className="inline-flex items-center gap-2 rounded-control border border-brand px-4 py-2.5 text-sm text-brand transition hover:bg-brand hover:text-canvas"><MdAddCircleOutline aria-hidden="true" className="text-lg" />Add without finding a time</button></div></> : null}<CalendarRange
     id={id}
     items={lessons}
     rangeStart={rangeStart}
