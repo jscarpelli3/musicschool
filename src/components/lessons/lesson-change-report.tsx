@@ -21,7 +21,7 @@ export function LessonChangeReport({
   const [note, setNote] = useState("");
   const [open, setOpen] = useState(false);
   if (!open) {
-    return <button type="button" onClick={() => setOpen(true)} className="text-action mt-5 text-sm text-danger">{buttonLabel}</button>;
+    return <button type="button" onClick={() => setOpen(true)} className="text-action mt-5 rounded-control border border-danger/40 px-4 py-2.5 text-sm text-danger transition hover:border-danger hover:bg-danger/5">{buttonLabel}</button>;
   }
   return (
     <section className="mt-5 border border-danger/40 p-4">

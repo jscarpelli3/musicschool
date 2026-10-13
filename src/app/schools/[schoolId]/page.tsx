@@ -11,6 +11,7 @@ import { addStudentAndPayer } from "./families/actions";
 import { InvoiceList } from "@/components/billing/invoice-list";
 import { loadSchoolInvoiceSummary } from "@/lib/billing/school-invoices";
 import { StudentDirectory } from "@/components/students/student-directory";
+import { SectionHeading } from "@/components/ui/section-heading";
 
 export const dynamic = "force-dynamic";
 
@@ -33,10 +34,13 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
   const canManageSchool = capabilities.has("school.lessons.manage");
   const entitlementPromise = view === "dashboard" && canManageSchool ? loadServiceEntitlements(supabase, schoolId) : Promise.resolve([]);
   const invoiceSummaryPromise = view === "dashboard" && capabilities.has("school.billing.manage") ? loadSchoolInvoiceSummary(supabase, schoolId, 6) : Promise.resolve({ invoices: [], attentionCount: 0 });
+  const paidLessonsPromise = view === "dashboard" && capabilities.has("school.billing.manage")
+    ? supabase.from("lesson_payment_requests").select("lesson_event_id").eq("school_id", schoolId).eq("status", "succeeded")
+    : Promise.resolve({ data: [], error: null });
 
-  const [dashboardQueries, entitlements, invoiceSummary] = await Promise.all([Promise.all([
+  const [dashboardQueries, entitlements, invoiceSummary, paidLessonsResult] = await Promise.all([Promise.all([
     supabase.from("teachers").select("person_id, outside_availability_policy").eq("school_id", schoolId),
-    supabase.from("students").select("person_id").eq("school_id", schoolId),
+    supabase.from("students").select("person_id,primary_teacher_id").eq("school_id", schoolId),
     supabase.from("people").select("id, first_name, last_name, preferred_name, profile_id, email, phone").eq("school_id", schoolId),
     supabase
       .from("teacher_availability_rules")
@@ -66,7 +70,9 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
     supabase.from("user_view_preferences").select("settings").eq("school_id", schoolId).eq("profile_id", profileId).eq("view_key", "student_roster").maybeSingle(),
     supabase.from("lesson_event_price_snapshots").select("lesson_event_id, billing_service_date").eq("school_id", schoolId),
     supabase.from("lesson_schedule_proposals").select("id,teacher_id,student_id,proposed_starts_at,proposed_ends_at,status,proposal_kind,schedule_type").eq("school_id",schoolId).in("status",["pending_teacher","pending_owner"]),
-  ]), entitlementPromise, invoiceSummaryPromise]);
+  ]), entitlementPromise, invoiceSummaryPromise, paidLessonsPromise]);
+
+  if (paidLessonsResult.error) throw new Error(`Paid lesson status could not load: ${paidLessonsResult.error.message}`);
 
   const failedDashboardQuery = dashboardQueries.find((result) => result.error);
   if (failedDashboardQuery?.error) throw new Error(`The dashboard could not load: ${failedDashboardQuery.error.message}`);
@@ -206,7 +212,15 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
       else if (lesson.status === "cancelled") outcome = lesson.cancellation_timing === "timely" ? "cancelled_timely" : "cancelled_late";
       else if (lesson.status === "no_show") outcome = "no_show";
       else outcome = new Date(lesson.starts_at).getTime() >= now ? "upcoming" : "unrecorded";
-      return { id: lesson.id, outcome };
+      return {
+        id: lesson.id,
+        outcome,
+        dateLabel: new Intl.DateTimeFormat("en-US", { timeZone: school.timezone, weekday: "long", month: "short", day: "numeric" }).format(new Date(lesson.starts_at)),
+        timeLabel: `${time(lesson.starts_at)}–${time(lesson.ends_at)}`,
+        teacherName: teacherNames.get(lesson.teacher_id) ?? "Unassigned teacher",
+        productName: productNames[lesson.product_id] ?? "Lesson",
+        placeName: placeDetails[lesson.place_id]?.name ?? "No place assigned",
+      };
     });
     return [{
       id: person_id,
@@ -233,6 +247,15 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
   }).sort((a, b) => a.family.localeCompare(b.family) || a.student.localeCompare(b.student));
 
   const invoices = invoiceSummary.invoices;
+  const invoiceSection = view === "dashboard" && capabilities.has("school.billing.manage") ? (
+    <section className={`ui-card p-6 sm:p-8 ${invoiceSummary.attentionCount ? "mb-10" : "mt-16"}`}>
+      <div className="flex flex-wrap items-start justify-between gap-5">
+        <SectionHeading kind="billing" eyebrow="Invoices" title={invoiceSummary.attentionCount ? `${invoiceSummary.attentionCount} still in progress` : "Everything is settled"} description="Recent family invoices and their current approval or payment status." />
+        <Link href={`/schools/${schoolId}/invoices`} className="rounded-control border border-line px-3 py-2 text-sm text-brand transition hover:border-brand hover:bg-brand/10 hover:text-brand-hover">View all invoices →</Link>
+      </div>
+      <div className="mt-6 border-t border-line pt-6"><InvoiceList schoolId={schoolId} invoices={invoices} compact /></div>
+    </section>
+  ) : null;
 
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-6 py-section">
@@ -241,13 +264,16 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
         monthLabel={monthLabel}
         addFamilyAction={capabilities.has("school.billing.manage") ? addStudentAndPayer.bind(null, schoolId) : undefined}
       /> : null}
-      {view === "dashboard" && canManageSchool ? <section className="ui-card mb-8 p-6 sm:p-8"><p className="text-xs uppercase tracking-[0.14em] text-brand">Needs scheduling</p><h2 className="mt-2 font-display text-3xl">{entitlements.length ? "Paid lessons waiting for a time" : "Nothing is waiting for a time"}</h2><p className="mt-2 text-sm text-muted">Paid replacement lessons appear here until they are placed back on the calendar.</p>{entitlements.length ? <div className="mt-5"><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} /></div> : null}</section> : null}
+      {view === "dashboard" && canManageSchool ? <section className={`needs-scheduling-card ui-card p-6 sm:p-8 ${invoiceSummary.attentionCount ? "mb-6" : "mb-10"}`} data-empty={entitlements.length === 0}><SectionHeading kind="scheduling" eyebrow="Needs scheduling" title={entitlements.length ? "Paid lessons waiting for a time" : "Nothing is waiting for a time"} description="Paid replacement lessons appear here until they are placed back on the calendar." />{entitlements.length ? <div className="mt-6 border-t border-line pt-6"><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} /></div> : null}</section> : null}
+      {invoiceSummary.attentionCount ? invoiceSection : null}
       {view === "dashboard" ? <OwnerPlanner
         key={initialLessonId ?? "school-calendar"}
         schoolId={schoolId}
         initialLessonId={initialLessonId}
         currentTimeMs={now}
         canReschedule={canManageSchool}
+        canCollectPayment={capabilities.has("school.billing.manage")}
+        paidLessonIds={(paidLessonsResult.data ?? []).map((request) => request.lesson_event_id)}
         initialDate={initialDate}
         timezone={school.timezone}
         teachers={teachers}
@@ -269,16 +295,28 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
         }))}
         lessonCreationOptions={canManageSchool ? {
           students: Object.entries(studentNames).map(([id,label]) => ({ id, label })),
+          primaryTeacherByStudent: Object.fromEntries((studentRows ?? []).flatMap((student) => student.primary_teacher_id ? [[student.person_id, student.primary_teacher_id]] : [])),
           teachers: teachers.map((teacher) => ({ id: teacher.id, label: teacher.name, outsideAvailabilityPolicy: teacher.outsideAvailabilityPolicy })),
           products: (productRows ?? []).filter((product) => product.status === "active" && product.format === "private_lesson").map((product) => ({ id: product.id, label: product.name, durationMinutes: product.duration_minutes, priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price_cents / 100) })),
           places: (placeRows ?? []).filter((place) => place.status === "active").map((place) => ({ id: place.id, label: place.name })),
           availability: availabilityRows ?? [],
+          busyLessons: (lessonRows ?? []).map((lesson) => ({ teacherId: lesson.teacher_id, studentId: lesson.student_id, startsAt: lesson.starts_at, endsAt: lesson.ends_at, status: lesson.status })),
           today: initialDate,
           minimumTimeToday,
         } : undefined}
+        addFamilyAction={capabilities.has("school.billing.manage") ? addStudentAndPayer.bind(null, schoolId) : undefined}
+        existingPayers={(billingAccountRows ?? []).flatMap((account) => {
+          const payer = people.get(account.billing_contact_person_id);
+          return payer?.email ? [{ id: account.id, label: `${account.name} · ${payer.preferred_name || payer.first_name} ${payer.last_name}`, firstName: payer.first_name, lastName: payer.last_name, email: payer.email }] : [];
+        })}
+        unconnectedStudents={(studentRows ?? []).flatMap((student) => {
+          if ((billingLinkRows ?? []).some((link) => link.student_id === student.person_id)) return [];
+          const person = people.get(student.person_id);
+          return person ? [{ id: student.person_id, label: `${person.preferred_name || person.first_name} ${person.last_name}` }] : [];
+        })}
       /> : null}
+      {!invoiceSummary.attentionCount ? invoiceSection : null}
       {view === "dashboard" ? <StudentRosterTable rows={studentRowsForTable} monthLabel={monthLabel} initialView={rosterPreference?.settings as Partial<RosterViewSettings> | null} saveView={saveStudentRosterView.bind(null, schoolId)} dashboard /> : null}
-      {view === "dashboard" && capabilities.has("school.billing.manage") ? <section className="ui-card mt-10 p-6 sm:p-8"><div className="flex flex-wrap items-start justify-between gap-5"><div><p className="text-xs uppercase tracking-[0.14em] text-brand">Invoices</p><h2 className="mt-2 font-display text-3xl">{invoiceSummary.attentionCount ? `${invoiceSummary.attentionCount} still in progress` : "Everything is settled"}</h2><p className="mt-2 text-sm text-muted">Recent family invoices and their current approval or payment status.</p></div><Link href={`/schools/${schoolId}/invoices`} className="text-sm text-brand hover:text-brand-hover">View all invoices →</Link></div><div className="mt-5"><InvoiceList schoolId={schoolId} invoices={invoices} compact /></div></section> : null}
     </main>
   );
 }

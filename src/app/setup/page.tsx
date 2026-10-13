@@ -21,13 +21,15 @@ export default async function SetupPage() {
 
   if (memberships?.length) redirect("/");
 
-  const { data: invitation } = email ? await createAdminClient()
+  const { data: invitation, error: invitationError } = email ? await createAdminClient()
     .from("school_onboarding_invitations")
     .select("intended_school_name")
     .eq("normalized_email", email)
     .eq("status", "invited")
     .gt("expires_at", new Date().toISOString())
-    .maybeSingle() : { data: null };
+    .maybeSingle() : { data: null, error: null };
+
+  if (invitationError) throw new Error("School invitation could not be loaded.");
 
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-20">

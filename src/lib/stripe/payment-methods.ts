@@ -6,6 +6,13 @@ import { getStripe, getStripeMode } from "@/lib/stripe/server";
 
 export const PAYMENT_METHOD_TERMS_VERSION = "off-session-approved-amounts-v1";
 
+export class CardSetupWorkflowError extends Error {
+  constructor(readonly stage: "school_record" | "billing_account_record" | "billing_account_inactive" | "connection_record" | "connection_not_ready" | "method_limit" | "contact" | "customer" | "customer_record" | "setup_record" | "audit" | "checkout" | "checkout_record", cause: unknown) {
+    super(cause instanceof Error ? cause.message : "Card setup failed.", { cause });
+    this.name = "CardSetupWorkflowError";
+  }
+}
+
 function sha256(value: string) {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
@@ -30,21 +37,25 @@ export async function createFamilyCardSetup(schoolId: string, billingAccountId: 
     admin.from("school_payment_connections").select("id, provider_account_id, status, charges_enabled")
       .eq("school_id", schoolId).eq("provider", "stripe").eq("livemode", livemode).single(),
   ]);
-  if (schoolResult.error || accountResult.error || connectionResult.error) {
-    throw schoolResult.error ?? accountResult.error ?? connectionResult.error;
-  }
+  if (schoolResult.error) throw new CardSetupWorkflowError("school_record", schoolResult.error);
+  if (accountResult.error) throw new CardSetupWorkflowError("billing_account_record", accountResult.error);
+  if (connectionResult.error) throw new CardSetupWorkflowError("connection_record", connectionResult.error);
   const school = schoolResult.data;
   const account = accountResult.data;
   const connection = connectionResult.data;
-  if (account.status !== "active") throw new Error("This billing account is not active.");
+  if (account.status !== "active") throw new CardSetupWorkflowError("billing_account_inactive", new Error("This billing account is not active."));
   if (connection.status !== "enabled" || !connection.charges_enabled || !connection.provider_account_id) {
-    throw new Error("The school's Stripe account is not ready to save payment methods.");
+    throw new CardSetupWorkflowError("connection_not_ready", new Error("The school's Stripe account is not ready to save payment methods."));
   }
+  const { count: activeMethodCount, error: activeMethodCountError } = await admin.from("billing_payment_methods")
+    .select("id", { count: "exact", head: true }).eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("status", "active");
+  if (activeMethodCountError) throw new CardSetupWorkflowError("billing_account_record", activeMethodCountError);
+  if ((activeMethodCount ?? 0) >= 3) throw new CardSetupWorkflowError("method_limit", new Error("This family already has three active payment methods."));
 
   const { data: contact, error: contactError } = await admin.from("people")
     .select("first_name, last_name, preferred_name, email, phone")
     .eq("school_id", schoolId).eq("id", account.billing_contact_person_id).single();
-  if (contactError) throw contactError;
+  if (contactError) throw new CardSetupWorkflowError("contact", contactError);
 
   const stripe = getStripe();
   const stripeAccount = connection.provider_account_id;
@@ -55,16 +66,20 @@ export async function createFamilyCardSetup(schoolId: string, billingAccountId: 
 
   let providerCustomerId = existingCustomer?.provider_customer_id;
   if (!providerCustomerId) {
-    const customer = await stripe.customers.create({
-      name: personName(contact),
-      email: contact.email ?? undefined,
-      phone: contact.phone ?? undefined,
-      metadata: { school_id: schoolId, billing_account_id: billingAccountId },
-    }, {
-      stripeAccount,
-      idempotencyKey: `billing-customer-${connection.id}-${billingAccountId}-v1`,
-    });
-    providerCustomerId = customer.id;
+    try {
+      const customer = await stripe.customers.create({
+        name: personName(contact),
+        email: contact.email ?? undefined,
+        phone: contact.phone ?? undefined,
+        metadata: { school_id: schoolId, billing_account_id: billingAccountId },
+      }, {
+        stripeAccount,
+        idempotencyKey: `billing-customer-${connection.id}-${billingAccountId}-v1`,
+      });
+      providerCustomerId = customer.id;
+    } catch (error) {
+      throw new CardSetupWorkflowError("customer", error);
+    }
   }
 
   const { data: providerCustomer, error: customerPersistError } = await admin.from("billing_provider_customers").upsert({
@@ -76,7 +91,7 @@ export async function createFamilyCardSetup(schoolId: string, billingAccountId: 
     status: "active",
     last_synced_at: new Date().toISOString(),
   }, { onConflict: "payment_connection_id,billing_account_id" }).select("id").single();
-  if (customerPersistError) throw customerPersistError;
+  if (customerPersistError) throw new CardSetupWorkflowError("customer_record", customerPersistError);
 
   const termsText = `I authorize ${school.name} to save this payment method with Stripe and charge it off-session only for lesson or class amounts I have separately approved. I can revoke this authorization for future charges.`;
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -90,7 +105,7 @@ export async function createFamilyCardSetup(schoolId: string, billingAccountId: 
     terms_sha256: sha256(termsText),
     expires_at: expiresAt.toISOString(),
   }).select("id").single();
-  if (requestError) throw requestError;
+  if (requestError) throw new CardSetupWorkflowError("setup_record", requestError);
 
   const { error: auditError } = await admin.from("audit_log").insert({
     school_id: schoolId,
@@ -102,12 +117,14 @@ export async function createFamilyCardSetup(schoolId: string, billingAccountId: 
   });
   if (auditError) {
     await admin.from("payment_method_setup_requests").update({ status: "failed" }).eq("id", setupRequest.id);
-    throw auditError;
+    throw new CardSetupWorkflowError("audit", auditError);
   }
 
   try {
     const familyPath = `/schools/${schoolId}/families/${billingAccountId}`;
-    const session = await stripe.checkout.sessions.create({
+    let session;
+    try {
+      session = await stripe.checkout.sessions.create({
       mode: "setup",
       currency: school.currency.toLowerCase(),
       customer: providerCustomerId,
@@ -119,17 +136,20 @@ export async function createFamilyCardSetup(schoolId: string, billingAccountId: 
       success_url: `${applicationUrl()}${familyPath}?card=complete`,
       cancel_url: `${applicationUrl()}${familyPath}?card=canceled`,
       expires_at: Math.floor(expiresAt.getTime() / 1000),
-    }, {
-      stripeAccount,
-      idempotencyKey: `payment-method-setup-${setupRequest.id}-v1`,
-    });
-    if (!session.url) throw new Error("Stripe did not return a hosted setup URL.");
+      }, {
+        stripeAccount,
+        idempotencyKey: `payment-method-setup-${setupRequest.id}-v1`,
+      });
+    } catch (error) {
+      throw new CardSetupWorkflowError("checkout", error);
+    }
+    if (!session.url) throw new CardSetupWorkflowError("checkout", new Error("Stripe did not return a hosted setup URL."));
 
     const { error: sessionPersistError } = await admin.from("payment_method_setup_requests")
       .update({ provider_checkout_session_id: session.id }).eq("id", setupRequest.id);
     if (sessionPersistError) {
       await stripe.checkout.sessions.expire(session.id, {}, { stripeAccount });
-      throw sessionPersistError;
+      throw new CardSetupWorkflowError("checkout_record", sessionPersistError);
     }
     return session.url;
   } catch (error) {

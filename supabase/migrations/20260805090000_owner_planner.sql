@@ -109,6 +109,7 @@ grant select, insert, update, delete on public.teacher_availability_rules to aut
 grant select, insert, update, delete on public.lesson_events to authenticated;
 
 -- Add a small working catalog and recurring demo schedule to the sole school.
+-- Fresh databases have no tenant yet and therefore need no demo rows.
 do $$
 declare
   target_school_id uuid;
@@ -118,7 +119,9 @@ declare
   school_count integer;
 begin
   select count(*) into school_count from public.schools;
-  if school_count <> 1 then
+  if school_count = 0 then
+    return;
+  elsif school_count > 1 then
     raise exception 'Planner demo requires exactly one school; found %', school_count;
   end if;
 

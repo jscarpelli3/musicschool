@@ -5,6 +5,7 @@ import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 import { createClient } from "@/lib/supabase/server";
 import { archiveProduct, updateSchoolBillingTiming } from "./actions";
 import { ProductForm } from "./product-form";
+import { AppSelect } from "@/components/ui/app-select";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +64,7 @@ export default async function ProductsPage({
       {canManage ? <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
         <div><h2 className="font-display text-3xl">Billing schedule</h2><p className="mt-3 text-sm leading-6 text-muted">Defaults for new student agreements. Existing agreements keep their recorded terms.</p></div>
         <form action={updateSchoolBillingTiming.bind(null, schoolId)} className="grid gap-7 sm:grid-cols-3">
-          <label className="sm:col-span-3"><span className="text-xs text-muted">School default</span><select name="billing_timing_default" defaultValue={school.billing_timing_default} className="mt-2 w-full border-b border-line bg-transparent py-3"><option value="before_service">Bill before lessons happen</option><option value="after_service">Bill after lessons happen</option></select></label>
+          <label className="sm:col-span-3"><span className="text-xs text-muted">School default</span><AppSelect name="billing_timing_default" defaultValue={school.billing_timing_default} className="mt-2 w-full border-b border-line bg-transparent py-3"><option value="before_service">Bill before lessons happen</option><option value="after_service">Bill after lessons happen</option></AppSelect></label>
           <label><span className="text-xs text-muted">Prepare on day</span><input name="billing_day" type="number" min={1} max={28} defaultValue={school.billing_day} className="mt-2 w-full border-b border-line bg-transparent py-3" /></label>
           <label><span className="text-xs text-muted">Review window</span><input name="payer_review_days" type="number" min={1} max={14} defaultValue={school.payer_review_days} className="mt-2 w-full border-b border-line bg-transparent py-3" /><span className="mt-1 block text-xs text-muted">days</span></label>
           <label><span className="text-xs text-muted">Intended charge day</span><input name="intended_charge_day" type="number" min={1} max={28} defaultValue={school.intended_charge_day} className="mt-2 w-full border-b border-line bg-transparent py-3" /></label>

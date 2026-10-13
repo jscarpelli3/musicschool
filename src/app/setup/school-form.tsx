@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { createSchool, type CreateSchoolState } from "./actions";
+import { AppSelect } from "@/components/ui/app-select";
 
 const initialState: CreateSchoolState = { error: null };
 
@@ -24,7 +25,7 @@ export function SchoolForm({ initialName = "" }: { initialName?: string }) {
       </label>
       <label className="block">
         <span className="mb-2 block text-sm text-muted">Timezone</span>
-        <select
+        <AppSelect
           name="timezone"
           defaultValue="America/Chicago"
           className="w-full rounded-control border border-line bg-surface px-4 py-3 outline-none transition focus:border-brand"
@@ -36,7 +37,7 @@ export function SchoolForm({ initialName = "" }: { initialName?: string }) {
           <option value="America/Los_Angeles">Pacific</option>
           <option value="America/Anchorage">Alaska</option>
           <option value="Pacific/Honolulu">Hawaii</option>
-        </select>
+        </AppSelect>
       </label>
       {state.error ? <p className="text-sm text-danger">{state.error}</p> : null}
       <button

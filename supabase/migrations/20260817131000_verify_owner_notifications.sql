@@ -2,6 +2,7 @@
 do $$
 declare request_row public.billing_approval_requests%rowtype; recipient_count integer; notification_count integer; outbox_count integer;
 begin
+  if not exists (select 1 from public.lesson_events) then return; end if;
   begin
     select * into strict request_row from public.billing_approval_requests order by created_at desc limit 1;
     select count(*) into recipient_count from public.school_members member join public.profiles profile on profile.id=member.profile_id

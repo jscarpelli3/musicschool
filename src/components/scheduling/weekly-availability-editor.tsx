@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AppSelect } from "@/components/ui/app-select";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
 
 export type WeeklyAvailabilityBlock = { weekday: number; start_time: string; end_time: string };
@@ -43,7 +44,7 @@ export function WeeklyAvailabilityEditor({ initialBlocks, action }: { initialBlo
               <button type="button" aria-label={`Remove ${days[block.weekday]} availability block`} title="Remove this block" onClick={() => { setBlocks((current) => current.filter((item) => item.key !== block.key)); changed(); }} className="grid h-7 w-7 place-items-center text-xl leading-none text-danger">×</button>
             </div>
             <div className="mt-1 grid gap-3 sm:grid-cols-[1fr_8rem_8rem] sm:items-end">
-              <label><span className="text-xs text-muted">Day</span><select value={block.weekday} onChange={(event) => update(block.key,"weekday",event.target.value)} className="mt-2 w-full rounded-control border border-line bg-surface px-3 py-2">{days.map((day,index) => <option key={day} value={index}>{day}</option>)}</select></label>
+              <label><span className="text-xs text-muted">Day</span><AppSelect value={block.weekday} onChange={(event) => update(block.key,"weekday",event.target.value)} className="mt-2 w-full rounded-control border border-line bg-surface px-3 py-2">{days.map((day,index) => <option key={day} value={index}>{day}</option>)}</AppSelect></label>
               <label><span className="text-xs text-muted">Starts</span><input type="time" value={block.start_time} onChange={(event) => update(block.key,"start_time",event.target.value)} className="mt-2 w-full rounded-control border border-line bg-surface px-3 py-2" /></label>
               <label><span className="text-xs text-muted">Ends</span><input type="time" value={block.end_time} onChange={(event) => update(block.key,"end_time",event.target.value)} className="mt-2 w-full rounded-control border border-line bg-surface px-3 py-2" /></label>
             </div>

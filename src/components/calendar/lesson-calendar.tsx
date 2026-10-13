@@ -57,6 +57,7 @@ export function LessonCalendar({ id, lessons, rangeStart, rangeEnd, timeZone }: 
   }, [selectedLesson]);
 
   function openLesson(lesson: LessonCalendarItem, opener: HTMLButtonElement) {
+    window.dispatchEvent(new Event("common-time:open-lesson-drawer"));
     openerRef.current = opener;
     setSelectedLesson(lesson);
   }
@@ -87,7 +88,7 @@ export function LessonCalendar({ id, lessons, rangeStart, rangeEnd, timeZone }: 
           <p className="mt-1 truncate text-xs text-muted" title={`${lesson.productName} with ${lesson.teacherName}`}>{lesson.productName}</p>
         </article>}</button>}
   />
-  {selectedLesson ? <div className="fixed inset-0 z-50 flex justify-end">
+  {selectedLesson ? <div className="fixed inset-0 z-[80] flex justify-end">
     <button type="button" aria-label="Close lesson details" onClick={closeLesson} className="absolute inset-0 cursor-default bg-ink/70" />
     <aside ref={sheetRef} role="dialog" aria-modal="true" aria-labelledby={`${id}-lesson-title`} className="relative z-10 h-full w-full overflow-y-auto border-l border-line bg-canvas px-6 py-7 shadow-2xl sm:max-w-md sm:px-8">
       <header className="flex items-start justify-between gap-6 border-b border-line pb-6">

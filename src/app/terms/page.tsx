@@ -9,7 +9,7 @@ export default function TermsPage() {
     <article className="policy-copy mt-10 space-y-6 border-t border-line pt-8 text-sm leading-7 text-muted">
       <h2>Program</h2><p>By enrolling, you agree to receive recurring transactional text messages from Common Time and the music school you identify. Messages may concern lesson scheduling, billing approvals, payment status, reminders, and secure account access. This program does not enroll you in promotional marketing.</p>
       <h2>Frequency and charges</h2><p>Message frequency varies with lesson and billing activity. Message and data rates may apply under your mobile plan. Consent is not a condition of purchase.</p>
-      <h2>Stopping or getting help</h2><p>Reply STOP to opt out. Reply HELP for help. You may also visit <Link href="/support">Common Time Support</Link> or contact the music school named in your messages.</p>
+      <h2>Stopping or getting help</h2><p>Reply STOP to opt out. Reply HELP for help. You may also use Help in the footer or contact the music school named in your messages.</p>
       <h2>Delivery</h2><p>Wireless carriers are not liable for delayed or undelivered messages. Delivery is subject to carrier availability and cannot be guaranteed.</p>
       <h2>Privacy</h2><p>Use of the SMS program is governed by the <Link href="/privacy">Common Time Privacy Policy</Link>. SMS consent is separate from payment authorization and other communication preferences.</p>
     </article>

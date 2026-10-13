@@ -6,7 +6,8 @@ import { DragHandle } from "@/components/ui/drag-handle";
 import { HorizontalScrollFrame } from "@/components/ui/horizontal-scroll-frame";
 import { AddFamilyDialog } from "@/components/families/add-family-dialog";
 import type { AddFamilyState } from "@/app/schools/[schoolId]/families/actions";
-import { LessonStatusStrip, type LessonOutcome } from "./lesson-status-strip";
+import { LessonStatusStrip, type LessonOutcome, type LessonStatusItem } from "./lesson-status-strip";
+import { SectionHeading } from "@/components/ui/section-heading";
 
 export type { LessonOutcome } from "./lesson-status-strip";
 
@@ -28,7 +29,7 @@ export type StudentRosterRow = {
   teacher: string;
   teacherId: string | null;
   place: string;
-  lessons: Array<{ id: string; outcome: LessonOutcome }>;
+  lessons: LessonStatusItem[];
 };
 
 const definitions = {
@@ -118,7 +119,6 @@ export function StudentRosterTable({
     ? requestedSort
     : { column: "family" as Column, mode: 0 };
   const [columns, setColumns] = useState<Column[]>(startingColumns);
-  const [arranging, setArranging] = useState(false);
   const [dragging, setDragging] = useState<Column | null>(null);
   const [dropTarget, setDropTarget] = useState<{ column: Column; side: "before" | "after" } | null>(null);
   const [sort, setSort] = useState<{ column: Column; mode: number }>(startingSort);
@@ -140,15 +140,6 @@ export function StudentRosterTable({
     const attempt = saveQueue.current.catch(() => undefined).then(() => saveView(settings));
     saveQueue.current = attempt.catch(() => undefined);
     void attempt.then(() => setViewSaveError(false), () => setViewSaveError(true));
-  }
-
-  function move(column: Column, direction: -1 | 1) {
-    const index = columns.indexOf(column);
-    const target = index + direction;
-    if (target < 0 || target >= columns.length) return;
-    const next = [...columns];
-    [next[index], next[target]] = [next[target], next[index]];
-    commit(next);
   }
 
   function cycleSort(column: Column) {
@@ -175,23 +166,18 @@ export function StudentRosterTable({
     <section aria-labelledby="student-roster-heading" className={dashboard ? "mt-16" : ""}>
       <header className="flex flex-wrap items-end justify-between gap-6 pb-4">
         <div>
-          {dashboard ? <h2 id="student-roster-heading" className="font-display text-4xl tracking-[-0.035em]">School matrix</h2> : <h1 id="student-roster-heading" className="font-display text-5xl tracking-[-0.04em] sm:text-6xl">Students.</h1>}
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-muted">Review student schedules, family connections, teachers, and recent lesson activity.</p>
-          <p className="mt-2 text-sm text-muted">{rows.length} active · actual occurrences in {monthLabel}</p>
+          {dashboard ? <SectionHeading id="student-roster-heading" kind="students" eyebrow="School roster" title="School matrix" description="Review student schedules, family connections, teachers, and recent lesson activity." /> : <><h1 id="student-roster-heading" className="font-display text-5xl tracking-[-0.04em] sm:text-6xl">Students.</h1><p className="mt-4 max-w-2xl text-sm leading-6 text-muted">Review student schedules, family connections, teachers, and recent lesson activity.</p></>}
+          <p className={`${dashboard ? "ml-[3.75rem]" : ""} mt-2 text-sm text-muted`}>{rows.length} active · actual occurrences in {monthLabel}</p>
         </div>
         {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add student +" /> : null}
       </header>
 
-      <div className="ui-card mt-8 p-5 sm:p-8">
-      <div className="flex justify-end pb-4"><button type="button" onClick={() => setArranging((value) => !value)} aria-expanded={arranging} className="text-action text-sm text-muted hover:text-ink">Arrange columns</button></div>
-
-      {arranging ? <div className="mb-3 flex items-center justify-between rounded-control bg-surface px-3 py-3 text-xs text-muted"><span>Drag the headers into place, or use the arrows inside each column.</span><button type="button" onClick={() => commit(defaults)} className="text-brand">Reset order</button></div> : null}
-
-      <HorizontalScrollFrame label="student table">
+      <div className="mt-8">
+      <HorizontalScrollFrame>
         <table className="w-full border-collapse text-left">
           <thead>
             <tr className="border-b border-line text-xs text-muted">
-              {columns.map((column, index) => (
+              {columns.map((column) => (
                 <th
                   key={column}
                   draggable
@@ -211,12 +197,12 @@ export function StudentRosterTable({
                     setDragging(null);
                     setDropTarget(null);
                   }}
-                  className={`${definitions[column].width} group relative cursor-grab px-4 py-4 font-normal first:pl-0 ${arranging ? "bg-surface text-ink" : ""} ${dragging === column ? "cursor-grabbing opacity-35" : ""}`}
+                  className={`${definitions[column].width} group relative cursor-grab px-4 py-4 font-normal first:pl-0 ${dragging === column ? "cursor-grabbing opacity-35" : ""}`}
                   title={`Drag to move ${definitions[column].label}`}
                 >
                   {dropTarget?.column === column ? <span className={`absolute inset-y-0 w-0.5 bg-brand ${dropTarget.side === "before" ? "left-0" : "right-0"}`} /> : null}
                   <div className="flex items-center justify-between gap-3">
-                    <span className="flex items-center gap-2 text-brand"><DragHandle active={arranging || dragging === column} /><span className="text-muted group-hover:text-ink">{definitions[column].label}</span></span>
+                    <span className="flex items-center gap-2 text-brand"><DragHandle active={dragging === column} /><span className="text-muted group-hover:text-ink">{definitions[column].label}</span></span>
                     <button
                       type="button"
                       draggable={false}
@@ -229,12 +215,6 @@ export function StudentRosterTable({
                     {sortNotice?.column === column ? (
                       <span role="status" aria-live="polite" className="absolute top-[calc(100%-1px)] right-2 z-20 border border-brand bg-canvas px-3 py-2 text-xs whitespace-nowrap text-ink">
                         <span className="mr-2 text-brand">↓</span>{sortNotice.label}
-                      </span>
-                    ) : null}
-                    {arranging ? (
-                      <span className="flex" aria-label={`Move ${definitions[column].label}`}>
-                        <button type="button" disabled={index === 0} onClick={() => move(column, -1)} className="px-2 py-1 text-muted hover:text-ink disabled:opacity-20" aria-label={`Move ${definitions[column].label} left`}>←</button>
-                        <button type="button" disabled={index === columns.length - 1} onClick={() => move(column, 1)} className="px-2 py-1 text-muted hover:text-ink disabled:opacity-20" aria-label={`Move ${definitions[column].label} right`}>→</button>
                       </span>
                     ) : null}
                   </div>

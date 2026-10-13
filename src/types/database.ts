@@ -2093,6 +2093,69 @@ export type Database = {
           },
         ]
       }
+      lesson_payment_requests: {
+        Row: {
+          amount_cents: number
+          billing_account_id: string
+          checkout_url: string | null
+          created_at: string
+          currency: string
+          expires_at: string
+          id: string
+          initiated_by: string
+          lesson_event_id: string
+          lesson_event_price_snapshot_id: string
+          payment_connection_id: string
+          provider_charge_id: string | null
+          provider_checkout_session_id: string | null
+          provider_payment_intent_id: string | null
+          school_id: string
+          status: string
+          succeeded_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          billing_account_id: string
+          checkout_url?: string | null
+          created_at?: string
+          currency: string
+          expires_at: string
+          id?: string
+          initiated_by: string
+          lesson_event_id: string
+          lesson_event_price_snapshot_id: string
+          payment_connection_id: string
+          provider_charge_id?: string | null
+          provider_checkout_session_id?: string | null
+          provider_payment_intent_id?: string | null
+          school_id: string
+          status?: string
+          succeeded_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          billing_account_id?: string
+          checkout_url?: string | null
+          created_at?: string
+          currency?: string
+          expires_at?: string
+          id?: string
+          initiated_by?: string
+          lesson_event_id?: string
+          lesson_event_price_snapshot_id?: string
+          payment_connection_id?: string
+          provider_charge_id?: string | null
+          provider_checkout_session_id?: string | null
+          provider_payment_intent_id?: string | null
+          school_id?: string
+          status?: string
+          succeeded_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lesson_places: {
         Row: {
           created_at: string
@@ -4694,6 +4757,7 @@ export type Database = {
           enrollment_status: string
           notes: string | null
           person_id: string
+          primary_teacher_id: string | null
           school_id: string
           updated_at: string
         }
@@ -4703,6 +4767,7 @@ export type Database = {
           enrollment_status?: string
           notes?: string | null
           person_id: string
+          primary_teacher_id?: string | null
           school_id: string
           updated_at?: string
         }
@@ -4712,10 +4777,18 @@ export type Database = {
           enrollment_status?: string
           notes?: string | null
           person_id?: string
+          primary_teacher_id?: string | null
           school_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "students_primary_teacher_school_fk"
+            columns: ["school_id", "primary_teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["school_id", "person_id"]
+          },
           {
             foreignKeyName: "students_school_id_person_id_fkey"
             columns: ["school_id", "person_id"]
@@ -5051,6 +5124,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      apply_invoice_payment_intent_event: {
+        Args: {
+          p_charge_id?: string | null
+          p_failure_code?: string | null
+          p_failure_message?: string | null
+          p_payment_attempt_id: string
+          p_payment_intent_id: string
+          p_provider_account_id: string
+          p_provider_event_id?: string | null
+          p_status: string
+        }
+        Returns: undefined
+      }
       apply_pending_account_adjustments_to_period: {
         Args: {
           p_actor_id: string
@@ -5075,6 +5161,17 @@ export type Database = {
           provider_account_id: string
           provider_payment_method_id: string
         }[]
+      }
+      complete_lesson_payment_request: {
+        Args: {
+          p_charge_id: string
+          p_checkout_session_id: string
+          p_payment_intent_id: string
+          p_provider_event_id: string
+          p_request_id: string
+          p_succeeded_at: string
+        }
+        Returns: string
       }
       can_decide_teacher_proposal: {
         Args: {
@@ -5135,6 +5232,10 @@ export type Database = {
           p_setup_request_id: string
         }
         Returns: string
+      }
+      set_default_billing_payment_method: {
+        Args: { p_payment_method_id: string }
+        Returns: undefined
       }
       complete_sms_provider_submission: {
         Args: {
@@ -5249,6 +5350,19 @@ export type Database = {
           p_school_id: string
           p_student_first_name: string
           p_student_last_name: string
+        }
+        Returns: Json
+      }
+      create_payer_for_existing_student: {
+        Args: {
+          p_operation_id?: string
+          p_payer_email: string
+          p_payer_first_name: string
+          p_payer_last_name: string
+          p_payer_profile_id: string
+          p_relationship?: string
+          p_school_id: string
+          p_student_id: string
         }
         Returns: Json
       }

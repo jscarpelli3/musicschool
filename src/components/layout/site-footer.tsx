@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HelpModal } from "@/components/layout/help-modal";
 
 export function SiteFooter() {
   return <footer className="bg-ink text-canvas">
@@ -8,7 +9,7 @@ export function SiteFooter() {
         <p className="mt-3 max-w-xl text-sm leading-6 text-canvas/65">Scheduling, billing, and communication tools for independent music schools. Schools remain responsible for their schedules, policies, statements, and charges.</p>
       </div>
       <nav aria-label="Legal and support" className="flex flex-wrap gap-x-5 gap-y-3 text-sm text-canvas/70">
-        <Link href="/support" className="transition hover:text-canvas focus-visible:text-canvas">Help</Link>
+        <HelpModal />
         <Link href="/privacy" className="transition hover:text-canvas focus-visible:text-canvas">Privacy</Link>
         <Link href="/terms" className="transition hover:text-canvas focus-visible:text-canvas">SMS terms</Link>
         <Link href="/portal" className="transition hover:text-canvas focus-visible:text-canvas">Family portal</Link>

@@ -12,6 +12,12 @@ import { LessonOutcomeForm } from "@/components/teacher/lesson-outcome-form";
 import { recordTeacherLessonOutcome } from "@/app/schools/[schoolId]/teacher/actions";
 import { lessonEventDescriptor, rescheduleReasonLabel } from "@/lib/scheduling/lesson-domain-contracts";
 import { RescheduleConfirmation, type RescheduleProposal } from "./lesson-reschedule-controls";
+import { QuickActionGrid, type QuickAction } from "@/components/ui/quick-action-grid";
+import { SectionHeading } from "@/components/ui/section-heading";
+import { LessonOpeningFinder } from "@/components/scheduling/lesson-opening-finder";
+import { AppSelect } from "@/components/ui/app-select";
+import { AddFamilyDialog } from "@/components/families/add-family-dialog";
+import type { AddFamilyState } from "@/app/schools/[schoolId]/families/actions";
 import "./owner-planner.css";
 
 type Teacher = { id: string; name: string; isOwner: boolean };
@@ -81,6 +87,8 @@ type StudentDetail = {
 type Props = {
   schoolId: string;
   canReschedule: boolean;
+  canCollectPayment?: boolean;
+  paidLessonIds?: string[];
   initialDate: string;
   timezone: string;
   teachers: Teacher[];
@@ -101,11 +109,14 @@ type Props = {
   rescheduleAction?: (input: { lessonId: string; localStart: string; reason: string }) => Promise<{ ok: boolean; message: string }>;
   initialLessonId?: string;
   currentTimeMs?: number;
+  addFamilyAction?: (state: AddFamilyState, formData: FormData) => Promise<AddFamilyState>;
+  existingPayers?: Array<{ id: string; label: string; firstName: string; lastName: string; email: string }>;
+  unconnectedStudents?: Array<{ id: string; label: string }>;
 };
 
 type LessonWithParts = Lesson & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> };
 type RescheduleNotice = { id: string; message: string };
-type CreationSlot = { dateKey: string; time: string; teacherId: string; minutes: number };
+type CreationSlot = { dateKey: string; time: string; teacherId: string; minutes: number; productId?: string; pointerX?: number };
 
 const views = ["day", "week", "month"] as const;
 type View = (typeof views)[number];
@@ -180,6 +191,8 @@ function timeMinutes(value: string) {
 export function OwnerPlanner({
   schoolId,
   canReschedule,
+  canCollectPayment = false,
+  paidLessonIds = [],
   initialDate,
   timezone,
   teachers,
@@ -200,6 +213,9 @@ export function OwnerPlanner({
   rescheduleAction,
   initialLessonId,
   currentTimeMs = 0,
+  addFamilyAction,
+  existingPayers = [],
+  unconnectedStudents = [],
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<View>("week");
@@ -217,8 +233,27 @@ export function OwnerPlanner({
   const [creationSlot, setCreationSlot] = useState<CreationSlot | null>(null);
   const [creatingLesson, setCreatingLesson] = useState(false);
   const [expandedWeek, setExpandedWeek] = useState(false);
+  const [layoutSwitchAnimating, setLayoutSwitchAnimating] = useState(false);
+  const layoutSwitchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const compactInitialized = useRef(false);
   const anchor = fromKey(anchorKey);
+
+  useEffect(() => () => {
+    if (layoutSwitchTimer.current) clearTimeout(layoutSwitchTimer.current);
+  }, []);
+
+  useEffect(() => {
+    let frame: number | null = null;
+    try {
+      const storedExpandedWeek = window.localStorage.getItem(`lessons:planner:${schoolId}:week-density`) === "expanded";
+      frame = requestAnimationFrame(() => setExpandedWeek(storedExpandedWeek));
+    } catch {
+      // The planner still works when storage is unavailable or blocked.
+    }
+    return () => {
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
+  }, [schoolId]);
 
   const lessonDetails = useMemo(
     () => lessons.map((lesson) => ({ ...lesson, start: zonedParts(lesson.starts_at, timezone), end: zonedParts(lesson.ends_at, timezone) })),
@@ -249,6 +284,7 @@ export function OwnerPlanner({
 
   useEffect(() => {
     if (!selectedLessonId) return;
+    window.dispatchEvent(new Event("common-time:open-lesson-drawer"));
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") setSelectedLessonId(null);
     }
@@ -368,63 +404,98 @@ export function OwnerPlanner({
     : view === "week"
       ? `${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(weekDates(anchor)[0])} — ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(weekDates(anchor)[6])}`
       : new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(anchor);
+  const todayAnchor = fromKey(initialDate);
+  const showingCurrentPeriod = view === "day"
+    ? anchorKey === initialDate
+    : view === "week"
+      ? key(weekDates(anchor)[0]) === key(weekDates(todayAnchor)[0])
+      : anchor.getFullYear() === todayAnchor.getFullYear() && anchor.getMonth() === todayAnchor.getMonth();
 
   return (
+    <>
+    {lessonCreationOptions ? <div className={`mb-10 items-stretch gap-4 ${addFamilyAction ? "grid md:grid-cols-3" : "flex justify-center"}`}>
+      <div className={addFamilyAction ? "" : "w-[min(34rem,100%)]"}><LessonOpeningFinder options={lessonCreationOptions} timeZone={timezone} onChoose={(opening) => { setCreatingLesson(false); setCreationSlot({ ...opening, minutes: timeMinutes(opening.time) }); }} /></div>
+      {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add student" largeKind="student" existingPayers={existingPayers} unconnectedStudents={unconnectedStudents} /> : null}
+      {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add payer" largeKind="payer" existingPayers={existingPayers} unconnectedStudents={unconnectedStudents} /> : null}
+    </div> : null}
     <section id="school-calendar" className="ui-card scroll-mt-6 overflow-hidden">
-      <div className="grid gap-8 px-5 py-6 md:grid-cols-[1fr_auto] md:items-end sm:px-7">
-        <div>
-          <p className="text-xs text-muted">{contextLabel} · {timezone.replaceAll("_", " ")}</p>
-          <h2 className="mt-3 font-display text-4xl font-normal tracking-[-0.03em]">{title}</h2>
-        </div>
-        <div className="flex flex-wrap items-end gap-8">
-          {lessonCreationOptions ? (
-            <button
-              type="button"
-              aria-pressed={creatingLesson}
-              onClick={toggleCreationMode}
-              className={`rounded-control border px-4 py-2 text-sm transition hover:-translate-y-px ${creatingLesson ? "border-brand bg-brand text-canvas" : "border-brand text-brand hover:bg-brand hover:text-canvas"}`}
-            >
-              <span aria-hidden="true" className="mr-2 text-base">+</span>{creatingLesson ? "Cancel adding" : "Add lesson"}
-            </button>
-          ) : null}
-          {showTeacherFilter ? <label className="border-b border-line pb-2 text-sm">
-            <span className="mr-3 text-muted">Teacher</span>
-            <select value={teacherId} onChange={(event) => setTeacherId(event.target.value)} className="bg-transparent outline-none">
-              {initialTeacherId === "" ? <option value="">Choose a teacher</option> : null}
-              {allowAllTeachers ? <option value="all">All teachers</option> : null}
-              {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}{teacher.isOwner ? " · you" : ""}</option>)}
-            </select>
-          </label> : null}
-          <div className="flex items-center gap-2" role="group" aria-label="Planner view">
+      <div className="planner-calendar-chrome pt-2">
+      <div className="grid gap-4 px-5 pt-6 pb-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end sm:px-7">
+        <div className="flex flex-wrap items-end gap-x-5 gap-y-3">
+          <SectionHeading kind="calendar" eyebrow={contextLabel} title={title} />
+          <div className="planner-view-choices flex h-7 items-center gap-1" role="group" aria-label="Planner view">
             {views.map((option) => (
               <button
                 key={option}
                 type="button"
                 aria-pressed={view === option}
                 onClick={() => setView(option)}
-                className={`rounded-control capitalize transition hover:-translate-y-px ${option === "week" ? `border px-4 py-2 text-sm ${view === option ? "border-brand bg-brand text-canvas" : "border-line text-ink hover:border-brand hover:bg-surface"}` : `px-2 py-1 text-xs ${view === option ? "bg-surface text-ink" : "text-muted hover:text-ink"}`}`}
+                className={`h-7 rounded-control px-2 py-0.5 text-[11px] capitalize transition hover:-translate-y-px ${view === option ? "bg-surface text-ink" : "text-muted hover:bg-surface/60 hover:text-ink"}`}
               >{option}</button>
             ))}
           </div>
-          {view === "week" && visibleTeachers.length > 1 ? (
-            <button
-              type="button"
-              aria-pressed={expandedWeek}
-              onClick={() => setExpandedWeek((current) => !current)}
-              className={`rounded-control border px-4 py-2 text-sm transition hover:-translate-y-px ${expandedWeek ? "border-brand bg-brand text-canvas" : "border-line text-muted hover:border-brand hover:text-ink"}`}
-            >
-              {expandedWeek ? "Compact week" : "Expand all teachers"}
-            </button>
-          ) : null}
         </div>
+        {lessonCreationOptions ? (
+          <button
+            type="button"
+            aria-pressed={creatingLesson}
+            onClick={toggleCreationMode}
+            className={`h-7 w-fit rounded-control border px-2.5 py-0.5 text-[11px] transition hover:-translate-y-px ${creatingLesson ? "border-brand bg-brand text-canvas" : "border-brand text-brand hover:bg-brand hover:text-canvas"}`}
+          >
+            <span aria-hidden="true" className="mr-1 text-xs">+</span>{creatingLesson ? "Cancel adding" : "Add lesson"}
+          </button>
+        ) : null}
       </div>
 
-      <div className="mx-5 flex items-center justify-between border-t border-line/60 py-3 sm:mx-7">
-        <button type="button" onClick={() => move(-1)} className="text-action text-sm text-muted hover:text-ink">← Previous</button>
-        <button type="button" onClick={() => setAnchorKey(initialDate)} className="text-sm text-brand hover:text-brand-hover">
-          {view === "day" ? "Go to today" : view === "week" ? "Go to this week" : "Go to this month"}
-        </button>
-        <button type="button" onClick={() => move(1)} className="text-action text-sm text-muted hover:text-ink">Next →</button>
+      <div className="mx-5 grid min-h-11 grid-cols-[1fr_auto_1fr] items-center gap-3 pb-2 sm:mx-7">
+        <div className="min-w-0">{showTeacherFilter ? <div className="flex max-w-96 items-center gap-2">
+          <label className="min-w-0 flex-1">
+            <span className="sr-only">Calendar teacher display</span>
+            <AppSelect aria-label="Calendar teacher display" value={teacherId} onChange={(event) => setTeacherId(event.target.value)} className="planner-teacher-select h-9 w-full rounded-control px-3 text-sm font-medium text-ink outline-none ring-1 ring-line/60 transition focus:ring-brand">
+              {initialTeacherId === "" ? <option value="">Choose a teacher</option> : null}
+              {allowAllTeachers ? <option value="all">All teachers</option> : null}
+              {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}{teacher.isOwner ? " · you" : ""}</option>)}
+            </AppSelect>
+          </label>
+          {view === "week" && visibleTeachers.length > 0 ? (
+            <button
+              type="button"
+              aria-label={expandedWeek ? "Use compact teacher columns" : "Expand every teacher column"}
+              title={expandedWeek ? "Compact teacher columns" : "Expand every teacher column"}
+              aria-pressed={expandedWeek}
+              onClick={() => {
+                if (layoutSwitchTimer.current) clearTimeout(layoutSwitchTimer.current);
+                setLayoutSwitchAnimating(true);
+                setExpandedWeek((current) => {
+                  const next = !current;
+                  try {
+                    window.localStorage.setItem(`lessons:planner:${schoolId}:week-density`, next ? "expanded" : "compact");
+                  } catch {
+                    // Keep the in-memory preference when storage is unavailable.
+                  }
+                  return next;
+                });
+                layoutSwitchTimer.current = setTimeout(() => setLayoutSwitchAnimating(false), 540);
+              }}
+              className="planner-column-switch"
+              data-expanded={expandedWeek}
+              data-animating={layoutSwitchAnimating}
+            >
+              <span className="planner-column-switch-thumb" aria-hidden="true">
+                <span /><span /><span />
+              </span>
+              <span className="planner-column-switch-label" aria-hidden="true">{expandedWeek ? "Expanded" : "Compact"}</span>
+            </button>
+          ) : null}
+        </div> : null}</div>
+        <div className="text-center">{!showingCurrentPeriod ? <button type="button" onClick={() => setAnchorKey(initialDate)} className="text-xs text-brand hover:text-brand-hover">
+          {view === "day" ? "Jump back to today" : view === "week" ? "Jump back to this week" : "Jump back to this month"}
+        </button> : null}</div>
+        <div className="flex items-center justify-end gap-4">
+          <button type="button" onClick={() => move(-1)} className="text-action text-xs text-muted hover:text-ink">← Previous</button>
+          <button type="button" onClick={() => move(1)} className="text-action text-xs text-muted hover:text-ink">Next →</button>
+        </div>
+      </div>
       </div>
 
       {rescheduleNotices.length ? (
@@ -454,10 +525,11 @@ export function OwnerPlanner({
         </div>
       ) : expandedWeek && view === "week" ? (
         <div role="status" className="border-b border-line px-4 py-3 text-sm text-muted">
-          <strong className="text-ink">Expanded week.</strong> Every teacher has a full column for each day. Scroll horizontally to move across the week.
+          <strong className="text-ink">Expanded week.</strong> {visibleTeachers.length === 1 ? "Each day is widened so lesson blocks are easier to read." : "Every teacher has a full column for each day."} Scroll horizontally to move across the week.
         </div>
       ) : null}
 
+      <div className="planner-grid-frame" data-layout={expandedWeek ? "expanded" : "compact"} data-layout-animating={layoutSwitchAnimating}>
       {view === "month" ? (
         <MonthView
           anchor={anchor}
@@ -472,6 +544,7 @@ export function OwnerPlanner({
             setView("day");
             if (window.matchMedia("(max-width: 639px)").matches && teacherId === "all" && teachers[0]) setTeacherId(teachers[0].id);
           }}
+          onCreateDate={lessonCreationOptions ? (dateKey) => setCreationSlot({ dateKey, time: "", teacherId: teacherId !== "all" ? teacherId : "", minutes: 0 }) : undefined}
         />
       ) : (
         <TimelineView
@@ -502,6 +575,7 @@ export function OwnerPlanner({
           onCreateSlot={(slot) => { setCreatingLesson(false); setCreationSlot(slot); }}
         />
       )}
+      </div>
       {selectedLesson ? (
         <LessonSheet
           schoolId={schoolId}
@@ -512,6 +586,8 @@ export function OwnerPlanner({
           productName={productNames[selectedLesson.product_id] ?? "Lesson"}
           place={placeDetails[selectedLesson.place_id] ?? { name: "Place not set", details: null }}
           canReschedule={canReschedule}
+          canCollectPayment={canCollectPayment}
+          paidSeparately={paidLessonIds.includes(selectedLesson.id)}
           canMarkReschedule={selectedLesson.can_mark_reschedule}
           onReschedule={() => beginReschedule(selectedLesson)}
           onPermissionChange={async (allowed, reason) => {
@@ -552,8 +628,9 @@ export function OwnerPlanner({
           }}
         />
       ) : null}
-      {creationSlot && lessonCreationOptions ? <LessonCreationDialog schoolId={schoolId} slot={creationSlot} options={lessonCreationOptions} lockTeacher={!showTeacherFilter && teachers.length === 1} onClose={() => setCreationSlot(null)} /> : null}
+      {creationSlot && lessonCreationOptions ? <LessonCreationDialog schoolId={schoolId} slot={creationSlot} options={lessonCreationOptions} lockTeacher={!showTeacherFilter && teachers.length === 1} timeZone={timezone} onClose={() => setCreationSlot(null)} /> : null}
     </section>
+    </>
   );
 }
 
@@ -662,21 +739,21 @@ function TimelineView({
       ? dates.flatMap((date) => teachers.map((teacher) => ({
           date,
           teachers: [teacher],
-          label: `${new Intl.DateTimeFormat("en-US", { weekday: "short", day: "numeric" }).format(date)} · ${teacher.name}`,
+          label: teacher.name,
         })))
       : dates.map((date) => ({ date, teachers, label: new Intl.DateTimeFormat("en-US", { weekday: "short", day: "numeric" }).format(date) }));
   const hourCount = (timelineEnd - timelineStart) / 60;
-  const minimumColumnWidth = expandedWeek ? 190 : view === "week" ? Math.max(150, teachers.length * 14 + 100) : 150;
+  const minimumColumnWidth = expandedWeek ? (teachers.length === 1 ? 280 : 190) : view === "week" ? Math.max(150, teachers.length * 14 + 100) : 150;
 
   function creationSlotFromPointer(event: { currentTarget: HTMLDivElement; clientX: number; clientY: number }, dateKey: string, columnTeachers: Teacher[]) {
     const rect = event.currentTarget.getBoundingClientRect();
     const teacherElement = document.elementsFromPoint(event.clientX,event.clientY).find((element): element is HTMLElement => element instanceof HTMLElement && Boolean(element.dataset.teacherId));
     const teacherId = teacherElement?.dataset.teacherId && columnTeachers.some((teacher) => teacher.id === teacherElement.dataset.teacherId)
       ? teacherElement.dataset.teacherId
-      : columnTeachers[0].id;
+      : columnTeachers.length === 1 ? columnTeachers[0].id : "";
     const rawMinutes = timelineStart + event.clientY - rect.top;
     const minutes = Math.max(timelineStart, Math.min(timelineEnd - 30, Math.round(rawMinutes / 5) * 5));
-    return { dateKey, teacherId, minutes, time: `${String(Math.floor(minutes / 60)).padStart(2,"0")}:${String(minutes % 60).padStart(2,"0")}` };
+    return { dateKey, teacherId, minutes, time: `${String(Math.floor(minutes / 60)).padStart(2,"0")}:${String(minutes % 60).padStart(2,"0")}`, pointerX: Math.max(8, Math.min(rect.width - 8, event.clientX - rect.left)) };
   }
 
   function candidateFromPointer(clientX: number, clientY: number, movingLesson: LessonWithParts) {
@@ -778,14 +855,31 @@ function TimelineView({
     <div ref={scrollFrame} className="planner-scroll overflow-x-auto">
       {dropError ? <div role="alert" className="sticky left-0 z-40 border-b border-danger px-4 py-3 text-sm text-danger">Move blocked: {dropError}</div> : null}
       <div style={{ minWidth: `${Math.max(view === "day" && columns.length === 1 ? 360 : 760, columns.length * minimumColumnWidth)}px` }}>
-        <div className="grid border-b border-line" style={{ gridTemplateColumns: `4.5rem repeat(${columns.length}, minmax(0, 1fr))` }}>
-          <div />
-          {columns.map((column, columnIndex) => <div key={`${key(column.date)}-${column.label}`} className="planner-column-boundary border-l border-line px-3 py-3 text-sm" data-expanded-week={expandedWeek} data-day-start={expandedWeek && columnIndex % teachers.length === 0}>{column.label}</div>)}
-        </div>
+        {expandedWeek ? (
+          <div className="border-b border-line">
+            <div className="grid" style={{ gridTemplateColumns: `4.5rem repeat(${columns.length}, minmax(0, 1fr))` }}>
+              <div />
+              {dates.map((date) => (
+                <div key={key(date)} className="px-3 pb-1 pt-3 text-sm font-medium" style={{ gridColumn: `span ${teachers.length}` }}>
+                  {new Intl.DateTimeFormat("en-US", { weekday: "short", day: "numeric" }).format(date)}
+                </div>
+              ))}
+            </div>
+            <div className="grid" style={{ gridTemplateColumns: `4.5rem repeat(${columns.length}, minmax(0, 1fr))` }}>
+              <div />
+              {columns.map((column) => <div key={`${key(column.date)}-${column.label}`} className="px-3 pb-3 pt-1 text-xs text-muted">{column.label}</div>)}
+            </div>
+          </div>
+        ) : (
+          <div className="grid border-b border-line" style={{ gridTemplateColumns: `4.5rem repeat(${columns.length}, minmax(0, 1fr))` }}>
+            <div />
+            {columns.map((column) => <div key={`${key(column.date)}-${column.label}`} className="px-3 py-3 text-sm">{column.label}</div>)}
+          </div>
+        )}
         <div className="grid" style={{ gridTemplateColumns: `4.5rem repeat(${columns.length}, minmax(0, 1fr))` }}>
           <div className="relative" style={{ height: `${hourCount * 60}px` }}>
             {Array.from({ length: hourCount }, (_, index) => (
-              <span key={index} className="absolute right-3 text-[10px] text-muted" style={{ top: `${index * 60 - 6}px` }}>{clock(timelineStart + index * 60)}</span>
+              <span key={index} className="absolute right-3 text-[10px] text-muted" style={{ top: `${index === 0 ? 6 : index * 60 - 6}px` }}>{clock(timelineStart + index * 60)}</span>
             ))}
           </div>
           {columns.map((column, columnIndex) => {
@@ -820,8 +914,8 @@ function TimelineView({
                       setExpandedTrack({ dateKey, teacherId: teacherElement.dataset.teacherId });
                     }
                   }
-                  if (!canCreateLesson || !creationMode || !column.teachers.length || rescheduleLesson || dragging || event.pointerType === "touch") return;
-                  if (event.target instanceof Element && event.target.closest(".lesson-block")) { setHoverSlot(null); return; }
+                  if (!canCreateLesson || !column.teachers.length || rescheduleLesson || dragging || event.pointerType === "touch") return;
+                  if (event.target instanceof Element && event.target.closest(".lesson-block,.proposal-block")) { setHoverSlot(null); return; }
                   setHoverSlot(creationSlotFromPointer(event, dateKey, column.teachers));
                 }}
                 onPointerLeave={(event) => {
@@ -830,14 +924,13 @@ function TimelineView({
                   if (!expandedWeek && !creationMode && !rescheduleLesson && !dragging) setExpandedTrack(null);
                 }}
                 onClick={(event) => {
-                  if (!creationMode) { setExpandedTrack(null); setPinnedTrack(null); return; }
                   if (!canCreateLesson || !column.teachers.length || rescheduleLesson || event.detail === 0) return;
-                  if (event.target instanceof Element && event.target.closest(".lesson-block")) return;
+                  if (event.target instanceof Element && event.target.closest(".lesson-block,.proposal-block")) return;
                   onCreateSlot(creationSlotFromPointer(event, dateKey, column.teachers));
                   setHoverSlot(null);
                 }}
               >
-                {hoverSlot?.dateKey === dateKey && column.teachers.some((teacher) => teacher.id === hoverSlot.teacherId) ? <div className="new-lesson-slot" style={lessonTrackStyle(hoverSlot.minutes, hoverSlot.minutes + 30, 0, 1, -1)}><span>+ {clock(hoverSlot.minutes)}</span></div> : null}
+                {hoverSlot?.dateKey === dateKey && (!hoverSlot.teacherId || column.teachers.some((teacher) => teacher.id === hoverSlot.teacherId)) ? <div aria-hidden="true" className="pointer-events-none absolute z-30 -translate-y-1/2 rounded-control bg-surface/80 px-2 py-1 text-[10px] font-normal text-muted ring-1 ring-line/50" style={{ top: `${hoverSlot.minutes - timelineStart}px`, left: `${hoverSlot.pointerX ?? 8}px` }}>{clock(hoverSlot.minutes)}</div> : null}
                 {column.teachers.flatMap((teacher, teacherIndex) => availability
                   .filter((rule) => rule.teacher_id === teacher.id && rule.weekday === column.date.getDay() && rule.effective_from <= dateKey && (!rule.effective_until || rule.effective_until >= dateKey))
                   .map((rule) => {
@@ -858,7 +951,7 @@ function TimelineView({
                         }}
                         onFocus={() => { if (!expandedWeek && !creationMode && !rescheduleLesson) setExpandedTrack({ dateKey, teacherId: teacher.id }); }}
                         onClick={(event) => {
-                          if (creationMode) return;
+                          if (canCreateLesson && !rescheduleLesson) return;
                           event.stopPropagation();
                           if (expandedWeek) return;
                           setPinnedTrack((current) => current?.dateKey === dateKey && current.teacherId === teacher.id ? null : { dateKey, teacherId: teacher.id });
@@ -936,6 +1029,7 @@ function TimelineView({
                         </span>
                         <span className="lesson-block-content">
                           <span className="lesson-student-name">{studentNames[lesson.student_id]}</span>
+                          {expandedWeek ? <span className="lesson-block-time">{clock(lesson.start.minutes)}–{clock(lesson.end.minutes)}</span> : null}
                         </span>
                         <span aria-hidden="true" className="lesson-student-initials">{studentInitials(studentNames[lesson.student_id] ?? "Student")}</span>
                         <QuickView>
@@ -1029,6 +1123,7 @@ function MonthView({
   studentNames,
   onSelectLesson,
   onOpenDay,
+  onCreateDate,
 }: {
   anchor: Date;
   activeTeacherIds: Set<string>;
@@ -1038,12 +1133,13 @@ function MonthView({
   studentNames: Record<string, string>;
   onSelectLesson: (lessonId: string) => void;
   onOpenDay: (dateKey: string) => void;
+  onCreateDate?: (dateKey: string) => void;
 }) {
   const dates = monthDates(anchor);
   return (
     <div>
       <div className="month-weekdays grid grid-cols-7 border-b border-line">
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => <div key={day} className="border-l border-line px-3 py-2 text-xs text-muted first:border-l-0"><span className="month-weekday-long">{day}</span><span className="month-weekday-short" aria-hidden="true">{day[0]}</span></div>)}
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => <div key={day} className="px-3 py-2 text-xs text-muted"><span className="month-weekday-long">{day}</span><span className="month-weekday-short" aria-hidden="true">{day[0]}</span></div>)}
       </div>
       <div className="grid grid-cols-7">
         {dates.map((date) => {
@@ -1056,9 +1152,11 @@ function MonthView({
           const occupancy = availableMinutes ? Math.min(100, Math.round((bookedMinutes / availableMinutes) * 100)) : 0;
           const inMonth = date.getMonth() === anchor.getMonth();
           return (
-            <div key={dateKey} className={`month-day min-h-36 border-b border-l border-line p-3 first:border-l-0 ${inMonth ? "" : "opacity-30"}`}>
+            <div key={dateKey} className={`month-day relative min-h-36 border-b border-l border-line p-3 first:border-l-0 ${inMonth ? "" : "opacity-30"}`}>
+              {onCreateDate ? <button type="button" onClick={() => onCreateDate(dateKey)} aria-label={`Add a lesson on ${dateKey}`} className="absolute inset-0 z-0 transition hover:bg-brand/5" /> : null}
+              <div className="relative z-[1] pointer-events-none">
               <div className="flex items-baseline justify-between">
-                <button type="button" onClick={() => onOpenDay(dateKey)} className="month-date text-sm" aria-label={`Open ${dateKey} day view, ${dayLessons.length} lessons`}>{date.getDate()}</button>
+                <button type="button" onClick={() => onOpenDay(dateKey)} className="month-date pointer-events-auto text-sm" aria-label={`Open ${dateKey} day view, ${dayLessons.length} lessons`}>{date.getDate()}</button>
                 {availableMinutes ? <span className="month-open text-[10px] text-muted">{Math.round(availableMinutes / 60)}h open</span> : null}
               </div>
               <div className="month-lesson-list mt-5 space-y-1">
@@ -1067,21 +1165,22 @@ function MonthView({
                     key={lesson.id}
                     type="button"
                     onClick={() => onSelectLesson(lesson.id)}
-                    className="block w-full truncate text-left text-[11px] text-muted hover:text-brand-hover"
+                    className="pointer-events-auto block w-full truncate text-left text-[11px] text-muted hover:text-brand-hover"
                   >
                     {clock(lesson.start.minutes)} · {studentNames[lesson.student_id]}
                   </button>
                 ))}
                 {dayLessons.length > 2 ? <p className="text-[10px] text-brand">+{dayLessons.length - 2} more</p> : null}
-                {dayProposals.length ? <button type="button" onClick={() => onOpenDay(dateKey)} className="block text-left text-[10px] font-medium text-brand">{dayProposals.length} pending {dayProposals.length === 1 ? "proposal" : "proposals"}</button> : null}
+                {dayProposals.length ? <button type="button" onClick={() => onOpenDay(dateKey)} className="pointer-events-auto block text-left text-[10px] font-medium text-brand">{dayProposals.length} pending {dayProposals.length === 1 ? "proposal" : "proposals"}</button> : null}
               </div>
-              <button type="button" onClick={() => onOpenDay(dateKey)} className="month-touch-count mt-3 w-full text-left text-[10px] text-brand">{dayLessons.length} {dayLessons.length === 1 ? "lesson" : "lessons"}</button>
+              <button type="button" onClick={() => onOpenDay(dateKey)} className="month-touch-count pointer-events-auto mt-3 w-full text-left text-[10px] text-brand">{dayLessons.length} {dayLessons.length === 1 ? "lesson" : "lessons"}</button>
               {availableMinutes ? (
                 <div className="month-capacity mt-5">
                   <div className="occupancy-line" style={{ "--occupancy": `${occupancy}%` } as CSSProperties} />
                   <p className="mt-2 text-[10px] text-muted">{dayLessons.length} booked · {occupancy}%</p>
                 </div>
               ) : null}
+              </div>
             </div>
           );
         })}
@@ -1099,6 +1198,8 @@ function LessonSheet({
   productName,
   place,
   canReschedule,
+  canCollectPayment,
+  paidSeparately,
   canMarkReschedule,
   onReschedule,
   onPermissionChange,
@@ -1113,6 +1214,8 @@ function LessonSheet({
   productName: string;
   place: { name: string; details: string | null };
   canReschedule: boolean;
+  canCollectPayment: boolean;
+  paidSeparately: boolean;
   canMarkReschedule: boolean;
   onReschedule: () => void;
   onPermissionChange: (allowed: boolean, reason: string) => Promise<{ ok: boolean; message: string }>;
@@ -1120,6 +1223,10 @@ function LessonSheet({
   onClose: () => void;
 }) {
   const duration = lesson.end.minutes - lesson.start.minutes;
+  const quickActions: QuickAction[] = [
+    { href: `/schools/${schoolId}/students/${lesson.student_id}`, kind: "student", title: "Student home", detail: "Contacts, schedule, and lesson plan." },
+    ...(student?.payers.flatMap((payer) => payer.accountId ? [{ href: `/schools/${schoolId}/families/${payer.accountId}#billing-history`, kind: "billing" as const, title: `${payer.accountName} billing`, detail: "Invoices and payment history, no detour." }] : []) ?? []),
+  ];
   return (
     <>
       <button type="button" aria-label="Close lesson details" className="lesson-sheet-backdrop" onClick={onClose} />
@@ -1132,14 +1239,19 @@ function LessonSheet({
           <button autoFocus type="button" onClick={onClose} className="text-action text-sm text-muted hover:text-ink">Close</button>
         </div>
 
+        <div className="border-b border-line"><QuickActionGrid actions={quickActions} description="Two taps saved. Tiny victory." /></div>
+
         <dl className="divide-y divide-line border-b border-line">
           <Detail label="Lesson" value={productName} />
           <div className="py-5"><dt className="text-xs text-muted">Teacher</dt><dd className="mt-2 text-sm"><Link href={`/schools/${schoolId}/staff/${lesson.teacher_id}`} className="hover:text-brand">{teacherName}</Link></dd></div>
           <Detail label="Date" value={new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(fromKey(lesson.start.dateKey))} />
           <Detail label="Time" value={`${clock(lesson.start.minutes)}–${clock(lesson.end.minutes)} · ${duration} minutes`} />
           <Detail label="Place" value={place.details ? `${place.name} · ${place.details}` : place.name} />
+          {lesson.notes ? <Detail label="Internal notes" value={lesson.notes} /> : null}
           {lesson.reschedule_reason_code ? <Detail label="Last moved" value={rescheduleReasonLabel(lesson.reschedule_reason_code, lesson.reschedule_reason_detail)} /> : null}
         </dl>
+
+        {canCollectPayment ? <section className="border-b border-line py-8"><h3 className="font-display text-2xl font-normal">Payment</h3>{paidSeparately ? <><p className="mt-3 text-sm text-brand">Paid separately</p><p className="mt-2 text-xs leading-5 text-muted">This lesson will remain on the family statement with $0 newly due.</p></> : <><p className="mt-3 text-xs leading-5 text-muted">Create a secure QR code for the payer to scan on their own phone.</p><Link href={`/schools/${schoolId}/lessons/${lesson.id}/payment`} className="mt-4 inline-flex rounded-control bg-brand px-4 py-2.5 text-sm text-canvas hover:bg-brand-hover">Collect payment now</Link></>}</section> : null}
 
         {canReschedule && lesson.can_reschedule ? (
           <section className="border-b border-line py-8">
@@ -1159,10 +1271,12 @@ function LessonSheet({
 
         {canReschedule && lesson.status === "scheduled" ? (
           <section className="border-b border-line py-8">
-            <h3 className="font-display text-2xl font-normal">School cancellation</h3>
+            <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">Optional action</p>
+            <h3 className="mt-2 font-display text-2xl font-normal">Can the school no longer provide this lesson?</h3>
+            <p className="mt-3 text-xs leading-5 text-muted">The lesson is still scheduled. Use this only when the school needs to initiate a cancellation.</p>
             <LessonChangeReport
               action={onSchoolCancellation}
-              buttonLabel="The school can’t provide this lesson"
+              buttonLabel="Start a school cancellation report"
               title="Report a school cancellation"
               description="This records the school-origin scenario for review. The lesson and all financial treatment remain unchanged until the remedy is confirmed."
               fieldLabel="Why can’t the school provide this lesson?"

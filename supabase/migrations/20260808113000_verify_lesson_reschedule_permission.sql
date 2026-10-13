@@ -5,6 +5,7 @@ declare
   sample record;
   blocked boolean := false;
 begin
+  if not exists (select 1 from public.lesson_events) then return; end if;
   begin
     select event.id, event.school_id, member.profile_id as owner_id
     into strict sample

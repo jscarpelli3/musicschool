@@ -171,8 +171,8 @@ grant select, insert, update, delete on public.student_contacts to authenticated
 grant select, insert, update, delete on public.billing_accounts to authenticated;
 grant select, insert, update, delete on public.billing_account_students to authenticated;
 
--- Seed the sole existing school with a coherent demo roster. Refuse to guess if
--- the project contains more than one school.
+-- Seed the sole existing school with a coherent demo roster. A clean schema has
+-- no tenant yet, so skip demo data there; refuse to guess among multiple schools.
 do $$
 declare
   target_school_id uuid;
@@ -180,7 +180,9 @@ declare
   school_count integer;
 begin
   select count(*) into school_count from public.schools;
-  if school_count <> 1 then
+  if school_count = 0 then
+    return;
+  elsif school_count > 1 then
     raise exception 'Demo roster requires exactly one school; found %', school_count;
   end if;
 

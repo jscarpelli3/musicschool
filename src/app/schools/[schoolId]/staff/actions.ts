@@ -86,23 +86,54 @@ export async function createAndInviteTeacher(schoolId: string, formData: FormDat
     p_instrument_names: instruments,
   });
   if (error || !teacherId) {
-    if (error?.message.includes("duplicate_teacher_email")) return { ok: false, message: "That email is already used by another teacher at this school." };
+    if (error?.message.includes("duplicate_teacher_email")) {
+      const { data: matchingPeople } = await supabase.from("people").select("id,profile_id").eq("school_id", schoolId).eq("email", email);
+      const matchingIds = (matchingPeople ?? []).map((person) => person.id);
+      const { data: matchingTeachers } = matchingIds.length
+        ? await supabase.from("teachers").select("person_id").eq("school_id", schoolId).in("person_id", matchingIds)
+        : { data: [] };
+      const teacherIds = new Set((matchingTeachers ?? []).map((teacher) => teacher.person_id));
+      const existingTeacher = (matchingPeople ?? []).find((person) => teacherIds.has(person.id) && !person.profile_id)
+        ?? (matchingPeople ?? []).find((person) => teacherIds.has(person.id));
+      if (existingTeacher) {
+        const retryResult = await deliverTeacherAccess(schoolId, existingTeacher.id, email);
+        revalidatePath(`/schools/${schoolId}/staff`);
+        revalidatePath(`/schools/${schoolId}/onboarding`);
+        if (retryResult === "linked") return { ok: true, message: "Your teacher record is connected to your existing owner account." };
+        if (retryResult === "sent") return { ok: true, message: "Teacher invitation sent." };
+      }
+      return { ok: false, message: "That email is already used by another teacher at this school." };
+    }
     return { ok: false, message: "The teacher could not be created. Check the details and try again." };
   }
   const result = await deliverTeacherAccess(schoolId, teacherId, email);
   revalidatePath(`/schools/${schoolId}/staff`);
+  revalidatePath(`/schools/${schoolId}/onboarding`);
+  if (result === "linked") return { ok: true, message: "Your teacher record is connected to your existing owner account." };
   if (result === "sent") return { ok: true, message: "Teacher created and invitation sent." };
   if (result === "delivery-failed") return { ok: false, message: "The teacher was created, but the invitation email was not sent. Use Resend invitation in the staff roster after the email-provider problem is corrected." };
   if (result === "identity-error") return { ok: false, message: "The teacher was created, but passwordless access could not be prepared. Use Invite teacher in the staff roster to try again." };
   return { ok: false, message: "The teacher was created, but access could not be prepared. Use Invite teacher in the staff roster to try again." };
 }
 
-async function deliverTeacherAccess(schoolId: string, teacherId: string, email: string): Promise<"sent" | "invalid" | "identity-error" | "delivery-failed" | "error"> {
+async function deliverTeacherAccess(schoolId: string, teacherId: string, email: string): Promise<"linked" | "sent" | "invalid" | "identity-error" | "delivery-failed" | "error"> {
   if (!/^[0-9a-f-]{36}$/i.test(schoolId) || !/^[0-9a-f-]{36}$/i.test(teacherId) || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 320) return "invalid";
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
   const profileId = auth?.claims?.sub;
   if (!profileId || !await checkSchoolCapability(supabase, schoolId, "school.staff.directory_manage")) return "error";
+  const currentEmail = typeof auth.claims.email === "string" ? auth.claims.email.trim().toLowerCase() : "";
+  if (currentEmail === email) {
+    const rpc = supabase.rpc as unknown as (name: string, params: Record<string, string>) => Promise<{ error: { code?: string } | null }>;
+    const linked = await rpc.call(supabase, "link_current_manager_teacher_identity", {
+      p_school_id: schoolId,
+      p_teacher_id: teacherId,
+      p_email: email,
+    });
+    if (!linked.error) return "linked";
+    console.error("Manager teacher identity link failed", { code: linked.error.code ?? "unknown" });
+    return "error";
+  }
   let authProfileId: string;
   try {
     authProfileId = await ensurePortalAuthIdentity(email);
@@ -166,6 +197,10 @@ export async function inviteTeacherAccess(schoolId: string, teacherId: string, f
   const boundaryMessage = await protectTeacherInvitation(profileId, schoolId, teacherId);
   if (boundaryMessage) redirect(`/schools/${schoolId}/staff?invite=rate-limited#staff-status`);
   const result = await deliverTeacherAccess(schoolId, teacherId, email);
+  if (result === "linked") {
+    revalidatePath(`/schools/${schoolId}/staff`);
+    redirect(`/schools/${schoolId}/staff?invite=linked#staff-status`);
+  }
   if (result === "invalid") redirect(`/schools/${schoolId}/staff?invite=invalid#staff-status`);
   if (result === "identity-error") redirect(`/schools/${schoolId}/staff?invite=identity-error#staff-status`);
   if (result === "delivery-failed") redirect(`/schools/${schoolId}/staff?invite=delivery-failed#staff-status`);

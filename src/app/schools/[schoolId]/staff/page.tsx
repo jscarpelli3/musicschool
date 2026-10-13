@@ -49,6 +49,8 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
   });
   const inviteStatus = query.invite === "sent"
     ? { tone: "text-brand border-brand/40 bg-brand/10", message: "Teacher invitation sent." }
+    : query.invite === "linked"
+      ? { tone: "text-brand border-brand/40 bg-brand/10", message: "The teacher record now uses your existing owner account. No separate invitation was needed." }
     : query.invite === "delivery-failed"
       ? { tone: "text-danger border-danger/40 bg-danger/10", message: "The teacher was created and access was prepared, but the invitation email was not sent. Find the teacher in the staff roster and resend the invitation after the email-provider problem is corrected." }
       : query.invite === "duplicate"
@@ -76,11 +78,11 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
               </header>
               <dl className="grid gap-3 sm:grid-cols-3"><div className="rounded-control bg-surface p-4"><dt className="text-xs text-muted">School role</dt><dd className="mt-2 text-sm capitalize">{person.role}</dd></div><div className="rounded-control bg-surface p-4"><dt className="text-xs text-muted">Schedule changes</dt><dd className="mt-2 text-sm">{person.schedulingAuthority === "manage_assigned_lessons" ? "Can move assigned lessons" : "Owner approval required"}</dd></div><div className="rounded-control bg-surface p-4"><dt className="text-xs text-muted">Outside availability</dt><dd className="mt-2 text-sm">{person.outsideAvailabilityPolicy === "require_approval" ? "Teacher approval required" : "Notify teacher"}</dd></div></dl>
               <div className="flex flex-wrap gap-3 pt-6">
-                <FocusedModal variant="secondary" triggerLabel="Access and invitation" eyebrow="Staff access" title={`Manage ${person.preferred_name || person.first_name}’s access.`} description="Send or disable passwordless school access.">
+                {person.role === "owner" || person.role === "admin" ? <p className="border border-brand/40 bg-brand/10 px-4 py-2 text-sm text-brand">Uses existing {person.role} account</p> : <FocusedModal variant="secondary" triggerLabel="Access and invitation" eyebrow="Staff access" title={`Manage ${person.preferred_name || person.first_name}’s access.`} description="Send or disable passwordless school access.">
                   <form action={inviteTeacherAccess.bind(null, schoolId, person.id)} className="grid gap-5"><label><span className="text-xs text-muted">Login email</span><input required type="email" name="email" defaultValue={person.email ?? ""} placeholder="teacher@example.com" className="mt-2 w-full border-b border-line bg-transparent py-2 text-sm outline-none focus:border-brand" /></label><button className="justify-self-start border border-brand px-4 py-2 text-sm text-brand transition hover:bg-brand hover:text-canvas">{person.membershipStatus === "active" ? "Send access email again" : person.latestDelivery ? "Resend invitation" : "Invite teacher"}</button></form>
                   {person.latestDelivery ? <p className="mt-4 text-xs text-muted">Latest invitation: {deliveryDescriptor(person.latestDelivery.status).label} · {new Date(person.latestDelivery.created_at).toLocaleString()}</p> : null}
                   {person.membershipStatus === "active" || person.membershipStatus === "invited" ? <form action={deactivateTeacherAccess.bind(null, schoolId, person.id)} className="mt-5 border-t border-line pt-4"><button className="text-xs text-danger hover:underline">Disable teacher access</button></form> : null}
-                </FocusedModal>
+                </FocusedModal>}
                 <FocusedModal variant="secondary" triggerLabel="Scheduling permissions" eyebrow="Scheduling authority" title={`Set ${person.preferred_name || person.first_name}’s permissions.`} description="Control direct schedule changes, availability editing, and outside-hours approval.">
                   <TeacherSchedulingSettingsForm initialAuthority={person.schedulingAuthority} initialCanManageAvailability={person.canManageOwnAvailability} initialOutsidePolicy={person.outsideAvailabilityPolicy} action={setTeacherSchedulingSettings.bind(null,schoolId,person.id)} />
                 </FocusedModal>

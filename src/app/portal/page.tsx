@@ -6,7 +6,6 @@ import { CalendarSubscription } from "./calendar-subscription";
 import { AutomaticPaymentSettings } from "./automatic-payment-settings";
 import { billingPeriodDescriptor } from "@/lib/domain/state-descriptors";
 import type { Json } from "@/types/database";
-import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +46,7 @@ export default async function ClientPortalPage() {
   const statementItems = (value: Json) => Array.isArray(value) ? value.filter((item): item is Record<string, Json | undefined> => Boolean(item) && typeof item === "object" && !Array.isArray(item)) : [];
 
   return <main className="mx-auto min-h-screen max-w-5xl px-5 py-10 sm:px-8 sm:py-16">
-    <header className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end"><div><p className="text-sm text-brand">Family scheduling</p><h1 className="mt-3 font-display text-5xl">Upcoming lessons</h1><p className="mt-3 text-xs text-muted">Signed in as {email}</p></div><div className="flex items-center gap-4"><Link href="/support" className="text-sm text-muted hover:text-ink">Help</Link><PortalSignOut label="Use a different email" /></div></header>
+    <header className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end"><div><p className="text-sm text-brand">Family scheduling</p><h1 className="mt-3 font-display text-5xl">Upcoming lessons</h1><p className="mt-3 text-xs text-muted">Signed in as {email}</p></div><PortalSignOut label="Use a different email" /></header>
     <p className="mt-6 max-w-2xl text-sm leading-6 text-muted">Scheduled lessons for the next three months. On phones, the same calendar becomes a compact agenda for easier reading.</p>
     <section className="mt-section">
       <h2 className="font-display text-3xl">Statements</h2>

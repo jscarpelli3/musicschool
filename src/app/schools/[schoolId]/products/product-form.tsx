@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { createProduct, type ProductState } from "./actions";
+import { AppSelect } from "@/components/ui/app-select";
 
 const initialState: ProductState = { error: null };
 const fieldClass = "w-full border-b border-line bg-transparent py-3 outline-none transition focus:border-brand";
@@ -19,20 +20,20 @@ export function ProductForm({ schoolId }: { schoolId: string }) {
         </label>
         <label>
           <span className="block text-xs text-muted">Format</span>
-          <select name="format" value={format} onChange={(event) => setFormat(event.target.value)} className={fieldClass}>
+          <AppSelect name="format" value={format} onChange={(event) => setFormat(event.target.value)} className={fieldClass}>
             <option value="private_lesson">Private lesson</option>
             <option value="group_class">Group class</option>
-          </select>
+          </AppSelect>
         </label>
         <label>
           <span className="block text-xs text-muted">Duration</span>
-          <select name="duration_minutes" defaultValue="30" className={fieldClass}>
+          <AppSelect name="duration_minutes" defaultValue="30" className={fieldClass}>
             <option value="30">30 minutes</option>
             <option value="45">45 minutes</option>
             <option value="60">60 minutes</option>
             <option value="90">90 minutes</option>
             <option value="120">2 hours</option>
-          </select>
+          </AppSelect>
         </label>
         <fieldset className="md:col-span-2">
           <legend className="text-xs text-muted">Frequency</legend>
@@ -44,21 +45,21 @@ export function ProductForm({ schoolId }: { schoolId: string }) {
             <span className="pb-3 text-sm text-muted">session(s) every</span>
             <div className="grid grid-cols-[1fr_1.5fr] gap-3">
               <input required name="interval_count" aria-label="Interval count" type="number" min={1} max={12} defaultValue={1} className={fieldClass} />
-              <select name="interval_unit" aria-label="Interval unit" defaultValue="week" className={fieldClass}>
+              <AppSelect name="interval_unit" aria-label="Interval unit" defaultValue="week" className={fieldClass}>
                 <option value="week">week(s)</option>
                 <option value="month">month(s)</option>
-              </select>
+              </AppSelect>
             </div>
           </div>
         </fieldset>
         <input type="hidden" name="pricing_model" value="per_session" />
         <label className="md:col-span-2">
           <span className="block text-xs text-muted">When this offering is billed</span>
-          <select name="billing_timing" defaultValue="school_default" className={fieldClass}>
+          <AppSelect name="billing_timing" defaultValue="school_default" className={fieldClass}>
             <option value="school_default">Use the school default</option>
             <option value="before_service">Before lessons happen</option>
             <option value="after_service">After lessons happen</option>
-          </select>
+          </AppSelect>
           <span className="mt-2 block text-xs leading-5 text-muted">This becomes an immutable term when a student is enrolled. Changing the default later does not rewrite existing agreements.</span>
         </label>
         <label className="md:col-span-2">

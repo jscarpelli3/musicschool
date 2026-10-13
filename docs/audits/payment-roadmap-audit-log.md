@@ -683,3 +683,50 @@ Recorded on 2026-09-12.
 - A controlled linked-project rehearsal passed `notice_required → notice_pending → ready`, duplicate webhook replay, revocation fallback, cap fallback, and category-scope fallback. Both controlled periods were left `void`, all rehearsal mandates were revoked, and zero payment attempts were created. Controlled period `4f104a02-1b8a-4103-b1fc-41e301ba92fa` anchors the successful evidence.
 - Migrations `20260912100000` through `20260912103000` are deployed. TypeScript, ESLint, `git diff --check`, the Next.js 16.3 webpack production build, and linked database lint pass with only the two pre-existing unused-variable warnings.
 - The readiness contract is frozen for Step 9 and the broad UI pass. One genuine provider-delivered beta statement remains required before Stripe charge execution is enabled.
+### One-time lesson payment source review
+
+Recorded on 2026-09-17.
+
+- Scope: payer-present QR/link Checkout for one immutable per-session lesson price, connected-account direct charge, signed webhook completion, and zero-dollar allocation on a later family statement.
+- Authorization is resolved server-side from signed claims plus `school.billing.manage`; the service-role client receives only server-derived school, lesson, snapshot, billing-account, product, and connection identifiers. The Server Action has an explicit durable throttle.
+- The server retrieves the connected account's current Stripe Price and requires active, one-time, exact amount, exact currency, and exact account agreement before creating Checkout. Checkout is card-only for this first path and uses a durable request ID as both internal binding and Stripe idempotency identity.
+- Review fixed four pre-commit integrity defects: exact 30-minute expiry clock skew, duplicate-risk retry of a provider-ambiguous `created` request, webhook dependence on a possibly failed local session-ID write, and persisted hosted receipt URLs. Expiry is now 35 minutes; retries reuse the request/key; webhooks recover through signed Checkout metadata and recheck account/amount/PaymentIntent/Charge; receipts remain provider-retrieved future work.
+- Migration assertions require RLS, anonymous denial, authenticated mutation denial, service-only completion, and billing-draft awareness of separately paid lessons. Dependency audit reports zero known production vulnerabilities; TypeScript passes; linked pre-migration database lint has only the two existing unused-variable warnings.
+- Decision: source-ready to commit, **not deployment-ready**. Local migration replay was unavailable because Docker was not running. Apply/rehearse only in Stripe test mode, then test success, cancellation, expiry, duplicate/concurrent initiation, provider acceptance plus local-write failure, webhook replay/order, wrong account/amount, draft regeneration, and receipt retrieval before enabling the control in production.
+
+### One-time lesson payment staging acceptance — successful Checkout
+
+Recorded on 2026-09-29.
+
+- A supervised staging run used only the isolated Supabase staging branch, the `Common Time Staging` Stripe sandbox, a test-mode connected account, a synthetic student, and a $1.00 per-session offering. No live-mode charge was attempted.
+- The offering was created through Common Time and displayed `Price verified in Stripe`. A one-time lesson was scheduled for October 5, 2026 using its immutable $1.00 price snapshot.
+- The first catalog attempt failed safely before Stripe because the persistent branch did not implicitly grant the service role catalog-persistence privileges. PR #47 added and verified narrow catalog operation/snapshot grants while retaining delete and provider-price mutation denial.
+- The first Checkout attempt then failed safely before a Checkout Session opened because `lesson_payment_requests` lacked an explicit service-role persistence contract. PR #48 granted and verified select/insert/update for the request, read-only eligibility dependencies, browser mutation denial, delete denial, and the existing service-only completion boundary.
+- The retried action opened one hosted Checkout request. The payer completed Stripe test Checkout from the QR code, and the Common Time page changed from waiting to `Payment confirmed` through signed connected-account webhook reconciliation. The lesson now reads `paid separately` and states that it will contribute $0 on the later family statement.
+- Local request `01ecc3c9-38ff-4291-9824-de2702d82ecd` succeeded for 100 USD cents. It binds school `4c827ae0-a44d-4b64-92ed-de3276aab3a5`, lesson `a23bfaa4-ea78-4835-a691-dc4b93cf46fe`, and payment connection `61c2cb3f-bfa2-4309-b9a1-8f902dd68419`. It was created at `2026-09-29T21:26:09.302272Z` and reconciled succeeded at `2026-09-29T21:29:32Z`.
+- Stripe read-back in connected-account context `acct_1UJHCGL7dHIhxUgn` confirmed `livemode=false`, Checkout Session `cs_test_a1gAqOa5PdMol4zvnIiiHhbZg3ZoLbseQq4K5ZlKf7pVlhLpQHvTySqbPI` complete/paid for 100 USD cents, PaymentIntent `pi_3UL8acL7dHIhxUgn1je1XcKs` succeeded, and Charge `ch_3UL8acL7dHIhxUgn13HfyDOI` succeeded/paid. These IDs exactly match the local request.
+- The service role intentionally cannot browse `audit_log`; it may append only. Therefore the required `lesson_payment.opened` audit row was not independently read during this verification and remains an explicit Gate 1 evidence check through an authorized operator/database view.
+- Exit decision: the successful-card row of the live staging Checkout matrix passes. Gate 1 remains open for cancellation/no-charge, expiration/retry, concurrent initiation, already-paid refusal, later-statement zero-due allocation, audit-row confirmation, and safe-log review.
+### Step 9 checkpoint — first exact-approved saved-card charge
+
+Recorded on 2026-10-11 for work performed and deployed through 2026-10-09.
+
+- PR #71 / staging merge `eccd77a` added exact-approved-period off-session collection. The implementation reserves a durable `payment_attempts` row before Stripe, uses a stable provider idempotency key, enforces one open-or-succeeded attempt per billing period, and leaves success pending until provider reconciliation.
+- PaymentIntent reconciliation re-retrieves provider state in the connected-account context and rejects mismatched account, tenant metadata, billing period, amount, currency, Customer, or PaymentMethod. Pure binding tests cover the accepted case and each mismatch; the full test, typecheck, lint, build, clean migration replay, database lint, authorization suite, browser suite, and staging deployment passed.
+- A supervised staging run used the synthetic family known in the test conversation as `TestFamily`, an exact approved $2.00 USD statement, the active default saved `4242` Stripe test card, and connected test account `acct_1UJHCGL7dHIhxUgn`. No live-mode charge or real card data was used.
+- Stripe read-back showed one succeeded test-mode PaymentIntent and paid Charge for exactly 200 USD cents with the expected attempt, school, billing-account, and billing-period metadata. Common Time remained `submitted`, and its provider-event ledger contained no matching event.
+- Root cause: the staging webhook endpoint subscribed only to Checkout completion/expiration events and not the four new PaymentIntent event types. The app failed closed: it did not mark the invoice paid and did not expose another charge control while the attempt was unresolved.
+- The staging endpoint was updated to subscribe to `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.processing`, and `payment_intent.requires_action`. The already-succeeded intent was then re-read from Stripe and manually reconciled through the service-only transition contract; the attempt became `succeeded` and the period became `paid`.
+- **Acceptance decision:** charge creation, exact provider binding, durable attempt creation, and duplicate-safe missing-webhook behavior pass. Automatic signed PaymentIntent webhook settlement remains open because this event occurred before the subscription correction and required manual reconciliation.
+- PR #72 / merge `616345c` de-emphasized paid cards. PR #73 / merge `61db86a` moved paid periods older than six school-calendar months behind an accessible archive modal without mutating ledger status. Archive month-end/timezone tests, TypeScript, lint, build, browser checks, and deployment passed; live archive-fixture inspection remains open.
+- **Next evidence required:** create and approve a different synthetic statement, submit one saved-card charge, and prove automatic `payment_intent.succeeded` intake and settlement without manual reconciliation. Record the local period/attempt, provider event/intent/charge IDs, timestamps, and connected-account/amount assertions before selecting a decline or authentication-required test.
+
+### Step 9 fixture — second exact-approved statement preparation
+
+Recorded on 2026-10-12.
+
+- Added two synthetic one-time lessons for the isolated staging family account `TestStudent1Last family` (conversation shorthand `TestFamily`) through the normal `create_single_lesson` RPC under the staging owner’s authority.
+- Lessons `894cab5c-973a-46fa-acf9-a820af61c07b` and `9f77d3a4-cedc-41d0-bb83-35abf29cc840` are scheduled October 19 and 26, 2026 from 10:00–10:30 AM America/Chicago with test teacher `JONATHAN ME`, place `TestPlaceA`, and offering `Staging Checkout Test – 30 min`.
+- The teacher’s saved Monday availability is 9:00 AM–12:00 PM, and the scheduling RPC accepted both without an outside-availability override or overlap.
+- Each occurrence has a durable 100 USD-cent price snapshot and matching October billing service date. No statement, approval, payment attempt, or Stripe object was created by this fixture step.
+- Next human action: prepare the October statement from these lessons, review the exact lines, and proceed through the already-recorded approval and automatic signed-webhook settlement acceptance. Do not recreate the lessons or redo payer/card setup.

@@ -2,6 +2,17 @@
 
 Production-domain URL, environment, provider-callback, verification, testing, and rollback changes are tracked in [`../operations/domain-cutover.md`](../operations/domain-cutover.md).
 
+The gated path from supervised beta to a one-school production pilot is tracked in [`../operations/production-readiness-plan.md`](../operations/production-readiness-plan.md). That checklist is the launch authority for payment testing and production readiness; passing application CI alone does not authorize live charges or real customer data.
+
+The latest staging handoff, including the first approved-statement test and the exact next automatic-webhook test, is in [`session-handoff.md`](session-handoff.md). Read it before resuming payment work after any context reset.
+
+## 2026-10-11 approved-statement checkpoint
+
+- Exact approved-statement saved-card collection is deployed to staging through merge commit `61db86a`; the charge implementation itself entered at PR #71 / merge `eccd77a`.
+- One synthetic $2.00 off-session test charge succeeded in Stripe on the correct connected account. The app correctly stayed pending because the staging webhook endpoint lacked PaymentIntent event subscriptions; those subscriptions are now enabled and that attempt was manually reconciled after authoritative Stripe read-back.
+- Automatic PaymentIntent webhook settlement after the subscription correction remains the immediate next acceptance test. Do not repeat initial card setup or count the manually reconciled charge as automatic-webhook proof.
+- Paid cards are visually subdued. Paid statements older than six school-calendar months are hidden from the main stack and available through an archive modal without changing their durable `paid` state.
+
 ## 2026-09-17 beta-test checkpoint
 
 - **Decision:** ready for one supervised invitation-only beta acceptance run using synthetic/test data. Do not import real customer records, enable live charges, or represent production SMS as available.
@@ -9,6 +20,14 @@ Production-domain URL, environment, provider-callback, verification, testing, an
 - During the session, complete the cold owner invitation/onboarding path, accept one teacher invitation, sign into the payer portal by OTP, and rehearse statement delivery → payer rejection → corrected replacement → approval. Do not execute a charge.
 - The broader production security baseline, backup/restore rehearsal, automated security pipeline, provider failure matrices, monitoring, and independent review remain production-scale gates; this beta session does not close them.
 - Browser notification reads now request only the five rendered fields. The full-row Postgres Changes subscription was replaced with a 30-second minimal-field refresh plus refresh-on-tab-return so notification metadata and internal entity identifiers are not sent merely to render the notification control.
+
+## 2026-09-17 one-time lesson payment checkpoint
+
+- A payer-present, card-only Stripe Checkout flow is implemented locally for positively priced per-session lessons. It derives the exact amount, currency, school account, lesson, student, and billing account from immutable server data and requires the billing-management capability inside the Server Action.
+- Provider identity and amount are re-read from Stripe in the connected-account context before a signed webhook may establish payment success. A separately paid lesson remains visible on its eventual statement with a zero amount due.
+- Retry recovery reuses one durable request and Stripe idempotency key; webhook metadata can recover a provider-accepted session even if the initial local session-ID write failed. Hosted receipt URLs are not persisted.
+- **Not deployed or live-tested:** migrations `20260916100000` and `20260916101000`, the Checkout UI, real test-card completion, webhook replay/concurrency, wrong-account/wrong-amount rejection, expired-session recovery, draft allocation, refunds/disputes, and receipt retrieval. This feature must remain out of production until those checks pass.
+- **Automation started 2026-09-18:** pure provider-binding tests now reject wrong Checkout mode/status/request, amount/currency, PaymentIntent state, and Charge state. CI now includes a production dependency audit plus a clean local Supabase migration replay and database lint. GitHub Actions run `35359611104` passed both jobs after portable fixture guards and explicit anonymous payment-table privilege denial were added.
 
 ## Phase
 

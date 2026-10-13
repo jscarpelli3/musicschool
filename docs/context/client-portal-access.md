@@ -12,6 +12,8 @@ Use Supabase one-time email codes for the family portal:
 4. The browser keeps a renewable session, so subsequent visits normally open the portal directly without another code or password.
 5. A client can request another code at any time; no password creation or recovery flow is required.
 
+The first successful verification is also the payer's entry into Common Time as a whole. Schools direct families to the ordinary portal address rather than distributing card-entry links. If an authorized family still needs payment-method setup, the portal should prioritize that task immediately after authentication and launch Stripe only from within the verified session. Later visits reuse the same portal identity and occasionally repeat OTP verification as needed.
+
 Payment approval links remain separate. They are expiring, single-purpose URLs bound to one immutable billing-period snapshot. They may display that amount and accept or decline it without granting access to the broader portal.
 
 ## Access boundaries
@@ -26,4 +28,4 @@ Payment approval links remain separate. They are expiring, single-purpose URLs b
 
 ## Implemented foundation
 
-The portal now includes relationship-scoped lessons, private rotatable calendar subscriptions, automatic-payment permission and revocation, and itemized sent statement history. Ambiguous email mappings stop with a support message rather than selecting a family. Draft statements, internal notes, provider payloads, and payment controls remain unavailable.
+The portal now includes relationship-scoped lessons, private rotatable calendar subscriptions, automatic-payment permission and revocation, and itemized sent statement history. Ambiguous email mappings stop with a support message rather than selecting a family. Draft statements, internal notes, provider payloads, and payment controls remain unavailable. Portal-initiated payment-method setup and its first-task presentation are the next implementation step.
