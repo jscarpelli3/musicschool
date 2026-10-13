@@ -376,20 +376,27 @@ export function OwnerPlanner({
     : view === "week"
       ? `${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(weekDates(anchor)[0])} — ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(weekDates(anchor)[6])}`
       : new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(anchor);
+  const todayAnchor = fromKey(initialDate);
+  const showingCurrentPeriod = view === "day"
+    ? anchorKey === initialDate
+    : view === "week"
+      ? key(weekDates(anchor)[0]) === key(weekDates(todayAnchor)[0])
+      : anchor.getFullYear() === todayAnchor.getFullYear() && anchor.getMonth() === todayAnchor.getMonth();
+  const teacherDisplayValue = expandedWeek && teacherId === "all" ? "expanded" : teacherId;
 
   return (
     <section id="school-calendar" className="ui-card scroll-mt-6 overflow-hidden">
       {lessonCreationOptions ? <div className="px-5 pt-6 sm:px-7"><LessonOpeningFinder options={lessonCreationOptions} timeZone={timezone} onChoose={(opening) => { setCreatingLesson(false); setCreationSlot({ ...opening, minutes: timeMinutes(opening.time) }); }} /></div> : null}
       <div className="grid gap-4 px-5 py-6 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center sm:px-7">
         <div className="flex flex-wrap items-end gap-x-5 gap-y-3">
-          <SectionHeading kind="calendar" eyebrow={contextLabel} title={title} description={`Times shown in ${timezone.replaceAll("_", " ")}`} />
+          <SectionHeading kind="calendar" eyebrow={contextLabel} title={title} />
           <div className="flex items-center gap-2" role="group" aria-label="Planner view">
             {views.map((option) => (
               <button
                 key={option}
                 type="button"
                 aria-pressed={view === option}
-                onClick={() => setView(option)}
+                onClick={() => { setView(option); if (option !== "week") setExpandedWeek(false); }}
                 className={`rounded-control px-2.5 py-1.5 text-xs capitalize transition hover:-translate-y-px ${view === option ? "bg-surface text-ink" : "text-muted hover:bg-surface/60 hover:text-ink"}`}
               >{option}</button>
             ))}
@@ -405,34 +412,28 @@ export function OwnerPlanner({
             <span aria-hidden="true" className="mr-1.5 text-sm">+</span>{creatingLesson ? "Cancel adding" : "Add lesson"}
           </button>
         ) : null}
-        <div className="flex min-w-44 flex-col items-stretch gap-1.5 justify-self-start lg:justify-self-end">
-          {view === "week" && visibleTeachers.length > 1 ? (
-            <button
-              type="button"
-              aria-pressed={expandedWeek}
-              onClick={() => setExpandedWeek((current) => !current)}
-              className={`self-end rounded-control border px-2.5 py-1 text-[11px] transition hover:-translate-y-px ${expandedWeek ? "border-brand bg-brand text-canvas" : "border-line text-muted hover:border-brand hover:text-ink"}`}
-            >
-              {expandedWeek ? "Compact week" : "Expand all teachers"}
-            </button>
-          ) : null}
+        <div className="min-w-48 justify-self-start lg:justify-self-end">
           {showTeacherFilter ? <label className="flex items-center justify-between gap-2 border-b border-line pb-1.5 text-xs">
             <span className="text-muted">Teacher</span>
-            <select value={teacherId} onChange={(event) => setTeacherId(event.target.value)} className="min-w-0 bg-transparent text-right outline-none">
+            <select value={teacherDisplayValue} onChange={(event) => { const value = event.target.value; if (value === "expanded") { setTeacherId("all"); setExpandedWeek(true); setView("week"); } else { setTeacherId(value); setExpandedWeek(false); } }} className="min-w-0 bg-transparent text-right outline-none">
               {initialTeacherId === "" ? <option value="">Choose a teacher</option> : null}
               {allowAllTeachers ? <option value="all">All teachers</option> : null}
+              {allowAllTeachers ? <option value="expanded">Expanded all teachers</option> : null}
               {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}{teacher.isOwner ? " · you" : ""}</option>)}
             </select>
           </label> : null}
         </div>
       </div>
 
-      <div className="mx-5 flex items-center justify-between border-t border-line/60 py-3 sm:mx-7">
-        <button type="button" onClick={() => move(-1)} className="text-action text-sm text-muted hover:text-ink">← Previous</button>
-        <button type="button" onClick={() => setAnchorKey(initialDate)} className="text-sm text-brand hover:text-brand-hover">
+      <div className="mx-5 grid min-h-12 grid-cols-[1fr_auto_1fr] items-center border-t border-line/60 py-2 sm:mx-7">
+        <div>{!showingCurrentPeriod ? <button type="button" onClick={() => setAnchorKey(initialDate)} className="text-xs text-brand hover:text-brand-hover">
           {view === "day" ? "Go to today" : view === "week" ? "Go to this week" : "Go to this month"}
-        </button>
-        <button type="button" onClick={() => move(1)} className="text-action text-sm text-muted hover:text-ink">Next →</button>
+        </button> : null}</div>
+        <div className="flex items-center justify-center gap-4">
+          <button type="button" onClick={() => move(-1)} className="text-action text-xs text-muted hover:text-ink">← Previous</button>
+          <button type="button" onClick={() => move(1)} className="text-action text-xs text-muted hover:text-ink">Next →</button>
+        </div>
+        <p className="justify-self-end text-[10px] text-muted/70">{timezone.replaceAll("_", " ")}</p>
       </div>
 
       {rescheduleNotices.length ? (
