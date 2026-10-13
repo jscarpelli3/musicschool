@@ -67,6 +67,13 @@ Do not redo card setup or the first $2.00 charge. The next human action is one n
 - Lesson IDs are `894cab5c-973a-46fa-acf9-a820af61c07b` and `9f77d3a4-cedc-41d0-bb83-35abf29cc840`. Each has a $1.00 immutable price snapshot and October billing service date.
 - Do not create these lessons again. The owner’s next action is to use them to prepare the new October statement, then continue the approval/automatic-webhook acceptance sequence above.
 
+### Scheduling-only staging fixtures
+
+- On 2026-10-12, three realistic demo teachers were added for calendar/finder evaluation: Maya Chen, Elena Rodriguez, and Marcus Bennett. Each has two recurring availability blocks; existing teacher Jerry Seinfeld also received a Tuesday 9:00 AM–12:00 PM block.
+- Four scheduling-only students were added: Sophie Walsh, Liam Brooks, Ava Patel, and Noah Williams. They are explicitly marked synthetic and have **zero billing-account links**.
+- Thirteen one-time lessons were created through `create_single_lesson` across October 13–24 using the staging 30-minute offering and test place. These populate occupied/free time for filter evaluation without entering `TestFamily` billing.
+- Payment acceptance remains exclusively `JONATHAN ME` + `TestStudent1 TestStudent1Last` + the existing test payer. Do not use the scheduling-only fixtures for invoice or Stripe testing.
+
 ## Owner navigation checkpoint
 
 - The calendar interaction rule is now consistent for owners: create a lesson in place from the calendar currently being viewed. The overall calendar can schedule any student, a family calendar limits the picker to that family, and a student calendar fixes the student. Record-level creation opens over the current page rather than navigating away.
