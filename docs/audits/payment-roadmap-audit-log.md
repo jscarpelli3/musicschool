@@ -806,3 +806,4 @@ Recorded on 2026-10-14.
 - Fixed-monthly lesson occurrences cannot be manually added because their billable source is the monthly series. No arbitrary amount is accepted for a lesson; arbitrary owner-entered amounts remain clearly labeled manual charges or credits.
 - Invoice-queue navigation now opens and scrolls the exact selected invoice on the family page. Migration `20261014150000_add_outstanding_lesson_to_invoice.sql` applied to persistent staging; linked database lint retains only the two documented pre-existing unused-variable warnings.
 - Follow-up UI acceptance increased Draft/review and Paid status visibility with higher-contrast bordered pills. Paid invoice cards remain subdued without applying opacity to the badge itself.
+- The header invoice queue received matching status pills so actionable lock/send state remains visible in its denser layout.
