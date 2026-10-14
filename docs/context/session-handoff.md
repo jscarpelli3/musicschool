@@ -139,6 +139,12 @@ Do not redo card setup or either successful $2.00 charge. Automatic signed-webho
 - Selecting an invoice from the header queue now opens its details and scrolls that exact invoice into the center of the family page.
 - Draft/review and Paid labels are now prominent bordered status pills in dashboard invoice lists and family invoice cards. Paid cards remain visually subdued through their surface treatment, but no longer use parent opacity that also washed out the status label.
 - The header invoice queue now uses the same high-contrast badge treatment for `Not locked`, `Locked · approval not sent`, Paid, and later lifecycle states.
+- Browser acceptance: the owner removed one November TestFamily lesson from the first November draft, locked the retained invoice, prepared another November invoice that contained only the still-unpaid deferred lesson, and successfully added that lesson to the later invoice. Deferred-source recovery and exclusion of the already-locked source pass. The later invoice still needs to be locked, after which duplicate-source refusal should be confirmed before approvals are sent.
+
+### Approval-by-email-reply follow-up
+
+- Add an optional one-invoice approval path where the payer replies `APPROVE` to the approval email. It must remain exact-invoice authority, not a standing mandate: unique opaque reply address, sender match to payer email, original Message-ID/thread correlation, signed/idempotent inbound webhook processing, unambiguous command parsing, expiry/supersession/state checks, durable evidence, and a confirmation response.
+- Any ambiguous reply, different sender, forward, automated response, expired/replaced request, changed statement, or non-`APPROVE` content must fail closed. A `REVIEW` reply may route the payer to the existing review experience. Consent language needs review before this becomes charging authority.
 
 - Flexible invoice batching is implemented and migrated on replacement staging but still needs browser acceptance. Preparing gathers unpaid eligible sources; removing a source records a draft-specific deferral rather than a waiver/credit; locked invoices reserve sources against duplicate billing; unlocking/review or voiding releases reservations; and later invoices may cover deferred lessons from the same service month.
 - Integrated payments remain optional. The plan now requires a durable, reversible school opt-out that suppresses prompts without deleting provider evidence and allows later reconnection.

@@ -807,3 +807,9 @@ Recorded on 2026-10-14.
 - Invoice-queue navigation now opens and scrolls the exact selected invoice on the family page. Migration `20261014150000_add_outstanding_lesson_to_invoice.sql` applied to persistent staging; linked database lint retains only the two documented pre-existing unused-variable warnings.
 - Follow-up UI acceptance increased Draft/review and Paid status visibility with higher-contrast bordered pills. Paid invoice cards remain subdued without applying opacity to the badge itself.
 - The header invoice queue received matching status pills so actionable lock/send state remains visible in its denser layout.
+- Browser acceptance then removed one November TestFamily lesson from an initial draft, locked the retained invoice, prepared a later November invoice containing only that deferred unpaid lesson, and added it successfully. This proves the deferral was neither waiver nor credit and that the locked source was not duplicated into the later draft. Locking the later invoice and proving subsequent source unavailability remain next.
+
+### Backlog — exact approval by email reply
+
+- Investigate payer approval by replying `APPROVE` to the exact invoice email as a lower-friction alternative to opening the approval page. This is not auto-charge and must not create reusable authority.
+- Required controls: unique opaque reply routing per request, payer-email sender match, original Message-ID/thread binding, verified and idempotent inbound-provider webhook, explicit command parsing, request expiry/supersession and immutable statement checks, replay protection, durable reply evidence, and confirmation delivery. Ambiguous/forwarded/automated/different-sender replies fail closed; consent language requires review.
