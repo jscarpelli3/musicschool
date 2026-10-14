@@ -8,12 +8,13 @@ import type { SchoolInvoice } from "@/lib/billing/school-invoices";
 import { MdApproval, MdExpandMore, MdReceiptLong, MdSearch } from "react-icons/md";
 import { HeaderLessonFinder } from "@/components/scheduling/header-lesson-finder";
 import type { LessonCreationOptions } from "@/components/scheduling/lesson-creation-dialog";
+import { PrepareInvoiceLauncher, type InvoicePayerChoice } from "@/components/billing/prepare-invoice-launcher";
 
 type RecentApproval = { id: string; kind: "schedule_proposal" | "lesson_change_request"; teacherId: string; studentId: string; teacher: string; student: string; detail: string };
 
 type DirectoryItem = { id: string; label: string };
 
-export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions, studentIdsByFamily = {}, capabilities, approvalCount = 0, recentApprovals = [], invoiceCount = 0, recentInvoices = [], students = [], families = [], staff = [] }: { schoolId: string; timeZone: string; lessonCreationOptions?: LessonCreationOptions; studentIdsByFamily?: Record<string, string[]>; capabilities: string[]; approvalCount?: number; recentApprovals?: RecentApproval[]; invoiceCount?: number; recentInvoices?: SchoolInvoice[]; students?: DirectoryItem[]; families?: DirectoryItem[]; staff?: DirectoryItem[] }) {
+export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions, studentIdsByFamily = {}, invoicePayers = [], capabilities, approvalCount = 0, recentApprovals = [], invoiceCount = 0, recentInvoices = [], students = [], families = [], staff = [] }: { schoolId: string; timeZone: string; lessonCreationOptions?: LessonCreationOptions; studentIdsByFamily?: Record<string, string[]>; invoicePayers?: InvoicePayerChoice[]; capabilities: string[]; approvalCount?: number; recentApprovals?: RecentApproval[]; invoiceCount?: number; recentInvoices?: SchoolInvoice[]; students?: DirectoryItem[]; families?: DirectoryItem[]; staff?: DirectoryItem[] }) {
   const pathname = usePathname();
   const [approvalsOpen, setApprovalsOpen] = useState(false);
   const [invoicesOpen, setInvoicesOpen] = useState(false);
@@ -92,6 +93,7 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
         </div>;
       })}
       {can("school.lessons.manage") && lessonCreationOptions ? <HeaderLessonFinder schoolId={schoolId} timeZone={timeZone} options={lessonCreationOptions} studentIdsByFamily={studentIdsByFamily} /> : null}
+      {can("school.billing.manage") ? <PrepareInvoiceLauncher schoolId={schoolId} payers={invoicePayers} variant="nav" /> : null}
       <div className="ml-auto flex flex-wrap items-start justify-end gap-3 sm:gap-4">
         {can("school.billing.manage") ? <div ref={invoicesRef} className="relative z-30 flex flex-col items-end">
           <button type="button" aria-expanded={invoicesOpen} onClick={() => setInvoicesOpen((value) => { if (!value) window.dispatchEvent(new Event("common-time:open-invoices")); return !value; })} className="inline-flex items-center rounded-control border border-brand/40 bg-brand/10 px-3 py-1.5 text-sm text-brand transition hover:border-brand hover:bg-brand/15"><MdReceiptLong aria-hidden="true" className="mr-1.5 text-base" />Invoices{invoiceCount ? <span className="ml-2 inline-grid min-w-5 place-items-center rounded-full bg-brand px-1 text-xs text-canvas" aria-label={`${invoiceCount} open invoices`}>{invoiceCount}</span> : null}</button>

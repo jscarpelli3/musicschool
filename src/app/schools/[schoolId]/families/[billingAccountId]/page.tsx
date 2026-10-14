@@ -39,10 +39,10 @@ function name(person: { first_name: string; last_name: string; preferred_name: s
 
 export default async function FamilyDetailPage({ params, searchParams }: {
   params: Promise<{ schoolId: string; billingAccountId: string }>;
-  searchParams: Promise<{ card?: string; billing?: string; period?: string }>;
+  searchParams: Promise<{ card?: string; billing?: string; period?: string; prepareInvoice?: string }>;
 }) {
   const { schoolId, billingAccountId } = await params;
-  const { card, billing, period: selectedPeriodId } = await searchParams;
+  const { card, billing, period: selectedPeriodId, prepareInvoice } = await searchParams;
   const stripeLivemode = getStripeMode() === "live";
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
@@ -186,7 +186,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
         </div>
       </DetailSection>
 
-      {canManagePayments ? <section className="mt-6 flex flex-col items-start gap-4 rounded-card bg-surface-raised/55 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8"><div><p className="text-xs uppercase tracking-[0.14em] text-brand">Billing</p><h2 className="mt-2 font-display text-3xl">Prepare an invoice</h2><p className="mt-2 max-w-xl text-sm leading-6 text-muted">Choose a service month in a focused review flow. Nothing is sent or charged until you lock and request approval.</p></div><BillingDraftForm schoolId={schoolId} billingAccountId={billingAccountId} defaultMonth={currentMonth} /></section> : null}
+      {canManagePayments ? <section className="mt-6 flex flex-col items-start gap-4 rounded-card bg-surface-raised/55 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8"><div><p className="text-xs uppercase tracking-[0.14em] text-brand">Billing</p><h2 className="mt-2 font-display text-3xl">Prepare an invoice</h2><p className="mt-2 max-w-xl text-sm leading-6 text-muted">Choose a service month in a focused review flow. Nothing is sent or charged until you lock and request approval.</p></div><BillingDraftForm schoolId={schoolId} billingAccountId={billingAccountId} defaultMonth={currentMonth} initialOpen={prepareInvoice === "1"} /></section> : null}
 
       <div id="billing-history" className="scroll-mt-6"><DetailSection title="Invoices" description="Draft, active, and completed invoices. A service month may have more than one invoice when lessons are intentionally billed later.">
         <div className="space-y-7">

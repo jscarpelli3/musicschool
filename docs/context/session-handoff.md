@@ -111,6 +111,15 @@ Do not redo card setup or either successful $2.00 charge. Automatic signed-webho
 
 ## Decisions and open work
 
+### Empty-invoice refusal and global invoice entry — 2026-10-14
+
+- During flexible-batching acceptance, the owner intentionally prepared November 2026 before creating any lessons. The old draft RPC persisted an empty TestFamily invoice, exposing a real invalid-state bug.
+- Staging draft `838e19e5-7aae-4d3b-9994-b8b7e075235d` was identified by exact school, billing account, month, draft status, zero amount, and absence of lines, then removed by a narrowly guarded migration. Read-back confirms it no longer exists.
+- Invoice preparation now raises `no_unbilled_items_for_month` after draft population finds no lines. Because the exception occurs in the same database transaction, the new period and all population side effects roll back; the owner sees that there are no unpaid items and no invoice is created.
+- The full service-month input opens its native month chooser when clicked, rather than requiring a click on the small calendar icon.
+- The dashboard now has a fourth large `Prepare an invoice` action. The shared owner header also has a compact `Prepare invoice` action next to `Find an opening`. Both open a searchable payer chooser that matches family/payer names and connected student names, then opens the existing month/review flow on the correct payer account.
+- Staging migration, typecheck, lint, production build, and six browser smoke tests pass. The next human action remains: create fresh TestFamily lessons, prepare the intended invoice, remove/defer one line, and finish the flexible-batching acceptance before repeating the payer cancellation-request flow.
+
 - Flexible invoice batching is implemented and migrated on replacement staging but still needs browser acceptance. Preparing gathers unpaid eligible sources; removing a source records a draft-specific deferral rather than a waiver/credit; locked invoices reserve sources against duplicate billing; unlocking/review or voiding releases reservations; and later invoices may cover deferred lessons from the same service month.
 - Integrated payments remain optional. The plan now requires a durable, reversible school opt-out that suppresses prompts without deleting provider evidence and allows later reconnection.
 - Provider review, remediable action, rejection, and voluntary opt-out must remain separate states. Payment failure must never block unrelated school operations.

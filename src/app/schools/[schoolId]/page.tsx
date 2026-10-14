@@ -113,6 +113,11 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
   const products = new Map((productRows ?? []).map((product) => [product.id, product]));
   const placeDetails = Object.fromEntries((placeRows ?? []).map((place) => [place.id, { name: place.name, details: place.details }]));
   const billingAccounts = new Map((billingAccountRows ?? []).map((account) => [account.id, account]));
+  const invoicePayers = (billingAccountRows ?? []).map((account) => ({
+    id: account.id,
+    name: account.name,
+    students: (billingLinkRows ?? []).filter((link) => link.billing_account_id === account.id).flatMap((link) => studentNames[link.student_id] ? [studentNames[link.student_id]] : []).sort((a, b) => a.localeCompare(b)),
+  })).sort((a, b) => a.name.localeCompare(b.name));
   const studentDetails = Object.fromEntries((studentRows ?? []).flatMap(({ person_id }) => {
     const student = people.get(person_id);
     if (!student) return [];
@@ -315,6 +320,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
           const person = people.get(student.person_id);
           return person ? [{ id: student.person_id, label: `${person.preferred_name || person.first_name} ${person.last_name}` }] : [];
         })}
+        invoicePayers={invoicePayers}
       /> : null}
       {!invoiceSummary.attentionCount ? invoiceSection : null}
       {view === "dashboard" ? <StudentRosterTable rows={studentRowsForTable} monthLabel={monthLabel} initialView={rosterPreference?.settings as Partial<RosterViewSettings> | null} saveView={saveStudentRosterView.bind(null, schoolId)} dashboard /> : null}

@@ -7,13 +7,14 @@ import { prepareFamilyBillingDraft, type BillingDraftState } from "./actions";
 
 const initialState: BillingDraftState = { ok: false, message: "", periodId: null };
 
-export function BillingDraftForm({ schoolId, billingAccountId, defaultMonth }: {
+export function BillingDraftForm({ schoolId, billingAccountId, defaultMonth, initialOpen = false }: {
   schoolId: string;
   billingAccountId: string;
   defaultMonth: string;
+  initialOpen?: boolean;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
   const [state, action, pending] = useActionState(prepareFamilyBillingDraft.bind(null, schoolId, billingAccountId), initialState);
 
   useEffect(() => {
@@ -31,7 +32,7 @@ export function BillingDraftForm({ schoolId, billingAccountId, defaultMonth }: {
       <form action={action} className="grid gap-6">
         <label>
           <span className="block text-xs text-muted">Service month</span>
-          <input required type="month" name="month" defaultValue={defaultMonth} className="mt-2 w-full rounded-control border border-line bg-canvas px-3 py-3 outline-none transition focus:border-brand" />
+          <input required type="month" name="month" defaultValue={defaultMonth} onClick={(event) => event.currentTarget.showPicker?.()} className="mt-2 w-full cursor-pointer rounded-control border border-line bg-canvas px-3 py-3 outline-none transition focus:border-brand" />
         </label>
         <p className="text-xs leading-5 text-muted">Preparing does not send or charge anything. You will review the included lessons and choose what to leave for later.</p>
         {state.message && !state.ok ? <p role="alert" className="border-l-2 border-danger pl-3 text-sm text-danger">{state.message}</p> : null}

@@ -763,3 +763,14 @@ Recorded on 2026-10-13.
 - Staging migrations `20261013170000` through `20261013172000` applied successfully. Verification asserts the old uniqueness constraint is gone, one editable draft is enforced, allocation/source-removal guards exist, anonymous/browser mutation is denied, and service diagnostics are read-only. Database lint reports only the two pre-existing unused-variable warnings.
 - Existing paid replacement invoice `c8d584c2-f181-429d-9054-15018e4e4d73` remained paid for 200 cents and backfilled exactly two lesson-source reservations. TypeScript, ESLint, `git diff --check`, and the Next.js 16.3 production build pass.
 - Browser acceptance remains required for modal behavior, finder sizing, deferral followed by a same-month later invoice, and duplicate protection. The next functional regression track must also repeat the payer lesson-cancellation request flow end to end before payment decline testing resumes.
+
+### Empty invoice guard — staging correction
+
+Recorded on 2026-10-14.
+
+- Acceptance deliberately attempted to prepare TestFamily November 2026 before any lessons existed. The database created zero-dollar draft period `838e19e5-7aae-4d3b-9994-b8b7e075235d` with no lines, proving the preparation contract did not reject an empty result.
+- Migration `20261014130000_refuse_empty_invoice_drafts.sql` wraps draft population in the same transaction and raises `no_unbilled_items_for_month` when no billing lines exist. The exception rolls back period creation and other population writes. The application maps that contract to a clear no-invoice-created message.
+- The migration deleted only the reported synthetic staging artifact after matching its exact ID, replacement-staging school and account IDs, November boundaries, draft status, zero amount, and absence of lines. Service-role read-back returned no matching period afterward. Production had no matching identity and was untouched.
+- Invoice entry now supports payer/family and connected-student search from a fourth dashboard action and a compact shared-header action. Choosing a result lands on the correct payer account with its invoice-preparation modal open. The month field itself opens the month chooser across its full clickable area.
+- TypeScript, ESLint, the Next.js production build, six Playwright smoke tests, migration dry-run/application, and linked staging database lint pass. Database lint retains only the two documented pre-existing unused-variable warnings.
+- Next acceptance: create new TestFamily lessons, prepare the non-empty invoice, defer one lesson, and prove it appears alone in a later same-month invoice without duplicate allocation. Then repeat payer cancellation-request acceptance end to end.

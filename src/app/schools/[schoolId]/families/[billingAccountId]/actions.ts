@@ -95,6 +95,7 @@ export async function prepareFamilyBillingDraft(schoolId: string, billingAccount
       || detail.includes("missing_effective_cancellation_policy")
       ? "A lesson needs an accounting decision before this invoice can be prepared."
       : detail.includes("after_service_period_is_not_complete") ? "That after-service billing month is not complete yet."
+      : detail.includes("no_unbilled_items_for_month") ? "There are no unpaid lessons or other items to invoice for that month. No invoice was created."
       : "The invoice could not be prepared. Nothing was changed.";
     return { ok: false, message, periodId: null };
   }

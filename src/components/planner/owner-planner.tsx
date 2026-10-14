@@ -18,6 +18,7 @@ import { LessonOpeningFinder } from "@/components/scheduling/lesson-opening-find
 import { AppSelect } from "@/components/ui/app-select";
 import { AddFamilyDialog } from "@/components/families/add-family-dialog";
 import type { AddFamilyState } from "@/app/schools/[schoolId]/families/actions";
+import { PrepareInvoiceLauncher, type InvoicePayerChoice } from "@/components/billing/prepare-invoice-launcher";
 import "./owner-planner.css";
 
 type Teacher = { id: string; name: string; isOwner: boolean };
@@ -114,6 +115,7 @@ type Props = {
   addFamilyAction?: (state: AddFamilyState, formData: FormData) => Promise<AddFamilyState>;
   existingPayers?: Array<{ id: string; label: string; firstName: string; lastName: string; email: string }>;
   unconnectedStudents?: Array<{ id: string; label: string }>;
+  invoicePayers?: InvoicePayerChoice[];
 };
 
 type LessonWithParts = Lesson & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> };
@@ -220,6 +222,7 @@ export function OwnerPlanner({
   addFamilyAction,
   existingPayers = [],
   unconnectedStudents = [],
+  invoicePayers = [],
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<View>("week");
@@ -417,10 +420,11 @@ export function OwnerPlanner({
 
   return (
     <>
-    {lessonCreationOptions && showLessonFinder ? <div className={`mb-10 items-stretch gap-4 ${addFamilyAction ? "grid md:grid-cols-3" : "flex justify-center"}`}>
+    {lessonCreationOptions && showLessonFinder ? <div className={`mb-10 items-stretch gap-4 ${addFamilyAction ? "grid md:grid-cols-4" : "flex justify-center"}`}>
       <div className={addFamilyAction ? "" : finderSize === "detail" ? "w-[min(22rem,100%)]" : "w-[min(34rem,100%)]"}><LessonOpeningFinder size={finderSize} options={lessonCreationOptions} timeZone={timezone} onChoose={(opening) => { setCreatingLesson(false); setCreationSlot({ ...opening, minutes: timeMinutes(opening.time) }); }} onManualAdd={() => { setCreatingLesson(false); setCreationSlot({ dateKey: lessonCreationOptions.today, time: "", teacherId: "", minutes: 0 }); }} /></div>
       {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add student" largeKind="student" existingPayers={existingPayers} unconnectedStudents={unconnectedStudents} /> : null}
       {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add payer" largeKind="payer" existingPayers={existingPayers} unconnectedStudents={unconnectedStudents} /> : null}
+      {addFamilyAction ? <PrepareInvoiceLauncher schoolId={schoolId} payers={invoicePayers} variant="dashboard" /> : null}
     </div> : null}
     <section id="school-calendar" className="ui-card scroll-mt-6 overflow-hidden">
       <div className="planner-calendar-chrome pt-2">
