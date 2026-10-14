@@ -794,6 +794,7 @@ Recorded on 2026-10-14.
 - The shared invoice dropdown now loads the 20 most recently updated invoices and identifies the actionable boundary: draft/review invoices need locking; locked invoices have not yet been sent for payer approval. Family, month, line count, total, and current status remain visible before action.
 - Stage-specific selection supports `select all needing lock` and `select all ready to send`. Bulk lock and bulk send are deliberately separate hold confirmations. Each selected invoice still passes through the existing capability and database transition checks; each email still passes through the existing recipient, approval-token, delivery-policy, provider-idempotency, and reconciliation flow.
 - This checkpoint changes orchestration and visibility only. It does not auto-lock invoices, auto-email payers, combine distinct approval requests, or relax exact-amount approval requirements.
+- A follow-up removed the family detail form's legacy URL replacement that opened/scrolled a background invoice while leaving its modal visible. Prepared invoices are now reviewed, adjusted, refreshed, and locked in the modal itself; the underlying page does not navigate or scroll. The global launcher gained the same embedded adjustment surface.
 
 ### Editable invoice composition
 

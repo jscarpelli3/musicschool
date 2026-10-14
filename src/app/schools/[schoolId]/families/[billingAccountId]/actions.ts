@@ -34,10 +34,35 @@ export type PreparedInvoice = {
   currency: string;
   status: string;
   lines: Array<{ id: string; description: string; serviceDate: string | null; amountCents: number }>;
+  outstandingLessons: Array<{ lessonEventId: string; studentName: string; offeringName: string; serviceDate: string; startsAt: string; amountCents: number; currency: string }>;
 };
 export type BillingDraftState = { ok: boolean; message: string; periodId: string | null; invoice: PreparedInvoice | null };
 export type BillingLineDeferState = { ok: boolean; message: string };
 export type BillingLessonAddState = { ok: boolean; message: string };
+
+async function readPreparedInvoice(schoolId: string, billingAccountId: string, periodId: string): Promise<PreparedInvoice | null> {
+  const supabase = await createClient();
+  const [{ data: period }, { data: account }, { data: lines }, { data: outstandingLessons }] = await Promise.all([
+    supabase.from("billing_periods").select("id,label,amount_due_cents,currency,status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", periodId).single(),
+    supabase.from("billing_accounts").select("name").eq("school_id", schoolId).eq("id", billingAccountId).single(),
+    supabase.from("billing_line_items").select("id,description,service_date,amount_cents").eq("school_id", schoolId).eq("billing_period_id", periodId).order("service_date", { ascending: true, nullsFirst: false }).order("created_at"),
+    supabase.rpc("get_outstanding_lessons_for_billing_account", { p_school_id: schoolId, p_billing_account_id: billingAccountId }),
+  ]);
+  if (!period || !account || !lines) return null;
+  return {
+    id: period.id, billingAccountId, familyName: account.name, label: period.label, amountDueCents: period.amount_due_cents,
+    currency: period.currency, status: period.status,
+    lines: lines.map((line) => ({ id: line.id, description: line.description, serviceDate: line.service_date, amountCents: line.amount_cents ?? 0 })),
+    outstandingLessons: (outstandingLessons ?? []).map((lesson) => ({ lessonEventId: lesson.lesson_event_id, studentName: lesson.student_name, offeringName: lesson.offering_name, serviceDate: lesson.service_date, startsAt: lesson.starts_at, amountCents: lesson.amount_cents, currency: lesson.currency })),
+  };
+}
+
+export async function loadPreparedInvoice(schoolId: string, billingAccountId: string, periodId: string) {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub || !await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) return null;
+  return readPreparedInvoice(schoolId, billingAccountId, periodId);
+}
 
 export async function collectFamilyInvoice(schoolId: string, billingAccountId: string, billingPeriodId: string) {
   const path = `/schools/${schoolId}/families/${billingAccountId}`;
@@ -111,19 +136,11 @@ export async function prepareFamilyBillingDraft(schoolId: string, billingAccount
     return { ok: false, message, periodId: null, invoice: null };
   }
 
-  const [{ data: period }, { data: account }, { data: lines }] = await Promise.all([
-    supabase.from("billing_periods").select("id,label,amount_due_cents,currency,status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", periodId).single(),
-    supabase.from("billing_accounts").select("name").eq("school_id", schoolId).eq("id", billingAccountId).single(),
-    supabase.from("billing_line_items").select("id,description,service_date,amount_cents").eq("school_id", schoolId).eq("billing_period_id", periodId).order("service_date", { ascending: true, nullsFirst: false }).order("created_at"),
-  ]);
-  if (!period || !account || !lines) return { ok: false, message: "The invoice was prepared, but its review details could not be loaded. Open the family account before continuing.", periodId, invoice: null };
+  const invoice = await readPreparedInvoice(schoolId, billingAccountId, periodId);
+  if (!invoice) return { ok: false, message: "The invoice was prepared, but its review details could not be loaded. Open the family account before continuing.", periodId, invoice: null };
 
   revalidatePath(path);
-  return { ok: true, message: "Invoice prepared. Review each included item before locking it.", periodId, invoice: {
-    id: period.id, billingAccountId, familyName: account.name, label: period.label, amountDueCents: period.amount_due_cents,
-    currency: period.currency, status: period.status,
-    lines: lines.map((line) => ({ id: line.id, description: line.description, serviceDate: line.service_date, amountCents: line.amount_cents ?? 0 })),
-  } };
+  return { ok: true, message: "Invoice prepared. Review each included item before locking it.", periodId, invoice };
 }
 
 export async function removeLineFromInvoice(schoolId: string, billingAccountId: string, billingPeriodId: string, lineItemId: string, _state: BillingLineDeferState, formData: FormData): Promise<BillingLineDeferState> {

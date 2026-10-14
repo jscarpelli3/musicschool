@@ -9,8 +9,8 @@ const initialState: BillingAdjustmentState = { ok: false, message: "" };
 const initialLessonState: BillingLessonAddState = { ok: false, message: "" };
 export type OutstandingLessonChoice = { lessonEventId: string; studentName: string; offeringName: string; serviceDate: string; startsAt: string; amountCents: number; currency: string };
 
-export function BillingAdjustmentForm({ schoolId, billingAccountId, billingPeriodId, outstandingLessons }: {
-  schoolId: string; billingAccountId: string; billingPeriodId: string; outstandingLessons: OutstandingLessonChoice[];
+export function BillingAdjustmentForm({ schoolId, billingAccountId, billingPeriodId, outstandingLessons, embedded = false, onChanged }: {
+  schoolId: string; billingAccountId: string; billingPeriodId: string; outstandingLessons: OutstandingLessonChoice[]; embedded?: boolean; onChanged?: () => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [open, setOpen] = useState(false);
@@ -19,7 +19,8 @@ export function BillingAdjustmentForm({ schoolId, billingAccountId, billingPerio
     const result = await addBillingAdjustment(schoolId, billingAccountId, billingPeriodId, previous, formData);
     if (result.ok) {
       formRef.current?.reset();
-      setOpen(false);
+      if (!embedded) setOpen(false);
+      onChanged?.();
       window.dispatchEvent(new CustomEvent("common-time:toast", { detail: { title: "Adjustment added", message: result.message } }));
     }
     return result;
@@ -27,14 +28,13 @@ export function BillingAdjustmentForm({ schoolId, billingAccountId, billingPerio
   const [lessonState, lessonAction, lessonPending] = useActionState(async (previous: BillingLessonAddState, formData: FormData) => {
     const result = await addOutstandingLessonToInvoice(schoolId, billingAccountId, billingPeriodId, previous, formData);
     if (result.ok) {
-      setOpen(false);
+      if (!embedded) setOpen(false);
+      onChanged?.();
       window.dispatchEvent(new CustomEvent("common-time:toast", { detail: { title: "Lesson added", message: result.message } }));
     }
     return result;
   }, initialLessonState);
-  return (
-    <div className="mt-5 border-t border-line pt-5">
-      <FocusedModal triggerLabel="Adjust this invoice" eyebrow="Invoice composition" title="Adjust this invoice." description="Add a credit, a manual charge, or an eligible unpaid lesson before locking." open={open} onOpenChange={setOpen}>
+  const content = <>
       <div className="mb-6 grid grid-cols-3 rounded-control bg-canvas/70 p-1" role="group" aria-label="Adjustment type">
         {([['charge','Add charge'],['credit','Add credit'],['lesson','Add lesson']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => setMode(value)} className={`rounded-control px-3 py-2 text-sm ${mode === value ? "bg-surface-raised text-ink shadow-sm" : "text-muted"}`}>{label}</button>)}
       </div>
@@ -50,9 +50,9 @@ export function BillingAdjustmentForm({ schoolId, billingAccountId, billingPerio
         <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-4"><p className="max-w-lg text-xs leading-5 text-muted">Adjustments become ordinary ledger lines and remain visible to the payer. Locking freezes them with the lesson charges.</p><button disabled={pending} className="border border-brand px-5 py-3 text-sm text-brand transition hover:bg-brand hover:text-canvas disabled:opacity-50">{pending ? "Saving…" : "Add adjustment"}</button></div>
         {state.message ? <p role="status" className={`sm:col-span-2 text-sm ${state.ok ? "text-muted" : "text-danger"}`}>{state.message}</p> : null}
       </form>}
-      </FocusedModal>
-    </div>
-  );
+    </>;
+  if (embedded) return <div className="mt-5 border-t border-line pt-5">{content}</div>;
+  return <div className="mt-5 border-t border-line pt-5"><FocusedModal triggerLabel="Adjust this invoice" eyebrow="Invoice composition" title="Adjust this invoice." description="Add a credit, a manual charge, or an eligible unpaid lesson before locking." open={open} onOpenChange={setOpen}>{content}</FocusedModal></div>;
 }
 
 export function BillingAdjustmentRemove({ schoolId, billingAccountId, billingPeriodId, adjustmentId }: {

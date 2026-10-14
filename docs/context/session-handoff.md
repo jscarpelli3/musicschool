@@ -129,6 +129,7 @@ Do not redo card setup or either successful $2.00 charge. Automatic signed-webho
 - The header Invoices menu is now a 20-most-recent invoice command queue. Draft/review invoices are explicitly labeled `Not locked`; locked invoices are labeled `Locked · approval not sent`. Each row shows family, month, line count, total, and status.
 - Queue controls can select all invoices needing lock or all invoices ready to send. Bulk locking and bulk email delivery are separate hold-to-confirm operations; preparation never silently locks or contacts payers. Per-invoice navigation and individual approval sending remain available.
 - This interface reuses the existing server-enforced lock and approval-email actions. Bulk operations process each invoice through those same authorization, state, amount, recipient, delivery, and idempotency boundaries rather than adding a bypass.
+- Follow-up correction removed the legacy family-page `?period=` navigation after preparation. Both family-page and global launcher flows now keep the page stationary and render the prepared invoice inside the modal. The modal shows its live lines/total, embeds charge/credit/outstanding-lesson adjustments, refreshes the invoice after an adjustment, supports hold-to-lock, and can return to preparation without closing.
 
 ### Modular editable invoices — 2026-10-14
 
