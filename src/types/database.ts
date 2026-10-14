@@ -5112,6 +5112,14 @@ export type Database = {
         }
         Returns: string
       }
+      add_outstanding_lesson_to_billing_draft: {
+        Args: {
+          p_billing_period_id: string
+          p_lesson_event_id: string
+          p_school_id: string
+        }
+        Returns: string
+      }
       apply_automatic_family_timely_reschedule: {
         Args: { p_lesson_event_id: string }
         Returns: Json
@@ -5680,6 +5688,18 @@ export type Database = {
           p_school_id: string
         }
         Returns: string
+      }
+      get_outstanding_lessons_for_billing_account: {
+        Args: { p_billing_account_id: string; p_school_id: string }
+        Returns: {
+          amount_cents: number
+          currency: string
+          lesson_event_id: string
+          offering_name: string
+          service_date: string
+          starts_at: string
+          student_name: string
+        }[]
       }
       prepare_teacher_invitation: {
         Args: {

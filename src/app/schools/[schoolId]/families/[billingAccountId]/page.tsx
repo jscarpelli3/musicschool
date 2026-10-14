@@ -19,6 +19,7 @@ import { BillingContactEmail } from "./billing-contact-email";
 import { BillingContactPhone } from "./billing-contact-phone";
 import { BillingPeriodLock } from "./billing-period-lock";
 import { BillingPeriodUnlock } from "./billing-period-unlock";
+import { ScrollToInvoice } from "./scroll-to-invoice";
 import { BillingPeriodRevise } from "./billing-period-revise";
 import { PaymentMethodRemove } from "./payment-method-remove";
 import { PaymentMethodDefault } from "./payment-method-default";
@@ -58,6 +59,9 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   if (failedInitial?.error) throw new Error(`Family detail could not load: ${failedInitial.error.message}`);
   const [{ data: school }, { data: membership }, { data: account }] = initial;
   if (!school || !membership || !account) notFound();
+  const capabilities = await loadMySchoolCapabilities(schoolId);
+  const canManagePayments = capabilities.has("school.billing.manage");
+  const canManageLessons = capabilities.has("school.lessons.manage");
   const archiveCutoff = calendarMonthCutoff(school.timezone, 6);
   const { rangeStart: calendarStart, rangeEnd: calendarEnd, queryStart, queryEnd } = schoolCalendarWindow(school.timezone);
 
@@ -77,10 +81,11 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     supabase.from("teachers").select("person_id,outside_availability_policy").eq("school_id", schoolId),
     supabase.from("teacher_availability_rules").select("id,teacher_id,weekday,start_time,end_time,effective_from,effective_until").eq("school_id", schoolId).order("weekday").order("start_time"),
     supabase.from("lesson_events").select("teacher_id,student_id,starts_at,ends_at,status").eq("school_id", schoolId).gte("starts_at", queryStart).lt("starts_at", queryEnd),
+    canManagePayments ? supabase.rpc("get_outstanding_lessons_for_billing_account", { p_school_id: schoolId, p_billing_account_id: billingAccountId }) : Promise.resolve({ data: [], error: null }),
   ]);
   const failedRelated = related.find((result) => result.error);
   if (failedRelated?.error) throw new Error(`Family detail could not load: ${failedRelated.error.message}`);
-  const [peopleResult, studentsResult, periodsResult, archivedPeriodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult, productsResult, placesResult, teachersResult, availabilityResult, busyLessonsResult] = related;
+  const [peopleResult, studentsResult, periodsResult, archivedPeriodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult, productsResult, placesResult, teachersResult, availabilityResult, busyLessonsResult, outstandingLessonsResult] = related;
   const periodIds = [...(periodsResult.data ?? []), ...(archivedPeriodsResult.data ?? [])].map((period) => period.id);
   const { data: lineItems, error: lineItemsError } = periodIds.length
     ? await supabase.from("billing_line_items")
@@ -122,9 +127,6 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   for (const attempt of attemptsResult.data ?? []) if (!latestAttemptByPeriod.has(attempt.billing_period_id)) latestAttemptByPeriod.set(attempt.billing_period_id, attempt);
   const hasActivePaymentMethod = (methodsResult.data ?? []).some((method) => method.status === "active");
   const activePaymentMethodCount = (methodsResult.data ?? []).filter((method) => method.status === "active").length;
-  const capabilities = await loadMySchoolCapabilities(schoolId);
-  const canManagePayments = capabilities.has("school.billing.manage");
-  const canManageLessons = capabilities.has("school.lessons.manage");
   const readinessResults = canManagePayments ? await Promise.all(periodIds.map((billingPeriodId) =>
     supabase.rpc("get_billing_collection_readiness", { p_school_id: schoolId, p_billing_period_id: billingPeriodId }).maybeSingle()
   )) : [];
@@ -189,6 +191,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
       {canManagePayments ? <section className="mt-6 flex flex-col items-start gap-4 rounded-card bg-surface-raised/55 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8"><div><p className="text-xs uppercase tracking-[0.14em] text-brand">Billing</p><h2 className="mt-2 font-display text-3xl">Prepare an invoice</h2><p className="mt-2 max-w-xl text-sm leading-6 text-muted">Choose a service month in a focused review flow. Nothing is sent or charged until you lock and request approval.</p></div><BillingDraftForm schoolId={schoolId} billingAccountId={billingAccountId} defaultMonth={currentMonth} initialOpen={prepareInvoice === "1"} /></section> : null}
 
       <div id="billing-history" className="scroll-mt-6"><DetailSection title="Invoices" description="Draft, active, and completed invoices. A service month may have more than one invoice when lessons are intentionally billed later.">
+        <ScrollToInvoice invoiceId={selectedPeriodId} />
         <div className="space-y-7">
           {billing && billingMessages[billing] ? <p role="status" className={`border-l-2 pl-4 text-sm leading-6 ${billing === "prepared" ? "border-brand text-ink" : "border-danger text-danger"}`}>{billingMessages[billing]}</p> : null}
           <div className="space-y-4">
@@ -196,7 +199,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
             const periodLines = linesByPeriod[billingPeriod.id] ?? [];
             const periodState = billingPeriodDescriptor(billingPeriod.status);
             return (
-              <details key={billingPeriod.id} open={billingPeriod.id === selectedPeriodId} className={`group rounded-card border p-5 transition sm:p-6 ${billingPeriod.status === "paid" ? "border-line/60 bg-surface/50 opacity-60 hover:opacity-80 open:opacity-80" : "border-line bg-surface open:border-brand/40 open:bg-surface-raised"}`}>
+              <details id={`invoice-${billingPeriod.id}`} key={billingPeriod.id} open={billingPeriod.id === selectedPeriodId} className={`group scroll-mt-24 rounded-card border p-5 transition sm:p-6 ${billingPeriod.status === "paid" ? "border-line/60 bg-surface/50 opacity-60 hover:opacity-80 open:opacity-80" : "border-line bg-surface open:border-brand/40 open:bg-surface-raised"}`}>
                 <summary className="grid cursor-pointer list-none grid-cols-[1fr_auto] items-start gap-4 marker:hidden">
                   <div><p className="font-display text-2xl">{billingPeriod.label}</p><div className="mt-3 flex flex-wrap items-center gap-2 text-xs"><span className="rounded-full bg-brand/10 px-2.5 py-1 text-brand">{periodState.label}</span><span className="text-muted">{formatCompactDate(billingPeriod.period_start)}–{formatCompactDate(billingPeriod.period_end)}</span><span className="text-muted">· {periodLines.length} lines</span></div></div>
                   <div className="flex items-start gap-3 text-right"><div><p className="text-lg">{money(billingPeriod.amount_due_cents, billingPeriod.currency)}</p><p className="mt-1 text-xs text-muted">{money(paidByPeriod[billingPeriod.id] ?? 0, billingPeriod.currency)} paid</p></div><MdExpandMore aria-hidden="true" className="mt-1 text-xl text-muted transition group-open:rotate-180" /></div>
@@ -209,7 +212,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
                   })}
                   {!periodLines.length ? <EmptyDetail>No line items are recorded.</EmptyDetail> : null}
                   {latestApprovalByPeriod.get(billingPeriod.id)?.approval_status === "rejected" ? <div className="my-5 border border-danger/50 p-5"><p className="text-xs uppercase tracking-[0.14em] text-danger">Payer requested review</p><p className="mt-3 text-sm">{({ lesson_did_not_happen: "A lesson did not happen", wrong_lesson_or_date: "A lesson or date is wrong", wrong_amount: "An amount is wrong", missing_credit: "A credit or discount is missing", duplicate_charge: "A charge appears twice", other: "Other" } as Record<string, string>)[latestApprovalByPeriod.get(billingPeriod.id)?.rejection_reason_code ?? ""] ?? "Charges need review"}</p>{latestApprovalByPeriod.get(billingPeriod.id)?.rejection_note ? <p className="mt-2 text-sm leading-6 text-muted">“{latestApprovalByPeriod.get(billingPeriod.id)?.rejection_note}”</p> : null}</div> : null}
-                  {canManagePayments && periodState.editable ? <BillingAdjustmentForm schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
+                  {canManagePayments && periodState.editable ? <BillingAdjustmentForm schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} outstandingLessons={(outstandingLessonsResult.data ?? []).map((lesson) => ({ lessonEventId: lesson.lesson_event_id, studentName: lesson.student_name, offeringName: lesson.offering_name, serviceDate: lesson.service_date, startsAt: lesson.starts_at, amountCents: lesson.amount_cents, currency: lesson.currency }))} /> : null}
                   {canManagePayments && periodState.editable && billingPeriod.amount_due_cents > 0 ? <div className="border-t border-line pt-5"><p className="max-w-lg text-xs leading-5 text-muted">Lock only after reviewing every line. Locking freezes this exact amount for the separate payer-approval step.</p><BillingPeriodLock schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /></div> : null}
                   {canManagePayments && billingPeriod.status === "locked" && !latestApprovalByPeriod.get(billingPeriod.id) ? <BillingPeriodUnlock schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
                   {canManagePayments && billingPeriod.status === "approval_pending" && latestApprovalByPeriod.get(billingPeriod.id)?.approval_status === "pending" ? <BillingPeriodRevise schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}

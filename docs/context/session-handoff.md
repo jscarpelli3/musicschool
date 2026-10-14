@@ -130,6 +130,13 @@ Do not redo card setup or either successful $2.00 charge. Automatic signed-webho
 - Queue controls can select all invoices needing lock or all invoices ready to send. Bulk locking and bulk email delivery are separate hold-to-confirm operations; preparation never silently locks or contacts payers. Per-invoice navigation and individual approval sending remain available.
 - This interface reuses the existing server-enforced lock and approval-email actions. Bulk operations process each invoice through those same authorization, state, amount, recipient, delivery, and idempotency boundaries rather than adding a bypass.
 
+### Modular editable invoices — 2026-10-14
+
+- `Adjust this amount` is now `Adjust this invoice` with three explicit paths: add a manual charge, add a credit, or add an eligible unpaid lesson. Month-based automatic preparation remains the primary workflow.
+- The lesson picker shows only per-session lessons connected to that payer that currently resolve to a positive charge and are not separately paid, already present on a non-void invoice, or reserved by a locked/later invoice. Fixed-monthly occurrences remain series-billed and are intentionally excluded.
+- Adding a lesson rechecks every eligibility condition inside the database transaction, uses its immutable price snapshot, service date, billing timing, and policy disposition, and records an audit event. The owner cannot type or alter its amount through this path.
+- Selecting an invoice from the header queue now opens its details and scrolls that exact invoice into the center of the family page.
+
 - Flexible invoice batching is implemented and migrated on replacement staging but still needs browser acceptance. Preparing gathers unpaid eligible sources; removing a source records a draft-specific deferral rather than a waiver/credit; locked invoices reserve sources against duplicate billing; unlocking/review or voiding releases reservations; and later invoices may cover deferred lessons from the same service month.
 - Integrated payments remain optional. The plan now requires a durable, reversible school opt-out that suppresses prompts without deleting provider evidence and allows later reconnection.
 - Provider review, remediable action, rejection, and voluntary opt-out must remain separate states. Payment failure must never block unrelated school operations.

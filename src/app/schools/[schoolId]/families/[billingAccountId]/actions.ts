@@ -37,6 +37,7 @@ export type PreparedInvoice = {
 };
 export type BillingDraftState = { ok: boolean; message: string; periodId: string | null; invoice: PreparedInvoice | null };
 export type BillingLineDeferState = { ok: boolean; message: string };
+export type BillingLessonAddState = { ok: boolean; message: string };
 
 export async function collectFamilyInvoice(schoolId: string, billingAccountId: string, billingPeriodId: string) {
   const path = `/schools/${schoolId}/families/${billingAccountId}`;
@@ -231,6 +232,36 @@ export async function addBillingAdjustment(
   }
   revalidatePath(path);
   return { ok: true, message: `${kind === "credit" ? "Credit" : "Charge"} added to the billing ledger.` };
+}
+
+export async function addOutstandingLessonToInvoice(
+  schoolId: string,
+  billingAccountId: string,
+  billingPeriodId: string,
+  _previous: BillingLessonAddState,
+  formData: FormData,
+): Promise<BillingLessonAddState> {
+  void _previous;
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const lessonEventId = String(formData.get("lesson_event_id") ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(lessonEventId)) return { ok: false, message: "Choose an outstanding lesson." };
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) redirect(`/login?next=${path}`);
+  const { error } = await supabase.rpc("add_outstanding_lesson_to_billing_draft", {
+    p_school_id: schoolId,
+    p_billing_period_id: billingPeriodId,
+    p_lesson_event_id: lessonEventId,
+  });
+  if (error) {
+    const message = error.message.includes("not_editable") ? "This invoice is no longer editable."
+      : error.message.includes("already") ? "That lesson is already paid, allocated, or present on an invoice."
+      : error.message.includes("not_ready") ? "That lesson is not ready to bill yet."
+      : "The lesson could not be added. The invoice total is unchanged.";
+    return { ok: false, message };
+  }
+  revalidatePath(path);
+  return { ok: true, message: "Outstanding lesson added using its saved price and accounting terms." };
 }
 
 export async function removeBillingAdjustment(schoolId: string, billingAccountId: string, billingPeriodId: string, adjustmentId: string) {

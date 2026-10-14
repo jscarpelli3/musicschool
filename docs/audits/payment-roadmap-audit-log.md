@@ -794,3 +794,13 @@ Recorded on 2026-10-14.
 - The shared invoice dropdown now loads the 20 most recently updated invoices and identifies the actionable boundary: draft/review invoices need locking; locked invoices have not yet been sent for payer approval. Family, month, line count, total, and current status remain visible before action.
 - Stage-specific selection supports `select all needing lock` and `select all ready to send`. Bulk lock and bulk send are deliberately separate hold confirmations. Each selected invoice still passes through the existing capability and database transition checks; each email still passes through the existing recipient, approval-token, delivery-policy, provider-idempotency, and reconciliation flow.
 - This checkpoint changes orchestration and visibility only. It does not auto-lock invoices, auto-email payers, combine distinct approval requests, or relax exact-amount approval requirements.
+
+### Editable invoice composition
+
+Recorded on 2026-10-14.
+
+- The owner adjustment modal now begins with three explicit choices: manual charge, credit, or outstanding lesson. Automatic service-month population remains the default; this is an escape hatch for legitimate cross-month or modular composition.
+- `get_outstanding_lessons_for_billing_account` lists only payer-connected, per-session, positive-charge lessons that are ready under the existing billing-disposition contract and have no succeeded quick payment, active invoice line, or durable source allocation.
+- `add_outstanding_lesson_to_billing_draft` locks and revalidates the editable period, payer relationship, immutable price snapshot, per-session mode, currency, payment state, active-line state, allocation state, readiness, and charge disposition before inserting. It persists snapshot/terms bindings and an auditable `billing_period.lesson_added` event.
+- Fixed-monthly lesson occurrences cannot be manually added because their billable source is the monthly series. No arbitrary amount is accepted for a lesson; arbitrary owner-entered amounts remain clearly labeled manual charges or credits.
+- Invoice-queue navigation now opens and scrolls the exact selected invoice on the family page. Migration `20261014150000_add_outstanding_lesson_to_invoice.sql` applied to persistent staging; linked database lint retains only the two documented pre-existing unused-variable warnings.
