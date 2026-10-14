@@ -122,6 +122,14 @@ Do not redo card setup or either successful $2.00 charge. Automatic signed-webho
 - The dashboard now has a fourth large `Prepare an invoice` action. The shared owner header also has a compact `Prepare invoice` action next to `Find an opening`. Both open a searchable payer chooser that matches family/payer names and connected student names, then opens the existing month/review flow on the correct payer account.
 - Staging migration, typecheck, lint, production build, and six browser smoke tests pass. The next human action remains: create fresh TestFamily lessons, prepare the intended invoice, remove/defer one line, and finish the flexible-batching acceptance before repeating the payer cancellation-request flow.
 
+### Invoice preparation workspace and queue — 2026-10-14
+
+- The shared header/dashboard invoice launcher no longer navigates away after payer selection. It prepares within the modal and keeps truthful success, no-items, and error feedback visible.
+- A successfully prepared invoice is immediately shown with family, service month, exact total, status, and every line. The existing hold-to-lock boundary remains mandatory; after locking, the same modal can email the payer approval request. `Prepare another invoice` returns to payer/student search without discarding the session's prepared-invoice carousel.
+- The header Invoices menu is now a 20-most-recent invoice command queue. Draft/review invoices are explicitly labeled `Not locked`; locked invoices are labeled `Locked · approval not sent`. Each row shows family, month, line count, total, and status.
+- Queue controls can select all invoices needing lock or all invoices ready to send. Bulk locking and bulk email delivery are separate hold-to-confirm operations; preparation never silently locks or contacts payers. Per-invoice navigation and individual approval sending remain available.
+- This interface reuses the existing server-enforced lock and approval-email actions. Bulk operations process each invoice through those same authorization, state, amount, recipient, delivery, and idempotency boundaries rather than adding a bypass.
+
 - Flexible invoice batching is implemented and migrated on replacement staging but still needs browser acceptance. Preparing gathers unpaid eligible sources; removing a source records a draft-specific deferral rather than a waiver/credit; locked invoices reserve sources against duplicate billing; unlocking/review or voiding releases reservations; and later invoices may cover deferred lessons from the same service month.
 - Integrated payments remain optional. The plan now requires a durable, reversible school opt-out that suppresses prompts without deleting provider evidence and allows later reconnection.
 - Provider review, remediable action, rejection, and voluntary opt-out must remain separate states. Payment failure must never block unrelated school operations.

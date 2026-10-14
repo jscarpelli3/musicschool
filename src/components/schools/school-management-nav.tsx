@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { OwnerNotifications } from "@/components/notifications/owner-notifications";
 import type { SchoolInvoice } from "@/lib/billing/school-invoices";
 import { MdApproval, MdExpandMore, MdReceiptLong, MdSearch } from "react-icons/md";
 import { HeaderLessonFinder } from "@/components/scheduling/header-lesson-finder";
 import type { LessonCreationOptions } from "@/components/scheduling/lesson-creation-dialog";
 import { PrepareInvoiceLauncher, type InvoicePayerChoice } from "@/components/billing/prepare-invoice-launcher";
+import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
+import { lockFamilyBillingPeriod, sendBillingApprovalEmail } from "@/app/schools/[schoolId]/families/[billingAccountId]/actions";
 
 type RecentApproval = { id: string; kind: "schedule_proposal" | "lesson_change_request"; teacherId: string; studentId: string; teacher: string; student: string; detail: string };
 
@@ -16,10 +18,14 @@ type DirectoryItem = { id: string; label: string };
 
 export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions, studentIdsByFamily = {}, invoicePayers = [], capabilities, approvalCount = 0, recentApprovals = [], invoiceCount = 0, recentInvoices = [], students = [], families = [], staff = [] }: { schoolId: string; timeZone: string; lessonCreationOptions?: LessonCreationOptions; studentIdsByFamily?: Record<string, string[]>; invoicePayers?: InvoicePayerChoice[]; capabilities: string[]; approvalCount?: number; recentApprovals?: RecentApproval[]; invoiceCount?: number; recentInvoices?: SchoolInvoice[]; students?: DirectoryItem[]; families?: DirectoryItem[]; staff?: DirectoryItem[] }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [approvalsOpen, setApprovalsOpen] = useState(false);
   const [invoicesOpen, setInvoicesOpen] = useState(false);
   const [directoryOpen, setDirectoryOpen] = useState<"students" | "families" | "staff" | null>(null);
   const [directorySearch, setDirectorySearch] = useState("");
+  const [invoiceSelection, setInvoiceSelection] = useState<string[]>([]);
+  const [invoiceMessage, setInvoiceMessage] = useState("");
+  const [invoiceActionPending, startInvoiceAction] = useTransition();
   const approvalsRef = useRef<HTMLDivElement>(null);
   const invoicesRef = useRef<HTMLDivElement>(null);
   const directoryRef = useRef<HTMLDivElement>(null);
@@ -65,6 +71,31 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
   const base = `/schools/${schoolId}`;
   const can = (capability: string) => capabilities.includes(capability);
   const dashboardHref = can("school.workspace.view") ? base : `${base}/teacher`;
+  const selectedInvoices = recentInvoices.filter((invoice) => invoiceSelection.includes(invoice.id));
+  const selectedToLock = selectedInvoices.filter((invoice) => invoice.status === "draft" || invoice.status === "review");
+  const selectedToSend = selectedInvoices.filter((invoice) => invoice.status === "locked");
+  const lockableInvoices = recentInvoices.filter((invoice) => invoice.status === "draft" || invoice.status === "review");
+  const sendableInvoices = recentInvoices.filter((invoice) => invoice.status === "locked");
+
+  async function lockInvoices(invoices: SchoolInvoice[]) {
+    const results = [];
+    for (const invoice of invoices) results.push(await lockFamilyBillingPeriod(schoolId, invoice.billingAccountId, invoice.id));
+    const failures = results.filter((result) => !result.ok);
+    if (!failures.length) { setInvoiceSelection([]); setInvoiceMessage(`${invoices.length} invoice${invoices.length === 1 ? "" : "s"} locked and ready to send.`); router.refresh(); return { ok: true, message: "Invoices locked." }; }
+    setInvoiceMessage(`${invoices.length - failures.length} locked; ${failures.length} could not be locked. Refresh and review those invoices.`);
+    router.refresh();
+    return { ok: false, message: failures[0].message };
+  }
+
+  async function sendInvoices(invoices: SchoolInvoice[]) {
+    const results = [];
+    for (const invoice of invoices) results.push(await sendBillingApprovalEmail(schoolId, invoice.billingAccountId, invoice.id, { ok: false, message: "" }));
+    const failures = results.filter((result) => !result.ok);
+    if (!failures.length) { setInvoiceSelection([]); setInvoiceMessage(`${invoices.length} approval request${invoices.length === 1 ? "" : "s"} sent.`); router.refresh(); return { ok: true, message: "Approval requests sent." }; }
+    setInvoiceMessage(`${invoices.length - failures.length} sent; ${failures.length} could not be sent. Review the payer email or invoice state.`);
+    router.refresh();
+    return { ok: false, message: failures[0].message };
+  }
   const items = !can("school.workspace.view")
     ? [{ label: "My schedule", href: dashboardHref, active: pathname.startsWith(dashboardHref) }]
     : [
@@ -98,7 +129,28 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
         {can("school.billing.manage") ? <div ref={invoicesRef} className="relative z-30 flex flex-col items-end">
           <button type="button" aria-expanded={invoicesOpen} onClick={() => setInvoicesOpen((value) => { if (!value) window.dispatchEvent(new Event("common-time:open-invoices")); return !value; })} className="inline-flex items-center rounded-control border border-brand/40 bg-brand/10 px-3 py-1.5 text-sm text-brand transition hover:border-brand hover:bg-brand/15"><MdReceiptLong aria-hidden="true" className="mr-1.5 text-base" />Invoices{invoiceCount ? <span className="ml-2 inline-grid min-w-5 place-items-center rounded-full bg-brand px-1 text-xs text-canvas" aria-label={`${invoiceCount} open invoices`}>{invoiceCount}</span> : null}</button>
           <Link href={`${base}/invoices`} aria-current={pathname.startsWith(`${base}/invoices`) ? "page" : undefined} className="mt-0.5 text-[10px] leading-none text-muted hover:text-ink">View all</Link>
-          {invoicesOpen ? <div className="ui-card absolute top-full right-0 mt-2 w-[min(24rem,calc(100vw-2.5rem))] p-4"><div className="flex items-center justify-between"><p className="font-display text-2xl">Invoices</p><button type="button" onClick={() => setInvoicesOpen(false)} className="text-sm text-muted hover:text-ink">Close</button></div><div className="mt-3">{recentInvoices.length ? recentInvoices.map((invoice) => <Link key={invoice.id} href={`${base}/families/${invoice.billingAccountId}?period=${invoice.id}`} onClick={() => setInvoicesOpen(false)} className="block rounded-control px-3 py-3 transition hover:bg-brand/10"><div className="flex justify-between gap-4"><p className="text-sm">{invoice.familyName}</p><p className="text-sm">{new Intl.NumberFormat("en-US", { style: "currency", currency: invoice.currency }).format(invoice.amountDueCents / 100)}</p></div><p className="mt-1 text-xs text-muted">{invoice.label} · {invoice.statusLabel}</p></Link>) : <p className="py-5 text-sm text-muted">No invoices have been prepared.</p>}</div></div> : null}
+          {invoicesOpen ? <div className="ui-card absolute top-full right-0 mt-2 w-[min(32rem,calc(100vw-2.5rem))] p-4">
+            <div className="flex items-center justify-between"><div><p className="font-display text-2xl">Invoice queue</p><p className="mt-1 text-xs text-muted">Review, lock, then send for approval.</p></div><button type="button" onClick={() => setInvoicesOpen(false)} className="text-sm text-muted hover:text-ink">Close</button></div>
+            {recentInvoices.length ? <>
+              <div className="mt-4 flex flex-wrap gap-2 border-y border-line py-3">
+                <button type="button" disabled={!lockableInvoices.length} onClick={() => setInvoiceSelection(lockableInvoices.map((invoice) => invoice.id))} className="rounded-control border border-line px-3 py-1.5 text-xs text-brand disabled:opacity-40">Select all needing lock ({lockableInvoices.length})</button>
+                <button type="button" disabled={!sendableInvoices.length} onClick={() => setInvoiceSelection(sendableInvoices.map((invoice) => invoice.id))} className="rounded-control border border-line px-3 py-1.5 text-xs text-brand disabled:opacity-40">Select all ready to send ({sendableInvoices.length})</button>
+                {invoiceSelection.length ? <button type="button" onClick={() => setInvoiceSelection([])} className="px-2 text-xs text-muted">Clear</button> : null}
+              </div>
+              <div className="max-h-80 overflow-y-auto py-2">{recentInvoices.map((invoice) => {
+                const actionable = ["draft", "review", "locked"].includes(invoice.status);
+                return <div key={invoice.id} className="grid grid-cols-[auto_1fr_auto] items-start gap-3 rounded-control px-2 py-3 hover:bg-brand/10">
+                  <input type="checkbox" aria-label={`Select ${invoice.familyName} ${invoice.label}`} disabled={!actionable || invoiceActionPending} checked={invoiceSelection.includes(invoice.id)} onChange={(event) => setInvoiceSelection((current) => event.target.checked ? [...current, invoice.id] : current.filter((id) => id !== invoice.id))} className="mt-1 size-4 accent-current" />
+                  <Link href={`${base}/families/${invoice.billingAccountId}?period=${invoice.id}`} onClick={() => setInvoicesOpen(false)}><p className="text-sm">{invoice.familyName}</p><p className="mt-1 text-xs text-muted">{invoice.label} · {invoice.lineCount} lines</p><p className={`mt-1 text-xs ${invoice.status === "draft" || invoice.status === "review" ? "text-danger" : invoice.status === "locked" ? "text-brand" : "text-muted"}`}>{invoice.status === "draft" || invoice.status === "review" ? "Not locked" : invoice.status === "locked" ? "Locked · approval not sent" : invoice.statusLabel}</p></Link>
+                  <div className="text-right"><p className="text-sm">{new Intl.NumberFormat("en-US", { style: "currency", currency: invoice.currency }).format(invoice.amountDueCents / 100)}</p>{invoice.status === "draft" || invoice.status === "review" ? <button type="button" disabled={invoiceActionPending} onClick={() => setInvoiceSelection([invoice.id])} className="mt-2 text-xs text-brand disabled:opacity-40">Select to lock</button> : invoice.status === "locked" ? <button type="button" disabled={invoiceActionPending} onClick={() => startInvoiceAction(async () => { const result = await sendInvoices([invoice]); setInvoiceMessage(result.message); })} className="mt-2 text-xs text-brand disabled:opacity-40">Send approval</button> : null}</div>
+                </div>;
+              })}</div>
+              {selectedToLock.length ? <div className="mt-3"><p className="mb-2 text-xs text-muted">Lock {selectedToLock.length} selected invoice{selectedToLock.length === 1 ? "" : "s"} totaling {new Intl.NumberFormat("en-US", { style: "currency", currency: selectedToLock[0].currency }).format(selectedToLock.reduce((sum, invoice) => sum + invoice.amountDueCents, 0) / 100)}.</p><HoldToConfirm compact action={() => lockInvoices(selectedToLock)} idleLabel="Hold to bulk lock selected invoices" holdingLabel="Keep holding to freeze these totals…" /></div> : null}
+              {selectedToSend.length ? <div className="mt-3"><p className="mb-2 text-xs text-muted">Send {selectedToSend.length} separate payer approval email{selectedToSend.length === 1 ? "" : "s"}.</p><HoldToConfirm compact action={() => sendInvoices(selectedToSend)} idleLabel="Hold to send selected approvals" holdingLabel="Keep holding to send these emails…" /></div> : null}
+              {invoiceMessage ? <p role="status" className="mt-3 border-l-2 border-brand pl-3 text-xs leading-5">{invoiceMessage}</p> : null}
+            </> : <p className="py-5 text-sm text-muted">No invoices have been prepared.</p>}
+            <Link href={`${base}/invoices`} onClick={() => setInvoicesOpen(false)} className="mt-3 block border-t border-line pt-3 text-xs text-brand">View all invoices →</Link>
+          </div> : null}
         </div> : null}
         {can("school.approvals.review") ? <div ref={approvalsRef} className="relative z-30 flex flex-col items-end">
           <button type="button" aria-expanded={approvalsOpen} onClick={() => setApprovalsOpen((value) => { if (!value) window.dispatchEvent(new Event("common-time:open-approvals")); return !value; })} className="inline-flex items-center rounded-control border border-brand/40 bg-brand/10 px-3 py-1.5 text-sm text-brand transition hover:border-brand hover:bg-brand/15"><MdApproval aria-hidden="true" className="mr-1.5 text-base" />Approvals{approvalCount ? <span className="ml-2 inline-grid min-w-5 place-items-center rounded-full bg-brand px-1 text-xs text-canvas" aria-label={`${approvalCount} pending approvals`}>{approvalCount}</span> : null}</button>

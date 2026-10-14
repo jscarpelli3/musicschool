@@ -25,7 +25,17 @@ export type BillingApprovalEmailState = { ok: boolean; message: string };
 export type BillingStatementNoticeState = { ok: boolean; message: string };
 export type BillingContactEmailState = { ok: boolean; message: string };
 export type BillingAdjustmentState = { ok: boolean; message: string };
-export type BillingDraftState = { ok: boolean; message: string; periodId: string | null };
+export type PreparedInvoice = {
+  id: string;
+  billingAccountId: string;
+  familyName: string;
+  label: string;
+  amountDueCents: number;
+  currency: string;
+  status: string;
+  lines: Array<{ id: string; description: string; serviceDate: string | null; amountCents: number }>;
+};
+export type BillingDraftState = { ok: boolean; message: string; periodId: string | null; invoice: PreparedInvoice | null };
 export type BillingLineDeferState = { ok: boolean; message: string };
 
 export async function collectFamilyInvoice(schoolId: string, billingAccountId: string, billingPeriodId: string) {
@@ -76,11 +86,11 @@ function appOrigin() {
 export async function prepareFamilyBillingDraft(schoolId: string, billingAccountId: string, _state: BillingDraftState, formData: FormData): Promise<BillingDraftState> {
   const path = `/schools/${schoolId}/families/${billingAccountId}`;
   const month = String(formData.get("month") ?? "");
-  if (!/^\d{4}-\d{2}$/.test(month)) return { ok: false, message: "Choose a valid invoice month.", periodId: null };
+  if (!/^\d{4}-\d{2}$/.test(month)) return { ok: false, message: "Choose a valid invoice month.", periodId: null, invoice: null };
 
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
-  if (!auth?.claims?.sub) return { ok: false, message: "Sign in again before preparing an invoice.", periodId: null };
+  if (!auth?.claims?.sub) return { ok: false, message: "Sign in again before preparing an invoice.", periodId: null, invoice: null };
 
   const { data: periodId, error } = await supabase.rpc("prepare_family_billing_draft", {
     p_school_id: schoolId,
@@ -97,11 +107,22 @@ export async function prepareFamilyBillingDraft(schoolId: string, billingAccount
       : detail.includes("after_service_period_is_not_complete") ? "That after-service billing month is not complete yet."
       : detail.includes("no_unbilled_items_for_month") ? "There are no unpaid lessons or other items to invoice for that month. No invoice was created."
       : "The invoice could not be prepared. Nothing was changed.";
-    return { ok: false, message, periodId: null };
+    return { ok: false, message, periodId: null, invoice: null };
   }
 
+  const [{ data: period }, { data: account }, { data: lines }] = await Promise.all([
+    supabase.from("billing_periods").select("id,label,amount_due_cents,currency,status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", periodId).single(),
+    supabase.from("billing_accounts").select("name").eq("school_id", schoolId).eq("id", billingAccountId).single(),
+    supabase.from("billing_line_items").select("id,description,service_date,amount_cents").eq("school_id", schoolId).eq("billing_period_id", periodId).order("service_date", { ascending: true, nullsFirst: false }).order("created_at"),
+  ]);
+  if (!period || !account || !lines) return { ok: false, message: "The invoice was prepared, but its review details could not be loaded. Open the family account before continuing.", periodId, invoice: null };
+
   revalidatePath(path);
-  return { ok: true, message: "Invoice prepared. Review each included item before locking it.", periodId };
+  return { ok: true, message: "Invoice prepared. Review each included item before locking it.", periodId, invoice: {
+    id: period.id, billingAccountId, familyName: account.name, label: period.label, amountDueCents: period.amount_due_cents,
+    currency: period.currency, status: period.status,
+    lines: lines.map((line) => ({ id: line.id, description: line.description, serviceDate: line.service_date, amountCents: line.amount_cents ?? 0 })),
+  } };
 }
 
 export async function removeLineFromInvoice(schoolId: string, billingAccountId: string, billingPeriodId: string, lineItemId: string, _state: BillingLineDeferState, formData: FormData): Promise<BillingLineDeferState> {

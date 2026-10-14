@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { FocusedModal } from "@/components/ui/focused-modal";
 import { prepareFamilyBillingDraft, type BillingDraftState } from "./actions";
 
-const initialState: BillingDraftState = { ok: false, message: "", periodId: null };
+const initialState: BillingDraftState = { ok: false, message: "", periodId: null, invoice: null };
 
 export function BillingDraftForm({ schoolId, billingAccountId, defaultMonth, initialOpen = false }: {
   schoolId: string;
@@ -19,12 +19,8 @@ export function BillingDraftForm({ schoolId, billingAccountId, defaultMonth, ini
 
   useEffect(() => {
     if (!state.ok || !state.periodId) return;
-    const timer = window.setTimeout(() => {
-      setOpen(false);
-      router.replace(`/schools/${schoolId}/families/${billingAccountId}?billing=prepared&period=${state.periodId}`, { scroll: false });
-      router.refresh();
-    }, 0);
-    return () => window.clearTimeout(timer);
+    router.replace(`/schools/${schoolId}/families/${billingAccountId}?billing=prepared&period=${state.periodId}`, { scroll: false });
+    router.refresh();
   }, [billingAccountId, router, schoolId, state]);
 
   return (

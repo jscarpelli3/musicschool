@@ -17,6 +17,7 @@ export type SchoolInvoice = {
   periodStart: string;
   periodEnd: string;
   updatedAt: string;
+  lineCount: number;
 };
 
 export async function loadSchoolInvoices(client: Client, schoolId: string, limit?: number): Promise<SchoolInvoice[]> {
@@ -31,6 +32,12 @@ export async function loadSchoolInvoices(client: Client, schoolId: string, limit
   ]);
   if (periodError || accountError) throw new Error("Invoices could not be loaded.");
   const accountNames = new Map((accounts ?? []).map((account) => [account.id, account.name]));
+  const periodIds = (periods ?? []).map((period) => period.id);
+  const { data: lines, error: lineError } = periodIds.length
+    ? await client.from("billing_line_items").select("billing_period_id").eq("school_id", schoolId).in("billing_period_id", periodIds)
+    : { data: [], error: null };
+  if (lineError) throw new Error("Invoice line counts could not be loaded.");
+  const lineCounts = (lines ?? []).reduce<Record<string, number>>((counts, line) => { counts[line.billing_period_id] = (counts[line.billing_period_id] ?? 0) + 1; return counts; }, {});
   return (periods ?? []).map((period) => ({
     id: period.id,
     billingAccountId: period.billing_account_id,
@@ -43,6 +50,7 @@ export async function loadSchoolInvoices(client: Client, schoolId: string, limit
     periodStart: period.period_start,
     periodEnd: period.period_end,
     updatedAt: period.updated_at,
+    lineCount: lineCounts[period.id] ?? 0,
   }));
 }
 

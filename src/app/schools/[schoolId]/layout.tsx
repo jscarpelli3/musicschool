@@ -20,7 +20,7 @@ export default async function SchoolLayout({ children, params }: { children: Rea
   const [{ data: profile }, approvalSummary, invoiceSummary, studentsResult, familiesResult, peopleResult, teachersResult, billingLinksResult] = await Promise.all([
     supabase.from("profiles").select("avatar_url, avatar_path").eq("id", profileId).maybeSingle(),
     capabilities.has("school.approvals.review") ? loadOwnerApprovalSummary(supabase, schoolId) : Promise.resolve({ items: [], count: 0 }),
-    capabilities.has("school.billing.manage") ? loadSchoolInvoiceSummary(supabase, schoolId, 6) : Promise.resolve({ invoices: [], attentionCount: 0 }),
+    capabilities.has("school.billing.manage") ? loadSchoolInvoiceSummary(supabase, schoolId, 20) : Promise.resolve({ invoices: [], attentionCount: 0 }),
     capabilities.has("school.workspace.view") ? supabase.from("students").select("person_id").eq("school_id", schoolId).in("enrollment_status", ["active", "prospect"]) : Promise.resolve({ data: [], error: null }),
     capabilities.has("school.workspace.view") ? supabase.from("billing_accounts").select("id,name").eq("school_id", schoolId).eq("status", "active").order("name") : Promise.resolve({ data: [], error: null }),
     capabilities.has("school.workspace.view") ? supabase.from("people").select("id,first_name,last_name,preferred_name").eq("school_id", schoolId).eq("status", "active") : Promise.resolve({ data: [], error: null }),

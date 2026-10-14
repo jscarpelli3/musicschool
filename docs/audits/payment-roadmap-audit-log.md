@@ -784,3 +784,13 @@ Recorded on 2026-10-14 during invoice-fixture creation.
 - Calendar occurrences should be materialized through the end of the second full month after the current month. For example, a series created midway through October should initially contain the remaining October occurrences plus all of November and December.
 - Automatic idempotent maintenance should add another complete month as the calendar horizon advances, keeping every active ongoing series at least two full months ahead. It must preserve explicit exceptions and surface conflicts or failures for owner action rather than silently omitting lessons.
 - The two-full-month horizon may become school-configurable later; implementation should begin with a single system default. No series-generation code was changed at this checkpoint.
+
+### Invoice preparation queue workflow
+
+Recorded on 2026-10-14.
+
+- Invoice preparation now remains in its originating header/dashboard modal. It presents errors and the no-unbilled-items refusal in place; on success it renders the exact prepared invoice and all returned line items rather than silently navigating to the family record.
+- Prepared invoices remain in a session carousel. The owner may review and hold to lock an exact invoice, send its approval request after lock, or return to payer/student search to prepare another invoice while retaining the prior cards.
+- The shared invoice dropdown now loads the 20 most recently updated invoices and identifies the actionable boundary: draft/review invoices need locking; locked invoices have not yet been sent for payer approval. Family, month, line count, total, and current status remain visible before action.
+- Stage-specific selection supports `select all needing lock` and `select all ready to send`. Bulk lock and bulk send are deliberately separate hold confirmations. Each selected invoice still passes through the existing capability and database transition checks; each email still passes through the existing recipient, approval-token, delivery-policy, provider-idempotency, and reconciliation flow.
+- This checkpoint changes orchestration and visibility only. It does not auto-lock invoices, auto-email payers, combine distinct approval requests, or relax exact-amount approval requirements.
