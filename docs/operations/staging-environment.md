@@ -26,6 +26,7 @@ The persistent staging environment exists to test migrations, authentication, pr
 ## Current state — 2026-09-19
 
 - Supabase staging project `iubmheectmsoavztbzma` is explicitly persistent, mapped to Git `staging`, and data-less by design. It replaced the accidentally ephemeral branch deleted when the staging-to-main promotion PR merged on 2026-10-13.
+- Supabase replaces Auth secrets such as SMTP passwords with placeholders when creating a branch. After creating or replacing persistent staging, restore the staging-only SMTP credential and verify `/auth/v1/otp` with a real non-team test payer. On 2026-10-14, `iubmheectmsoavztbzma` required this repair; the retained host/sender/template configuration alone was insufficient.
 - The Git `staging` branch and `main` require pull requests, current `verify` and `database` checks, resolved conversations, and linear history.
 - All Git branches reject deletion and force pushes.
 - Staging database seeding is disabled until a deterministic synthetic fixture is reviewed and committed.
