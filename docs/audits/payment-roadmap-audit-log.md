@@ -808,6 +808,8 @@ Recorded on 2026-10-14.
 - Follow-up UI acceptance increased Draft/review and Paid status visibility with higher-contrast bordered pills. Paid invoice cards remain subdued without applying opacity to the badge itself.
 - The header invoice queue received matching status pills so actionable lock/send state remains visible in its denser layout.
 - Browser acceptance then removed one November TestFamily lesson from an initial draft, locked the retained invoice, prepared a later November invoice containing only that deferred unpaid lesson, and added it successfully. This proves the deferral was neither waiver nor credit and that the locked source was not duplicated into the later draft. Locking the later invoice and proving subsequent source unavailability remain next.
+- The later November invoice subsequently locked. A third preparation attempt for TestFamily November returned the explicit no-unpaid-items refusal and created no period. Each lesson is now reserved by exactly one locked invoice; flexible same-month batching and duplicate-source prevention pass.
+- Queue UX follow-up is deferred: mixed-status checkbox selections are presently possible while a bulk button represents only one transition. The next UI pass should prevent incompatible selection or split the selected set into explicit stage actions; server-side per-invoice transition enforcement remains intact.
 
 ### Backlog — exact approval by email reply
 

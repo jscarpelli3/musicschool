@@ -140,6 +140,8 @@ Do not redo card setup or either successful $2.00 charge. Automatic signed-webho
 - Draft/review and Paid labels are now prominent bordered status pills in dashboard invoice lists and family invoice cards. Paid cards remain visually subdued through their surface treatment, but no longer use parent opacity that also washed out the status label.
 - The header invoice queue now uses the same high-contrast badge treatment for `Not locked`, `Locked · approval not sent`, Paid, and later lifecycle states.
 - Browser acceptance: the owner removed one November TestFamily lesson from the first November draft, locked the retained invoice, prepared another November invoice that contained only the still-unpaid deferred lesson, and successfully added that lesson to the later invoice. Deferred-source recovery and exclusion of the already-locked source pass. The later invoice still needs to be locked, after which duplicate-source refusal should be confirmed before approvals are sent.
+- Follow-up acceptance: the later November invoice locked successfully. A third November preparation attempt then returned the expected no-unpaid-items result and created no invoice. Both lessons are therefore reserved exactly once across the two locked invoices; same-month flexible batching, deferred recovery, and duplicate-source protection pass end to end.
+- Deferred UI follow-up: invoice-queue checkboxes currently allow a mixed-status selection even though each action handles only one lifecycle transition. A later pass must constrain, split, or clearly summarize mixed selections. Do not conflate this UI issue with the verified database transition guards.
 
 ### Approval-by-email-reply follow-up
 
