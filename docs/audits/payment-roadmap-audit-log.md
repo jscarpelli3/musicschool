@@ -774,3 +774,13 @@ Recorded on 2026-10-14.
 - Invoice entry now supports payer/family and connected-student search from a fourth dashboard action and a compact shared-header action. Choosing a result lands on the correct payer account with its invoice-preparation modal open. The month field itself opens the month chooser across its full clickable area.
 - TypeScript, ESLint, the Next.js production build, six Playwright smoke tests, migration dry-run/application, and linked staging database lint pass. Database lint retains only the two documented pre-existing unused-variable warnings.
 - Next acceptance: create new TestFamily lessons, prepare the non-empty invoice, defer one lesson, and prove it appears alone in a later same-month invoice without duplicate allocation. Then repeat payer cancellation-request acceptance end to end.
+
+### Ongoing lesson-series product decision
+
+Recorded on 2026-10-14 during invoice-fixture creation.
+
+- The current weekly composer defaults to a fixed twelve-week end date and eagerly creates every occurrence through that date; no maintenance process extends it. This was identified as a scheduling-model gap, not an invoice-test failure.
+- Intended default: a weekly lesson is an ongoing series unless the owner explicitly supplies an end date. A one-time lesson remains a separate choice.
+- Calendar occurrences should be materialized through the end of the second full month after the current month. For example, a series created midway through October should initially contain the remaining October occurrences plus all of November and December.
+- Automatic idempotent maintenance should add another complete month as the calendar horizon advances, keeping every active ongoing series at least two full months ahead. It must preserve explicit exceptions and surface conflicts or failures for owner action rather than silently omitting lessons.
+- The two-full-month horizon may become school-configurable later; implementation should begin with a single system default. No series-generation code was changed at this checkpoint.

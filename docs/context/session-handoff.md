@@ -101,6 +101,8 @@ Do not redo card setup or either successful $2.00 charge. Automatic signed-webho
 
 ## Lesson-composer direction agreed in discussion
 
+- Weekly lessons should default to an ongoing series, not a twelve-week series with a silent hard stop. Materialized calendar occurrences should cover the remainder of the current month plus the next two complete calendar months. Automatic maintenance should add the next full month as the horizon advances so every active series remains at least two full months ahead. A series may instead have an explicit end date, and one-time lessons remain supported. The horizon may become a school setting later, but should initially use this single predictable default.
+- Series intent and generated occurrences must remain separate: the ongoing series is the source of truth; a bounded rolling set of lesson events supports calendar, conflicts, and billing. Maintenance must be idempotent, preserve occurrence exceptions, never recreate cancelled/rescheduled lessons, and surface generation conflicts rather than silently shortening the schedule.
 - Model an explicit primary-teacher relationship for each student. Selecting a student defaults the lesson teacher from that relationship, while an individual lesson may override it.
 - Service type/duration must be known before availability suggestions can be accurate. The intended helper supports either direction: choose service/student and see fitting openings, or ask for a desired time and see which teacher/service durations fit.
 - Teacher or student overlaps are not allowed. Outside regular availability may remain an explicit warned exception, but overlap is a hard conflict.
