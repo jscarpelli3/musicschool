@@ -15,6 +15,7 @@ import { lockFamilyBillingPeriod, sendBillingApprovalEmail } from "@/app/schools
 type RecentApproval = { id: string; kind: "schedule_proposal" | "lesson_change_request"; teacherId: string; studentId: string; teacher: string; student: string; detail: string };
 
 type DirectoryItem = { id: string; label: string };
+type InvoiceSendProgress = "waiting" | "sending" | "sent" | "failed";
 
 export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions, studentIdsByFamily = {}, invoicePayers = [], capabilities, approvalCount = 0, recentApprovals = [], invoiceCount = 0, recentInvoices = [], students = [], families = [], staff = [] }: { schoolId: string; timeZone: string; lessonCreationOptions?: LessonCreationOptions; studentIdsByFamily?: Record<string, string[]>; invoicePayers?: InvoicePayerChoice[]; capabilities: string[]; approvalCount?: number; recentApprovals?: RecentApproval[]; invoiceCount?: number; recentInvoices?: SchoolInvoice[]; students?: DirectoryItem[]; families?: DirectoryItem[]; staff?: DirectoryItem[] }) {
   const pathname = usePathname();
@@ -25,6 +26,7 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
   const [directorySearch, setDirectorySearch] = useState("");
   const [invoiceSelection, setInvoiceSelection] = useState<string[]>([]);
   const [invoiceMessage, setInvoiceMessage] = useState("");
+  const [invoiceSendProgress, setInvoiceSendProgress] = useState<Record<string, InvoiceSendProgress>>({});
   const [invoiceActionPending, startInvoiceAction] = useTransition();
   const approvalsRef = useRef<HTMLDivElement>(null);
   const invoicesRef = useRef<HTMLDivElement>(null);
@@ -88,12 +90,18 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
   }
 
   async function sendInvoices(invoices: SchoolInvoice[]) {
+    setInvoiceMessage("");
+    setInvoiceSendProgress(Object.fromEntries(invoices.map((invoice) => [invoice.id, "waiting"])));
     const results = [];
-    for (const invoice of invoices) results.push(await sendBillingApprovalEmail(schoolId, invoice.billingAccountId, invoice.id, { ok: false, message: "" }));
+    for (const invoice of invoices) {
+      setInvoiceSendProgress((current) => ({ ...current, [invoice.id]: "sending" }));
+      const result = await sendBillingApprovalEmail(schoolId, invoice.billingAccountId, invoice.id, { ok: false, message: "" });
+      results.push(result);
+      setInvoiceSendProgress((current) => ({ ...current, [invoice.id]: result.ok ? "sent" : "failed" }));
+    }
     const failures = results.filter((result) => !result.ok);
-    if (!failures.length) { setInvoiceSelection([]); setInvoiceMessage(`${invoices.length} approval request${invoices.length === 1 ? "" : "s"} sent.`); router.refresh(); return { ok: true, message: "Approval requests sent." }; }
+    if (!failures.length) { setInvoiceSelection([]); setInvoiceMessage(`${invoices.length} approval request${invoices.length === 1 ? "" : "s"} sent.`); return { ok: true, message: "Approval requests sent." }; }
     setInvoiceMessage(`${invoices.length - failures.length} sent; ${failures.length} could not be sent. Review the payer email or invoice state.`);
-    router.refresh();
     return { ok: false, message: failures[0].message };
   }
   const items = !can("school.workspace.view")
@@ -139,11 +147,12 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
               </div>
               <div className="max-h-80 overflow-y-auto py-2">{recentInvoices.map((invoice) => {
                 const actionable = ["draft", "review", "locked"].includes(invoice.status);
+                const sendProgress = invoiceSendProgress[invoice.id];
                 const queueStatusClass = invoice.status === "paid" ? "border-brand/50 bg-brand text-canvas" : invoice.status === "draft" || invoice.status === "review" ? "border-ink/25 bg-ink/10 text-ink" : invoice.status === "locked" ? "border-brand/40 bg-brand/15 text-brand" : "border-line bg-surface text-muted";
                 return <div key={invoice.id} className="grid grid-cols-[auto_1fr_auto] items-start gap-3 rounded-control px-2 py-3 hover:bg-brand/10">
-                  <input type="checkbox" aria-label={`Select ${invoice.familyName} ${invoice.label}`} disabled={!actionable || invoiceActionPending} checked={invoiceSelection.includes(invoice.id)} onChange={(event) => setInvoiceSelection((current) => event.target.checked ? [...current, invoice.id] : current.filter((id) => id !== invoice.id))} className="mt-1 size-4 accent-current" />
+                  <input type="checkbox" aria-label={`Select ${invoice.familyName} ${invoice.label}`} disabled={!actionable || invoiceActionPending || Boolean(sendProgress)} checked={invoiceSelection.includes(invoice.id)} onChange={(event) => setInvoiceSelection((current) => event.target.checked ? [...current, invoice.id] : current.filter((id) => id !== invoice.id))} className="mt-1 size-4 accent-current" />
                   <Link href={`${base}/families/${invoice.billingAccountId}?period=${invoice.id}`} onClick={() => setInvoicesOpen(false)}><p className="text-sm">{invoice.familyName}</p><p className="mt-1 text-xs text-muted">{invoice.label} · {invoice.lineCount} lines</p><span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.07em] ${queueStatusClass}`}>{invoice.status === "draft" || invoice.status === "review" ? "Not locked" : invoice.status === "locked" ? "Locked · approval not sent" : invoice.statusLabel}</span></Link>
-                  <div className="text-right"><p className="text-sm">{new Intl.NumberFormat("en-US", { style: "currency", currency: invoice.currency }).format(invoice.amountDueCents / 100)}</p>{invoice.status === "draft" || invoice.status === "review" ? <button type="button" disabled={invoiceActionPending} onClick={() => setInvoiceSelection([invoice.id])} className="mt-2 text-xs text-brand disabled:opacity-40">Select to lock</button> : invoice.status === "locked" ? <button type="button" disabled={invoiceActionPending} onClick={() => startInvoiceAction(async () => { const result = await sendInvoices([invoice]); setInvoiceMessage(result.message); })} className="mt-2 text-xs text-brand disabled:opacity-40">Send approval</button> : null}</div>
+                  <div className="text-right"><p className="text-sm">{new Intl.NumberFormat("en-US", { style: "currency", currency: invoice.currency }).format(invoice.amountDueCents / 100)}</p>{sendProgress ? <p role="status" className={`mt-2 text-xs font-medium ${sendProgress === "failed" ? "text-danger" : sendProgress === "sent" ? "text-brand" : "text-muted"}`}>{sendProgress === "waiting" ? "Waiting…" : sendProgress === "sending" ? "Sending…" : sendProgress === "sent" ? "Sent" : "Failed"}</p> : invoice.status === "draft" || invoice.status === "review" ? <button type="button" disabled={invoiceActionPending} onClick={() => setInvoiceSelection([invoice.id])} className="mt-2 text-xs text-brand disabled:opacity-40">Select to lock</button> : invoice.status === "locked" ? <button type="button" disabled={invoiceActionPending} onClick={() => startInvoiceAction(async () => { const result = await sendInvoices([invoice]); setInvoiceMessage(result.message); })} className="mt-2 text-xs text-brand disabled:opacity-40">Send approval</button> : null}</div>
                 </div>;
               })}</div>
               {selectedToLock.length ? <div className="mt-3"><p className="mb-2 text-xs text-muted">Lock {selectedToLock.length} selected invoice{selectedToLock.length === 1 ? "" : "s"} totaling {new Intl.NumberFormat("en-US", { style: "currency", currency: selectedToLock[0].currency }).format(selectedToLock.reduce((sum, invoice) => sum + invoice.amountDueCents, 0) / 100)}.</p><HoldToConfirm compact action={() => lockInvoices(selectedToLock)} idleLabel="Hold to bulk lock selected invoices" holdingLabel="Keep holding to freeze these totals…" /></div> : null}
