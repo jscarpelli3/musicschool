@@ -40,7 +40,7 @@ function startingMinute(windowStart: number, preference: string, requested: numb
   return windowStart;
 }
 
-export function LessonOpeningFinder({ options, timeZone, onChoose, size = "dashboard" }: { options: LessonCreationOptions; timeZone: string; onChoose: (opening: Opening) => void; size?: "dashboard" | "directory" | "detail" }) {
+export function LessonOpeningFinder({ options, timeZone, onChoose, onManualAdd, size = "dashboard", triggerVariant = "card" }: { options: LessonCreationOptions; timeZone: string; onChoose: (opening: Opening) => void; onManualAdd?: () => void; size?: "dashboard" | "directory" | "detail"; triggerVariant?: "card" | "nav" }) {
   const [open, setOpen] = useState(false);
   const [teacherId, setTeacherId] = useState(options.teachers.length === 1 ? options.teachers[0].id : "");
   const [productId, setProductId] = useState("");
@@ -116,6 +116,11 @@ export function LessonOpeningFinder({ options, timeZone, onChoose, size = "dashb
     onChoose(opening);
   }
 
+  function manuallyAdd() {
+    closeFinder();
+    onManualAdd?.();
+  }
+
   const finder = <>
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div className="flex items-center gap-3 text-sm">
@@ -138,11 +143,11 @@ export function LessonOpeningFinder({ options, timeZone, onChoose, size = "dashb
   const titleSize = size === "dashboard" ? "text-3xl" : size === "directory" ? "text-2xl" : "text-xl";
 
   return <>
-    <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className={`flex h-full w-full flex-col items-center justify-center rounded-card border border-transparent bg-surface-raised/55 text-center shadow-[var(--ui-shadow-soft)] transition duration-200 hover:-translate-y-1 hover:scale-[1.025] hover:border-brand/50 hover:bg-surface-raised hover:text-brand hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${triggerSize}`}>
-      <MdSearch aria-hidden="true" className={`${iconSize} text-brand`} />
-      <span className={`font-display font-normal tracking-[-0.03em] ${titleSize}`}>Find an opening</span>
-      {size === "dashboard" ? <span className="mt-2 max-w-xl text-xs leading-5 text-muted">Filter a week by teacher, lesson, day, or time to see exactly what is available.</span> : null}
-    </button>
+    {triggerVariant === "nav" ? <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 text-sm text-brand transition hover:text-brand-hover"><MdSearch aria-hidden="true" className="text-lg" />Find an opening</button> : <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className={`flex h-full w-full flex-col items-center justify-center rounded-card border border-transparent bg-surface-raised/55 text-center shadow-[var(--ui-shadow-soft)] transition duration-200 hover:-translate-y-1 hover:scale-[1.025] hover:border-brand/50 hover:bg-surface-raised hover:text-brand hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${triggerSize}`}>
+        <MdSearch aria-hidden="true" className={`${iconSize} text-brand`} />
+        <span className={`font-display font-normal tracking-[-0.03em] ${titleSize}`}>Find an opening</span>
+        {size === "dashboard" ? <span className="mt-2 max-w-xl text-xs leading-5 text-muted">Filter a week by teacher, lesson, day, or time to see exactly what is available.</span> : null}
+      </button>}
     {open ? <div className="fixed inset-0 z-[120]" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <button type="button" aria-label="Close opening finder" onClick={closeFinder} className="fixed inset-0 border-0 bg-[var(--ui-overlay)]" />
       <section className="fixed left-1/2 top-1/2 z-[121] max-h-[calc(100dvh-2rem)] w-[min(72rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto border border-line bg-surface p-6 shadow-xl sm:p-8">
@@ -150,6 +155,7 @@ export function LessonOpeningFinder({ options, timeZone, onChoose, size = "dashb
           <MdSearch aria-hidden="true" className="mx-auto text-3xl text-brand" />
           <h2 id={titleId} className="mt-2 font-display text-3xl font-normal tracking-[-0.03em]">Find an opening</h2>
           <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted">Each choice filters the same weekly availability picture.</p>
+          {onManualAdd ? <p className="mt-3 text-sm text-muted">Or you can manually <button type="button" onClick={manuallyAdd} className="inline-flex items-center gap-1 text-brand transition hover:text-brand-hover"><span aria-hidden="true">+</span><span>Add a lesson</span></button>.</p> : null}
           <button type="button" onClick={closeFinder} className="absolute right-0 top-0 text-sm text-muted hover:text-ink">Close</button>
         </header>
         <div className="pt-6">{finder}</div>

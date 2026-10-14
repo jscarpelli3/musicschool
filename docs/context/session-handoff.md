@@ -78,6 +78,8 @@ Do not redo card setup or either successful $2.00 charge. Automatic signed-webho
 - The finder now presents each teacher's continuous free windows rather than generating 15-minute or lesson-duration start increments.
 - Selecting an offering does not remove shorter openings. A window that cannot fit the selected duration remains visible but muted and cannot be selected; its label explains that it is too short, allowing the owner to reconsider the lesson length.
 - Past days are omitted consistently, and today's first open window is clipped to the scheduling minimum whether or not an offering is selected.
+- The large standalone finder remains only on the main dashboard. Directory and student/family/teacher record copies were removed; the former `New lesson` action in the shared school header is now `Find an opening` with a magnifying-glass icon and opens the real finder modal from every owner page.
+- Header finder context follows the route: student records constrain the student, family records constrain students to that family, and teacher records constrain the teacher. Beneath the finder explanation, `Or you can manually + Add a lesson` opens the ordinary composer without requiring availability selection.
 
 ### Direct calendar lesson entry
 

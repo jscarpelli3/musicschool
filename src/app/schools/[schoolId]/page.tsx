@@ -273,9 +273,6 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
       {view === "students" ? <StudentDirectory
         rows={studentRowsForTable}
         monthLabel={monthLabel}
-        schoolId={schoolId}
-        timeZone={school.timezone}
-        lessonCreationOptions={lessonCreationOptions}
         addFamilyAction={capabilities.has("school.billing.manage") ? addStudentAndPayer.bind(null, schoolId) : undefined}
       /> : null}
       {view === "dashboard" && canManageSchool ? <section className={`needs-scheduling-card ui-card p-6 sm:p-8 ${invoiceSummary.attentionCount ? "mb-6" : "mb-10"}`} data-empty={entitlements.length === 0}><SectionHeading kind="scheduling" eyebrow="Needs scheduling" title={entitlements.length ? "Paid lessons waiting for a time" : "Nothing is waiting for a time"} description="Paid replacement lessons appear here until they are placed back on the calendar." />{entitlements.length ? <div className="mt-6 border-t border-line pt-6"><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} /></div> : null}</section> : null}

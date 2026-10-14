@@ -8,6 +8,7 @@ import { loadCurrentSchoolAccess } from "@/lib/auth/school-access";
 import { loadOwnerApprovalSummary } from "@/lib/approvals/owner-approvals";
 import { loadSchoolInvoiceSummary } from "@/lib/billing/school-invoices";
 import { MdSettings } from "react-icons/md";
+import { loadLessonCreationOptions } from "@/lib/scheduling/lesson-creation-options";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ export default async function SchoolLayout({ children, params }: { children: Rea
   const supabase = await createClient();
   const { profileId, school, membership, capabilities } = await loadCurrentSchoolAccess(schoolId);
   if (!profileId) redirect(`/login?next=/schools/${schoolId}`);
-  const [{ data: profile }, approvalSummary, invoiceSummary, studentsResult, familiesResult, peopleResult, teachersResult] = await Promise.all([
+  const [{ data: profile }, approvalSummary, invoiceSummary, studentsResult, familiesResult, peopleResult, teachersResult, billingLinksResult] = await Promise.all([
     supabase.from("profiles").select("avatar_url, avatar_path").eq("id", profileId).maybeSingle(),
     capabilities.has("school.approvals.review") ? loadOwnerApprovalSummary(supabase, schoolId) : Promise.resolve({ items: [], count: 0 }),
     capabilities.has("school.billing.manage") ? loadSchoolInvoiceSummary(supabase, schoolId, 6) : Promise.resolve({ invoices: [], attentionCount: 0 }),
@@ -24,10 +25,12 @@ export default async function SchoolLayout({ children, params }: { children: Rea
     capabilities.has("school.workspace.view") ? supabase.from("billing_accounts").select("id,name").eq("school_id", schoolId).eq("status", "active").order("name") : Promise.resolve({ data: [], error: null }),
     capabilities.has("school.workspace.view") ? supabase.from("people").select("id,first_name,last_name,preferred_name").eq("school_id", schoolId).eq("status", "active") : Promise.resolve({ data: [], error: null }),
     capabilities.has("school.staff.directory_manage") ? supabase.from("teachers").select("person_id").eq("school_id", schoolId) : Promise.resolve({ data: [], error: null }),
+    capabilities.has("school.workspace.view") ? supabase.from("billing_account_students").select("billing_account_id,student_id").eq("school_id", schoolId) : Promise.resolve({ data: [], error: null }),
   ]);
-  const directoryError = studentsResult.error ?? familiesResult.error ?? peopleResult.error ?? teachersResult.error;
+  const directoryError = studentsResult.error ?? familiesResult.error ?? peopleResult.error ?? teachersResult.error ?? billingLinksResult.error;
   if (directoryError) throw new Error(`School navigation directory could not load: ${directoryError.message}`);
   if (!school || !membership) notFound();
+  const lessonCreationOptions = capabilities.has("school.lessons.manage") ? await loadLessonCreationOptions(supabase, schoolId, school.timezone) : undefined;
   const [{ data: avatar }, { data: logo }] = await Promise.all([
     profile?.avatar_path ? supabase.storage.from("avatars").createSignedUrl(profile.avatar_path, 3600) : Promise.resolve({ data: null }),
     school.logo_path ? supabase.storage.from("school-logos").createSignedUrl(school.logo_path, 3600) : Promise.resolve({ data: null }),
@@ -37,6 +40,7 @@ export default async function SchoolLayout({ children, params }: { children: Rea
   const studentDirectory = (studentsResult.data ?? []).flatMap((student) => { const person = people.get(student.person_id); return person ? [{ id: person.id, label: `${person.preferred_name || person.first_name} ${person.last_name}` }] : []; }).sort((a, b) => a.label.localeCompare(b.label));
   const familyDirectory = (familiesResult.data ?? []).map((family) => ({ id: family.id, label: family.name }));
   const staffDirectory = (teachersResult.data ?? []).flatMap((teacher) => { const person = people.get(teacher.person_id); return person ? [{ id: person.id, label: `${person.preferred_name || person.first_name} ${person.last_name}` }] : []; }).sort((a, b) => a.label.localeCompare(b.label));
+  const studentIdsByFamily = (billingLinksResult.data ?? []).reduce<Record<string,string[]>>((groups, link) => { (groups[link.billing_account_id] ??= []).push(link.student_id); return groups; }, {});
   return <div data-school-theme={school.theme_key} data-school-font={school.font_key} className="min-h-screen bg-canvas text-ink">
     <div className="mx-auto max-w-7xl px-5 pt-8 sm:px-8 sm:pt-10">
       <header className="flex items-start justify-between gap-6 border-b border-line pb-7">
@@ -52,7 +56,7 @@ export default async function SchoolLayout({ children, params }: { children: Rea
         </div>
         <div className="flex shrink-0 items-end gap-3"><AccountMenu avatarUrl={avatarUrl} role={membership.role} /></div>
       </header>
-      <SchoolManagementNav schoolId={schoolId} capabilities={[...capabilities]} students={studentDirectory} families={familyDirectory} staff={staffDirectory} recentApprovals={approvalSummary.items.map((item) => ({ id: item.id, kind: item.kind, teacherId: item.teacherId, studentId: item.studentId, teacher: item.teacher, student: item.student, detail: item.kind === "schedule_proposal" ? "Schedule change" : item.requestType === "cancellation" ? "Cancellation request" : "Reschedule request" }))} approvalCount={approvalSummary.count} recentInvoices={invoiceSummary.invoices.slice(0, 5)} invoiceCount={invoiceSummary.attentionCount} />
+      <SchoolManagementNav schoolId={schoolId} timeZone={school.timezone} lessonCreationOptions={lessonCreationOptions} studentIdsByFamily={studentIdsByFamily} capabilities={[...capabilities]} students={studentDirectory} families={familyDirectory} staff={staffDirectory} recentApprovals={approvalSummary.items.map((item) => ({ id: item.id, kind: item.kind, teacherId: item.teacherId, studentId: item.studentId, teacher: item.teacher, student: item.student, detail: item.kind === "schedule_proposal" ? "Schedule change" : item.requestType === "cancellation" ? "Cancellation request" : "Reschedule request" }))} approvalCount={approvalSummary.count} recentInvoices={invoiceSummary.invoices.slice(0, 5)} invoiceCount={invoiceSummary.attentionCount} />
     </div>
     {children}
   </div>;

@@ -104,6 +104,7 @@ type Props = {
   showAvailabilityLabels?: boolean;
   lessonCreationOptions?: LessonCreationOptions;
   finderSize?: "dashboard" | "directory" | "detail";
+  showLessonFinder?: boolean;
   initialTeacherId?: string;
   allowAllTeachers?: boolean;
   rescheduleMode?: "apply" | "propose";
@@ -209,6 +210,7 @@ export function OwnerPlanner({
   showAvailabilityLabels = true,
   lessonCreationOptions,
   finderSize = "dashboard",
+  showLessonFinder = true,
   initialTeacherId = "all",
   allowAllTeachers = true,
   rescheduleMode = "apply",
@@ -415,8 +417,8 @@ export function OwnerPlanner({
 
   return (
     <>
-    {lessonCreationOptions ? <div className={`mb-10 items-stretch gap-4 ${addFamilyAction ? "grid md:grid-cols-3" : "flex justify-center"}`}>
-      <div className={addFamilyAction ? "" : finderSize === "detail" ? "w-[min(22rem,100%)]" : "w-[min(34rem,100%)]"}><LessonOpeningFinder size={finderSize} options={lessonCreationOptions} timeZone={timezone} onChoose={(opening) => { setCreatingLesson(false); setCreationSlot({ ...opening, minutes: timeMinutes(opening.time) }); }} /></div>
+    {lessonCreationOptions && showLessonFinder ? <div className={`mb-10 items-stretch gap-4 ${addFamilyAction ? "grid md:grid-cols-3" : "flex justify-center"}`}>
+      <div className={addFamilyAction ? "" : finderSize === "detail" ? "w-[min(22rem,100%)]" : "w-[min(34rem,100%)]"}><LessonOpeningFinder size={finderSize} options={lessonCreationOptions} timeZone={timezone} onChoose={(opening) => { setCreatingLesson(false); setCreationSlot({ ...opening, minutes: timeMinutes(opening.time) }); }} onManualAdd={() => { setCreatingLesson(false); setCreationSlot({ dateKey: lessonCreationOptions.today, time: "", teacherId: "", minutes: 0 }); }} /></div>
       {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add student" largeKind="student" existingPayers={existingPayers} unconnectedStudents={unconnectedStudents} /> : null}
       {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add payer" largeKind="payer" existingPayers={existingPayers} unconnectedStudents={unconnectedStudents} /> : null}
     </div> : null}

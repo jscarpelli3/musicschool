@@ -5,7 +5,6 @@ import { CalendarRange } from "./calendar-range";
 import { QuickActionGrid, type QuickAction } from "@/components/ui/quick-action-grid";
 import { LessonCreationDialog, type LessonCreationOptions } from "@/components/scheduling/lesson-creation-dialog";
 import { MdAddCircleOutline } from "react-icons/md";
-import { LessonOpeningFinder } from "@/components/scheduling/lesson-opening-finder";
 
 export type RecordLessonCalendarItem = {
   id: string;
@@ -74,7 +73,7 @@ export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeE
     { href: `/schools/${schoolId}/staff/${selectedLesson.teacherId}`, kind: "teacher", title: "Teacher home", detail: "Schedule, availability, and details." },
   ] : [];
 
-  return <>{lessonCreationOptions ? <div className="my-6 flex justify-center"><div className="w-[min(22rem,100%)]"><LessonOpeningFinder size="detail" options={lessonCreationOptions} timeZone={timeZone} onChoose={(opening) => setCreationSlot(opening)} /></div></div> : null}<section className="ui-card mt-6 p-6 md:p-8"><div className="mb-7 flex flex-wrap items-end justify-between gap-5"><div><h2 className="font-display text-3xl">{title}</h2><p className="mt-3 text-sm leading-6 text-muted">{description}</p></div>{lessonCreationOptions ? <button type="button" onClick={() => setCreationSlot({ dateKey: lessonCreationOptions.today, time: "", teacherId: "" })} className="inline-flex items-center gap-2 rounded-control border border-brand px-4 py-2.5 text-sm text-brand transition hover:bg-brand hover:text-canvas"><MdAddCircleOutline aria-hidden="true" className="text-lg" />Add without finding a time</button> : null}</div><CalendarRange
+  return <><section className="ui-card mt-6 p-6 md:p-8"><div className="mb-7 flex flex-wrap items-end justify-between gap-5"><div><h2 className="font-display text-3xl">{title}</h2><p className="mt-3 text-sm leading-6 text-muted">{description}</p></div>{lessonCreationOptions ? <button type="button" onClick={() => setCreationSlot({ dateKey: lessonCreationOptions.today, time: "", teacherId: "" })} className="inline-flex items-center gap-2 rounded-control border border-brand px-4 py-2.5 text-sm text-brand transition hover:bg-brand hover:text-canvas"><MdAddCircleOutline aria-hidden="true" className="text-lg" />Add without finding a time</button> : null}</div><CalendarRange
     id={id}
     items={lessons}
     rangeStart={rangeStart}

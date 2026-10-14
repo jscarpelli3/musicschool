@@ -54,6 +54,7 @@ export function TeacherScheduleCalendar({
     showAvailabilityLabels={false}
     lessonCreationOptions={lessonCreationOptions}
     finderSize="detail"
+    showLessonFinder={false}
     rescheduleMode={rescheduleMode}
     rescheduleAction={rescheduleAction}
   />;
