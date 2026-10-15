@@ -86,36 +86,36 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
   return (
     <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-labelledby="lesson-request-title">
       <button type="button" aria-label="Close request review" disabled={resolving} onClick={() => router.push(closeHref)} className="fixed inset-0 bg-[var(--ui-overlay)] disabled:cursor-wait" />
-      <section className="fixed left-1/2 top-1/2 z-[101] max-h-[calc(100dvh-2rem)] w-[min(50rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto border border-brand bg-canvas p-5 shadow-xl sm:p-8">
+      <section className="fixed left-1/2 top-1/2 z-[101] max-h-[calc(100dvh-2rem)] w-[min(50rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-card bg-canvas p-5 shadow-xl sm:p-8">
         <div className="flex items-start justify-between gap-5">
           <div><p className="text-xs uppercase tracking-[0.14em] text-brand">{presentation.eyebrow}</p><h2 id="lesson-request-title" className="mt-3 font-display text-4xl">{presentation.title}</h2><p className="mt-3 text-sm leading-6 text-muted"><Link href={`/schools/${schoolId}/students/${item.studentId}`} className="hover:text-brand">{item.student}</Link> · Teacher: <Link href={`/schools/${schoolId}/staff/${item.teacherId}`} className="hover:text-brand">{item.teacher}</Link></p></div>
           <button type="button" disabled={resolving} onClick={() => router.push(closeHref)} className="text-sm text-muted transition hover:text-ink disabled:cursor-wait disabled:opacity-40">Close</button>
         </div>
 
-        <dl className="mt-7 grid gap-px bg-line sm:grid-cols-2">
-          <div className="bg-canvas p-5"><dt className="text-xs text-muted">Lesson</dt><dd className="mt-2 text-sm font-medium">{format.format(new Date(item.lessonAt))}</dd></div>
-          <div className="bg-canvas p-5"><dt className="text-xs text-muted">Request recorded</dt><dd className="mt-2 text-sm font-medium">{format.format(new Date(item.requestedAt))}</dd></div>
-          <div className="bg-canvas p-5"><dt className="text-xs text-muted">{presentation.askedLabel}</dt><dd className="mt-2 text-sm">{requestedAction}.</dd></div>
-          <div className="bg-canvas p-5"><dt className="text-xs text-muted">Current accounting</dt><dd className="mt-2 text-sm capitalize">{accountingName(item.accountingState)}</dd></div>
+        <dl className="mt-7 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-control bg-surface-raised p-4"><dt className="text-xs text-muted">Lesson</dt><dd className="mt-2 text-sm font-medium">{format.format(new Date(item.lessonAt))}</dd></div>
+          <div className="rounded-control bg-surface-raised p-4"><dt className="text-xs text-muted">Request recorded</dt><dd className="mt-2 text-sm font-medium">{format.format(new Date(item.requestedAt))}</dd></div>
+          <div className="rounded-control bg-surface-raised p-4"><dt className="text-xs text-muted">{presentation.askedLabel}</dt><dd className="mt-2 text-sm">{requestedAction}.</dd></div>
+          <div className="rounded-control bg-surface-raised p-4"><dt className="text-xs text-muted">Current accounting</dt><dd className="mt-2 text-sm capitalize">{accountingName(item.accountingState)}</dd></div>
         </dl>
 
-        <section className="mt-6 border-l-2 border-brand bg-surface-raised p-5">
+        <section className="mt-5 rounded-card bg-surface-raised p-5">
           <p className="text-sm font-medium">{item.withinPolicyWindow ? "Within" : "Outside"} the {item.cutoffHours}-hour cancellation window</p>
           <p className="mt-2 text-sm leading-6 text-muted">{item.policyGuidance}</p>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm"><span className="text-muted">Policy recommends: </span>{recommendationName(item.policyLessonResolution)}{item.policyFeeCents > 0 ? ` plus a ${money.format(item.policyFeeCents / 100)} late fee` : ""}.</p>
             {recommendedResolution && isOverride ? <button type="button" disabled={resolving} onClick={usePolicyRecommendation} className="text-sm text-brand underline-offset-4 transition hover:underline disabled:cursor-wait disabled:opacity-40">Use recommendation</button> : null}
           </div>
         </section>
 
         {pending ? <>
-          {invoiceImpact ? <section className="mt-6 border border-brand bg-brand/10 p-5">
+          {invoiceImpact ? <section className="mt-5 rounded-card bg-brand/10 p-5">
             <p className="text-xs uppercase tracking-[0.12em] text-brand">Invoice consequence</p>
             <p className="mt-3 text-base font-medium">The existing {accountingName(invoiceImpact.status).toLowerCase()} invoice and its approval will be voided.</p>
             <p className="mt-2 text-sm leading-6 text-muted">{invoiceImpact.revisedAmountCents > 0 ? `The current ${money.format(invoiceImpact.currentAmountCents / 100)} statement will be replaced by a ${money.format(invoiceImpact.revisedAmountCents / 100)} draft without this ${money.format(invoiceImpact.lessonAmountCents / 100)} lesson. The new draft must be reviewed, locked, and approved again before collection.` : `This ${money.format(invoiceImpact.currentAmountCents / 100)} statement contains no remaining balance after removing the lesson, so it will be voided without creating a $0 replacement.`} Nothing will be charged or refunded by this decision.</p>
           </section> : null}
 
-          <details className="mt-7 border-t border-line pt-5" open={policyRequiresJudgment || undefined}>
+          <details className="mt-5 rounded-card bg-surface-raised p-5" open={policyRequiresJudgment || undefined}>
             <summary className="cursor-pointer text-sm font-medium text-brand">Choose a different outcome or add an adjustment</summary>
           <fieldset className="mt-5">
             <legend className="text-lg font-medium">Lesson outcome</legend>
@@ -123,7 +123,7 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
             <div className="mt-4 grid gap-3" role="radiogroup">
               {item.resolutionChoices.map((option) => {
                 const selected = resolution === option.value;
-                return <button key={option.value} type="button" role="radio" aria-checked={selected} disabled={resolving} onClick={() => setResolution(option.value)} className={`p-4 text-left transition disabled:cursor-wait disabled:opacity-50 ${selected ? "bg-brand text-canvas" : "border border-line bg-canvas hover:border-brand"}`}><span className="block text-sm font-medium">{option.title}</span><span className={`mt-2 block text-sm leading-6 ${selected ? "text-canvas/80" : "text-muted"}`}>{option.description}</span></button>;
+                return <button key={option.value} type="button" role="radio" aria-checked={selected} disabled={resolving} onClick={() => setResolution(option.value)} className={`rounded-control p-4 text-left transition disabled:cursor-wait disabled:opacity-50 ${selected ? "bg-brand text-canvas" : "bg-canvas hover:bg-brand/10"}`}><span className="block text-sm font-medium">{option.title}</span><span className={`mt-2 block text-sm leading-6 ${selected ? "text-canvas/80" : "text-muted"}`}>{option.description}</span></button>;
               })}
             </div>
           </fieldset>
@@ -131,7 +131,7 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
           <fieldset className="mt-7">
             <legend className="text-sm font-medium">Add a separate account adjustment?</legend>
             <div className="mt-3 flex flex-wrap gap-2">
-              {(["none", ...item.allowedAdjustmentKinds] as const).map((kind) => <button key={kind} type="button" disabled={resolving} onClick={() => setAdjustmentKind(kind)} className={`border px-4 py-2 text-sm capitalize transition disabled:cursor-wait disabled:opacity-50 ${adjustmentKind === kind ? "border-brand bg-brand text-canvas" : "border-line hover:border-brand"}`}>{kind === "none" ? "No adjustment" : `Add ${kind}`}</button>)}
+              {(["none", ...item.allowedAdjustmentKinds] as const).map((kind) => <button key={kind} type="button" disabled={resolving} onClick={() => setAdjustmentKind(kind)} className={`rounded-control px-4 py-2 text-sm capitalize transition disabled:cursor-wait disabled:opacity-50 ${adjustmentKind === kind ? "bg-brand text-canvas" : "bg-canvas hover:bg-brand/10"}`}>{kind === "none" ? "No adjustment" : `Add ${kind}`}</button>)}
             </div>
             {adjustmentKind !== "none" ? <label className="mt-4 block max-w-xs"><span className="text-sm font-medium">{adjustmentKind === "fee" ? "Fee" : "Credit"} amount</span><span className="relative block"><span className="absolute left-0 top-5 text-muted">$</span><input type="number" min="0.01" max="10000" step="0.01" value={amount} disabled={resolving} onChange={(event) => setAmount(Number(event.target.value))} className="mt-2 w-full border-b border-line bg-transparent py-3 pl-5 outline-none focus:border-brand disabled:cursor-wait disabled:opacity-50" /></span></label> : null}
           </fieldset>
@@ -139,15 +139,15 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
           <label className="mt-7 block"><span className="text-sm font-medium">Internal decision note {requiresReason ? `· required ${isOverride ? "for this exception" : "because policy requires judgment"}` : "· optional"}</span><textarea value={reason} disabled={resolving} onChange={(event) => setReason(event.target.value)} maxLength={1000} rows={3} className="mt-2 w-full border border-line bg-transparent p-3 outline-none focus:border-brand disabled:cursor-wait disabled:opacity-50" placeholder={presentation.note} /></label>
           </details>
 
-          <aside className="mt-7 border border-brand bg-surface-raised p-5">
+          <aside className="mt-5 rounded-card bg-surface-raised p-5">
             <p className="text-xs uppercase tracking-[0.12em] text-brand">What will happen</p><p className="mt-3 text-base font-medium">{selectedOutcome.title}</p>
             <ul className="mt-3 space-y-2 text-sm leading-6 text-muted"><li>• The scheduled calendar event will be cancelled.</li><li>• {selectedOutcome.description}</li>{invoiceImpact?<li>• The old invoice and approval will be voided{invoiceImpact.revisedAmountCents>0?", and a revised draft will be created for fresh approval":" with no $0 replacement invoice"}.</li>:null}<li>• {adjustmentKind === "none" || amountCents <= 0 ? "No separate account fee or credit will be added." : `A ${money.format(amountCents / 100)} ${adjustmentKind} will be recorded.`}</li><li>• {presentation.audience} will be notified of the owner’s decision.</li></ul>
             {isOverride ? <p className="mt-4 text-xs text-brand">This differs from the published policy and will be recorded as an owner exception.</p> : null}
           </aside>
 
           <div className="mt-7">
-            <HoldToConfirm action={() => submit("approved")} disabled={resolving || (requiresReason && !reason.trim()) || (adjustmentKind !== "none" && amountCents <= 0)} onBusyChange={setResolving} idleLabel="Hold to apply this outcome" holdingLabel="Keep holding to resolve…" submittingLabel="Applying lesson and account changes…" successLabel="Request resolved" />
-            {!showDecline ? <button type="button" disabled={resolving} onClick={() => setShowDecline(true)} className="mt-2 text-sm text-muted underline-offset-4 transition hover:text-danger hover:underline disabled:cursor-wait disabled:text-muted/40 disabled:no-underline">{presentation.decline}</button> : <section className="mt-5 border-t border-line pt-5"><p className="text-sm font-medium">{presentation.decline}?</p><p className="mt-2 text-sm leading-6 text-muted">{presentation.declineEffect}</p><div className="mt-4 max-w-md"><HoldToConfirm action={() => submit("declined")} disabled={resolving} onBusyChange={setResolving} idleLabel="Hold to confirm" holdingLabel="Keep holding…" submittingLabel="Recording decision…" successLabel="Decision recorded" /></div><button type="button" disabled={resolving} onClick={() => setShowDecline(false)} className="mt-2 text-sm text-muted transition hover:text-ink disabled:cursor-wait disabled:opacity-40">Never mind</button></section>}
+            <HoldToConfirm action={() => submit("approved")} disabled={resolving || (requiresReason && !reason.trim()) || (adjustmentKind !== "none" && amountCents <= 0)} onBusyChange={setResolving} idleLabel="Hold to apply this outcome" holdingLabel="Keep holding to resolve…" submittingLabel="Applying lesson and account changes…" successLabel="Request resolved" prominent centered />
+            {!showDecline ? <button type="button" disabled={resolving} onClick={() => setShowDecline(true)} className="mt-2 text-sm text-muted underline-offset-4 transition hover:text-danger hover:underline disabled:cursor-wait disabled:text-muted/40 disabled:no-underline">{presentation.decline}</button> : <section className="mt-5 rounded-card bg-surface-raised p-5"><p className="text-sm font-medium">{presentation.decline}?</p><p className="mt-2 text-sm leading-6 text-muted">{presentation.declineEffect}</p><div className="mt-4 max-w-md"><HoldToConfirm action={() => submit("declined")} disabled={resolving} onBusyChange={setResolving} idleLabel="Hold to confirm" holdingLabel="Keep holding…" submittingLabel="Recording decision…" successLabel="Decision recorded" /></div><button type="button" disabled={resolving} onClick={() => setShowDecline(false)} className="mt-2 text-sm text-muted transition hover:text-ink disabled:cursor-wait disabled:opacity-40">Never mind</button></section>}
           </div>
         </> : <p className="mt-7 text-sm text-muted">This request is {lessonRequestDescriptor(item.status).label.toLowerCase()}.</p>}
       </section>
