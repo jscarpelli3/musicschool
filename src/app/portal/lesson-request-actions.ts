@@ -29,6 +29,9 @@ export async function previewLessonRequest(lessonId: string, requestType: Lesson
   }
   const { data, error } = await supabase.rpc("preview_client_lesson_change_request", { p_lesson_event_id: lessonId, p_request_type: requestType });
   const preview = data ? parsePreview(data) : null;
+  if (error?.message.includes("published_cancellation_policy_required")) {
+    return { ok: false as const, message: "Lesson changes are not available yet because the school has not published its cancellation policy. Contact the school before changing this lesson." };
+  }
   return error || !preview ? { ok: false as const, message: "This request cannot be prepared. Contact the school for help." } : { ok: true as const, preview };
 }
 export async function submitLessonRequest(lessonId: string, requestType: LessonRequestType, resolution: LessonRequestedResolution) {
