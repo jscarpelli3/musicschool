@@ -48,6 +48,7 @@ export async function submitLessonRequest(lessonId: string, requestType: LessonR
   }
   const { data, error } = await supabase.rpc("submit_client_lesson_change_action", { p_lesson_event_id: lessonId, p_request_type: requestType, p_requested_resolution: resolution });
   const result = data ? object(data) : null;
+  if (error?.code === "23505" || error?.message.includes("lesson_change_requests_one_active_per_lesson")) return { ok: false as const, message: "A change request for this lesson is already waiting for the school. Reload to see it." };
   if (error || !result || typeof result.request_id !== "string") return { ok: false as const, message: "Your request was not recorded. Please try again." };
   const delivery = await dispatchLessonRequestEmails(result.request_id);
   return { ok: true as const, result: result.result, requestId: result.request_id, requestedAt: typeof result.requested_at === "string" ? result.requested_at : new Date().toISOString(), deliveryFailed: delivery.failed > 0 };

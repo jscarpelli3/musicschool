@@ -7,7 +7,7 @@ The persistent staging environment exists to test migrations, authentication, pr
 | Layer | Staging target |
 | --- | --- |
 | Git | Protected `staging` branch |
-| Supabase | Persistent branch project `plnluybazyltxtsbkxpn` |
+| Supabase | Persistent branch project `iubmheectmsoavztbzma` |
 | Database data | Empty by default; synthetic fixtures only |
 | Stripe | Test mode only, with a staging-specific webhook destination and signing secret |
 | Vercel | Branch-scoped `staging` preview/environment; never generic production credentials; Vercel Authentication remains enabled |
@@ -16,6 +16,7 @@ The persistent staging environment exists to test migrations, authentication, pr
 ## Non-negotiable boundaries
 
 - Never copy production Auth users, family records, Storage objects, tokens, or payment data into staging.
+- Before every database write, print and compare the CLI-linked project ref with `iubmheectmsoavztbzma`. `supabase/config.toml` remote settings do not override a stale local CLI link. Prefer an explicitly targeted connection or Management API project ref; never assume an unqualified `supabase db push` targets staging.
 - Never configure a Stripe live-mode secret, live connected account, or production webhook secret in staging.
 - Never reuse production Supabase server keys or provider webhook secrets in staging.
 - Keep `APP_URL` pointed at the stable staging application origin so callback and Checkout return URLs cannot cross environments.

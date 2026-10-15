@@ -12,6 +12,7 @@ export type LessonCalendarItem = {
   placeName: string;
   startsAt: string;
   endsAt: string;
+  pendingRequest: { id: string; type: string; status: string; requestedAt: string } | null;
 };
 
 type LessonCalendarProps = {
@@ -103,7 +104,7 @@ export function LessonCalendar({ id, lessons, rangeStart, rangeEnd, timeZone, sc
         <div className="py-5"><dt className="text-xs text-muted">Teacher</dt><dd className="mt-2 text-sm">{selectedLesson.teacherName}</dd></div>
         <div className="py-5"><dt className="text-xs text-muted">Place</dt><dd className="mt-2 text-sm">{selectedLesson.placeName}</dd></div>
       </dl>
-      <LessonRequestControls lessonId={selectedLesson.lessonId} timeZone={timeZone} schoolContact={schoolContact} />
+      <LessonRequestControls lessonId={selectedLesson.lessonId} timeZone={timeZone} schoolContact={schoolContact} pendingRequest={selectedLesson.pendingRequest} />
     </aside>
   </div> : null}</>;
 }

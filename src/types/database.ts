@@ -5567,6 +5567,10 @@ export type Database = {
         Returns: {
           ends_at: string
           lesson_id: string
+          pending_request_id: string | null
+          pending_request_status: string | null
+          pending_request_type: string | null
+          pending_requested_at: string | null
           place_name: string
           product_name: string
           reschedule_allowed: boolean
