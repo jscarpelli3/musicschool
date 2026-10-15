@@ -5571,8 +5571,10 @@ export type Database = {
           product_name: string
           reschedule_allowed: boolean
           reschedule_blocked_reason: string
+          school_email: string | null
           school_id: string
           school_name: string
+          school_phone: string | null
           school_timezone: string
           starts_at: string
           student_id: string

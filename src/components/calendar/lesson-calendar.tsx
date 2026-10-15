@@ -20,9 +20,10 @@ type LessonCalendarProps = {
   rangeStart: Date;
   rangeEnd: Date;
   timeZone: string;
+  schoolContact: { name: string; phone: string | null; email: string | null };
 };
 
-export function LessonCalendar({ id, lessons, rangeStart, rangeEnd, timeZone }: LessonCalendarProps) {
+export function LessonCalendar({ id, lessons, rangeStart, rangeEnd, timeZone, schoolContact }: LessonCalendarProps) {
   const [selectedLesson, setSelectedLesson] = useState<LessonCalendarItem | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const sheetRef = useRef<HTMLElement>(null);
@@ -102,7 +103,7 @@ export function LessonCalendar({ id, lessons, rangeStart, rangeEnd, timeZone }: 
         <div className="py-5"><dt className="text-xs text-muted">Teacher</dt><dd className="mt-2 text-sm">{selectedLesson.teacherName}</dd></div>
         <div className="py-5"><dt className="text-xs text-muted">Place</dt><dd className="mt-2 text-sm">{selectedLesson.placeName}</dd></div>
       </dl>
-      <LessonRequestControls lessonId={selectedLesson.lessonId} timeZone={timeZone} />
+      <LessonRequestControls lessonId={selectedLesson.lessonId} timeZone={timeZone} schoolContact={schoolContact} />
     </aside>
   </div> : null}</>;
 }
