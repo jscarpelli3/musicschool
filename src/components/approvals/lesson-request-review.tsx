@@ -50,6 +50,7 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
   const isOverride = !policyRequiresJudgment && (resolution !== recommendedResolution || adjustmentKind !== recommendedAdjustment || amountCents !== item.policyFeeCents);
   const requiresReason = policyRequiresJudgment || isOverride;
   const presentation = scenarioPresentation(item);
+  const invoiceImpact = resolution === "waive" ? item.invoiceImpact : null;
   const requestedAction = item.scenario === "teacher_cancellation" ? "The assigned teacher cannot provide this lesson; choose the service and accounting remedy"
     : item.scenario === "school_cancellation" ? "The school cannot provide this lesson; choose the service and accounting remedy"
       : item.scenario === "student_no_show" ? "The student did not attend; apply the effective no-show policy"
@@ -108,9 +109,17 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
         </section>
 
         {pending ? <>
-          <fieldset className="mt-8">
-            <legend className="text-lg font-medium">Choose the outcome</legend>
-            <p className="mt-1 text-sm text-muted">The policy guides this choice. You can make a different call when the situation calls for it.</p>
+          {invoiceImpact ? <section className="mt-6 border border-brand bg-brand/10 p-5">
+            <p className="text-xs uppercase tracking-[0.12em] text-brand">Invoice consequence</p>
+            <p className="mt-3 text-base font-medium">The existing {accountingName(invoiceImpact.status).toLowerCase()} invoice and its approval will be voided.</p>
+            <p className="mt-2 text-sm leading-6 text-muted">{invoiceImpact.revisedAmountCents > 0 ? `The current ${money.format(invoiceImpact.currentAmountCents / 100)} statement will be replaced by a ${money.format(invoiceImpact.revisedAmountCents / 100)} draft without this ${money.format(invoiceImpact.lessonAmountCents / 100)} lesson. The new draft must be reviewed, locked, and approved again before collection.` : `This ${money.format(invoiceImpact.currentAmountCents / 100)} statement contains no remaining balance after removing the lesson, so it will be voided without creating a $0 replacement.`} Nothing will be charged or refunded by this decision.</p>
+          </section> : null}
+
+          <details className="mt-7 border-t border-line pt-5" open={policyRequiresJudgment || undefined}>
+            <summary className="cursor-pointer text-sm font-medium text-brand">Choose a different outcome or add an adjustment</summary>
+          <fieldset className="mt-5">
+            <legend className="text-lg font-medium">Lesson outcome</legend>
+            <p className="mt-1 text-sm text-muted">The published policy is selected. A different choice is recorded as an exception and requires a note.</p>
             <div className="mt-4 grid gap-3" role="radiogroup">
               {item.resolutionChoices.map((option) => {
                 const selected = resolution === option.value;
@@ -128,10 +137,11 @@ export function LessonRequestReview({ schoolId, item, timezone, closeHref }: { s
           </fieldset>
 
           <label className="mt-7 block"><span className="text-sm font-medium">Internal decision note {requiresReason ? `· required ${isOverride ? "for this exception" : "because policy requires judgment"}` : "· optional"}</span><textarea value={reason} disabled={resolving} onChange={(event) => setReason(event.target.value)} maxLength={1000} rows={3} className="mt-2 w-full border border-line bg-transparent p-3 outline-none focus:border-brand disabled:cursor-wait disabled:opacity-50" placeholder={presentation.note} /></label>
+          </details>
 
           <aside className="mt-7 border border-brand bg-surface-raised p-5">
             <p className="text-xs uppercase tracking-[0.12em] text-brand">What will happen</p><p className="mt-3 text-base font-medium">{selectedOutcome.title}</p>
-            <ul className="mt-3 space-y-2 text-sm leading-6 text-muted"><li>• The scheduled calendar event will be cancelled.</li><li>• {selectedOutcome.description}</li><li>• {adjustmentKind === "none" || amountCents <= 0 ? "No separate account fee or credit will be added." : `A ${money.format(amountCents / 100)} ${adjustmentKind} will be recorded.`}</li><li>• {presentation.audience} will be notified of the owner’s decision.</li></ul>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-muted"><li>• The scheduled calendar event will be cancelled.</li><li>• {selectedOutcome.description}</li>{invoiceImpact?<li>• The old invoice and approval will be voided{invoiceImpact.revisedAmountCents>0?", and a revised draft will be created for fresh approval":" with no $0 replacement invoice"}.</li>:null}<li>• {adjustmentKind === "none" || amountCents <= 0 ? "No separate account fee or credit will be added." : `A ${money.format(amountCents / 100)} ${adjustmentKind} will be recorded.`}</li><li>• {presentation.audience} will be notified of the owner’s decision.</li></ul>
             {isOverride ? <p className="mt-4 text-xs text-brand">This differs from the published policy and will be recorded as an owner exception.</p> : null}
           </aside>
 
