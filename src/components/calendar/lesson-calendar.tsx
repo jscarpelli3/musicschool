@@ -26,6 +26,7 @@ type LessonCalendarProps = {
 
 export function LessonCalendar({ id, lessons, rangeStart, rangeEnd, timeZone, schoolContact }: LessonCalendarProps) {
   const [selectedLesson, setSelectedLesson] = useState<LessonCalendarItem | null>(null);
+  const [submittedRequests, setSubmittedRequests] = useState<Record<string, NonNullable<LessonCalendarItem["pendingRequest"]>>>({});
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const sheetRef = useRef<HTMLElement>(null);
   const openerRef = useRef<HTMLButtonElement | null>(null);
@@ -104,7 +105,7 @@ export function LessonCalendar({ id, lessons, rangeStart, rangeEnd, timeZone, sc
         <div className="py-5"><dt className="text-xs text-muted">Teacher</dt><dd className="mt-2 text-sm">{selectedLesson.teacherName}</dd></div>
         <div className="py-5"><dt className="text-xs text-muted">Place</dt><dd className="mt-2 text-sm">{selectedLesson.placeName}</dd></div>
       </dl>
-      <LessonRequestControls lessonId={selectedLesson.lessonId} timeZone={timeZone} schoolContact={schoolContact} pendingRequest={selectedLesson.pendingRequest} />
+      <LessonRequestControls lessonId={selectedLesson.lessonId} timeZone={timeZone} schoolContact={schoolContact} pendingRequest={submittedRequests[selectedLesson.lessonId]??selectedLesson.pendingRequest} onRequestSubmitted={(request)=>setSubmittedRequests((current)=>({...current,[selectedLesson.lessonId]:request}))} />
     </aside>
   </div> : null}</>;
 }

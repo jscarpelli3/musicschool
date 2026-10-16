@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import type { Json } from "@/types/database";
 import { createClient } from "@/lib/supabase/server";
 import { dispatchLessonRequestEmails } from "@/lib/notifications/dispatch-lesson-request-emails";
@@ -51,5 +52,6 @@ export async function submitLessonRequest(lessonId: string, requestType: LessonR
   if (error?.code === "23505" || error?.message.includes("lesson_change_requests_one_active_per_lesson")) return { ok: false as const, message: "A change request for this lesson is already waiting for the school. Reload to see it." };
   if (error || !result || typeof result.request_id !== "string") return { ok: false as const, message: "Your request was not recorded. Please try again." };
   const delivery = await dispatchLessonRequestEmails(result.request_id);
+  revalidatePath("/portal");
   return { ok: true as const, result: result.result, requestId: result.request_id, requestedAt: typeof result.requested_at === "string" ? result.requested_at : new Date().toISOString(), deliveryFailed: delivery.failed > 0 };
 }
