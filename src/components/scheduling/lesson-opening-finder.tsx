@@ -40,10 +40,10 @@ function startingMinute(windowStart: number, preference: string, requested: numb
   return windowStart;
 }
 
-export function LessonOpeningFinder({ options, timeZone, onChoose, onManualAdd, size = "dashboard", triggerVariant = "card" }: { options: LessonCreationOptions; timeZone: string; onChoose: (opening: Opening) => void; onManualAdd?: () => void; size?: "dashboard" | "directory" | "detail"; triggerVariant?: "card" | "nav" }) {
+export function LessonOpeningFinder({ options, timeZone, onChoose, onManualAdd, size = "dashboard", triggerVariant = "card" }: { options: LessonCreationOptions; timeZone: string; onChoose: (opening: Opening) => void; onManualAdd?: () => void; size?: "dashboard" | "directory" | "detail"; triggerVariant?: "card" | "nav" | "inline" }) {
   const [open, setOpen] = useState(false);
   const [teacherId, setTeacherId] = useState(options.teachers.length === 1 ? options.teachers[0].id : "");
-  const [productId, setProductId] = useState("");
+  const [productId, setProductId] = useState(options.entitlement?.productId ?? "");
   const [dateMode, setDateMode] = useState<"any" | "weekday" | "date">("any");
   const [weekday, setWeekday] = useState("1");
   const [specificDate, setSpecificDate] = useState(options.today);
@@ -143,7 +143,7 @@ export function LessonOpeningFinder({ options, timeZone, onChoose, onManualAdd, 
   const titleSize = size === "dashboard" ? "text-3xl" : size === "directory" ? "text-2xl" : "text-xl";
 
   return <>
-    {triggerVariant === "nav" ? <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 text-sm text-brand transition hover:text-brand-hover"><MdSearch aria-hidden="true" className="text-lg" />Find an opening</button> : <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className={`flex h-full w-full flex-col items-center justify-center rounded-card border border-transparent bg-surface-raised/55 text-center shadow-[var(--ui-shadow-soft)] transition duration-200 hover:-translate-y-1 hover:scale-[1.025] hover:border-brand/50 hover:bg-surface-raised hover:text-brand hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${triggerSize}`}>
+    {triggerVariant === "nav" ? <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 text-sm text-brand transition hover:text-brand-hover"><MdSearch aria-hidden="true" className="text-lg" />Find an opening</button> : triggerVariant === "inline" ? <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 text-sm text-brand transition hover:text-brand-hover"><MdSearch aria-hidden="true" />Find a time →</button> : <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className={`flex h-full w-full flex-col items-center justify-center rounded-card border border-transparent bg-surface-raised/55 text-center shadow-[var(--ui-shadow-soft)] transition duration-200 hover:-translate-y-1 hover:scale-[1.025] hover:border-brand/50 hover:bg-surface-raised hover:text-brand hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${triggerSize}`}>
         <MdSearch aria-hidden="true" className={`${iconSize} text-brand`} />
         <span className={`font-display font-normal tracking-[-0.03em] ${titleSize}`}>Find an opening</span>
         {size === "dashboard" ? <span className="mt-2 max-w-xl text-xs leading-5 text-muted">Filter a week by teacher, lesson, day, or time to see exactly what is available.</span> : null}
