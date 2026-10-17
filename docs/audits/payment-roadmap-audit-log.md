@@ -843,3 +843,9 @@ Recorded on 2026-10-14.
 
 - Investigate payer approval by replying `APPROVE` to the exact invoice email as a lower-friction alternative to opening the approval page. This is not auto-charge and must not create reusable authority.
 - Required controls: unique opaque reply routing per request, payer-email sender match, original Message-ID/thread binding, verified and idempotent inbound-provider webhook, explicit command parsing, request expiry/supersession and immutable statement checks, replay protection, durable reply evidence, and confirmation delivery. Ambiguous/forwarded/automated/different-sender replies fail closed; consent language requires review.
+
+### Replacement scheduling acceptance and audit trail
+
+- Browser acceptance consumed the TestFamily replacement entitlement into one new lesson on Wednesday, October 28, 2026, 2:00–2:30 PM America/Chicago. The entitlement now points to event `b1304e16-465d-4bc4-b5d3-ca037313e73d`; its source remains the cancelled November 30 12:20 AM event. No second charge or reusable entitlement was created.
+- Follow-up audit UX separates active owner decisions from finished approvals in the header menu. Finished entries are status-labeled and open in history as read-only records; active counts and the default list contain only genuinely reviewable rows.
+- Migration `20261016170000_enrich_replacement_lesson_notifications.sql` changes replacement scheduling notifications from a generic teacher-page link to an exact lesson link and records both new and original dates in owner-visible copy and metadata. Existing replacement records are backfilled so the tested occurrence remains traceable.

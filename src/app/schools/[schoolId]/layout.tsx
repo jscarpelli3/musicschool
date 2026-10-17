@@ -19,7 +19,7 @@ export default async function SchoolLayout({ children, params }: { children: Rea
   if (!profileId) redirect(`/login?next=/schools/${schoolId}`);
   const [{ data: profile }, approvalSummary, invoiceSummary, studentsResult, familiesResult, peopleResult, teachersResult, billingLinksResult] = await Promise.all([
     supabase.from("profiles").select("avatar_url, avatar_path").eq("id", profileId).maybeSingle(),
-    capabilities.has("school.approvals.review") ? loadOwnerApprovalSummary(supabase, schoolId) : Promise.resolve({ items: [], count: 0 }),
+    capabilities.has("school.approvals.review") ? loadOwnerApprovalSummary(supabase, schoolId) : Promise.resolve({ items: [], finishedItems: [], count: 0 }),
     capabilities.has("school.billing.manage") ? loadSchoolInvoiceSummary(supabase, schoolId, 20) : Promise.resolve({ invoices: [], attentionCount: 0 }),
     capabilities.has("school.workspace.view") ? supabase.from("students").select("person_id").eq("school_id", schoolId).in("enrollment_status", ["active", "prospect"]) : Promise.resolve({ data: [], error: null }),
     capabilities.has("school.workspace.view") ? supabase.from("billing_accounts").select("id,name").eq("school_id", schoolId).eq("status", "active").order("name") : Promise.resolve({ data: [], error: null }),
@@ -64,7 +64,7 @@ export default async function SchoolLayout({ children, params }: { children: Rea
         </div>
         <div className="flex shrink-0 items-end gap-3"><AccountMenu avatarUrl={avatarUrl} role={membership.role} /></div>
       </header>
-      <SchoolManagementNav schoolId={schoolId} timeZone={school.timezone} lessonCreationOptions={lessonCreationOptions} studentIdsByFamily={studentIdsByFamily} invoicePayers={invoicePayers} capabilities={[...capabilities]} students={studentDirectory} families={familyDirectory} staff={staffDirectory} recentApprovals={approvalSummary.items.map((item) => ({ id: item.id, kind: item.kind, teacherId: item.teacherId, studentId: item.studentId, teacher: item.teacher, student: item.student, detail: item.kind === "schedule_proposal" ? "Schedule change" : item.requestType === "cancellation" ? "Cancellation request" : "Reschedule request" }))} approvalCount={approvalSummary.count} recentInvoices={invoiceSummary.invoices.slice(0, 5)} invoiceCount={invoiceSummary.attentionCount} />
+      <SchoolManagementNav schoolId={schoolId} timeZone={school.timezone} lessonCreationOptions={lessonCreationOptions} studentIdsByFamily={studentIdsByFamily} invoicePayers={invoicePayers} capabilities={[...capabilities]} students={studentDirectory} families={familyDirectory} staff={staffDirectory} recentApprovals={approvalSummary.items.map((item) => ({ id: item.id, kind: item.kind, status: item.status, teacherId: item.teacherId, studentId: item.studentId, teacher: item.teacher, student: item.student, detail: item.kind === "schedule_proposal" ? "Schedule change" : item.requestType === "cancellation" ? "Cancellation request" : "Reschedule request" }))} finishedApprovals={approvalSummary.finishedItems.map((item) => ({ id: item.id, kind: item.kind, status: item.status, teacherId: item.teacherId, studentId: item.studentId, teacher: item.teacher, student: item.student, detail: item.kind === "schedule_proposal" ? "Schedule change" : item.requestType === "cancellation" ? "Cancellation request" : "Reschedule request" }))} approvalCount={approvalSummary.count} recentInvoices={invoiceSummary.invoices.slice(0, 5)} invoiceCount={invoiceSummary.attentionCount} />
     </div>
     {children}
   </div>;

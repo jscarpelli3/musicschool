@@ -158,6 +158,8 @@ export async function createSingleLesson(
   }
 
   revalidatePath(`/schools/${schoolId}`);
+  revalidatePath(`/schools/${schoolId}/approvals`);
+  revalidatePath(`/schools/${schoolId}/notifications`);
   revalidatePath(`/schools/${schoolId}/teacher`);
   revalidatePath(`/schools/${schoolId}/staff/${teacherId}`);
   revalidatePath(`/schools/${schoolId}/students/${studentId}`);

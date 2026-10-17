@@ -33,11 +33,12 @@ export async function loadOwnerApprovals(client:Client,schoolId:string,{teacherI
 }
 
 export const loadOwnerApprovalSummary = cache(async function loadOwnerApprovalSummary(client: Client, schoolId: string) {
- const [items, proposalCount, requestCount] = await Promise.all([
+ const [items, finishedItems, proposalCount, requestCount] = await Promise.all([
   loadOwnerApprovals(client,schoolId,{limit:5}),
+  loadOwnerApprovals(client,schoolId,{history:true,limit:5}),
   client.from("lesson_schedule_proposals").select("id",{count:"exact",head:true}).eq("school_id",schoolId).eq("proposal_kind","reschedule").eq("status","pending_owner"),
   client.from("lesson_change_requests").select("id",{count:"exact",head:true}).eq("school_id",schoolId).in("status",["pending","in_progress"]),
  ]);
  if(proposalCount.error||requestCount.error)throw new Error("Approval count could not be loaded.");
- return {items:items.slice(0,5),count:(proposalCount.count??0)+(requestCount.count??0)};
+ return {items:items.slice(0,5),finishedItems:finishedItems.slice(0,5),count:(proposalCount.count??0)+(requestCount.count??0)};
 });

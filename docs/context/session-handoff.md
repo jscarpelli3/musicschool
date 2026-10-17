@@ -198,3 +198,9 @@ Do not redo card setup or either successful $2.00 charge. Automatic signed-webho
 - PR #42: human-readable Stripe connection states and state-classification tests.
 - PR #43: platform-admin payment setup visibility requirement.
 - PR #44: pending/disabled UI states for Stripe onboarding and status actions.
+
+### Replacement scheduling traceability — 2026-10-16
+
+- Human acceptance passed for scheduling entitlement `500e8c92-ce9e-4618-a50e-75cd1a3d1d57`: it was consumed exactly once into lesson event `b1304e16-465d-4bc4-b5d3-ca037313e73d`, Wednesday, October 28, 2026 from 2:00–2:30 PM America/Chicago. It replaces the cancelled Monday, November 30, 2026 12:20 AM occurrence `a5da97e9-3b74-4035-886d-ca42ae0cf8f5`.
+- The acceptance exposed two audit-navigation gaps. The header Approvals menu showed only one undifferentiated recent list and could retain completed work after a stale render; completed review framing also resembled an active decision. The dropdown now separates `Needs decision` from `Finished`, terminal records carry their status and open read-only history, and scheduling revalidates approvals/notifications.
+- Generic lesson-created notifications routed owners to a teacher page and omitted the scheduled time. Replacement notifications now identify the student, new date/time range, and original date/time, and link directly to the new lesson drawer on the main calendar. The migration also repairs existing replacement notifications, including this staging test record.
