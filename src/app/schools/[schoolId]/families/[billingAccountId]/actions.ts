@@ -25,6 +25,44 @@ export type BillingApprovalEmailState = { ok: boolean; message: string };
 export type BillingStatementNoticeState = { ok: boolean; message: string };
 export type BillingContactEmailState = { ok: boolean; message: string };
 export type BillingAdjustmentState = { ok: boolean; message: string };
+export type PreparedInvoice = {
+  id: string;
+  billingAccountId: string;
+  familyName: string;
+  label: string;
+  amountDueCents: number;
+  currency: string;
+  status: string;
+  lines: Array<{ id: string; description: string; serviceDate: string | null; amountCents: number }>;
+  outstandingLessons: Array<{ lessonEventId: string; studentName: string; offeringName: string; serviceDate: string; startsAt: string; amountCents: number; currency: string }>;
+};
+export type BillingDraftState = { ok: boolean; message: string; periodId: string | null; invoice: PreparedInvoice | null };
+export type BillingLineDeferState = { ok: boolean; message: string };
+export type BillingLessonAddState = { ok: boolean; message: string };
+
+async function readPreparedInvoice(schoolId: string, billingAccountId: string, periodId: string): Promise<PreparedInvoice | null> {
+  const supabase = await createClient();
+  const [{ data: period }, { data: account }, { data: lines }, { data: outstandingLessons }] = await Promise.all([
+    supabase.from("billing_periods").select("id,label,amount_due_cents,currency,status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", periodId).single(),
+    supabase.from("billing_accounts").select("name").eq("school_id", schoolId).eq("id", billingAccountId).single(),
+    supabase.from("billing_line_items").select("id,description,service_date,amount_cents").eq("school_id", schoolId).eq("billing_period_id", periodId).order("service_date", { ascending: true, nullsFirst: false }).order("created_at"),
+    supabase.rpc("get_outstanding_lessons_for_billing_account", { p_school_id: schoolId, p_billing_account_id: billingAccountId }),
+  ]);
+  if (!period || !account || !lines) return null;
+  return {
+    id: period.id, billingAccountId, familyName: account.name, label: period.label, amountDueCents: period.amount_due_cents,
+    currency: period.currency, status: period.status,
+    lines: lines.map((line) => ({ id: line.id, description: line.description, serviceDate: line.service_date, amountCents: line.amount_cents ?? 0 })),
+    outstandingLessons: (outstandingLessons ?? []).map((lesson) => ({ lessonEventId: lesson.lesson_event_id, studentName: lesson.student_name, offeringName: lesson.offering_name, serviceDate: lesson.service_date, startsAt: lesson.starts_at, amountCents: lesson.amount_cents, currency: lesson.currency })),
+  };
+}
+
+export async function loadPreparedInvoice(schoolId: string, billingAccountId: string, periodId: string) {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub || !await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) return null;
+  return readPreparedInvoice(schoolId, billingAccountId, periodId);
+}
 
 export async function collectFamilyInvoice(schoolId: string, billingAccountId: string, billingPeriodId: string) {
   const path = `/schools/${schoolId}/families/${billingAccountId}`;
@@ -71,14 +109,14 @@ function appOrigin() {
   return new URL(value).origin;
 }
 
-export async function prepareFamilyBillingDraft(schoolId: string, billingAccountId: string, formData: FormData) {
+export async function prepareFamilyBillingDraft(schoolId: string, billingAccountId: string, _state: BillingDraftState, formData: FormData): Promise<BillingDraftState> {
   const path = `/schools/${schoolId}/families/${billingAccountId}`;
   const month = String(formData.get("month") ?? "");
-  if (!/^\d{4}-\d{2}$/.test(month)) redirect(`${path}?billing=invalid_month`);
+  if (!/^\d{4}-\d{2}$/.test(month)) return { ok: false, message: "Choose a valid invoice month.", periodId: null, invoice: null };
 
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
-  if (!auth?.claims?.sub) redirect(`/login?next=${path}`);
+  if (!auth?.claims?.sub) return { ok: false, message: "Sign in again before preparing an invoice.", periodId: null, invoice: null };
 
   const { data: periodId, error } = await supabase.rpc("prepare_family_billing_draft", {
     p_school_id: schoolId,
@@ -88,17 +126,38 @@ export async function prepareFamilyBillingDraft(schoolId: string, billingAccount
 
   if (error || !periodId) {
     const detail = error?.message ?? "";
-    const status = detail.includes("lesson_requires_owner_review")
+    const message = detail.includes("lesson_requires_owner_review")
       || detail.includes("requires_owner_review")
       || detail.includes("missing_effective_cancellation_policy")
-      ? "needs_review"
-      : detail.includes("after_service_period_is_not_complete") ? "period_incomplete"
-      : detail.includes("billing_period_is_not_refreshable") ? "not_refreshable" : "error";
-    redirect(`${path}?billing=${status}`);
+      ? "A lesson needs an accounting decision before this invoice can be prepared."
+      : detail.includes("after_service_period_is_not_complete") ? "That after-service billing month is not complete yet."
+      : detail.includes("no_unbilled_items_for_month") ? "There are no unpaid lessons or other items to invoice for that month. No invoice was created."
+      : "The invoice could not be prepared. Nothing was changed.";
+    return { ok: false, message, periodId: null, invoice: null };
   }
 
+  const invoice = await readPreparedInvoice(schoolId, billingAccountId, periodId);
+  if (!invoice) return { ok: false, message: "The invoice was prepared, but its review details could not be loaded. Open the family account before continuing.", periodId, invoice: null };
+
   revalidatePath(path);
-  redirect(`${path}?billing=prepared&period=${periodId}`);
+  return { ok: true, message: "Invoice prepared. Review each included item before locking it.", periodId, invoice };
+}
+
+export async function removeLineFromInvoice(schoolId: string, billingAccountId: string, billingPeriodId: string, lineItemId: string, _state: BillingLineDeferState, formData: FormData): Promise<BillingLineDeferState> {
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) return { ok: false, message: "Sign in again before changing this invoice." };
+  const reason = String(formData.get("reason") ?? "").trim();
+  const { error } = await supabase.rpc("remove_source_from_billing_draft", {
+    p_school_id: schoolId,
+    p_billing_period_id: billingPeriodId,
+    p_line_item_id: lineItemId,
+    p_reason: reason || undefined,
+  });
+  if (error) return { ok: false, message: "That item could not be removed. Refresh and confirm the invoice is still editable." };
+  revalidatePath(path);
+  return { ok: true, message: "Removed from this invoice. It remains unpaid and can be included on a later invoice." };
 }
 
 export async function lockFamilyBillingPeriod(schoolId: string, billingAccountId: string, billingPeriodId: string) {
@@ -190,6 +249,36 @@ export async function addBillingAdjustment(
   }
   revalidatePath(path);
   return { ok: true, message: `${kind === "credit" ? "Credit" : "Charge"} added to the billing ledger.` };
+}
+
+export async function addOutstandingLessonToInvoice(
+  schoolId: string,
+  billingAccountId: string,
+  billingPeriodId: string,
+  _previous: BillingLessonAddState,
+  formData: FormData,
+): Promise<BillingLessonAddState> {
+  void _previous;
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const lessonEventId = String(formData.get("lesson_event_id") ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(lessonEventId)) return { ok: false, message: "Choose an outstanding lesson." };
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) redirect(`/login?next=${path}`);
+  const { error } = await supabase.rpc("add_outstanding_lesson_to_billing_draft", {
+    p_school_id: schoolId,
+    p_billing_period_id: billingPeriodId,
+    p_lesson_event_id: lessonEventId,
+  });
+  if (error) {
+    const message = error.message.includes("not_editable") ? "This invoice is no longer editable."
+      : error.message.includes("already") ? "That lesson is already paid, allocated, or present on an invoice."
+      : error.message.includes("not_ready") ? "That lesson is not ready to bill yet."
+      : "The lesson could not be added. The invoice total is unchanged.";
+    return { ok: false, message };
+  }
+  revalidatePath(path);
+  return { ok: true, message: "Outstanding lesson added using its saved price and accounting terms." };
 }
 
 export async function removeBillingAdjustment(schoolId: string, billingAccountId: string, billingPeriodId: string, adjustmentId: string) {

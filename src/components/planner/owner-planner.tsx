@@ -12,12 +12,13 @@ import { LessonOutcomeForm } from "@/components/teacher/lesson-outcome-form";
 import { recordTeacherLessonOutcome } from "@/app/schools/[schoolId]/teacher/actions";
 import { lessonEventDescriptor, rescheduleReasonLabel } from "@/lib/scheduling/lesson-domain-contracts";
 import { RescheduleConfirmation, type RescheduleProposal } from "./lesson-reschedule-controls";
-import { QuickActionGrid, type QuickAction } from "@/components/ui/quick-action-grid";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { LessonOpeningFinder } from "@/components/scheduling/lesson-opening-finder";
 import { AppSelect } from "@/components/ui/app-select";
 import { AddFamilyDialog } from "@/components/families/add-family-dialog";
 import type { AddFamilyState } from "@/app/schools/[schoolId]/families/actions";
+import { PrepareInvoiceLauncher, type InvoicePayerChoice } from "@/components/billing/prepare-invoice-launcher";
+import { LessonDrawerShell } from "@/components/ui/lesson-drawer-shell";
 import "./owner-planner.css";
 
 type Teacher = { id: string; name: string; isOwner: boolean };
@@ -103,6 +104,8 @@ type Props = {
   showTeacherFilter?: boolean;
   showAvailabilityLabels?: boolean;
   lessonCreationOptions?: LessonCreationOptions;
+  finderSize?: "dashboard" | "directory" | "detail";
+  showLessonFinder?: boolean;
   initialTeacherId?: string;
   allowAllTeachers?: boolean;
   rescheduleMode?: "apply" | "propose";
@@ -112,6 +115,7 @@ type Props = {
   addFamilyAction?: (state: AddFamilyState, formData: FormData) => Promise<AddFamilyState>;
   existingPayers?: Array<{ id: string; label: string; firstName: string; lastName: string; email: string }>;
   unconnectedStudents?: Array<{ id: string; label: string }>;
+  invoicePayers?: InvoicePayerChoice[];
 };
 
 type LessonWithParts = Lesson & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> };
@@ -207,6 +211,8 @@ export function OwnerPlanner({
   showTeacherFilter = true,
   showAvailabilityLabels = true,
   lessonCreationOptions,
+  finderSize = "dashboard",
+  showLessonFinder = true,
   initialTeacherId = "all",
   allowAllTeachers = true,
   rescheduleMode = "apply",
@@ -216,6 +222,7 @@ export function OwnerPlanner({
   addFamilyAction,
   existingPayers = [],
   unconnectedStudents = [],
+  invoicePayers = [],
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<View>("week");
@@ -265,6 +272,21 @@ export function OwnerPlanner({
   );
   const selectedLesson = lessonDetails.find((lesson) => lesson.id === selectedLessonId) ?? null;
   const rescheduleLesson = lessonDetails.find((lesson) => lesson.id === rescheduleLessonId) ?? null;
+
+  useEffect(() => {
+    if (!initialLessonId) return;
+    const frame = window.requestAnimationFrame(() => setSelectedLessonId(initialLessonId));
+    return () => window.cancelAnimationFrame(frame);
+  }, [initialLessonId]);
+
+  useEffect(() => {
+    const selectLesson = (event: Event) => {
+      const lessonId = (event as CustomEvent<{ lessonId?: string }>).detail?.lessonId;
+      if (lessonId && lessonDetails.some((lesson) => lesson.id === lessonId)) setSelectedLessonId(lessonId);
+    };
+    window.addEventListener("common-time:select-lesson", selectLesson);
+    return () => window.removeEventListener("common-time:select-lesson", selectLesson);
+  }, [lessonDetails]);
 
   useEffect(() => {
     const reset = () => {
@@ -356,6 +378,7 @@ export function OwnerPlanner({
       setTeacherId(compact ? lesson.teacher_id : "all");
       if (view === "month") setView(compact ? "day" : "week");
     }
+    requestAnimationFrame(() => document.getElementById("school-calendar")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
   function cancelReschedule() {
@@ -413,10 +436,11 @@ export function OwnerPlanner({
 
   return (
     <>
-    {lessonCreationOptions ? <div className={`mb-10 items-stretch gap-4 ${addFamilyAction ? "grid md:grid-cols-3" : "flex justify-center"}`}>
-      <div className={addFamilyAction ? "" : "w-[min(34rem,100%)]"}><LessonOpeningFinder options={lessonCreationOptions} timeZone={timezone} onChoose={(opening) => { setCreatingLesson(false); setCreationSlot({ ...opening, minutes: timeMinutes(opening.time) }); }} /></div>
+    {lessonCreationOptions && showLessonFinder ? <div className={`mb-10 items-stretch gap-4 ${addFamilyAction ? "grid md:grid-cols-4" : "flex justify-center"}`}>
+      <div className={addFamilyAction ? "" : finderSize === "detail" ? "w-[min(22rem,100%)]" : "w-[min(34rem,100%)]"}><LessonOpeningFinder size={finderSize} options={lessonCreationOptions} timeZone={timezone} onChoose={(opening) => { setCreatingLesson(false); setCreationSlot({ ...opening, minutes: timeMinutes(opening.time) }); }} onManualAdd={() => { setCreatingLesson(false); setCreationSlot({ dateKey: lessonCreationOptions.today, time: "", teacherId: "", minutes: 0 }); }} /></div>
       {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add student" largeKind="student" existingPayers={existingPayers} unconnectedStudents={unconnectedStudents} /> : null}
       {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add payer" largeKind="payer" existingPayers={existingPayers} unconnectedStudents={unconnectedStudents} /> : null}
+      {addFamilyAction ? <PrepareInvoiceLauncher schoolId={schoolId} payers={invoicePayers} variant="dashboard" /> : null}
     </div> : null}
     <section id="school-calendar" className="ui-card scroll-mt-6 overflow-hidden">
       <div className="planner-calendar-chrome pt-2">
@@ -598,7 +622,7 @@ export function OwnerPlanner({
           onSchoolCancellation={reportSchoolCancellation.bind(null, schoolId, selectedLesson.id)}
           onClose={() => {
             setSelectedLessonId(null);
-            if (initialLessonId) router.replace(`/schools/${schoolId}#school-calendar`, { scroll: false });
+            if (new URL(window.location.href).searchParams.has("lesson")) router.replace(`/schools/${schoolId}#school-calendar`, { scroll: false });
           }}
         />
       ) : null}
@@ -1223,42 +1247,23 @@ function LessonSheet({
   onClose: () => void;
 }) {
   const duration = lesson.end.minutes - lesson.start.minutes;
-  const quickActions: QuickAction[] = [
-    { href: `/schools/${schoolId}/students/${lesson.student_id}`, kind: "student", title: "Student home", detail: "Contacts, schedule, and lesson plan." },
-    ...(student?.payers.flatMap((payer) => payer.accountId ? [{ href: `/schools/${schoolId}/families/${payer.accountId}#billing-history`, kind: "billing" as const, title: `${payer.accountName} billing`, detail: "Invoices and payment history, no detour." }] : []) ?? []),
-  ];
   return (
-    <>
-      <button type="button" aria-label="Close lesson details" className="lesson-sheet-backdrop" onClick={onClose} />
-      <aside className="lesson-sheet px-7 py-8 md:px-10" role="dialog" aria-modal="true" aria-labelledby="lesson-sheet-title">
-        <div className="flex items-start justify-between gap-6 border-b border-line pb-7">
-          <div>
-            <p className="text-xs text-brand">{lessonEventDescriptor(lesson.status).label}</p>
-            <h2 id="lesson-sheet-title" className="mt-4 font-display text-4xl font-normal tracking-[-0.035em]"><Link href={`/schools/${schoolId}/students/${lesson.student_id}`} className="hover:text-brand">{student?.name ?? "Student"}</Link></h2>
-          </div>
-          <button autoFocus type="button" onClick={onClose} className="text-action text-sm text-muted hover:text-ink">Close</button>
-        </div>
-
-        <div className="border-b border-line"><QuickActionGrid actions={quickActions} description="Two taps saved. Tiny victory." /></div>
-
-        <dl className="divide-y divide-line border-b border-line">
-          <Detail label="Lesson" value={productName} />
-          <div className="py-5"><dt className="text-xs text-muted">Teacher</dt><dd className="mt-2 text-sm"><Link href={`/schools/${schoolId}/staff/${lesson.teacher_id}`} className="hover:text-brand">{teacherName}</Link></dd></div>
+      <LessonDrawerShell titleId="lesson-sheet-title" eyebrow={lessonEventDescriptor(lesson.status).label} title={<Link href={`/schools/${schoolId}/students/${lesson.student_id}`} className="hover:text-brand">{student?.name ?? "Student"}</Link>} onClose={onClose} width="wide">
+        <section className="rounded-card bg-surface-raised p-5 shadow-[var(--ui-shadow-soft)]">
+        <dl className="grid gap-1">
           <Detail label="Date" value={new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(fromKey(lesson.start.dateKey))} />
           <Detail label="Time" value={`${clock(lesson.start.minutes)}–${clock(lesson.end.minutes)} · ${duration} minutes`} />
+          <div className="grid grid-cols-[6rem_1fr] gap-5 rounded-control px-3 py-3 text-sm odd:bg-canvas/55"><dt className="text-muted">Teacher</dt><dd><Link href={`/schools/${schoolId}/staff/${lesson.teacher_id}`} className="hover:text-brand">{teacherName}</Link></dd></div>
           <Detail label="Place" value={place.details ? `${place.name} · ${place.details}` : place.name} />
+          <Detail label="Lesson" value={productName} />
           {lesson.notes ? <Detail label="Internal notes" value={lesson.notes} /> : null}
           {lesson.reschedule_reason_code ? <Detail label="Last moved" value={rescheduleReasonLabel(lesson.reschedule_reason_code, lesson.reschedule_reason_detail)} /> : null}
         </dl>
+        {canReschedule && lesson.can_reschedule ? <button type="button" onClick={onReschedule} className="mt-4 inline-flex rounded-control bg-brand/10 px-4 py-2.5 text-sm font-medium text-brand transition hover:bg-brand hover:text-canvas">Reschedule this lesson →</button> : null}
+        </section>
 
-        {canCollectPayment ? <section className="border-b border-line py-8"><h3 className="font-display text-2xl font-normal">Payment</h3>{paidSeparately ? <><p className="mt-3 text-sm text-brand">Paid separately</p><p className="mt-2 text-xs leading-5 text-muted">This lesson will remain on the family statement with $0 newly due.</p></> : <><p className="mt-3 text-xs leading-5 text-muted">Create a secure QR code for the payer to scan on their own phone.</p><Link href={`/schools/${schoolId}/lessons/${lesson.id}/payment`} className="mt-4 inline-flex rounded-control bg-brand px-4 py-2.5 text-sm text-canvas hover:bg-brand-hover">Collect payment now</Link></>}</section> : null}
-
-        {canReschedule && lesson.can_reschedule ? (
-          <section className="border-b border-line py-8">
-            <button type="button" onClick={onReschedule} className="text-action text-sm text-brand hover:text-brand-hover">Reschedule on calendar →</button>
-            <p className="mt-3 text-xs leading-5 text-muted">The calendar will enter move mode. Dropping proposes a destination; nothing changes until you hold to confirm.</p>
-          </section>
-        ) : null}
+        <div className="mt-4 grid gap-4">
+        {canCollectPayment ? <section className="rounded-card bg-surface-raised p-5"><h3 className="font-display text-2xl font-normal">Payment</h3>{paidSeparately ? <><p className="mt-3 text-sm text-brand">Paid separately</p><p className="mt-2 text-xs leading-5 text-muted">This lesson will remain on the family statement with $0 newly due.</p></> : <><p className="mt-3 text-xs leading-5 text-muted">Create a secure QR code for the payer to scan on their own phone.</p><Link href={`/schools/${schoolId}/lessons/${lesson.id}/payment`} className="mt-4 inline-flex rounded-control bg-brand px-4 py-2.5 text-sm text-canvas hover:bg-brand-hover">Collect payment now</Link></>}</section> : null}
 
         <ReschedulePermission
           allowed={lesson.reschedule_allowed}
@@ -1267,10 +1272,10 @@ function LessonSheet({
           onChange={onPermissionChange}
         />
 
-        {canMarkReschedule && lesson.status === "scheduled" && new Date(lesson.ends_at).getTime() <= currentTimeMs ? <section className="border-b border-line py-8"><LessonOutcomeForm action={(outcome, notes) => recordTeacherLessonOutcome(schoolId, lesson.id, outcome, notes)} /></section> : null}
+        {canMarkReschedule && lesson.status === "scheduled" && new Date(lesson.ends_at).getTime() <= currentTimeMs ? <section className="rounded-card bg-surface-raised p-5"><LessonOutcomeForm action={(outcome, notes) => recordTeacherLessonOutcome(schoolId, lesson.id, outcome, notes)} /></section> : null}
 
         {canReschedule && lesson.status === "scheduled" ? (
-          <section className="border-b border-line py-8">
+          <section className="rounded-card bg-surface-raised p-5">
             <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">Optional action</p>
             <h3 className="mt-2 font-display text-2xl font-normal">Can the school no longer provide this lesson?</h3>
             <p className="mt-3 text-xs leading-5 text-muted">The lesson is still scheduled. Use this only when the school needs to initiate a cancellation.</p>
@@ -1284,14 +1289,10 @@ function LessonSheet({
           </section>
         ) : null}
 
-        <section className="border-b border-line py-8">
-          <h3 className="font-display text-2xl font-normal">Student</h3>
-          <p className="mt-4 text-sm"><Link href={`/schools/${schoolId}/students/${lesson.student_id}`} className="hover:text-brand">{student?.name}</Link></p>
-          {student?.email ? <p className="mt-1 text-sm text-muted">{student.email}</p> : null}
-          {student?.phone ? <p className="mt-1 text-sm text-muted">{student.phone}</p> : null}
-        </section>
-
-        <section className="border-b border-line py-8">
+        <section className="rounded-card bg-surface-raised p-5">
+          <h3 className="font-display text-2xl font-normal">People</h3>
+          <div className="mt-5 rounded-control bg-canvas/60 p-4"><p className="text-xs uppercase tracking-[0.12em] text-muted">Student</p><p className="mt-2 text-sm"><Link href={`/schools/${schoolId}/students/${lesson.student_id}`} className="hover:text-brand">{student?.name}</Link></p>{student?.email ? <p className="mt-1 text-sm text-muted">{student.email}</p> : null}{student?.phone ? <p className="mt-1 text-sm text-muted">{student.phone}</p> : null}</div>
+          <div className="mt-3 rounded-control bg-canvas/60 p-4">
           <h3 className="font-display text-2xl font-normal">Parent or guardian</h3>
           {student?.contacts.length ? student.contacts.map((contact) => (
             <div key={`${contact.name}-${contact.relationship}`} className="mt-5">
@@ -1303,9 +1304,8 @@ function LessonSheet({
               {contact.phone ? <p className="mt-1 text-sm text-muted">{contact.phone}</p> : null}
             </div>
           )) : <p className="mt-4 text-sm text-muted">No parent or guardian attached.</p>}
-        </section>
-
-        <section className="py-8">
+          </div>
+          <div className="mt-3 rounded-control bg-canvas/60 p-4">
           <h3 className="font-display text-2xl font-normal">Payer</h3>
           {student?.payers.length ? student.payers.map((payer) => (
             <div key={`${payer.accountName}-${payer.name}`} className="mt-5">
@@ -1315,9 +1315,10 @@ function LessonSheet({
               {payer.phone ? <p className="mt-1 text-sm text-muted">{payer.phone}</p> : null}
             </div>
           )) : <p className="mt-4 text-sm text-muted">No billing account attached.</p>}
+          </div>
         </section>
-      </aside>
-    </>
+        </div>
+      </LessonDrawerShell>
   );
 }
 
@@ -1340,21 +1341,24 @@ function ReschedulePermission({ allowed, blockedReason, canManage, onChange }: {
     setSaving(false);
   }
 
+  if (allowed && !canManage) return null;
+
   return (
-    <section className="border-b border-line py-8">
-      <h3 className="font-display text-2xl font-normal">Rescheduling</h3>
-      <p className="mt-3 text-sm">{allowed ? "Allowed for this lesson" : "Blocked for this lesson"}</p>
-      {!allowed && blockedReason ? <p className="mt-2 text-xs leading-5 text-muted">{blockedReason}</p> : null}
-      {canManage && allowed ? (
-        <details className="mt-5">
-          <summary className="cursor-pointer text-sm text-muted hover:text-ink">Block rescheduling</summary>
-          <label className="mt-4 block"><span className="text-xs text-muted">Policy or scheduling reason</span><input value={reason} onChange={(event) => setReason(event.target.value)} maxLength={300} className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand" /></label>
-          <button type="button" disabled={saving || !reason.trim()} onClick={() => save(false)} className="mt-5 border border-line px-4 py-3 text-sm text-muted disabled:opacity-40">{saving ? "Saving…" : "Mark non-reschedulable"}</button>
+    <section className={`rounded-card p-5 ${allowed ? "bg-surface-raised" : "bg-danger/5"}`}>
+      {allowed ? (
+        <details>
+          <summary className="cursor-pointer text-sm text-muted hover:text-ink">Lesson settings</summary>
+          <div className="mt-4 rounded-control bg-canvas/55 p-4">
+            <p className="text-sm font-medium">Rescheduling is available</p>
+            <p className="mt-2 text-sm leading-6 text-muted">Use this exception only when this particular lesson must stay fixed. Blocking it prevents the family, teacher, and owner from starting a reschedule.</p>
+          </div>
+          <label className="mt-5 block" htmlFor="reschedule-block-reason"><span className="text-sm">Why can’t this lesson be moved?</span><span className="mt-1 block text-xs leading-5 text-muted">A reason is required and will appear wherever rescheduling is unavailable.</span><input id="reschedule-block-reason" value={reason} onChange={(event) => setReason(event.target.value)} maxLength={300} placeholder="For example: recital, exam, or fixed room booking" aria-describedby="reschedule-block-help" className="mt-3 w-full rounded-control border border-line bg-canvas/60 px-3 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-brand" /></label>
+          <p id="reschedule-block-help" className="mt-2 text-xs leading-5 text-muted">{reason.trim() ? "This lesson will remain at its current date and time." : "Enter the reason above to enable the blocking action."}</p>
+          <button type="button" disabled={saving || !reason.trim()} onClick={() => save(false)} className="mt-4 rounded-control border border-danger/45 bg-danger/10 px-4 py-2.5 text-sm text-danger transition hover:bg-danger/15 disabled:bg-transparent">{saving ? "Saving…" : "Block rescheduling for this lesson"}</button>
+          <p className="mt-4 text-xs leading-5 text-muted">Past or completed lessons cannot be rescheduled regardless of this setting.</p>
         </details>
-      ) : null}
-      {canManage && !allowed ? <button type="button" disabled={saving} onClick={() => save(true)} className="text-action mt-5 text-sm text-brand">{saving ? "Saving…" : "Allow rescheduling again"}</button> : null}
+      ) : <><h3 className="font-display text-2xl font-normal">Rescheduling blocked</h3><p className="mt-3 text-sm leading-6 text-muted">This lesson must remain at its current date and time.</p>{blockedReason ? <div className="mt-4 rounded-control bg-canvas/55 p-4"><p className="text-xs uppercase tracking-[0.1em] text-muted">Reason</p><p className="mt-2 text-sm leading-6">{blockedReason}</p></div> : null}{canManage ? <button type="button" disabled={saving} onClick={() => save(true)} className="text-action mt-5 text-sm text-brand">{saving ? "Saving…" : "Allow rescheduling again"}</button> : null}</>}
       {message ? <p className="mt-3 text-xs text-muted" aria-live="polite">{message}</p> : null}
-      <p className="mt-4 text-xs leading-5 text-muted">Past or completed lessons remain ineligible even when this setting is allowed.</p>
     </section>
   );
 }
@@ -1365,7 +1369,7 @@ function formatCalendarDate(dateKey: string) {
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid grid-cols-[6rem_1fr] gap-5 py-5 text-sm">
+    <div className="grid grid-cols-[6rem_1fr] gap-5 rounded-control px-3 py-3 text-sm odd:bg-canvas/55">
       <dt className="text-muted">{label}</dt>
       <dd>{value}</dd>
     </div>

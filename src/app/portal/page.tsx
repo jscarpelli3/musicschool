@@ -36,9 +36,9 @@ export default async function ClientPortalPage() {
   const rangeStart = new Date();
   const rangeEnd = new Date(rangeStart);
   rangeEnd.setUTCMonth(rangeEnd.getUTCMonth() + 3);
-  const schools = new Map<string, { name: string; timeZone: string; lessons: NonNullable<typeof lessons> }>();
+  const schools = new Map<string, { name: string; timeZone: string; phone: string | null; email: string | null; lessons: NonNullable<typeof lessons> }>();
   for (const lesson of lessons ?? []) {
-    const school = schools.get(lesson.school_id) ?? { name: lesson.school_name, timeZone: lesson.school_timezone, lessons: [] };
+    const school = schools.get(lesson.school_id) ?? { name: lesson.school_name, timeZone: lesson.school_timezone, phone: lesson.school_phone, email: lesson.school_email, lessons: [] };
     school.lessons.push(lesson);
     schools.set(lesson.school_id, school);
   }
@@ -89,10 +89,11 @@ export default async function ClientPortalPage() {
       <div className="mb-8"><CalendarSubscription schoolId={schoolId} schoolName={school.name} active={calendarAccounts?.find((account) => account.school_id === schoolId)?.subscription_active ?? false} /></div>
       <div className="ui-card p-5 sm:p-7"><LessonCalendar
           id={`family-lessons-${schoolId}`}
-          lessons={school.lessons.map((lesson) => ({ lessonId: lesson.lesson_id, studentName: lesson.student_name, teacherName: lesson.teacher_name, productName: lesson.product_name, placeName: lesson.place_name, startsAt: lesson.starts_at, endsAt: lesson.ends_at }))}
+          lessons={school.lessons.map((lesson) => ({ lessonId: lesson.lesson_id, studentName: lesson.student_name, teacherName: lesson.teacher_name, productName: lesson.product_name, placeName: lesson.place_name, startsAt: lesson.starts_at, endsAt: lesson.ends_at, pendingRequest: lesson.pending_request_id && lesson.pending_request_type && lesson.pending_request_status && lesson.pending_requested_at ? { id: lesson.pending_request_id, type: lesson.pending_request_type, status: lesson.pending_request_status, requestedAt: lesson.pending_requested_at } : null }))}
           rangeStart={rangeStart}
           rangeEnd={rangeEnd}
           timeZone={school.timeZone}
+          schoolContact={{ name: school.name, phone: school.phone, email: school.email }}
         /></div>
     </section>) : <section><h2 className="font-display text-3xl">No upcoming lessons</h2><div className="ui-card mt-6 p-6 sm:p-8"><p className="text-sm leading-6 text-muted">No scheduled lessons were found for this family during the next three months.</p></div>{calendarAccounts?.map((account) => <div key={account.school_id} className="mt-8"><CalendarSubscription schoolId={account.school_id} schoolName={account.school_name} active={account.subscription_active} /></div>)}</section>}</div>
   </main>;

@@ -1,0 +1,2 @@
+grant select on public.billing_period_line_exclusions,public.billing_source_invoice_allocations to service_role;
+revoke insert,update,delete on public.billing_period_line_exclusions,public.billing_source_invoice_allocations from service_role;

@@ -5112,6 +5112,14 @@ export type Database = {
         }
         Returns: string
       }
+      add_outstanding_lesson_to_billing_draft: {
+        Args: {
+          p_billing_period_id: string
+          p_lesson_event_id: string
+          p_school_id: string
+        }
+        Returns: string
+      }
       apply_automatic_family_timely_reschedule: {
         Args: { p_lesson_event_id: string }
         Returns: Json
@@ -5559,12 +5567,18 @@ export type Database = {
         Returns: {
           ends_at: string
           lesson_id: string
+          pending_request_id: string | null
+          pending_request_status: string | null
+          pending_request_type: string | null
+          pending_requested_at: string | null
           place_name: string
           product_name: string
           reschedule_allowed: boolean
           reschedule_blocked_reason: string
+          school_email: string | null
           school_id: string
           school_name: string
+          school_phone: string | null
           school_timezone: string
           starts_at: string
           student_id: string
@@ -5680,6 +5694,18 @@ export type Database = {
           p_school_id: string
         }
         Returns: string
+      }
+      get_outstanding_lessons_for_billing_account: {
+        Args: { p_billing_account_id: string; p_school_id: string }
+        Returns: {
+          amount_cents: number
+          currency: string
+          lesson_event_id: string
+          offering_name: string
+          service_date: string
+          starts_at: string
+          student_name: string
+        }[]
       }
       prepare_teacher_invitation: {
         Args: {
@@ -5835,6 +5861,15 @@ export type Database = {
           p_school_id: string
         }
         Returns: undefined
+      }
+      remove_source_from_billing_draft: {
+        Args: {
+          p_billing_period_id: string
+          p_line_item_id: string
+          p_reason?: string
+          p_school_id: string
+        }
+        Returns: string
       }
       replace_teacher_weekly_availability: {
         Args: { p_blocks: Json; p_school_id: string; p_teacher_id: string }

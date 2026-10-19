@@ -19,10 +19,12 @@ import { BillingContactEmail } from "./billing-contact-email";
 import { BillingContactPhone } from "./billing-contact-phone";
 import { BillingPeriodLock } from "./billing-period-lock";
 import { BillingPeriodUnlock } from "./billing-period-unlock";
+import { ScrollToInvoice } from "./scroll-to-invoice";
 import { BillingPeriodRevise } from "./billing-period-revise";
 import { PaymentMethodRemove } from "./payment-method-remove";
 import { PaymentMethodDefault } from "./payment-method-default";
 import { BillingAdjustmentForm, BillingAdjustmentRemove } from "./billing-adjustments";
+import { BillingLineDefer } from "./billing-line-defer";
 import { BillingArchive } from "./billing-archive";
 import { RecordLessonCalendar } from "@/components/calendar/record-lesson-calendar";
 import { schoolCalendarWindow } from "@/lib/calendar/school-calendar-window";
@@ -38,10 +40,10 @@ function name(person: { first_name: string; last_name: string; preferred_name: s
 
 export default async function FamilyDetailPage({ params, searchParams }: {
   params: Promise<{ schoolId: string; billingAccountId: string }>;
-  searchParams: Promise<{ card?: string; billing?: string; period?: string }>;
+  searchParams: Promise<{ card?: string; billing?: string; period?: string; prepareInvoice?: string }>;
 }) {
   const { schoolId, billingAccountId } = await params;
-  const { card, billing, period: selectedPeriodId } = await searchParams;
+  const { card, billing, period: selectedPeriodId, prepareInvoice } = await searchParams;
   const stripeLivemode = getStripeMode() === "live";
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
@@ -57,6 +59,9 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   if (failedInitial?.error) throw new Error(`Family detail could not load: ${failedInitial.error.message}`);
   const [{ data: school }, { data: membership }, { data: account }] = initial;
   if (!school || !membership || !account) notFound();
+  const capabilities = await loadMySchoolCapabilities(schoolId);
+  const canManagePayments = capabilities.has("school.billing.manage");
+  const canManageLessons = capabilities.has("school.lessons.manage");
   const archiveCutoff = calendarMonthCutoff(school.timezone, 6);
   const { rangeStart: calendarStart, rangeEnd: calendarEnd, queryStart, queryEnd } = schoolCalendarWindow(school.timezone);
 
@@ -76,10 +81,12 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     supabase.from("teachers").select("person_id,outside_availability_policy").eq("school_id", schoolId),
     supabase.from("teacher_availability_rules").select("id,teacher_id,weekday,start_time,end_time,effective_from,effective_until").eq("school_id", schoolId).order("weekday").order("start_time"),
     supabase.from("lesson_events").select("teacher_id,student_id,starts_at,ends_at,status").eq("school_id", schoolId).gte("starts_at", queryStart).lt("starts_at", queryEnd),
+    canManagePayments ? supabase.rpc("get_outstanding_lessons_for_billing_account", { p_school_id: schoolId, p_billing_account_id: billingAccountId }) : Promise.resolve({ data: [], error: null }),
   ]);
   const failedRelated = related.find((result) => result.error);
   if (failedRelated?.error) throw new Error(`Family detail could not load: ${failedRelated.error.message}`);
-  const [peopleResult, studentsResult, periodsResult, archivedPeriodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult, productsResult, placesResult, teachersResult, availabilityResult, busyLessonsResult] = related;
+  const [peopleResult, studentsResult, periodsResult, archivedPeriodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult, productsResult, placesResult, teachersResult, availabilityResult, busyLessonsResult, outstandingLessonsResult] = related;
+  const outstandingLessonChoices = (outstandingLessonsResult.data ?? []).map((lesson) => ({ lessonEventId: lesson.lesson_event_id, studentName: lesson.student_name, offeringName: lesson.offering_name, serviceDate: lesson.service_date, startsAt: lesson.starts_at, amountCents: lesson.amount_cents, currency: lesson.currency }));
   const periodIds = [...(periodsResult.data ?? []), ...(archivedPeriodsResult.data ?? [])].map((period) => period.id);
   const { data: lineItems, error: lineItemsError } = periodIds.length
     ? await supabase.from("billing_line_items")
@@ -121,9 +128,6 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   for (const attempt of attemptsResult.data ?? []) if (!latestAttemptByPeriod.has(attempt.billing_period_id)) latestAttemptByPeriod.set(attempt.billing_period_id, attempt);
   const hasActivePaymentMethod = (methodsResult.data ?? []).some((method) => method.status === "active");
   const activePaymentMethodCount = (methodsResult.data ?? []).filter((method) => method.status === "active").length;
-  const capabilities = await loadMySchoolCapabilities(schoolId);
-  const canManagePayments = capabilities.has("school.billing.manage");
-  const canManageLessons = capabilities.has("school.lessons.manage");
   const readinessResults = canManagePayments ? await Promise.all(periodIds.map((billingPeriodId) =>
     supabase.rpc("get_billing_collection_readiness", { p_school_id: schoolId, p_billing_period_id: billingPeriodId }).maybeSingle()
   )) : [];
@@ -167,15 +171,12 @@ export default async function FamilyDetailPage({ params, searchParams }: {
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
-      <DetailHeader eyebrow={`${school.name} · Family account`} title={account.name} meta={`${account.status} billing relationship · ${students.length} ${students.length === 1 ? "student" : "students"}`} />
+      <DetailHeader kind="families" eyebrow={`${school.name} · Family account`} title={account.name} meta={`${account.status} billing relationship · ${students.length} ${students.length === 1 ? "student" : "students"}`} />
 
       {approvals.length?<DetailSection title="Needs approval" description="Pending owner decisions involving students in this family."><ApprovalList schoolId={schoolId} items={approvals} timezone={school.timezone} compact/></DetailSection>:null}
-      {entitlements.length?<DetailSection title="Lessons to schedule" description="Paid replacement lessons still owed to this family."><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} compact/></DetailSection>:null}
+      {entitlements.length?<DetailSection title="Lessons to schedule" description="Replacement lesson time still owed to this family."><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} lessonCreationOptions={lessonCreationOptions} compact/></DetailSection>:null}
 
-      <section className="ui-card mt-6 p-6 md:p-8">
-        <div className="mb-7"><h2 className="font-display text-3xl">Family lesson calendar</h2><p className="mt-3 text-sm leading-6 text-muted">Lessons for every student on this account. Move between months without leaving the record.</p></div>
-        <RecordLessonCalendar schoolId={schoolId} id={`family-${billingAccountId}-calendar`} lessons={(familyLessons ?? []).map((lesson) => { const studentPerson = people.get(lesson.student_id); const teacherPerson = people.get(lesson.teacher_id); return { id: lesson.id, studentId: lesson.student_id, studentName: studentPerson ? name(studentPerson) : "Student", teacherId: lesson.teacher_id, teacherName: teacherPerson ? name(teacherPerson) : "Unassigned teacher", productName: products.get(lesson.product_id) ?? "Lesson", placeName: places.get(lesson.actual_place_id ?? lesson.place_id) ?? "Unassigned place", startsAt: lesson.actual_starts_at ?? lesson.starts_at, endsAt: lesson.actual_ends_at ?? lesson.ends_at, status: lesson.outcome ?? lesson.status, billingAccounts: [{ id: billingAccountId, name: account.name }] }; })} rangeStart={calendarStart} rangeEnd={calendarEnd} timeZone={school.timezone} lessonCreationOptions={lessonCreationOptions} />
-      </section>
+      <RecordLessonCalendar title="Family lesson calendar" description="Lessons for every student on this account. Move between months without leaving the record." schoolId={schoolId} id={`family-${billingAccountId}-calendar`} lessons={(familyLessons ?? []).map((lesson) => { const studentPerson = people.get(lesson.student_id); const teacherPerson = people.get(lesson.teacher_id); return { id: lesson.id, studentId: lesson.student_id, studentName: studentPerson ? name(studentPerson) : "Student", teacherId: lesson.teacher_id, teacherName: teacherPerson ? name(teacherPerson) : "Unassigned teacher", productName: products.get(lesson.product_id) ?? "Lesson", placeName: places.get(lesson.actual_place_id ?? lesson.place_id) ?? "Unassigned place", startsAt: lesson.actual_starts_at ?? lesson.starts_at, endsAt: lesson.actual_ends_at ?? lesson.ends_at, status: lesson.outcome ?? lesson.status, billingAccounts: [{ id: billingAccountId, name: account.name }] }; })} rangeStart={calendarStart} rangeEnd={calendarEnd} timeZone={school.timezone} lessonCreationOptions={lessonCreationOptions} />
 
       <DetailSection title="Primary payer" description="The person currently responsible for this billing account.">
         {contact ? <div><p className="font-display text-3xl">{name(contact)}</p><p className="mt-3 text-xs uppercase tracking-[0.14em] text-brand">{contact.status}</p>{canManagePayments ? <><BillingContactEmail schoolId={schoolId} billingAccountId={billingAccountId} email={contact.email ?? ""} hasPendingApproval={(approvalRequestsResult.data ?? []).some((request) => request.approval_status === "pending")} /><BillingContactPhone schoolId={schoolId} schoolName={school.name} billingAccountId={billingAccountId} phone={contact.phone ?? ""} consentState={smsConsentState ?? "not_enrolled"} /></> : <><p className="mt-3 text-sm text-muted">{contact.email || "No email recorded"}</p><p className="mt-3 text-sm text-muted">{contact.phone || "No mobile number recorded"}</p></>}</div> : <EmptyDetail>The billing contact record is unavailable.</EmptyDetail>}
@@ -188,29 +189,32 @@ export default async function FamilyDetailPage({ params, searchParams }: {
         </div>
       </DetailSection>
 
-      <div id="billing-history" className="scroll-mt-6"><DetailSection title="Billing history" description="Durable monthly billing periods. Draft amounts remain visibly distinct from paid provider truth.">
+      {canManagePayments ? <section className="mt-6 flex flex-col items-start gap-4 rounded-card bg-surface-raised/55 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8"><div><p className="text-xs uppercase tracking-[0.14em] text-brand">Billing</p><h2 className="mt-2 font-display text-3xl">Prepare an invoice</h2><p className="mt-2 max-w-xl text-sm leading-6 text-muted">Choose a service month in a focused review flow. Nothing is sent or charged until you lock and request approval.</p></div><BillingDraftForm schoolId={schoolId} billingAccountId={billingAccountId} defaultMonth={currentMonth} initialOpen={prepareInvoice === "1"} /></section> : null}
+
+      <div id="billing-history" className="scroll-mt-6"><DetailSection title="Invoices" description="Draft, active, and completed invoices. A service month may have more than one invoice when lessons are intentionally billed later.">
+        <ScrollToInvoice invoiceId={selectedPeriodId} />
         <div className="space-y-7">
-          {canManagePayments ? <BillingDraftForm schoolId={schoolId} billingAccountId={billingAccountId} defaultMonth={currentMonth} /> : null}
           {billing && billingMessages[billing] ? <p role="status" className={`border-l-2 pl-4 text-sm leading-6 ${billing === "prepared" ? "border-brand text-ink" : "border-danger text-danger"}`}>{billingMessages[billing]}</p> : null}
           <div className="space-y-4">
           {(periodsResult.data ?? []).map((billingPeriod) => {
             const periodLines = linesByPeriod[billingPeriod.id] ?? [];
             const periodState = billingPeriodDescriptor(billingPeriod.status);
+            const statusClass = billingPeriod.status === "paid" ? "border-brand/50 bg-brand text-canvas" : periodState.editable ? "border-ink/25 bg-ink/10 text-ink" : "border-brand/30 bg-brand/10 text-brand";
             return (
-              <details key={billingPeriod.id} open={billingPeriod.id === selectedPeriodId} className={`group rounded-card border p-5 transition sm:p-6 ${billingPeriod.status === "paid" ? "border-line/60 bg-surface/50 opacity-60 hover:opacity-80 open:opacity-80" : "border-line bg-surface open:border-brand/40 open:bg-surface-raised"}`}>
+              <details id={`invoice-${billingPeriod.id}`} key={billingPeriod.id} open={billingPeriod.id === selectedPeriodId} className={`group scroll-mt-24 rounded-card border p-5 transition sm:p-6 ${billingPeriod.status === "paid" ? "border-line/60 bg-surface/45 text-muted hover:bg-surface/65 open:bg-surface/65" : "border-line bg-surface open:border-brand/40 open:bg-surface-raised"}`}>
                 <summary className="grid cursor-pointer list-none grid-cols-[1fr_auto] items-start gap-4 marker:hidden">
-                  <div><p className="font-display text-2xl">{billingPeriod.label}</p><div className="mt-3 flex flex-wrap items-center gap-2 text-xs"><span className="rounded-full bg-brand/10 px-2.5 py-1 text-brand">{periodState.label}</span><span className="text-muted">{formatCompactDate(billingPeriod.period_start)}–{formatCompactDate(billingPeriod.period_end)}</span><span className="text-muted">· {periodLines.length} lines</span></div></div>
+                  <div><p className="font-display text-2xl">{billingPeriod.label}</p><div className="mt-3 flex flex-wrap items-center gap-2 text-xs"><span className={`rounded-full border px-2.5 py-1 font-semibold uppercase tracking-[0.08em] ${statusClass}`}>{periodState.label}</span><span className="text-muted">{formatCompactDate(billingPeriod.period_start)}–{formatCompactDate(billingPeriod.period_end)}</span><span className="text-muted">· {periodLines.length} lines</span></div></div>
                   <div className="flex items-start gap-3 text-right"><div><p className="text-lg">{money(billingPeriod.amount_due_cents, billingPeriod.currency)}</p><p className="mt-1 text-xs text-muted">{money(paidByPeriod[billingPeriod.id] ?? 0, billingPeriod.currency)} paid</p></div><MdExpandMore aria-hidden="true" className="mt-1 text-xl text-muted transition group-open:rotate-180" /></div>
                 </summary>
                 <div className="mt-6 border-t border-line pt-2">
                   {periodLines.map((line) => {
                     const metadata = line.metadata && typeof line.metadata === "object" && !Array.isArray(line.metadata) ? line.metadata : {};
                     const disposition = "disposition" in metadata && typeof metadata.disposition === "string" ? metadata.disposition : line.source_type.replaceAll("_", " ");
-                    return <div key={line.id} className="grid gap-2 border-t border-line py-4 first:border-t-0 sm:grid-cols-[1fr_auto] sm:gap-6"><div><p className="text-sm">{line.description}</p><p className="mt-1 text-xs text-muted">{lineServiceWhen(line)} · <span className="uppercase">{line.source_type === "manual_adjustment" ? "owner adjustment" : disposition}</span></p>{canManagePayments && periodState.editable && line.source_type === "manual_adjustment" ? <div className="mt-2"><BillingAdjustmentRemove schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} adjustmentId={line.id} /></div> : null}</div><p className={`text-sm sm:text-right ${(line.amount_cents ?? 0) < 0 ? "text-brand" : ""}`}>{money(line.amount_cents ?? 0, billingPeriod.currency)}</p></div>;
+                    return <div key={line.id} className="grid gap-2 border-t border-line py-4 first:border-t-0 sm:grid-cols-[1fr_auto] sm:gap-6"><div><p className="text-sm">{line.description}</p><p className="mt-1 text-xs text-muted">{lineServiceWhen(line)} · <span className="uppercase">{line.source_type === "manual_adjustment" ? "owner adjustment" : disposition}</span></p>{canManagePayments && periodState.editable && line.source_type === "manual_adjustment" ? <div className="mt-2"><BillingAdjustmentRemove schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} adjustmentId={line.id} /></div> : null}{canManagePayments && periodState.editable && (line.source_type === "lesson" || line.source_type === "lesson_series") ? <BillingLineDefer schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} lineItemId={line.id} description={line.description} /> : null}</div><p className={`text-sm sm:text-right ${(line.amount_cents ?? 0) < 0 ? "text-brand" : ""}`}>{money(line.amount_cents ?? 0, billingPeriod.currency)}</p></div>;
                   })}
                   {!periodLines.length ? <EmptyDetail>No line items are recorded.</EmptyDetail> : null}
                   {latestApprovalByPeriod.get(billingPeriod.id)?.approval_status === "rejected" ? <div className="my-5 border border-danger/50 p-5"><p className="text-xs uppercase tracking-[0.14em] text-danger">Payer requested review</p><p className="mt-3 text-sm">{({ lesson_did_not_happen: "A lesson did not happen", wrong_lesson_or_date: "A lesson or date is wrong", wrong_amount: "An amount is wrong", missing_credit: "A credit or discount is missing", duplicate_charge: "A charge appears twice", other: "Other" } as Record<string, string>)[latestApprovalByPeriod.get(billingPeriod.id)?.rejection_reason_code ?? ""] ?? "Charges need review"}</p>{latestApprovalByPeriod.get(billingPeriod.id)?.rejection_note ? <p className="mt-2 text-sm leading-6 text-muted">“{latestApprovalByPeriod.get(billingPeriod.id)?.rejection_note}”</p> : null}</div> : null}
-                  {canManagePayments && periodState.editable ? <BillingAdjustmentForm schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
+                  {canManagePayments && periodState.editable ? <BillingAdjustmentForm schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} outstandingLessons={outstandingLessonChoices} /> : null}
                   {canManagePayments && periodState.editable && billingPeriod.amount_due_cents > 0 ? <div className="border-t border-line pt-5"><p className="max-w-lg text-xs leading-5 text-muted">Lock only after reviewing every line. Locking freezes this exact amount for the separate payer-approval step.</p><BillingPeriodLock schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /></div> : null}
                   {canManagePayments && billingPeriod.status === "locked" && !latestApprovalByPeriod.get(billingPeriod.id) ? <BillingPeriodUnlock schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}
                   {canManagePayments && billingPeriod.status === "approval_pending" && latestApprovalByPeriod.get(billingPeriod.id)?.approval_status === "pending" ? <BillingPeriodRevise schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={billingPeriod.id} /> : null}

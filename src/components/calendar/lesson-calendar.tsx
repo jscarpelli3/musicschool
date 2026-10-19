@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { CalendarRange } from "./calendar-range";
 import { LessonRequestControls } from "./lesson-request-controls";
+import { LessonDrawerShell } from "@/components/ui/lesson-drawer-shell";
 
 export type LessonCalendarItem = {
   lessonId: string;
@@ -12,6 +13,7 @@ export type LessonCalendarItem = {
   placeName: string;
   startsAt: string;
   endsAt: string;
+  pendingRequest: { id: string; type: string; status: string; requestedAt: string } | null;
 };
 
 type LessonCalendarProps = {
@@ -20,41 +22,15 @@ type LessonCalendarProps = {
   rangeStart: Date;
   rangeEnd: Date;
   timeZone: string;
+  schoolContact: { name: string; phone: string | null; email: string | null };
 };
 
-export function LessonCalendar({ id, lessons, rangeStart, rangeEnd, timeZone }: LessonCalendarProps) {
+export function LessonCalendar({ id, lessons, rangeStart, rangeEnd, timeZone, schoolContact }: LessonCalendarProps) {
   const [selectedLesson, setSelectedLesson] = useState<LessonCalendarItem | null>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const sheetRef = useRef<HTMLElement>(null);
+  const [submittedRequests, setSubmittedRequests] = useState<Record<string, NonNullable<LessonCalendarItem["pendingRequest"]>>>({});
   const openerRef = useRef<HTMLButtonElement | null>(null);
   const time = new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", minute: "2-digit" });
   const date = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "long", month: "long", day: "numeric", year: "numeric" });
-
-  useEffect(() => {
-    if (!selectedLesson) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    closeButtonRef.current?.focus();
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        if (document.querySelector("[data-nested-modal]")) return;
-        setSelectedLesson(null);
-        requestAnimationFrame(() => openerRef.current?.focus());
-      }
-      if (event.key === "Tab") {
-        const controls = Array.from(sheetRef.current?.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])') ?? []);
-        const first = controls[0];
-        const last = controls.at(-1);
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [selectedLesson]);
 
   function openLesson(lesson: LessonCalendarItem, opener: HTMLButtonElement) {
     window.dispatchEvent(new Event("common-time:open-lesson-drawer"));
@@ -88,13 +64,7 @@ export function LessonCalendar({ id, lessons, rangeStart, rangeEnd, timeZone }: 
           <p className="mt-1 truncate text-xs text-muted" title={`${lesson.productName} with ${lesson.teacherName}`}>{lesson.productName}</p>
         </article>}</button>}
   />
-  {selectedLesson ? <div className="fixed inset-0 z-[80] flex justify-end">
-    <button type="button" aria-label="Close lesson details" onClick={closeLesson} className="absolute inset-0 cursor-default bg-ink/70" />
-    <aside ref={sheetRef} role="dialog" aria-modal="true" aria-labelledby={`${id}-lesson-title`} className="relative z-10 h-full w-full overflow-y-auto border-l border-line bg-canvas px-6 py-7 shadow-2xl sm:max-w-md sm:px-8">
-      <header className="flex items-start justify-between gap-6 border-b border-line pb-6">
-        <div><p className="text-xs text-brand">Lesson details</p><h2 id={`${id}-lesson-title`} className="mt-3 font-display text-4xl">{selectedLesson.studentName}</h2></div>
-        <button ref={closeButtonRef} type="button" onClick={closeLesson} className="min-h-11 px-2 text-sm text-muted hover:text-ink">Close</button>
-      </header>
+  {selectedLesson ? <LessonDrawerShell titleId={`${id}-lesson-title`} eyebrow="Lesson details" title={selectedLesson.studentName} onClose={closeLesson} surface="canvas">
       <dl className="divide-y divide-line">
         <div className="py-5"><dt className="text-xs text-muted">Date</dt><dd className="mt-2 text-sm">{date.format(new Date(selectedLesson.startsAt))}</dd></div>
         <div className="py-5"><dt className="text-xs text-muted">Time</dt><dd className="mt-2 text-sm">{time.format(new Date(selectedLesson.startsAt))}–{time.format(new Date(selectedLesson.endsAt))}</dd></div>
@@ -102,7 +72,6 @@ export function LessonCalendar({ id, lessons, rangeStart, rangeEnd, timeZone }: 
         <div className="py-5"><dt className="text-xs text-muted">Teacher</dt><dd className="mt-2 text-sm">{selectedLesson.teacherName}</dd></div>
         <div className="py-5"><dt className="text-xs text-muted">Place</dt><dd className="mt-2 text-sm">{selectedLesson.placeName}</dd></div>
       </dl>
-      <LessonRequestControls lessonId={selectedLesson.lessonId} timeZone={timeZone} />
-    </aside>
-  </div> : null}</>;
+      <LessonRequestControls lessonId={selectedLesson.lessonId} timeZone={timeZone} schoolContact={schoolContact} pendingRequest={submittedRequests[selectedLesson.lessonId]??selectedLesson.pendingRequest} onRequestSubmitted={(request)=>setSubmittedRequests((current)=>({...current,[selectedLesson.lessonId]:request}))} />
+  </LessonDrawerShell> : null}</>;
 }

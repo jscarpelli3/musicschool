@@ -71,6 +71,37 @@
   --ui-font-display: var(--font-monospace), ui-monospace, monospace;
 }
 
+[data-school-section] {
+  --school-section-hue: var(--ui-brand);
+  --school-section-tab: color-mix(in srgb, var(--school-section-hue) 38%, var(--ui-surface-raised));
+  background: color-mix(in srgb, var(--school-section-hue) 14%, var(--ui-canvas));
+  transition: background-color 180ms ease;
+}
+
+[data-school-section="students"] {
+  --school-section-hue: var(--ui-outcome-rescheduled);
+}
+
+[data-school-section="families"] {
+  --school-section-hue: var(--ui-brand-hover);
+}
+
+[data-school-section="staff"] {
+  --school-section-hue: var(--ui-outcome-no-show);
+}
+
+[data-school-section="billing"] {
+  --school-section-hue: var(--ui-outcome-rescheduled);
+}
+
+[data-school-section="approvals"] {
+  --school-section-hue: var(--ui-danger);
+}
+
+[data-school-section="settings"] {
+  --school-section-hue: var(--ui-outcome-cancelled);
+}
+
 .text-action {
   display: inline-flex;
   align-items: center;
@@ -617,7 +648,7 @@ summary:focus-visible,
   }
 }
 
-.notification-control > div {
+.notification-control > div:not(.notification-trigger) {
   position: absolute;
   top: 100%;
   right: 0;

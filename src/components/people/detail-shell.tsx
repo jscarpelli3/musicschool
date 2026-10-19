@@ -1,17 +1,16 @@
 import type { ReactNode } from "react";
+import { PageHeading, type PageHeadingKind } from "@/components/ui/page-heading";
 
-export function DetailHeader({ eyebrow, title, meta }: {
+export function DetailHeader({ eyebrow, title, meta, kind }: {
   eyebrow: string;
   title: string;
   meta?: string;
+  kind: Extract<PageHeadingKind, "students" | "families">;
 }) {
   return (
     <header className="pb-4">
-      <div>
-        <p className="text-xs text-brand">{eyebrow}</p>
-        <h1 className="mt-3 font-display text-5xl font-normal tracking-[-0.04em] sm:text-6xl">{title}</h1>
-        {meta ? <p className="mt-3 text-sm text-muted">{meta}</p> : null}
-      </div>
+      <p className="mb-3 ml-[4.75rem] text-xs text-brand sm:ml-[5.25rem]">{eyebrow}</p>
+      <PageHeading kind={kind} title={title} meta={meta} />
     </header>
   );
 }

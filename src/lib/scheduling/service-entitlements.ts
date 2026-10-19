@@ -9,6 +9,7 @@ export type ServiceEntitlementItem = {
   studentName: string;
   teacherId: string | null;
   teacherName: string | null;
+  productId: string;
   productName: string;
   durationMinutes: number;
   sourceStartsAt: string;
@@ -47,7 +48,7 @@ export async function loadServiceEntitlements(
     const event = events.get(row.source_lesson_event_id);
     if (!event) return [];
     return [{ id: row.id, studentId: row.student_id, studentName: people.get(row.student_id) ?? "Student",
-      teacherId: row.assigned_teacher_id, teacherName: row.assigned_teacher_id ? people.get(row.assigned_teacher_id) ?? "Teacher" : null,
+      teacherId: row.assigned_teacher_id, teacherName: row.assigned_teacher_id ? people.get(row.assigned_teacher_id) ?? "Teacher" : null, productId: event.product_id,
       productName: productNames.get(event.product_id) ?? "Lesson", durationMinutes: row.duration_minutes,
       sourceStartsAt: event.starts_at, expiresAt: row.expires_at }];
   });

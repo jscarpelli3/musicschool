@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import type { Json } from "@/types/database";
 import { createClient } from "@/lib/supabase/server";
 import { dispatchLessonRequestEmails } from "@/lib/notifications/dispatch-lesson-request-emails";
@@ -29,6 +30,9 @@ export async function previewLessonRequest(lessonId: string, requestType: Lesson
   }
   const { data, error } = await supabase.rpc("preview_client_lesson_change_request", { p_lesson_event_id: lessonId, p_request_type: requestType });
   const preview = data ? parsePreview(data) : null;
+  if (error?.message.includes("published_cancellation_policy_required")) {
+    return { ok: false as const, message: "Lesson changes are not available yet because the school has not published its cancellation policy. Contact the school before changing this lesson." };
+  }
   return error || !preview ? { ok: false as const, message: "This request cannot be prepared. Contact the school for help." } : { ok: true as const, preview };
 }
 export async function submitLessonRequest(lessonId: string, requestType: LessonRequestType, resolution: LessonRequestedResolution) {
@@ -45,7 +49,9 @@ export async function submitLessonRequest(lessonId: string, requestType: LessonR
   }
   const { data, error } = await supabase.rpc("submit_client_lesson_change_action", { p_lesson_event_id: lessonId, p_request_type: requestType, p_requested_resolution: resolution });
   const result = data ? object(data) : null;
+  if (error?.code === "23505" || error?.message.includes("lesson_change_requests_one_active_per_lesson")) return { ok: false as const, message: "A change request for this lesson is already waiting for the school. Reload to see it." };
   if (error || !result || typeof result.request_id !== "string") return { ok: false as const, message: "Your request was not recorded. Please try again." };
   const delivery = await dispatchLessonRequestEmails(result.request_id);
+  revalidatePath("/portal");
   return { ok: true as const, result: result.result, requestId: result.request_id, requestedAt: typeof result.requested_at === "string" ? result.requested_at : new Date().toISOString(), deliveryFailed: delivery.failed > 0 };
 }

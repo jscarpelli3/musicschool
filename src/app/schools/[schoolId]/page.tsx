@@ -12,6 +12,7 @@ import { InvoiceList } from "@/components/billing/invoice-list";
 import { loadSchoolInvoiceSummary } from "@/lib/billing/school-invoices";
 import { StudentDirectory } from "@/components/students/student-directory";
 import { SectionHeading } from "@/components/ui/section-heading";
+import { PageHeading } from "@/components/ui/page-heading";
 
 export const dynamic = "force-dynamic";
 
@@ -113,6 +114,11 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
   const products = new Map((productRows ?? []).map((product) => [product.id, product]));
   const placeDetails = Object.fromEntries((placeRows ?? []).map((place) => [place.id, { name: place.name, details: place.details }]));
   const billingAccounts = new Map((billingAccountRows ?? []).map((account) => [account.id, account]));
+  const invoicePayers = (billingAccountRows ?? []).map((account) => ({
+    id: account.id,
+    name: account.name,
+    students: (billingLinkRows ?? []).filter((link) => link.billing_account_id === account.id).flatMap((link) => studentNames[link.student_id] ? [studentNames[link.student_id]] : []).sort((a, b) => a.localeCompare(b)),
+  })).sort((a, b) => a.name.localeCompare(b.name));
   const studentDetails = Object.fromEntries((studentRows ?? []).flatMap(({ person_id }) => {
     const student = people.get(person_id);
     if (!student) return [];
@@ -188,6 +194,17 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
     minute: "2-digit",
   }).format(new Date(iso));
   const now = new Date().getTime();
+  const lessonCreationOptions = canManageSchool ? {
+    students: Object.entries(studentNames).map(([id,label]) => ({ id, label })),
+    primaryTeacherByStudent: Object.fromEntries((studentRows ?? []).flatMap((student) => student.primary_teacher_id ? [[student.person_id, student.primary_teacher_id]] : [])),
+    teachers: teachers.map((teacher) => ({ id: teacher.id, label: teacher.name, outsideAvailabilityPolicy: teacher.outsideAvailabilityPolicy })),
+    products: (productRows ?? []).filter((product) => product.status === "active" && product.format === "private_lesson").map((product) => ({ id: product.id, label: product.name, durationMinutes: product.duration_minutes, priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price_cents / 100) })),
+    places: (placeRows ?? []).filter((place) => place.status === "active").map((place) => ({ id: place.id, label: place.name })),
+    availability: availabilityRows ?? [],
+    busyLessons: (lessonRows ?? []).map((lesson) => ({ teacherId: lesson.teacher_id, studentId: lesson.student_id, startsAt: lesson.starts_at, endsAt: lesson.ends_at, status: lesson.status })),
+    today: initialDate,
+    minimumTimeToday,
+  } : undefined;
   const studentRowsForTable: StudentRosterRow[] = (studentRows ?? []).flatMap(({ person_id }) => {
     const student = people.get(person_id);
     const details = studentDetails[person_id];
@@ -259,12 +276,13 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
 
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-6 py-section">
+      {view === "dashboard" ? <header className="mb-10"><PageHeading kind="dashboard" title="Dashboard." description="Your school’s schedule, outstanding work, invoices, and student activity in one place." /></header> : null}
       {view === "students" ? <StudentDirectory
         rows={studentRowsForTable}
         monthLabel={monthLabel}
         addFamilyAction={capabilities.has("school.billing.manage") ? addStudentAndPayer.bind(null, schoolId) : undefined}
       /> : null}
-      {view === "dashboard" && canManageSchool ? <section className={`needs-scheduling-card ui-card p-6 sm:p-8 ${invoiceSummary.attentionCount ? "mb-6" : "mb-10"}`} data-empty={entitlements.length === 0}><SectionHeading kind="scheduling" eyebrow="Needs scheduling" title={entitlements.length ? "Paid lessons waiting for a time" : "Nothing is waiting for a time"} description="Paid replacement lessons appear here until they are placed back on the calendar." />{entitlements.length ? <div className="mt-6 border-t border-line pt-6"><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} /></div> : null}</section> : null}
+      {view === "dashboard" && canManageSchool ? <section className={`needs-scheduling-card ui-card p-6 sm:p-8 ${invoiceSummary.attentionCount ? "mb-6" : "mb-10"}`} data-empty={entitlements.length === 0}><SectionHeading kind="scheduling" eyebrow="Needs scheduling" title={entitlements.length ? "Replacement lessons waiting for a time" : "Nothing is waiting for a time"} description="Lesson time the school has retained for a student appears here until it is scheduled." />{entitlements.length ? <div className="mt-6 border-t border-line pt-6"><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} lessonCreationOptions={lessonCreationOptions} /></div> : null}</section> : null}
       {invoiceSummary.attentionCount ? invoiceSection : null}
       {view === "dashboard" ? <OwnerPlanner
         key={initialLessonId ?? "school-calendar"}
@@ -293,17 +311,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
           status: item.status === "pending_owner" ? "pending_owner" as const : "pending_teacher" as const,
           href: item.status === "pending_owner" ? `/schools/${schoolId}/approvals?proposal=${item.id}` : `/schools/${schoolId}/staff/${item.teacher_id}`,
         }))}
-        lessonCreationOptions={canManageSchool ? {
-          students: Object.entries(studentNames).map(([id,label]) => ({ id, label })),
-          primaryTeacherByStudent: Object.fromEntries((studentRows ?? []).flatMap((student) => student.primary_teacher_id ? [[student.person_id, student.primary_teacher_id]] : [])),
-          teachers: teachers.map((teacher) => ({ id: teacher.id, label: teacher.name, outsideAvailabilityPolicy: teacher.outsideAvailabilityPolicy })),
-          products: (productRows ?? []).filter((product) => product.status === "active" && product.format === "private_lesson").map((product) => ({ id: product.id, label: product.name, durationMinutes: product.duration_minutes, priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price_cents / 100) })),
-          places: (placeRows ?? []).filter((place) => place.status === "active").map((place) => ({ id: place.id, label: place.name })),
-          availability: availabilityRows ?? [],
-          busyLessons: (lessonRows ?? []).map((lesson) => ({ teacherId: lesson.teacher_id, studentId: lesson.student_id, startsAt: lesson.starts_at, endsAt: lesson.ends_at, status: lesson.status })),
-          today: initialDate,
-          minimumTimeToday,
-        } : undefined}
+        lessonCreationOptions={lessonCreationOptions}
         addFamilyAction={capabilities.has("school.billing.manage") ? addStudentAndPayer.bind(null, schoolId) : undefined}
         existingPayers={(billingAccountRows ?? []).flatMap((account) => {
           const payer = people.get(account.billing_contact_person_id);
@@ -314,6 +322,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
           const person = people.get(student.person_id);
           return person ? [{ id: student.person_id, label: `${person.preferred_name || person.first_name} ${person.last_name}` }] : [];
         })}
+        invoicePayers={invoicePayers}
       /> : null}
       {!invoiceSummary.attentionCount ? invoiceSection : null}
       {view === "dashboard" ? <StudentRosterTable rows={studentRowsForTable} monthLabel={monthLabel} initialView={rosterPreference?.settings as Partial<RosterViewSettings> | null} saveView={saveStudentRosterView.bind(null, schoolId)} dashboard /> : null}

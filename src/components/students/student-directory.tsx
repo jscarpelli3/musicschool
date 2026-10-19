@@ -7,6 +7,7 @@ import type { AddFamilyState } from "@/app/schools/[schoolId]/families/actions";
 import type { StudentRosterRow } from "./student-roster-table";
 import { LessonStatusStrip } from "./lesson-status-strip";
 import { MdPersonOutline, MdSchedule, MdSearch } from "react-icons/md";
+import { PageHeading } from "@/components/ui/page-heading";
 
 export function StudentDirectory({ rows, monthLabel, addFamilyAction }: {
   rows: StudentRosterRow[];
@@ -23,7 +24,7 @@ export function StudentDirectory({ rows, monthLabel, addFamilyAction }: {
 
   return <section aria-labelledby="student-directory-heading">
     <header className="flex flex-wrap items-end justify-between gap-6 pb-4">
-      <div><h1 id="student-directory-heading" className="font-display text-5xl tracking-[-0.04em] sm:text-6xl">Students.</h1><p className="mt-4 max-w-2xl text-sm leading-6 text-muted">Open a student record to see their family, lesson calendar, teachers, and recent activity.</p><p className="mt-2 text-sm text-muted">{rows.length} students</p></div>
+      <PageHeading kind="students" id="student-directory-heading" title="Students." description="Open a student record to see their family, lesson calendar, teachers, and recent activity." meta={`${rows.length} students`} />
       {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add student +" /> : null}
     </header>
     <label className="mt-8 block max-w-xl text-xs font-medium uppercase tracking-[0.14em] text-muted">

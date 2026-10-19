@@ -42,6 +42,23 @@
   cursor: default;
 }
 
+.hold-confirm-prominent {
+  border: 0;
+  border-radius: var(--ui-radius-control);
+  background: var(--ui-ink);
+  color: var(--ui-canvas);
+  box-shadow: var(--ui-shadow-soft);
+  font-weight: 650;
+}
+
+.hold-confirm-prominent::before {
+  background: var(--ui-brand);
+}
+
+.hold-confirm-prominent:disabled:not([data-state="success"]) {
+  opacity: 0.45;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hold-confirm[data-state="holding"]::before {
     transition-duration: var(--hold-duration);
