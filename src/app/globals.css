@@ -31,6 +31,14 @@
   --ui-font-display: var(--font-display), Georgia, serif;
 }
 
+.onboarding-billing-scroll {
+  scrollbar-width: none;
+}
+
+.onboarding-billing-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 [data-school-font="editorial"] {
   --ui-font-sans: var(--font-sans), "Helvetica Neue", Arial, sans-serif;
   --ui-font-display: var(--font-display), Georgia, serif;

@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { MdCreditCard, MdHowToReg, MdLockOutline, MdReceiptLong, MdScheduleSend } from "react-icons/md";
+import { MdCheckCircle } from "react-icons/md";
 import { AvatarUploader } from "@/app/profile/avatar-uploader";
 import { SchoolLogoUploader } from "@/components/school-setup/school-logo-uploader";
 import { InstrumentCatalogForm } from "@/components/school-setup/instrument-catalog-form";
@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 import { updateSchoolInstrumentCatalog } from "../setup/instrument-actions";
 import { createAndInviteTeacher } from "../staff/actions";
 import { finishOnboarding } from "./actions";
+import { BillingWalkthrough } from "./billing-walkthrough";
 import { FamilyForm, type OnboardingFamily } from "./family-form";
 
 export const dynamic = "force-dynamic";
@@ -90,8 +91,8 @@ export default async function OnboardingPage({ params, searchParams }: {
         <h2 className="mt-3 font-display text-4xl">Add the faces people will recognize.</h2>
         <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted">Your school logo appears on school communications. Your avatar identifies you to teachers and staff.</p>
         <div className="mt-8 grid gap-8 text-left sm:grid-cols-2">
-          <div className="rounded-control bg-surface p-5"><h3 className="text-sm font-medium">School logo</h3>{logo?.data?.signedUrl ? <img src={logo.data.signedUrl} alt={`${school.name} logo`} className="mt-4 h-24 w-24 object-contain" /> : null}<SchoolLogoUploader schoolId={schoolId} /></div>
-          <div className="rounded-control bg-surface p-5"><h3 className="text-sm font-medium">Your avatar</h3><div className="mt-4"><AvatarUploader currentUrl={avatar?.data?.signedUrl ?? profile.avatar_url ?? null} initial={profile.full_name?.[0] ?? "?"} /></div></div>
+          <div className="rounded-control bg-surface p-5">{logo?.data?.signedUrl ? <div className="flex min-h-64 flex-col items-center justify-center text-center"><img src={logo.data.signedUrl} alt={`${school.name} logo`} className="h-24 w-24 object-contain" /><MdCheckCircle aria-hidden="true" className="mt-5 h-7 w-7 text-brand" /><h3 className="mt-2 font-display text-2xl">Your school logo is saved!</h3><p className="mt-2 text-sm leading-6 text-muted">People will recognize your school by this image. You can change it later in School settings.</p></div> : <><h3 className="text-sm font-medium">School logo</h3><SchoolLogoUploader schoolId={schoolId} /></>}</div>
+          <div className="rounded-control bg-surface p-5">{avatar?.data?.signedUrl || profile.avatar_url ? <div className="flex min-h-64 flex-col items-center justify-center text-center"><img src={avatar?.data?.signedUrl ?? profile.avatar_url ?? ""} alt="Your avatar" className="h-24 w-24 rounded-full border border-line object-cover" /><MdCheckCircle aria-hidden="true" className="mt-5 h-7 w-7 text-brand" /><h3 className="mt-2 font-display text-2xl">Your owner profile is saved!</h3><p className="mt-2 text-sm leading-6 text-muted">Your team will know who you are. You can change this photo later from your account menu.</p></div> : <><h3 className="text-sm font-medium">Your avatar</h3><div className="mt-4"><AvatarUploader currentUrl={null} initial={profile.full_name?.[0] ?? "?"} /></div></>}</div>
         </div>
         <p className="mt-6 text-sm text-muted">School name: <strong className="text-ink">{school.name}</strong> · Timezone: <strong className="text-ink">{school.timezone}</strong> · <Link href={`/schools/${schoolId}/setup`} className="text-brand underline">add address or phone</Link></p>
       </section>
@@ -112,7 +113,7 @@ export default async function OnboardingPage({ params, searchParams }: {
             <p className="text-xs uppercase tracking-[0.12em] text-brand">First · Choose your instruments</p>
             <h3 className="mt-2 font-display text-3xl">What does your school teach right now?</h3>
             <p className="mt-3 text-sm leading-6 text-muted">Select the instruments you currently offer—not everything you might add later. This list controls the choices available when you add teachers and lessons, and you can update it anytime.</p>
-            <div className="mt-6"><InstrumentCatalogForm instruments={instrumentNames} action={updateSchoolInstrumentCatalog.bind(null, schoolId)} /></div>
+            {instrumentNames.length ? <div className="flex min-h-52 flex-col items-center justify-center text-center"><MdCheckCircle aria-hidden="true" className="h-8 w-8 text-brand" /><h4 className="mt-3 font-display text-3xl">Your instruments are saved!</h4><p className="mt-3 max-w-lg text-sm leading-6 text-muted">You added {instrumentNames.length} {instrumentNames.length === 1 ? "instrument" : "instruments"}. You can change this list later in School settings.</p><p className="mt-4 text-sm text-ink">{instrumentNames.join(" · ")}</p></div> : <div className="mt-6"><InstrumentCatalogForm instruments={instrumentNames} action={updateSchoolInstrumentCatalog.bind(null, schoolId)} /></div>}
           </div>
 
           <div className="rounded-control border border-line bg-surface p-5 sm:p-6">
@@ -124,20 +125,8 @@ export default async function OnboardingPage({ params, searchParams }: {
               <p className="mt-2 text-sm leading-6 text-ink">Add yourself here too. Your owner account manages the school, while your teacher record connects you to instruments, students, and lessons.</p>
             </aside>
             <div className="mt-6 border-t border-line pt-6">
-              {onboardingTeachers.length ? (
-                <div>
-                  <p className="text-sm font-medium text-ink">{onboardingTeachers.length} {onboardingTeachers.length === 1 ? "teacher" : "teachers"} added</p>
-                  <ul className="mt-3 divide-y divide-line border-y border-line" aria-label="Teachers added">
-                    {onboardingTeachers.map((teacher) => (
-                      <li key={teacher.id} className="flex flex-wrap items-baseline justify-between gap-2 py-3">
-                        <span className="font-medium text-ink">{personName(teacher)}</span>
-                        <span className="text-sm text-muted">{teacher.email || "No email address"}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : <p className="text-sm text-muted">No teachers added yet.</p>}
-              <div className="mt-5">
+              {onboardingTeachers.length ? <div className="flex min-h-52 flex-col items-center justify-center text-center"><MdCheckCircle aria-hidden="true" className="h-8 w-8 text-brand" /><h4 className="mt-3 font-display text-3xl">You saved your first teacher!</h4><p className="mt-3 text-sm leading-6 text-muted">{onboardingTeachers.length === 1 ? `${personName(onboardingTeachers[0])} is ready in your teaching team.` : `${onboardingTeachers.length} teachers are ready in your teaching team.`} You can update their details later.</p></div> : <p className="text-sm text-muted">No teachers added yet.</p>}
+              <div className={onboardingTeachers.length ? "mt-2 flex justify-center" : "mt-5"}>
                 <AddTeacherDialog
                   instruments={instrumentNames}
                   action={createAndInviteTeacher.bind(null, schoolId)}
@@ -153,29 +142,8 @@ export default async function OnboardingPage({ params, searchParams }: {
       <section className="border-t border-line py-10">
         <p className="text-xs uppercase tracking-[0.14em] text-brand">4 · Billing in plain English</p>
         <h2 className="mt-3 font-display text-4xl">What happens when money is involved.</h2>
-        <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted">Money moves forward in deliberate stages. Each handoff is visible, and nothing is charged simply because a lesson exists.</p>
-        <ol className="relative mx-auto mt-10 grid max-w-5xl gap-8 text-left lg:grid-cols-5 lg:gap-5" aria-label="Billing flow">
-          <span aria-hidden="true" className="absolute top-8 bottom-8 left-8 w-px bg-brand/40 lg:inset-x-[10%] lg:top-8 lg:bottom-auto lg:h-px lg:w-auto" />
-          {[
-            { number: "01", title: "Collect", icon: MdReceiptLong, description: <>Lessons and fees gather in a draft <Term definition="An itemized summary of charges for one family during a date range. Nothing is charged merely because a statement exists.">statement</Term>.</> },
-            { number: "02", title: "Review & lock", icon: MdLockOutline, description: <>You check every line, then lock the exact statement so it cannot quietly change.</> },
-            { number: "03", title: "Get approval", icon: MdHowToReg, description: <>The payer sees the itemized amount and gives <Term definition="Clear permission from the payer for one exact statement and amount.">approval</Term>.</> },
-            { number: "04", title: "Notify & wait", icon: MdScheduleSend, description: <>Automatic payments still receive advance notice and observe the agreed waiting period.</> },
-            { number: "05", title: "Charge", icon: MdCreditCard, description: <>Only then—with permission and a saved payment method—does Common Time attempt payment.</> },
-          ].map((step) => {
-            const Icon = step.icon;
-            return <li key={step.number} className="relative grid grid-cols-[4rem_1fr] gap-4 lg:block">
-              <div className="relative z-10 grid h-16 w-16 place-items-center rounded-full border-2 border-brand bg-canvas text-brand shadow-[0_0_0_6px_var(--color-canvas)] lg:mx-auto">
-                <Icon aria-hidden="true" className="h-7 w-7" />
-              </div>
-              <div className="rounded-control border border-line bg-surface p-5 lg:mt-7 lg:min-h-64">
-                <span className="text-xs font-medium tracking-[0.14em] text-brand">STEP {step.number}</span>
-                <h3 className="mt-3 font-display text-2xl text-ink">{step.title}</h3>
-                <p className="mt-3 text-sm leading-6 text-muted">{step.description}</p>
-              </div>
-            </li>;
-          })}
-        </ol>
+        <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted">Here is the whole path from teaching a lesson to receiving payment. You stay in control, and Common Time never charges someone just because a lesson was added.</p>
+        <BillingWalkthrough />
         <aside className="mx-auto mt-8 max-w-5xl border-l-4 border-brand bg-brand/10 px-5 py-4 text-left">
           <p className="text-xs uppercase tracking-[0.12em] text-brand">A clear paper trail</p>
           <p className="mt-2 text-sm leading-6 text-ink">Invoices, credits, failed attempts, and receipts stay separate, so you and the payer can always see exactly what happened.</p>

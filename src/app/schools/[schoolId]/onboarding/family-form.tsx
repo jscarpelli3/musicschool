@@ -5,6 +5,7 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FocusedModal } from "@/components/ui/focused-modal";
 import { AppSelect } from "@/components/ui/app-select";
+import { MdCheckCircle } from "react-icons/md";
 import { addStudentAndPayer, type AddFamilyState } from "../families/actions";
 
 export type OnboardingFamily = {
@@ -48,31 +49,17 @@ export function FamilyForm({ schoolId, families }: { schoolId: string; families:
 
   return (
     <div className="mx-auto mt-7 max-w-2xl text-left">
-      {families.length ? (
-        <div className="space-y-4">
-          {families.map((family) => (
-            <article key={family.id} className="rounded-control border border-line bg-surface p-5">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <h3 className="font-display text-2xl">{family.name}</h3>
-                  <p className="mt-2 text-sm text-ink">{family.payer ? `${family.payer.firstName} ${family.payer.lastName}` : "Payer unavailable"}</p>
-                  {family.payer?.email ? <p className="mt-1 text-xs text-muted">{family.payer.email}</p> : null}
-                </div>
-                <Link href={`/schools/${schoolId}/families/${family.id}`} className="text-sm text-brand underline underline-offset-4">Edit payer</Link>
-              </div>
-              <div className="mt-5 border-t border-line pt-4">
-                <p className="text-xs uppercase tracking-[0.12em] text-muted">Students</p>
-                <ul className="mt-2 space-y-1 text-sm">
-                  {family.students.map((student) => <li key={student.id}>{student.name}</li>)}
-                </ul>
-                {family.payer?.email ? <button type="button" onClick={() => openForm(family.id)} className="mt-4 border-b border-brand text-sm text-brand">Add student to this payer</button> : null}
-              </div>
-            </article>
-          ))}
+      {families.length ? <div className="rounded-control border border-line bg-surface p-6 text-center sm:p-8">
+        <div className="flex min-h-52 flex-col items-center justify-center">
+          <MdCheckCircle aria-hidden="true" className="h-8 w-8 text-brand" />
+          <h3 className="mt-3 font-display text-3xl">You saved your first student and payer!</h3>
+          <p className="mt-3 max-w-lg text-sm leading-6 text-muted">{families.length === 1 ? `${families[0].students[0]?.name ?? "Your student"} and their payer are connected.` : `${families.reduce((total, family) => total + family.students.length, 0)} students are connected across ${families.length} payer accounts.`} You can change their details later.</p>
+          <div className="mt-5 flex flex-wrap justify-center gap-4">
+            <button type="button" onClick={() => openForm("new")} className="rounded-control border border-brand px-5 py-3 text-sm text-brand transition hover:bg-brand hover:text-canvas">Add another student and payer</button>
+            <Link href={`/schools/${schoolId}/families/${families[0].id}`} className="px-3 py-3 text-sm text-brand underline underline-offset-4">View saved family</Link>
+          </div>
         </div>
-      ) : null}
-
-      <button type="button" onClick={() => openForm("new")} className="mt-5 rounded-control border border-brand px-5 py-3 text-sm text-brand transition hover:bg-brand hover:text-canvas">{families.length ? "Add another student and payer" : "Add student and payer"}</button>
+      </div> : <button type="button" onClick={() => openForm("new")} className="rounded-control border border-brand px-5 py-3 text-sm text-brand transition hover:bg-brand hover:text-canvas">Add student and payer</button>}
 
       <FocusedModal
         triggerLabel="Add student and payer"
