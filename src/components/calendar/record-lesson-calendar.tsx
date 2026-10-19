@@ -96,9 +96,9 @@ export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeE
       <dl className="grid gap-1 rounded-card bg-surface-raised p-5 shadow-[var(--ui-shadow-soft)]">
         <div className="rounded-control bg-canvas/55 p-3"><dt className="text-xs text-muted">Date</dt><dd className="mt-2 text-sm">{date.format(new Date(selectedLesson.startsAt))}</dd></div>
         <div className="rounded-control p-3"><dt className="text-xs text-muted">Time</dt><dd className="mt-2 text-sm">{time.format(new Date(selectedLesson.startsAt))}–{time.format(new Date(selectedLesson.endsAt))}</dd></div>
+        <div className="rounded-control bg-canvas/55 p-3"><dt className="text-xs text-muted">Teacher</dt><dd className="mt-2 text-sm">{selectedLesson.teacherName}</dd></div>
+        <div className="rounded-control p-3"><dt className="text-xs text-muted">Place</dt><dd className="mt-2 text-sm">{selectedLesson.placeName}</dd></div>
         <div className="rounded-control bg-canvas/55 p-3"><dt className="text-xs text-muted">Lesson</dt><dd className="mt-2 text-sm">{selectedLesson.productName}</dd></div>
-        <div className="rounded-control p-3"><dt className="text-xs text-muted">Teacher</dt><dd className="mt-2 text-sm">{selectedLesson.teacherName}</dd></div>
-        <div className="rounded-control bg-canvas/55 p-3"><dt className="text-xs text-muted">Place</dt><dd className="mt-2 text-sm">{selectedLesson.placeName}</dd></div>
       </dl>
     </aside>
   </div> : null}</>;

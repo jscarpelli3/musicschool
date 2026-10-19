@@ -362,6 +362,7 @@ export function OwnerPlanner({
       setTeacherId(compact ? lesson.teacher_id : "all");
       if (view === "month") setView(compact ? "day" : "week");
     }
+    requestAnimationFrame(() => document.getElementById("school-calendar")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
   function cancelReschedule() {
@@ -1242,25 +1243,21 @@ function LessonSheet({
           <button autoFocus type="button" onClick={onClose} className="text-action text-sm text-muted hover:text-ink">Close</button>
         </div>
 
-        <dl className="grid gap-1 rounded-card bg-surface-raised p-5 shadow-[var(--ui-shadow-soft)]">
-          <Detail label="Lesson" value={productName} />
-          <div className="grid grid-cols-[6rem_1fr] gap-5 rounded-control px-3 py-3 text-sm"><dt className="text-muted">Teacher</dt><dd><Link href={`/schools/${schoolId}/staff/${lesson.teacher_id}`} className="hover:text-brand">{teacherName}</Link></dd></div>
+        <section className="rounded-card bg-surface-raised p-5 shadow-[var(--ui-shadow-soft)]">
+        <dl className="grid gap-1">
           <Detail label="Date" value={new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(fromKey(lesson.start.dateKey))} />
           <Detail label="Time" value={`${clock(lesson.start.minutes)}–${clock(lesson.end.minutes)} · ${duration} minutes`} />
+          <div className="grid grid-cols-[6rem_1fr] gap-5 rounded-control px-3 py-3 text-sm odd:bg-canvas/55"><dt className="text-muted">Teacher</dt><dd><Link href={`/schools/${schoolId}/staff/${lesson.teacher_id}`} className="hover:text-brand">{teacherName}</Link></dd></div>
           <Detail label="Place" value={place.details ? `${place.name} · ${place.details}` : place.name} />
+          <Detail label="Lesson" value={productName} />
           {lesson.notes ? <Detail label="Internal notes" value={lesson.notes} /> : null}
           {lesson.reschedule_reason_code ? <Detail label="Last moved" value={rescheduleReasonLabel(lesson.reschedule_reason_code, lesson.reschedule_reason_detail)} /> : null}
         </dl>
+        {canReschedule && lesson.can_reschedule ? <button type="button" onClick={onReschedule} className="mt-4 inline-flex rounded-control bg-brand/10 px-4 py-2.5 text-sm font-medium text-brand transition hover:bg-brand hover:text-canvas">Reschedule this lesson →</button> : null}
+        </section>
 
         <div className="mt-4 grid gap-4">
         {canCollectPayment ? <section className="rounded-card bg-surface-raised p-5"><h3 className="font-display text-2xl font-normal">Payment</h3>{paidSeparately ? <><p className="mt-3 text-sm text-brand">Paid separately</p><p className="mt-2 text-xs leading-5 text-muted">This lesson will remain on the family statement with $0 newly due.</p></> : <><p className="mt-3 text-xs leading-5 text-muted">Create a secure QR code for the payer to scan on their own phone.</p><Link href={`/schools/${schoolId}/lessons/${lesson.id}/payment`} className="mt-4 inline-flex rounded-control bg-brand px-4 py-2.5 text-sm text-canvas hover:bg-brand-hover">Collect payment now</Link></>}</section> : null}
-
-        {canReschedule && lesson.can_reschedule ? (
-          <section className="rounded-card bg-brand/10 p-5">
-            <button type="button" onClick={onReschedule} className="text-action text-sm text-brand hover:text-brand-hover">Reschedule on calendar →</button>
-            <p className="mt-3 text-xs leading-5 text-muted">The calendar will enter move mode. Dropping proposes a destination; nothing changes until you hold to confirm.</p>
-          </section>
-        ) : null}
 
         <ReschedulePermission
           allowed={lesson.reschedule_allowed}
