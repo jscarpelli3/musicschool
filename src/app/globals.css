@@ -648,7 +648,7 @@ summary:focus-visible,
   }
 }
 
-.notification-control > div {
+.notification-control > div:not(.notification-trigger) {
   position: absolute;
   top: 100%;
   right: 0;

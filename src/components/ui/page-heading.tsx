@@ -1,13 +1,16 @@
 import type { IconType } from "react-icons";
-import { MdDashboard, MdFamilyRestroom, MdGroups, MdSchool } from "react-icons/md";
+import { MdApproval, MdDashboard, MdFamilyRestroom, MdGroups, MdNotificationsNone, MdReceiptLong, MdSchool } from "react-icons/md";
 
-export type PageHeadingKind = "dashboard" | "students" | "families" | "staff";
+export type PageHeadingKind = "dashboard" | "students" | "families" | "staff" | "billing" | "approvals" | "notifications";
 
 const icons: Record<PageHeadingKind, IconType> = {
   dashboard: MdDashboard,
   students: MdSchool,
   families: MdFamilyRestroom,
   staff: MdGroups,
+  billing: MdReceiptLong,
+  approvals: MdApproval,
+  notifications: MdNotificationsNone,
 };
 
 export function PageHeading({ kind, title, description, meta, id }: {
