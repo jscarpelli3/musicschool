@@ -32,6 +32,7 @@
 }
 
 .onboarding-billing-scroll {
+  mask-image: linear-gradient(to bottom, #000 0%, #000 82%, transparent 100%);
   scrollbar-width: none;
 }
 

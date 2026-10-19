@@ -145,10 +145,6 @@ export default async function OnboardingPage({ params, searchParams }: {
         <h2 className="mt-3 font-display text-4xl">What happens when money is involved.</h2>
         <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted">Here is the whole path from teaching a lesson to receiving payment. You stay in control, and Common Time never charges someone just because a lesson was added.</p>
         <BillingWalkthrough />
-        <aside className="mx-auto mt-8 max-w-5xl border-l-4 border-brand bg-brand/10 px-5 py-4 text-left">
-          <p className="text-xs uppercase tracking-[0.12em] text-brand">A clear paper trail</p>
-          <p className="mt-2 text-sm leading-6 text-ink">Invoices, credits, failed attempts, and receipts stay separate, so you and the payer can always see exactly what happened.</p>
-        </aside>
         {school.onboarding_completed_at ? (
           <Link href={`/schools/${schoolId}`} className="mt-8 inline-flex rounded-control bg-ink px-7 py-3 text-sm font-medium text-canvas">Return to my school</Link>
         ) : !hasStudent ? <p className="mt-7 text-sm text-danger">Add the first student and payer before finishing setup.</p> : <form action={finishOnboarding.bind(null, schoolId)} className="mt-8"><button className="rounded-control bg-ink px-7 py-3 text-sm font-medium text-canvas">Finish setup and open my school</button>{query.finish ? <p className="mt-3 text-sm text-danger">Setup could not be completed. Reload and try again.</p> : null}</form>}

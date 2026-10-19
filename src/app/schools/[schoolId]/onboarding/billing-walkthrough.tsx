@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { MdCreditCard, MdHowToReg, MdLockOutline, MdReceiptLong, MdScheduleSend } from "react-icons/md";
+import { MdCreditCard, MdHistory, MdHowToReg, MdLockOutline, MdReceiptLong, MdScheduleSend } from "react-icons/md";
 
 const steps = [
   { title: "Gather what is owed", icon: MdReceiptLong, description: "Completed lessons and any fees are gathered into a draft invoice for each payer. Nothing is charged yet." },
@@ -9,6 +9,7 @@ const steps = [
   { title: "Ask the payer to approve it", icon: MdHowToReg, description: "Common Time emails the payer an itemized invoice. They approve that exact amount before you can charge their saved payment method." },
   { title: "Give them advance notice", icon: MdScheduleSend, description: "If the payer chose automatic payments, Common Time still sends notice and waits for the agreed amount of time before charging." },
   { title: "Collect the payment", icon: MdCreditCard, description: "After the required approval and notice, you can charge the saved payment method. The invoice is marked paid only after the payment is confirmed." },
+  { title: "Keep a clear paper trail", icon: MdHistory, description: "Invoices, credits, failed attempts, approvals, and receipts stay separate. You and the payer can always look back and understand exactly what happened.", note: true },
 ];
 
 export function BillingWalkthrough() {
@@ -34,24 +35,24 @@ export function BillingWalkthrough() {
   }
 
   return <div className="mx-auto mt-9 grid max-w-3xl gap-5 sm:grid-cols-[1fr_auto] sm:items-center">
-    <ol ref={scroller} onScroll={updateProgress} className="onboarding-billing-scroll relative h-80 snap-y snap-mandatory overflow-y-auto overscroll-contain scroll-smooth text-left" aria-label="How billing works">
+    <ol ref={scroller} onScroll={updateProgress} className="onboarding-billing-scroll relative flex h-80 snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain scroll-smooth pb-12 text-left" aria-label="How billing works">
       {steps.map((step, index) => {
         const Icon = step.icon;
-        return <li key={step.title} className="relative grid min-h-80 snap-center grid-cols-[4rem_1fr] items-center gap-5 py-8">
+        return <li key={step.title} className="relative grid min-h-72 snap-start grid-cols-[4rem_1fr] items-center gap-5 py-4">
           <span aria-hidden="true" className={`absolute bottom-0 left-8 top-0 w-px bg-brand/40 ${index === 0 ? "top-1/2" : ""} ${index === steps.length - 1 ? "bottom-1/2" : ""}`} />
           <div className="relative z-10 grid h-16 w-16 place-items-center rounded-full border-2 border-brand bg-canvas text-brand shadow-[0_0_0_7px_var(--color-canvas)]">
             <Icon aria-hidden="true" className="h-7 w-7" />
           </div>
           <article className="rounded-control border border-line bg-surface p-6 shadow-sm sm:p-8">
-            <span className="text-xs font-medium tracking-[0.14em] text-brand">STEP {String(index + 1).padStart(2, "0")}</span>
+            <span className="text-xs font-medium tracking-[0.14em] text-brand">{step.note ? "BUILT IN" : `STEP ${String(index + 1).padStart(2, "0")}`}</span>
             <h3 className="mt-3 font-display text-3xl text-ink">{step.title}</h3>
             <p className="mt-4 text-sm leading-7 text-muted">{step.description}</p>
           </article>
         </li>;
       })}
     </ol>
-    <div className="flex justify-center gap-2 sm:flex-col" aria-label={`Step ${active + 1} of ${steps.length}`}>
-      {steps.map((step, index) => <button key={step.title} type="button" onClick={() => show(index)} aria-label={`Show step ${index + 1}: ${step.title}`} aria-current={active === index ? "step" : undefined} className={`h-2.5 rounded-full transition-all ${active === index ? "w-8 bg-brand sm:h-8 sm:w-2.5" : "w-2.5 bg-line"}`} />)}
+    <div className="flex justify-center gap-2 sm:flex-col" aria-label={`Item ${active + 1} of ${steps.length}`}>
+      {steps.map((step, index) => <button key={step.title} type="button" onClick={() => show(index)} aria-label={`Show ${step.note ? "paper trail note" : `step ${index + 1}`}: ${step.title}`} aria-current={active === index ? "step" : undefined} className={`h-2.5 rounded-full transition-all ${active === index ? "w-8 bg-brand sm:h-8 sm:w-2.5" : "w-2.5 bg-line"}`} />)}
     </div>
   </div>;
 }
