@@ -74,7 +74,7 @@ export default async function StudentDetailPage({ params }: {
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
-      <DetailHeader eyebrow={`${school.name} · Student`} title={displayName(person)} meta={`${student.enrollment_status} enrollment · ${person.status} record`} />
+      <DetailHeader kind="students" eyebrow={`${school.name} · Student`} title={displayName(person)} meta={`${student.enrollment_status} enrollment · ${person.status} record`} />
 
       {approvals.length?<DetailSection title="Needs approval" description="Pending owner decisions involving this student. Resolving one here removes it from every active approval list."><ApprovalList schoolId={schoolId} items={approvals} timezone={school.timezone} compact/></DetailSection>:null}
       {entitlements.length?<DetailSection title="Lessons to schedule" description="Replacement lesson time still owed to this student."><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} lessonCreationOptions={lessonCreationOptions} compact/></DetailSection>:null}

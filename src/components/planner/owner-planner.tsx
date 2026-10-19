@@ -274,7 +274,9 @@ export function OwnerPlanner({
   const rescheduleLesson = lessonDetails.find((lesson) => lesson.id === rescheduleLessonId) ?? null;
 
   useEffect(() => {
-    if (initialLessonId) setSelectedLessonId(initialLessonId);
+    if (!initialLessonId) return;
+    const frame = window.requestAnimationFrame(() => setSelectedLessonId(initialLessonId));
+    return () => window.cancelAnimationFrame(frame);
   }, [initialLessonId]);
 
   useEffect(() => {

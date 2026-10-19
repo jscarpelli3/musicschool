@@ -5,6 +5,7 @@ import { AddFamilyDialog } from "@/components/families/add-family-dialog";
 import { addStudentAndPayer } from "./actions";
 import { invoiceNeedsAttention, loadSchoolInvoices } from "@/lib/billing/school-invoices";
 import { FamilyDirectory, type FamilyDirectoryRow } from "@/components/families/family-directory";
+import { PageHeading } from "@/components/ui/page-heading";
 
 export const dynamic = "force-dynamic";
 
@@ -64,7 +65,7 @@ export default async function FamiliesPage({ params }: { params: Promise<{ schoo
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-5 py-10 sm:px-8 sm:py-section">
       <header className="flex flex-wrap items-end justify-between gap-6 pb-4">
-        <div><h1 className="font-display text-5xl tracking-[-0.04em] sm:text-6xl">Families.</h1><p className="mt-4 max-w-2xl text-sm leading-6 text-muted">Review payer accounts, contact details, and the students connected to each family.</p><p className="mt-2 text-sm text-muted">{accounts?.length ?? 0} payer accounts</p></div>
+        <PageHeading kind="families" title="Families." description="Review payer accounts, contact details, and the students connected to each family." meta={`${accounts?.length ?? 0} payer accounts`} />
         {capabilities.has("school.billing.manage") ? <AddFamilyDialog action={addStudentAndPayer.bind(null, schoolId)} triggerLabel="Add family +" /> : null}
       </header>
       <FamilyDirectory rows={directoryRows} />

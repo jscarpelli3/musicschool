@@ -12,6 +12,7 @@ import { InvoiceList } from "@/components/billing/invoice-list";
 import { loadSchoolInvoiceSummary } from "@/lib/billing/school-invoices";
 import { StudentDirectory } from "@/components/students/student-directory";
 import { SectionHeading } from "@/components/ui/section-heading";
+import { PageHeading } from "@/components/ui/page-heading";
 
 export const dynamic = "force-dynamic";
 
@@ -275,6 +276,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
 
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-6 py-section">
+      {view === "dashboard" ? <header className="mb-10"><PageHeading kind="dashboard" title="Dashboard." description="Your school’s schedule, outstanding work, invoices, and student activity in one place." /></header> : null}
       {view === "students" ? <StudentDirectory
         rows={studentRowsForTable}
         monthLabel={monthLabel}

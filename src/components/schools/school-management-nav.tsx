@@ -116,7 +116,9 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
       ];
 
   return (
-    <nav className="flex flex-wrap items-center gap-x-6 gap-y-4 border-b border-line py-5" aria-label="School management">
+    <nav className="border-b border-line py-5" aria-label="School management">
+      <div className="flex flex-wrap items-start gap-x-6 gap-y-4">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-3">
       {items.map((item) => {
         const directory = "directory" in item ? item.directory : null;
         if (!directory) return <Link key={item.href} href={item.href} aria-current={item.active ? "page" : undefined} className={`rounded-control px-3 py-2 text-sm transition-colors ${item.active ? "bg-[var(--school-section-tab)] text-ink shadow-sm" : "text-muted hover:bg-surface-raised/60 hover:text-ink"}`}>{item.label}</Link>;
@@ -133,8 +135,7 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
           </div></div> : null}
         </div>;
       })}
-      {can("school.lessons.manage") && lessonCreationOptions ? <HeaderLessonFinder schoolId={schoolId} timeZone={timeZone} options={lessonCreationOptions} studentIdsByFamily={studentIdsByFamily} /> : null}
-      {can("school.billing.manage") ? <PrepareInvoiceLauncher schoolId={schoolId} payers={invoicePayers} variant="nav" /> : null}
+      </div>
       <div className="ml-auto flex flex-wrap items-start justify-end gap-3 sm:gap-4">
         {can("school.billing.manage") ? <div ref={invoicesRef} className="relative z-30 flex flex-col items-end">
           <button type="button" aria-expanded={invoicesOpen} onClick={() => setInvoicesOpen((value) => { if (!value) window.dispatchEvent(new Event("common-time:open-invoices")); return !value; })} className="inline-flex items-center rounded-control border border-brand/40 bg-brand/10 px-3 py-1.5 text-sm text-brand transition hover:border-brand hover:bg-brand/15"><MdReceiptLong aria-hidden="true" className="mr-1.5 text-base" />Invoices{invoiceCount ? <span className="ml-2 inline-grid min-w-5 place-items-center rounded-full bg-brand px-1 text-xs text-canvas" aria-label={`${invoiceCount} open invoices`}>{invoiceCount}</span> : null}</button>
@@ -170,6 +171,11 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
           {approvalsOpen ? <div className="ui-card absolute top-full right-0 mt-2 w-[min(24rem,calc(100vw-2.5rem))] p-4"><div className="flex items-center justify-between"><p className="font-display text-2xl">Approvals</p><button type="button" onClick={() => setApprovalsOpen(false)} className="text-sm text-muted hover:text-ink">Close</button></div><div className="mt-3 flex rounded-control bg-surface p-1 text-xs"><button type="button" onClick={() => setApprovalView("pending")} className={`flex-1 rounded-control px-3 py-2 ${approvalView === "pending" ? "bg-surface-raised text-ink shadow-sm" : "text-muted hover:text-ink"}`}>Needs decision{approvalCount ? ` (${approvalCount})` : ""}</button><button type="button" onClick={() => setApprovalView("finished")} className={`flex-1 rounded-control px-3 py-2 ${approvalView === "finished" ? "bg-surface-raised text-ink shadow-sm" : "text-muted hover:text-ink"}`}>Finished</button></div><div className="mt-3">{visibleApprovals.length ? visibleApprovals.map((item) => <article key={`${item.kind}-${item.id}`} className="rounded-control px-3 py-3 hover:bg-brand/10"><div className="flex items-start justify-between gap-3"><p className="text-sm"><Link href={`${base}/staff/${item.teacherId}`} onClick={() => setApprovalsOpen(false)} className="hover:text-brand">{item.teacher}</Link> → <Link href={`${base}/students/${item.studentId}`} onClick={() => setApprovalsOpen(false)} className="hover:text-brand">{item.student}</Link></p>{approvalView === "finished" ? <span className="rounded-full bg-ink/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-ink">{item.status}</span> : null}</div><Link href={`${base}/approvals?${approvalView === "finished" ? "view=history&" : ""}${item.kind === "schedule_proposal" ? "proposal" : "request"}=${item.id}`} onClick={() => setApprovalsOpen(false)} className="mt-1 block text-xs text-muted hover:text-brand">{item.detail} →</Link></article>) : <p className="py-5 text-sm text-muted">{approvalView === "pending" ? "No approvals need a decision." : "No finished approvals yet."}</p>}</div></div> : null}
         </div> : null}
         <OwnerNotifications schoolId={schoolId} embedded />
+      </div>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-3 pl-1">
+        {can("school.lessons.manage") && lessonCreationOptions ? <HeaderLessonFinder schoolId={schoolId} timeZone={timeZone} options={lessonCreationOptions} studentIdsByFamily={studentIdsByFamily} /> : null}
+        {can("school.billing.manage") ? <PrepareInvoiceLauncher schoolId={schoolId} payers={invoicePayers} variant="nav" /> : null}
       </div>
     </nav>
   );

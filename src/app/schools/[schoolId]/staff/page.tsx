@@ -9,6 +9,7 @@ import { deliveryDescriptor } from "@/lib/domain/state-descriptors";
 import { createClient } from "@/lib/supabase/server";
 import { createAndInviteTeacher, deactivateTeacherAccess, inviteTeacherAccess, setTeacherSchedulingSettings } from "./actions";
 import { saveTeacherWeeklyAvailability } from "../availability-actions";
+import { PageHeading } from "@/components/ui/page-heading";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +66,7 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
 
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-5 py-10 sm:px-8 sm:py-section">
-      <header className="flex flex-wrap items-end justify-between gap-6 pb-4"><div><h1 className="font-display text-5xl tracking-[-0.04em] sm:text-6xl">Staff.</h1><p className="mt-4 max-w-2xl text-sm leading-6 text-muted">Invite teachers, review access, and set each person’s scheduling boundaries.</p><p className="mt-2 text-sm text-muted">{roster.length} teaching {roster.length === 1 ? "staff member" : "staff members"}</p></div><AddTeacherDialog instruments={instrumentNames} action={createAndInviteTeacher.bind(null, schoolId)} /></header>
+      <header className="flex flex-wrap items-end justify-between gap-6 pb-4"><PageHeading kind="staff" title="Staff." description="Invite teachers, review access, and set each person’s scheduling boundaries." meta={`${roster.length} teaching ${roster.length === 1 ? "staff member" : "staff members"}`} /><AddTeacherDialog instruments={instrumentNames} action={createAndInviteTeacher.bind(null, schoolId)} /></header>
       {inviteStatus ? <div id="staff-status" role="alert" className={`scroll-mt-6 border p-4 text-sm leading-6 ${inviteStatus.tone}`}>{inviteStatus.message}</div> : null}
       {query.access ? <p role="status" className={`mt-4 rounded-control bg-surface px-4 py-3 text-sm ${query.access === "disabled" ? "text-brand" : "text-danger"}`}>{query.access === "disabled" ? "Teacher access disabled for this school." : "Teacher access could not be changed."}</p> : null}
       <section className="mt-8" aria-label="Staff roster">

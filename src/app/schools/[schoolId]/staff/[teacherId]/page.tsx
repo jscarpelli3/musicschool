@@ -10,6 +10,7 @@ import { lessonProposalDescriptor } from "@/lib/domain/state-descriptors";
 import { createClient } from "@/lib/supabase/server";
 import { loadTeacherCalendar, personDisplayName } from "@/lib/scheduling/teacher-calendar";
 import { loadServiceEntitlements } from "@/lib/scheduling/service-entitlements";
+import { PageHeading } from "@/components/ui/page-heading";
 
 export const dynamic = "force-dynamic";
 
@@ -75,7 +76,7 @@ export default async function StaffTeacherPage({ params }: {
     <header className="flex flex-wrap items-end justify-between gap-6 pb-4">
       <div>
         <p className="text-xs text-muted">Staff record</p>
-        <h1 className="mt-3 font-display text-5xl tracking-[-0.04em] sm:text-6xl">{teacherName}</h1>
+        <div className="mt-3"><PageHeading kind="staff" title={teacherName} /></div>
         <p className="mt-4 text-sm text-muted">Teacher details, scheduling boundaries, and calendar.</p>
       </div>
       <Link href={`/schools/${schoolId}/staff`} className="text-sm text-muted hover:text-ink">All staff</Link>

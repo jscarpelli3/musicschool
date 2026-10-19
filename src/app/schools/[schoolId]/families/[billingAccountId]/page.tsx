@@ -171,7 +171,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
-      <DetailHeader eyebrow={`${school.name} · Family account`} title={account.name} meta={`${account.status} billing relationship · ${students.length} ${students.length === 1 ? "student" : "students"}`} />
+      <DetailHeader kind="families" eyebrow={`${school.name} · Family account`} title={account.name} meta={`${account.status} billing relationship · ${students.length} ${students.length === 1 ? "student" : "students"}`} />
 
       {approvals.length?<DetailSection title="Needs approval" description="Pending owner decisions involving students in this family."><ApprovalList schoolId={schoolId} items={approvals} timezone={school.timezone} compact/></DetailSection>:null}
       {entitlements.length?<DetailSection title="Lessons to schedule" description="Replacement lesson time still owed to this family."><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} lessonCreationOptions={lessonCreationOptions} compact/></DetailSection>:null}
