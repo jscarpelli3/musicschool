@@ -1346,12 +1346,16 @@ function ReschedulePermission({ allowed, blockedReason, canManage, onChange }: {
       {allowed ? (
         <details>
           <summary className="cursor-pointer text-sm text-muted hover:text-ink">Lesson settings</summary>
-          <p className="mt-4 text-sm">Family and staff rescheduling is currently permitted for this lesson.</p>
-          <label className="mt-4 block"><span className="text-xs text-muted">Policy or scheduling reason</span><input value={reason} onChange={(event) => setReason(event.target.value)} maxLength={300} className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand" /></label>
-          <button type="button" disabled={saving || !reason.trim()} onClick={() => save(false)} className="mt-5 border border-line px-4 py-3 text-sm text-muted disabled:opacity-40">{saving ? "Saving…" : "Block rescheduling"}</button>
-          <p className="mt-4 text-xs leading-5 text-muted">Past or completed lessons remain ineligible regardless of this setting.</p>
+          <div className="mt-4 rounded-control bg-canvas/55 p-4">
+            <p className="text-sm font-medium">Rescheduling is available</p>
+            <p className="mt-2 text-sm leading-6 text-muted">Use this exception only when this particular lesson must stay fixed. Blocking it prevents the family, teacher, and owner from starting a reschedule.</p>
+          </div>
+          <label className="mt-5 block" htmlFor="reschedule-block-reason"><span className="text-sm">Why can’t this lesson be moved?</span><span className="mt-1 block text-xs leading-5 text-muted">A reason is required and will appear wherever rescheduling is unavailable.</span><input id="reschedule-block-reason" value={reason} onChange={(event) => setReason(event.target.value)} maxLength={300} placeholder="For example: recital, exam, or fixed room booking" aria-describedby="reschedule-block-help" className="mt-3 w-full rounded-control border border-line bg-canvas/60 px-3 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-brand" /></label>
+          <p id="reschedule-block-help" className="mt-2 text-xs leading-5 text-muted">{reason.trim() ? "This lesson will remain at its current date and time." : "Enter the reason above to enable the blocking action."}</p>
+          <button type="button" disabled={saving || !reason.trim()} onClick={() => save(false)} className="mt-4 rounded-control border border-danger/45 bg-danger/10 px-4 py-2.5 text-sm text-danger transition hover:bg-danger/15 disabled:bg-transparent">{saving ? "Saving…" : "Block rescheduling for this lesson"}</button>
+          <p className="mt-4 text-xs leading-5 text-muted">Past or completed lessons cannot be rescheduled regardless of this setting.</p>
         </details>
-      ) : <><h3 className="font-display text-2xl font-normal">Rescheduling blocked</h3>{blockedReason ? <p className="mt-3 text-sm leading-6 text-muted">{blockedReason}</p> : null}{canManage ? <button type="button" disabled={saving} onClick={() => save(true)} className="text-action mt-5 text-sm text-brand">{saving ? "Saving…" : "Allow rescheduling again"}</button> : null}</>}
+      ) : <><h3 className="font-display text-2xl font-normal">Rescheduling blocked</h3><p className="mt-3 text-sm leading-6 text-muted">This lesson must remain at its current date and time.</p>{blockedReason ? <div className="mt-4 rounded-control bg-canvas/55 p-4"><p className="text-xs uppercase tracking-[0.1em] text-muted">Reason</p><p className="mt-2 text-sm leading-6">{blockedReason}</p></div> : null}{canManage ? <button type="button" disabled={saving} onClick={() => save(true)} className="text-action mt-5 text-sm text-brand">{saving ? "Saving…" : "Allow rescheduling again"}</button> : null}</>}
       {message ? <p className="mt-3 text-xs text-muted" aria-live="polite">{message}</p> : null}
     </section>
   );

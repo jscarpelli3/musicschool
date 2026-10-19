@@ -870,3 +870,9 @@ Recorded on 2026-10-14.
 - The per-lesson rescheduling permission remains enforced but its ordinary allowed state is collapsed under Lesson settings; only a blocked exception is prominent. No scheduling authority or database invariant changed. Typecheck, lint, and production build pass; repeated-open browser acceptance remains next.
 - The first repair still allowed the notification's Next link and hash to navigate after immediate client selection, producing a visible scroll/remount flicker. Same-page lesson notices now use one state transition and a non-navigating history update; links from other pages still navigate normally.
 - All lesson-detail drawers now share `LessonDrawerShell` for dismissal, scroll lock, Escape, nested-dialog safety, keyboard focus containment, initial focus, width, and header behavior. Their owner, record, and payer content remains separate. Browser acceptance must cover repeated notification open/close/open and at least one payer drawer with its nested confirmation.
+
+### 2026-10-19 — Section identity and rescheduling-setting presentation
+
+- Added route-level, theme-derived background tints for the owner workspace and matching filled active navigation tabs. This changes orientation cues only and does not change permissions or route behavior.
+- Rewrote the allowed-state rescheduling control to make its state, exception purpose, required reason, disabled-action behavior, and resulting restriction explicit. The blocked state now gives the stored reason its own visual treatment.
+- Verification: `npm run typecheck`, `npm run lint`, and `npm run build` pass. Human staging visual acceptance remains pending.

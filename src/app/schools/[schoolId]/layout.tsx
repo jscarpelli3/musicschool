@@ -9,6 +9,7 @@ import { loadOwnerApprovalSummary } from "@/lib/approvals/owner-approvals";
 import { loadSchoolInvoiceSummary } from "@/lib/billing/school-invoices";
 import { MdSettings } from "react-icons/md";
 import { loadLessonCreationOptions } from "@/lib/scheduling/lesson-creation-options";
+import { SchoolSectionFrame } from "@/components/schools/school-section-frame";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,7 @@ export default async function SchoolLayout({ children, params }: { children: Rea
     }).sort((a, b) => a.localeCompare(b)),
   }));
   return <div data-school-theme={school.theme_key} data-school-font={school.font_key} className="min-h-screen bg-canvas text-ink">
+    <SchoolSectionFrame schoolId={schoolId}>
     <div className="mx-auto max-w-7xl px-5 pt-8 sm:px-8 sm:pt-10">
       <header className="flex items-start justify-between gap-6 border-b border-line pb-7">
         <div className="flex min-w-0 items-center gap-4">
@@ -67,5 +69,6 @@ export default async function SchoolLayout({ children, params }: { children: Rea
       <SchoolManagementNav schoolId={schoolId} timeZone={school.timezone} lessonCreationOptions={lessonCreationOptions} studentIdsByFamily={studentIdsByFamily} invoicePayers={invoicePayers} capabilities={[...capabilities]} students={studentDirectory} families={familyDirectory} staff={staffDirectory} recentApprovals={approvalSummary.items.map((item) => ({ id: item.id, kind: item.kind, status: item.status, teacherId: item.teacherId, studentId: item.studentId, teacher: item.teacher, student: item.student, detail: item.kind === "schedule_proposal" ? "Schedule change" : item.requestType === "cancellation" ? "Cancellation request" : "Reschedule request" }))} finishedApprovals={approvalSummary.finishedItems.map((item) => ({ id: item.id, kind: item.kind, status: item.status, teacherId: item.teacherId, studentId: item.studentId, teacher: item.teacher, student: item.student, detail: item.kind === "schedule_proposal" ? "Schedule change" : item.requestType === "cancellation" ? "Cancellation request" : "Reschedule request" }))} approvalCount={approvalSummary.count} recentInvoices={invoiceSummary.invoices.slice(0, 5)} invoiceCount={invoiceSummary.attentionCount} />
     </div>
     {children}
+    </SchoolSectionFrame>
   </div>;
 }
