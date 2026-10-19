@@ -20,7 +20,7 @@ export function ChoiceConfirmationDialog({
 
   useEffect(() => {
     if (!open) return;
-    cancelRef.current?.focus();
+    cancelRef.current?.focus({ preventScroll: true });
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onCancel();
     };
@@ -33,7 +33,7 @@ export function ChoiceConfirmationDialog({
   return (
     <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <button type="button" aria-label="Cancel change" onClick={onCancel} className="fixed inset-0 border-0 bg-[var(--ui-overlay)]" />
-      <section className="fixed left-1/2 top-1/2 z-[101] w-[min(30rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-[var(--ui-radius-card)] bg-surface p-6 shadow-xl sm:p-8">
+      <section className="fixed left-1/2 top-1/2 z-[101] w-[calc(100vw_-_2rem)] max-w-[30rem] -translate-x-1/2 -translate-y-1/2 overflow-x-hidden rounded-[var(--ui-radius-card)] bg-surface p-6 shadow-xl sm:p-8">
         <h2 id={titleId} className="font-display text-3xl">{title}</h2>
         <p className="mt-3 text-sm leading-6 text-muted">{description}</p>
         <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

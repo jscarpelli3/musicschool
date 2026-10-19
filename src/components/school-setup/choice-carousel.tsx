@@ -6,7 +6,15 @@ export function ChoiceCarousel({ label, selectedValue, children }: { label: stri
   const rail = useRef<HTMLDivElement>(null);
   const move = (direction: -1 | 1) => rail.current?.scrollBy({ left: direction * Math.max(280, rail.current.clientWidth * 0.78), behavior: "smooth" });
   useEffect(() => {
-    rail.current?.querySelector<HTMLElement>("[data-choice-selected='true']")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const container = rail.current;
+    const selected = container?.querySelector<HTMLElement>("[data-choice-selected='true']");
+    if (!container || !selected) return;
+    const selectedStart = selected.offsetLeft;
+    const selectedEnd = selectedStart + selected.offsetWidth;
+    const visibleStart = container.scrollLeft;
+    const visibleEnd = visibleStart + container.clientWidth;
+    if (selectedStart < visibleStart) container.scrollTo({ left: selectedStart, behavior: "smooth" });
+    else if (selectedEnd > visibleEnd) container.scrollTo({ left: selectedEnd - container.clientWidth, behavior: "smooth" });
   }, [selectedValue]);
 
   return <div role="region" aria-label={label} className="min-w-0 max-w-full">
