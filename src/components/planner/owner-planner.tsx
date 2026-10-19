@@ -273,6 +273,19 @@ export function OwnerPlanner({
   const rescheduleLesson = lessonDetails.find((lesson) => lesson.id === rescheduleLessonId) ?? null;
 
   useEffect(() => {
+    if (initialLessonId) setSelectedLessonId(initialLessonId);
+  }, [initialLessonId]);
+
+  useEffect(() => {
+    const selectLesson = (event: Event) => {
+      const lessonId = (event as CustomEvent<{ lessonId?: string }>).detail?.lessonId;
+      if (lessonId && lessonDetails.some((lesson) => lesson.id === lessonId)) setSelectedLessonId(lessonId);
+    };
+    window.addEventListener("common-time:select-lesson", selectLesson);
+    return () => window.removeEventListener("common-time:select-lesson", selectLesson);
+  }, [lessonDetails]);
+
+  useEffect(() => {
     const reset = () => {
       setCreationSlot(null);
       setCreatingLesson(false);
@@ -606,7 +619,7 @@ export function OwnerPlanner({
           onSchoolCancellation={reportSchoolCancellation.bind(null, schoolId, selectedLesson.id)}
           onClose={() => {
             setSelectedLessonId(null);
-            if (initialLessonId) router.replace(`/schools/${schoolId}#school-calendar`, { scroll: false });
+            if (new URL(window.location.href).searchParams.has("lesson")) router.replace(`/schools/${schoolId}#school-calendar`, { scroll: false });
           }}
         />
       ) : null}
@@ -1336,21 +1349,20 @@ function ReschedulePermission({ allowed, blockedReason, canManage, onChange }: {
     setSaving(false);
   }
 
+  if (allowed && !canManage) return null;
+
   return (
-    <section className="rounded-card bg-surface-raised p-5">
-      <h3 className="font-display text-2xl font-normal">Rescheduling</h3>
-      <p className="mt-3 text-sm">{allowed ? "Allowed for this lesson" : "Blocked for this lesson"}</p>
-      {!allowed && blockedReason ? <p className="mt-2 text-xs leading-5 text-muted">{blockedReason}</p> : null}
-      {canManage && allowed ? (
-        <details className="mt-5">
-          <summary className="cursor-pointer text-sm text-muted hover:text-ink">Block rescheduling</summary>
+    <section className={`rounded-card p-5 ${allowed ? "bg-surface-raised" : "bg-danger/5"}`}>
+      {allowed ? (
+        <details>
+          <summary className="cursor-pointer text-sm text-muted hover:text-ink">Lesson settings</summary>
+          <p className="mt-4 text-sm">Family and staff rescheduling is currently permitted for this lesson.</p>
           <label className="mt-4 block"><span className="text-xs text-muted">Policy or scheduling reason</span><input value={reason} onChange={(event) => setReason(event.target.value)} maxLength={300} className="mt-2 w-full border-b border-line bg-transparent py-2 outline-none focus:border-brand" /></label>
-          <button type="button" disabled={saving || !reason.trim()} onClick={() => save(false)} className="mt-5 border border-line px-4 py-3 text-sm text-muted disabled:opacity-40">{saving ? "Saving…" : "Mark non-reschedulable"}</button>
+          <button type="button" disabled={saving || !reason.trim()} onClick={() => save(false)} className="mt-5 border border-line px-4 py-3 text-sm text-muted disabled:opacity-40">{saving ? "Saving…" : "Block rescheduling"}</button>
+          <p className="mt-4 text-xs leading-5 text-muted">Past or completed lessons remain ineligible regardless of this setting.</p>
         </details>
-      ) : null}
-      {canManage && !allowed ? <button type="button" disabled={saving} onClick={() => save(true)} className="text-action mt-5 text-sm text-brand">{saving ? "Saving…" : "Allow rescheduling again"}</button> : null}
+      ) : <><h3 className="font-display text-2xl font-normal">Rescheduling blocked</h3>{blockedReason ? <p className="mt-3 text-sm leading-6 text-muted">{blockedReason}</p> : null}{canManage ? <button type="button" disabled={saving} onClick={() => save(true)} className="text-action mt-5 text-sm text-brand">{saving ? "Saving…" : "Allow rescheduling again"}</button> : null}</>}
       {message ? <p className="mt-3 text-xs text-muted" aria-live="polite">{message}</p> : null}
-      <p className="mt-4 text-xs leading-5 text-muted">Past or completed lessons remain ineligible even when this setting is allowed.</p>
     </section>
   );
 }

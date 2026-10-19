@@ -863,3 +863,8 @@ Recorded on 2026-10-14.
 - The nonfunctional Quick-hop navigation grid was removed from owner lesson drawers. Lesson identity and schedule now occupy one raised summary card; payment, rescheduling, outcomes, and school-cancellation controls occupy separate shaded cards; people and payer context are consolidated rather than repeated across a series of divider-heavy sections.
 - This is presentation-only: no payment or scheduling authority changed. Typecheck, lint, and production build pass. Browser visual acceptance remains required before adding the cross-linked approval/request/entitlement/lesson history timeline.
 - The summary now prioritizes date/time, teacher, place, and lesson type. Rescheduling is initiated from that summary and explicitly returns focus to the planner in reschedule mode; the separate action card that appeared inert was removed. Guardian/contact and payer remain intentionally separate database roles even when the same person fills both; presentation deduplication remains a later UI refinement.
+
+### Notification drawer-state regression
+
+- Exact-lesson notification navigation previously initialized planner selection from the URL but did not provide a repeatable client transition after drawer close. Notification links now explicitly select their lesson in the mounted planner as well as navigating, and drawer close clears a live lesson query. The same notification should therefore reopen the same drawer without refresh.
+- The per-lesson rescheduling permission remains enforced but its ordinary allowed state is collapsed under Lesson settings; only a blocked exception is prominent. No scheduling authority or database invariant changed. Typecheck, lint, and production build pass; repeated-open browser acceptance remains next.
