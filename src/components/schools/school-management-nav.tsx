@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { OwnerNotifications } from "@/components/notifications/owner-notifications";
 import type { SchoolInvoice } from "@/lib/billing/school-invoices";
-import { MdApproval, MdExpandMore, MdReceiptLong, MdSearch } from "react-icons/md";
+import { MdApproval, MdDashboard, MdExpandMore, MdFamilyRestroom, MdGroups, MdReceiptLong, MdSchool, MdSearch } from "react-icons/md";
 import { HeaderLessonFinder } from "@/components/scheduling/header-lesson-finder";
 import type { LessonCreationOptions } from "@/components/scheduling/lesson-creation-dialog";
 import { PrepareInvoiceLauncher, type InvoicePayerChoice } from "@/components/billing/prepare-invoice-launcher";
@@ -107,12 +107,12 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
     return { ok: false, message: failures[0].message };
   }
   const items = !can("school.workspace.view")
-    ? [{ label: "My schedule", href: dashboardHref, active: pathname.startsWith(dashboardHref) }]
+    ? [{ label: "My schedule", href: dashboardHref, active: pathname.startsWith(dashboardHref), icon: MdDashboard }]
     : [
-        { label: "Dashboard", href: dashboardHref, active: pathname === dashboardHref },
-        { label: "Students", href: `${base}/students`, active: pathname.startsWith(`${base}/students`), directory: "students" as const },
-        { label: "Families", href: `${base}/families`, active: pathname.startsWith(`${base}/families`), directory: "families" as const },
-        ...(can("school.staff.directory_manage") ? [{ label: "Staff", href: `${base}/staff`, active: pathname.startsWith(`${base}/staff`), directory: "staff" as const }] : []),
+        { label: "Dashboard", href: dashboardHref, active: pathname === dashboardHref, icon: MdDashboard },
+        { label: "Students", href: `${base}/students`, active: pathname.startsWith(`${base}/students`), directory: "students" as const, icon: MdSchool },
+        { label: "Families", href: `${base}/families`, active: pathname.startsWith(`${base}/families`), directory: "families" as const, icon: MdFamilyRestroom },
+        ...(can("school.staff.directory_manage") ? [{ label: "Staff", href: `${base}/staff`, active: pathname.startsWith(`${base}/staff`), directory: "staff" as const, icon: MdGroups }] : []),
       ];
 
   return (
@@ -120,13 +120,14 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
       <div className="flex flex-wrap items-start gap-x-6 gap-y-4">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-3">
       {items.map((item) => {
+        const Icon = item.icon;
         const directory = "directory" in item ? item.directory : null;
-        if (!directory) return <Link key={item.href} href={item.href} aria-current={item.active ? "page" : undefined} className={`rounded-control px-3 py-2 text-sm transition-colors ${item.active ? "bg-[var(--school-section-tab)] text-ink shadow-sm" : "text-muted hover:bg-surface-raised/60 hover:text-ink"}`}>{item.label}</Link>;
+        if (!directory) return <Link key={item.href} href={item.href} aria-current={item.active ? "page" : undefined} className={`inline-flex items-center rounded-control px-3 py-1.5 text-sm transition-colors ${item.active ? "bg-[var(--school-section-tab)] text-ink shadow-sm" : "text-muted hover:bg-surface-raised/60 hover:text-ink"}`}><Icon aria-hidden="true" className="mr-1.5 text-base" />{item.label}</Link>;
         const open = directoryOpen === directory;
         const choices = directory === "students" ? students : directory === "families" ? families : staff;
         const filtered = choices.filter((choice) => choice.label.toLocaleLowerCase().includes(directorySearch.trim().toLocaleLowerCase()));
         return <div key={item.href} ref={open ? directoryRef : undefined} className={`relative z-40 flex items-center rounded-control transition-colors ${item.active ? "bg-[var(--school-section-tab)] text-ink shadow-sm" : "text-muted hover:bg-surface-raised/60 hover:text-ink"}`} onMouseEnter={() => { setDirectorySearch(""); setDirectoryOpen(directory); window.dispatchEvent(new Event("common-time:open-directory")); }} onMouseLeave={() => setDirectoryOpen(null)} onFocusCapture={() => { if (!open) { setDirectorySearch(""); setDirectoryOpen(directory); window.dispatchEvent(new Event("common-time:open-directory")); } }} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setDirectoryOpen(null); }}>
-          <Link href={item.href} aria-current={item.active ? "page" : undefined} className="py-2 pl-3 text-sm">{item.label}</Link>
+          <Link href={item.href} aria-current={item.active ? "page" : undefined} className="inline-flex items-center py-1.5 pl-3 text-sm"><Icon aria-hidden="true" className="mr-1.5 text-base" />{item.label}</Link>
           <button type="button" aria-label={`Browse ${item.label.toLowerCase()}`} aria-expanded={open} onClick={() => { setDirectorySearch(""); setDirectoryOpen(open ? null : directory); if (!open) window.dispatchEvent(new Event("common-time:open-directory")); }} className="grid min-h-8 min-w-8 place-items-center text-current"><MdExpandMore aria-hidden="true" className={`transition ${open ? "rotate-180" : ""}`} /></button>
           {open ? <div className="absolute left-0 top-full w-[min(18rem,calc(100vw-2.5rem))] pt-1"><div className="rounded-card border border-brand/25 bg-surface-raised p-2 shadow-2xl">
             <label className="flex items-center gap-2 border-b border-line px-2"><MdSearch aria-hidden="true" className="shrink-0 text-muted" /><span className="sr-only">Search {item.label.toLowerCase()}</span><input autoFocus={false} value={directorySearch} onChange={(event) => setDirectorySearch(event.target.value)} placeholder={`Quick search ${item.label.toLowerCase()}…`} className="min-w-0 flex-1 bg-transparent py-2.5 text-sm outline-none placeholder:text-muted" /></label>
