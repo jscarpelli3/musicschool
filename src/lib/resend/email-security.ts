@@ -32,7 +32,7 @@ export function secureEmailContent(input: { text: string; html: string; includeP
   const fallbackHtml = input.includePortalFallback
     ? `<p style="margin:12px 0 0">You can also sign in at <a href="${portal}">${portal}</a> to verify this message without using an email action link.</p>`
     : "";
-  const safetyHtml = `<div style="margin-top:32px;padding-top:18px;border-top:1px solid #19344b;color:#8da5b8;font-size:12px;line-height:1.6">${fallbackHtml}<p style="margin:12px 0 0">${safetySentence}</p></div>`;
+  const safetyHtml = `<div style="margin-top:32px;padding-top:18px;border-top:1px solid #1f5559;color:#91b7b6;font-size:12px;line-height:1.6">${fallbackHtml}<p style="margin:12px 0 0">${safetySentence}</p></div>`;
   const html = input.html.includes("</body>")
     ? input.html.replace("</body>", `${safetyHtml}</body>`)
     : `${input.html}${safetyHtml}`;

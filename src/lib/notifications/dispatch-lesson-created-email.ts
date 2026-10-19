@@ -2,6 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ResendRequestError, ResendUnknownOutcomeError, sendResendEmail } from "@/lib/resend/server";
+import { commonTimeEmailFrame } from "@/lib/resend/email-brand";
 import { normalizeReplyTo, schoolEmailSender, secureEmailContent } from "@/lib/resend/email-security";
 
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (character) => ({
@@ -20,7 +21,7 @@ export async function dispatchLessonCreatedEmail(entityType: "lesson_event" | "l
   }
   const delivery = data?.[0];
   if (!delivery) return { status: "queued" as const };
-  const content = secureEmailContent({ text: delivery.message_text, html: `<div style="font-family:Arial,sans-serif;line-height:1.65"><h1>${escapeHtml(delivery.subject)}</h1><p>${escapeHtml(delivery.message_text)}</p></div>` });
+  const content = secureEmailContent({ text: delivery.message_text, html: commonTimeEmailFrame(`<h1 style="margin:0 0 24px;font-size:32px;font-weight:600">${escapeHtml(delivery.subject)}</h1><p style="margin:0;line-height:1.65">${escapeHtml(delivery.message_text)}</p>`) });
 
   try {
     const sent = await sendResendEmail({

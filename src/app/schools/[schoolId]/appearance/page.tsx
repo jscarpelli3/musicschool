@@ -58,7 +58,7 @@ export default async function AppearancePage({
         </div>
         {capabilities.has("school.appearance.palette_manage") ? (
           <ThemeSelector
-            currentTheme={isSchoolThemeKey(school.theme_key) ? school.theme_key : "midnight"}
+            currentTheme={isSchoolThemeKey(school.theme_key) ? school.theme_key : "tidepool"}
             action={updateSchoolTheme.bind(null, schoolId)}
           />
         ) : (
@@ -69,7 +69,7 @@ export default async function AppearancePage({
       </section>
       <section className="ui-card mt-6 grid min-w-0 gap-8 overflow-hidden p-6 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] md:gap-12 md:p-8">
         <div><h2 className="font-display text-3xl">Fonts</h2><p className="mt-3 text-sm leading-6 text-muted">Choose the voice used for headings and everyday interface text across this school.</p></div>
-        {capabilities.has("school.appearance.palette_manage") ? <FontSelector currentFont={isSchoolFontKey(school.font_key) ? school.font_key : "editorial"} action={updateSchoolFont.bind(null, schoolId)} /> : <p className="text-sm text-muted">Only the school owner can change shared typography.</p>}
+        {capabilities.has("school.appearance.palette_manage") ? <FontSelector currentFont={isSchoolFontKey(school.font_key) ? school.font_key : "contemporary"} action={updateSchoolFont.bind(null, schoolId)} /> : <p className="text-sm text-muted">Only the school owner can change shared typography.</p>}
       </section>
     </main>
   );

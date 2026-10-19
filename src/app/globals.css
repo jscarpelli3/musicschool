@@ -3,19 +3,19 @@
 
 :root {
   color-scheme: dark;
-  --ui-canvas: #02060c;
-  --ui-surface: #071422;
-  --ui-surface-raised: #0b2136;
-  --ui-ink: #e8f6ff;
-  --ui-muted: #8da5b8;
-  --ui-line: #19344b;
-  --ui-brand: #20a8e8;
-  --ui-brand-hover: #62ccf7;
-  --ui-danger: #ff8292;
-  --ui-outcome-rescheduled: #70abc8;
-  --ui-outcome-cancelled: #697f94;
-  --ui-outcome-no-show: #f29a70;
-  --ui-overlay: rgb(1 5 11 / 0.76);
+  --ui-canvas: #031012;
+  --ui-surface: #072126;
+  --ui-surface-raised: #0c363d;
+  --ui-ink: #e8fcfa;
+  --ui-muted: #91b7b6;
+  --ui-line: #1f5559;
+  --ui-brand: #42dfd0;
+  --ui-brand-hover: #88f4e9;
+  --ui-danger: #ff8798;
+  --ui-outcome-rescheduled: #62b7b2;
+  --ui-outcome-cancelled: #718d8d;
+  --ui-outcome-no-show: #eaa076;
+  --ui-overlay: rgb(1 13 15 / 0.78);
   --ui-shadow-soft: 0 0.75rem 1.875rem rgb(0 12 28 / 0.34);
   --ui-shadow-medium: 0 1.25rem 3.5rem rgb(0 10 24 / 0.42);
   --ui-shadow-strong: 0 2rem 7rem rgb(0 7 18 / 0.58);
@@ -27,8 +27,8 @@
   --ui-space-section: 3.5rem;
   --ui-shadow-panel: none;
   --ui-disabled-opacity: 0.52;
-  --ui-font-sans: var(--font-sans), "Helvetica Neue", Arial, sans-serif;
-  --ui-font-display: var(--font-display), Georgia, serif;
+  --ui-font-sans: var(--font-contemporary), "Helvetica Neue", Arial, sans-serif;
+  --ui-font-display: var(--font-contemporary), "Helvetica Neue", Arial, sans-serif;
 }
 
 .onboarding-billing-scroll {

@@ -2,6 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ResendRequestError, ResendUnknownOutcomeError, sendResendEmail } from "@/lib/resend/server";
+import { commonTimeEmailFrame } from "@/lib/resend/email-brand";
 import { normalizeReplyTo, schoolEmailSender, secureEmailContent } from "@/lib/resend/email-security";
 
 const escape = (value: string) => value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!);
@@ -17,7 +18,7 @@ export async function dispatchLessonRequestEmails(requestId: string) {
   const schoolById = new Map((schools ?? []).map((school) => [school.id, school]));
   for (const delivery of deliveries ?? []) {
     const school = schoolById.get(delivery.school_id);
-    const content = secureEmailContent({ text: delivery.message_text, html: `<div style="font-family:Arial,sans-serif;line-height:1.65"><h1>${escape(delivery.subject)}</h1><p>${escape(delivery.message_text)}</p></div>` });
+    const content = secureEmailContent({ text: delivery.message_text, html: commonTimeEmailFrame(`<h1 style="margin:0 0 24px;font-size:32px;font-weight:600">${escape(delivery.subject)}</h1><p style="margin:0;line-height:1.65">${escape(delivery.message_text)}</p>`) });
     try {
       const result = await sendResendEmail({
         from: schoolEmailSender(school?.name ?? "Common Time"),
