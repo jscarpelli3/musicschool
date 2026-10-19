@@ -881,3 +881,9 @@ Recorded on 2026-10-14.
 - A transparent layout border now makes the visually borderless tabs exactly match the outer dimensions and text baseline of the bordered status dropdown controls. Hover-versus-click directory behavior was intentionally left unchanged for product confirmation. Typecheck, lint, and production build pass.
 - Product confirmation selected explicit click interaction across header dropdowns. Student, Family, and Staff labels retain navigation while enlarged caret targets control their directories; hover/focus auto-open was removed. Typecheck, lint, and production build pass.
 - Invoices, Approvals, and Notifications now use the same label-navigation/caret-dropdown interaction and no longer need separate `View all` links. Their destination pages mirror the header icons in the large route headings. Typecheck, lint, and production build pass.
+
+### 2026-10-19 — Production beta promotion preflight
+
+- Exact migration-history comparison found production `twhexxokrjwzsoxgzlme` at `20261015100000` and persistent staging `iubmheectmsoavztbzma` at `20261016170000`. An isolated production-linked dry run named only the four expected, staging-rehearsed migrations.
+- Production successfully applied `20261015150000_one_active_lesson_change_request.sql`, `20261015160000_revise_invoices_for_waived_lessons.sql`, `20261016110000_release_editable_invoice_allocations.sql`, and `20261016170000_enrich_replacement_lesson_notifications.sql`; post-write history shows local/remote parity through `20261016170000`.
+- PR #91 merges the protected staging history with main without force movement. Vercel and Supabase preview checks pass and the combined tree matches the locally verified staging tree. Required GitHub jobs were queued with no assigned runner and no other in-progress repository run; any administrator merge is an explicit runner-infrastructure exception, not evidence that those jobs ran.
