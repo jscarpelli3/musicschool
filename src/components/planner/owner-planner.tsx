@@ -18,6 +18,7 @@ import { AppSelect } from "@/components/ui/app-select";
 import { AddFamilyDialog } from "@/components/families/add-family-dialog";
 import type { AddFamilyState } from "@/app/schools/[schoolId]/families/actions";
 import { PrepareInvoiceLauncher, type InvoicePayerChoice } from "@/components/billing/prepare-invoice-launcher";
+import { LessonDrawerShell } from "@/components/ui/lesson-drawer-shell";
 import "./owner-planner.css";
 
 type Teacher = { id: string; name: string; isOwner: boolean };
@@ -1245,17 +1246,7 @@ function LessonSheet({
 }) {
   const duration = lesson.end.minutes - lesson.start.minutes;
   return (
-    <>
-      <button type="button" aria-label="Close lesson details" className="lesson-sheet-backdrop" onClick={onClose} />
-      <aside className="lesson-sheet bg-surface px-7 py-8 md:px-10" role="dialog" aria-modal="true" aria-labelledby="lesson-sheet-title">
-        <div className="flex items-start justify-between gap-6 pb-6">
-          <div>
-            <p className="text-xs text-brand">{lessonEventDescriptor(lesson.status).label}</p>
-            <h2 id="lesson-sheet-title" className="mt-4 font-display text-4xl font-normal tracking-[-0.035em]"><Link href={`/schools/${schoolId}/students/${lesson.student_id}`} className="hover:text-brand">{student?.name ?? "Student"}</Link></h2>
-          </div>
-          <button autoFocus type="button" onClick={onClose} className="text-action text-sm text-muted hover:text-ink">Close</button>
-        </div>
-
+      <LessonDrawerShell titleId="lesson-sheet-title" eyebrow={lessonEventDescriptor(lesson.status).label} title={<Link href={`/schools/${schoolId}/students/${lesson.student_id}`} className="hover:text-brand">{student?.name ?? "Student"}</Link>} onClose={onClose} width="wide">
         <section className="rounded-card bg-surface-raised p-5 shadow-[var(--ui-shadow-soft)]">
         <dl className="grid gap-1">
           <Detail label="Date" value={new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(fromKey(lesson.start.dateKey))} />
@@ -1325,8 +1316,7 @@ function LessonSheet({
           </div>
         </section>
         </div>
-      </aside>
-    </>
+      </LessonDrawerShell>
   );
 }
 

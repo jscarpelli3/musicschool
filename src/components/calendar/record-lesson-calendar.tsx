@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { CalendarRange } from "./calendar-range";
 import { LessonCreationDialog, type LessonCreationOptions } from "@/components/scheduling/lesson-creation-dialog";
 import { MdAddCircleOutline } from "react-icons/md";
+import { LessonDrawerShell } from "@/components/ui/lesson-drawer-shell";
 
 export type RecordLessonCalendarItem = {
   id: string;
@@ -32,27 +33,9 @@ export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeE
 }) {
   const [selectedLesson, setSelectedLesson] = useState<RecordLessonCalendarItem | null>(null);
   const [creationSlot, setCreationSlot] = useState<{ dateKey: string; time: string; teacherId: string; productId?: string } | null>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLButtonElement | null>(null);
   const time = new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", minute: "2-digit" });
   const date = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "long", month: "long", day: "numeric", year: "numeric" });
-
-  useEffect(() => {
-    if (!selectedLesson) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    closeButtonRef.current?.focus();
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      setSelectedLesson(null);
-      requestAnimationFrame(() => openerRef.current?.focus());
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [selectedLesson]);
 
   function openLesson(lesson: RecordLessonCalendarItem, opener: HTMLButtonElement) {
     window.dispatchEvent(new Event("common-time:open-lesson-drawer"));
@@ -86,13 +69,7 @@ export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeE
     </article>}</button>}
   /></section>
   {creationSlot && lessonCreationOptions ? <LessonCreationDialog schoolId={schoolId} slot={creationSlot} options={lessonCreationOptions} lockTeacher={false} timeZone={timeZone} onClose={() => setCreationSlot(null)} /> : null}
-  {selectedLesson ? <div className="fixed inset-0 z-[80] flex justify-end">
-    <button type="button" aria-label="Close lesson details" onClick={closeLesson} className="absolute inset-0 cursor-default bg-ink/70" />
-    <aside role="dialog" aria-modal="true" aria-labelledby={`${id}-lesson-title`} className="relative z-10 h-full w-full overflow-y-auto border-l border-line bg-surface px-6 py-7 shadow-2xl sm:max-w-md sm:px-8">
-      <header className="flex items-start justify-between gap-6 pb-6">
-        <div><p className="text-xs text-brand">{selectedLesson.status.replaceAll("_", " ")}</p><h2 id={`${id}-lesson-title`} className="mt-3 font-display text-4xl">{selectedLesson.studentName}</h2></div>
-        <button ref={closeButtonRef} type="button" onClick={closeLesson} className="min-h-11 px-2 text-sm text-muted hover:text-ink">Close</button>
-      </header>
+  {selectedLesson ? <LessonDrawerShell titleId={`${id}-lesson-title`} eyebrow={selectedLesson.status.replaceAll("_", " ")} title={selectedLesson.studentName} onClose={closeLesson}>
       <dl className="grid gap-1 rounded-card bg-surface-raised p-5 shadow-[var(--ui-shadow-soft)]">
         <div className="rounded-control bg-canvas/55 p-3"><dt className="text-xs text-muted">Date</dt><dd className="mt-2 text-sm">{date.format(new Date(selectedLesson.startsAt))}</dd></div>
         <div className="rounded-control p-3"><dt className="text-xs text-muted">Time</dt><dd className="mt-2 text-sm">{time.format(new Date(selectedLesson.startsAt))}–{time.format(new Date(selectedLesson.endsAt))}</dd></div>
@@ -100,6 +77,5 @@ export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeE
         <div className="rounded-control p-3"><dt className="text-xs text-muted">Place</dt><dd className="mt-2 text-sm">{selectedLesson.placeName}</dd></div>
         <div className="rounded-control bg-canvas/55 p-3"><dt className="text-xs text-muted">Lesson</dt><dd className="mt-2 text-sm">{selectedLesson.productName}</dd></div>
       </dl>
-    </aside>
-  </div> : null}</>;
+  </LessonDrawerShell> : null}</>;
 }
