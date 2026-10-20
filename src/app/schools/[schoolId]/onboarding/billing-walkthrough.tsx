@@ -35,19 +35,19 @@ export function BillingWalkthrough({ timing, billingDay, reviewDays, chargeDay }
     setActive(index);
   }
 
-  return <div className="mx-auto grid max-w-3xl gap-5 sm:grid-cols-[1fr_auto] sm:items-center">
-    <ol ref={scroller} onScroll={updateProgress} className="onboarding-billing-scroll relative flex h-[24rem] snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain scroll-smooth pb-10 text-left" aria-label="How your school gets from a lesson to payment">
+  return <div className="mx-auto grid max-w-5xl gap-7 sm:grid-cols-[1fr_auto] sm:items-center">
+    <ol ref={scroller} onScroll={updateProgress} className="onboarding-billing-scroll relative flex h-[32rem] snap-y snap-mandatory flex-col gap-4 overflow-y-auto overscroll-contain scroll-smooth pb-14 text-left" aria-label="How your school gets from a lesson to payment">
       {steps.map((step, index) => {
         const Icon = step.icon;
-        return <li key={step.title} className="relative grid min-h-[22rem] snap-start grid-cols-[3.5rem_1fr] items-center gap-4 py-3">
-          <span aria-hidden="true" className={`absolute bottom-0 left-8 top-0 w-px bg-brand/40 ${index === 0 ? "top-1/2" : ""} ${index === steps.length - 1 ? "bottom-1/2" : ""}`} />
-          <div className="relative z-10 grid h-14 w-14 place-items-center rounded-full border-2 border-brand bg-canvas text-brand shadow-[0_0_0_7px_var(--color-canvas)]">
-            <Icon aria-hidden="true" className="h-6 w-6" />
+        return <li key={step.title} className="relative grid min-h-[29rem] snap-start grid-cols-[4.5rem_1fr] items-center gap-6 py-4">
+          <span aria-hidden="true" className={`absolute bottom-0 left-9 top-0 w-px bg-brand/40 ${index === 0 ? "top-1/2" : ""} ${index === steps.length - 1 ? "bottom-1/2" : ""}`} />
+          <div className="relative z-10 grid h-[4.5rem] w-[4.5rem] place-items-center rounded-full border-2 border-brand bg-canvas text-brand shadow-[0_0_0_9px_var(--color-canvas)]">
+            <Icon aria-hidden="true" className="h-8 w-8" />
           </div>
-          <article className="rounded-control bg-surface p-5 shadow-sm sm:p-6">
-            <h3 className="text-lg font-medium text-ink">{step.title}</h3>
-            <p className="mt-3 text-sm leading-6 text-muted">{step.description}</p>
-            {step.detailTitle ? <details className="mt-4 border-t border-line/70 pt-4"><summary className="cursor-pointer text-sm font-medium text-brand">{step.detailTitle}</summary><p className="mt-2 text-sm leading-6 text-muted">{step.detail}</p></details> : null}
+          <article className="rounded-card bg-surface p-7 shadow-[var(--ui-shadow-soft)] sm:p-9">
+            <h3 className="text-2xl font-medium text-ink">{step.title}</h3>
+            <p className="mt-4 text-base leading-7 text-muted">{step.description}</p>
+            {step.detailTitle ? <details className="mt-6 border-t border-line/70 pt-5"><summary className="cursor-pointer text-base font-medium text-brand">{step.detailTitle}</summary><p className="mt-3 text-sm leading-6 text-muted">{step.detail}</p></details> : null}
           </article>
         </li>;
       })}

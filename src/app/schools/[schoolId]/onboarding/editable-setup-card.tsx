@@ -16,7 +16,7 @@ export function EditableSetupCard({
   const [editing, setEditing] = useState(!saved);
 
   if (saved && !editing) {
-    return <div className="flex min-h-64 flex-col items-center justify-center text-center">
+    return <div className="flex min-h-40 flex-col items-center justify-center text-center">
       {completion}
       <button type="button" onClick={() => setEditing(true)} className="mt-5 rounded-control border border-brand px-5 py-3 text-sm text-brand transition hover:bg-brand hover:text-canvas">
         {editLabel}

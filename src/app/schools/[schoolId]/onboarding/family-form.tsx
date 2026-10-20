@@ -48,7 +48,7 @@ export function FamilyForm({ schoolId, families }: { schoolId: string; families:
   }
 
   return (
-    <div className="mx-auto mt-7 max-w-2xl text-left">
+    <div className="mt-7 w-full text-left">
       {families.length ? <div className="rounded-control bg-surface p-5 sm:p-6">
         <div className="space-y-3">
           <div className="grid grid-cols-[1fr_auto_1fr] gap-3 px-4 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted"><span>Student</span><span aria-hidden="true" /><span className="text-right">Payer</span></div>
