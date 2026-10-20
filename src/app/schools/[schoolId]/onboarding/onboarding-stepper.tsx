@@ -54,7 +54,6 @@ export function OnboardingStepper({ children, initialStep = "school" }: { childr
     url.searchParams.set("step", steps[next].key);
     url.searchParams.delete("finish");
     window.history.replaceState(null, "", url);
-    window.scrollTo({ top: 0, behavior: "smooth" });
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setDisplayed(next);
       setPhase("idle");
@@ -80,7 +79,7 @@ export function OnboardingStepper({ children, initialStep = "school" }: { childr
       {steps.map((item, index) => { const ItemIcon = item.icon; return <button key={item.key} type="button" onClick={() => move(index)} aria-label={`Go to ${item.label}`} aria-current={index === active ? "step" : undefined} className={`group flex min-w-0 flex-1 flex-col items-center gap-2 rounded-control px-1 py-2 text-center transition ${index === active ? "bg-[var(--school-section-tab)] text-ink" : "text-muted hover:bg-surface hover:text-ink"}`}><ItemIcon aria-hidden="true" className={`text-2xl transition ${index === active ? "scale-110 text-brand" : "opacity-60 group-hover:opacity-100"}`} /><span className={`hidden text-[0.62rem] uppercase tracking-[0.1em] sm:block ${index === active ? "font-medium" : ""}`}>{item.label}</span></button>; })}
     </div>
 
-    <div className="mt-7 rounded-card bg-[color-mix(in_srgb,var(--school-section-tab)_46%,var(--ui-surface-raised))] p-5 text-left shadow-[var(--ui-shadow-soft)] transition-[background-color,box-shadow] duration-700 sm:p-8 lg:p-10">
+    <div className="mt-7 rounded-card bg-[color-mix(in_srgb,var(--school-section-tab)_46%,var(--ui-surface-raised))] p-5 text-left shadow-[var(--ui-shadow-soft)] transition-[background-color,box-shadow] duration-700 [overflow-anchor:none] sm:p-8 lg:p-10">
       <h2 className="sr-only">{step.label}</h2>
       <div className="overflow-hidden transition-[height] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none" style={contentHeight === null ? undefined : { height: contentHeight }}>
         <section ref={contentRef} className={`origin-center transform-gpu transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${contentMotion}`}>{pages[displayed]}</section>
