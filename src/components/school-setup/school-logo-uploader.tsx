@@ -10,7 +10,7 @@ import {
   SCHOOL_LOGO_UPLOAD_MAX_MB,
 } from "@/lib/media/image-upload";
 
-export function SchoolLogoUploader({ schoolId }: { schoolId: string }) {
+export function SchoolLogoUploader({ schoolId, compact = false }: { schoolId: string; compact?: boolean }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -55,7 +55,7 @@ export function SchoolLogoUploader({ schoolId }: { schoolId: string }) {
   }
 
   return (
-    <div className="mt-4">
+    <div className={compact ? "mt-3" : "mt-4"}>
       <ImageUploadControls
         id={`school-logo-${schoolId}`}
         inputName="logo"
@@ -68,6 +68,7 @@ export function SchoolLogoUploader({ schoolId }: { schoolId: string }) {
         result={result}
         onChange={chooseFile}
         onUpload={() => void upload()}
+        compact={compact}
       />
     </div>
   );

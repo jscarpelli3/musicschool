@@ -39,6 +39,11 @@ export async function updateSchoolFont(schoolId: string, formData: FormData) {
 }
 
 export async function updateSchoolInfo(schoolId: string, formData: FormData) {
+  const onboardingPath = `/schools/${schoolId}/onboarding?step=school`;
+  const returnPath = String(formData.get("return_path") ?? "");
+  const destination = returnPath === onboardingPath ? onboardingPath : `/schools/${schoolId}/setup`;
+  const statusKey = destination === onboardingPath ? "school" : "status";
+  const withStatus = (status: string) => `${destination}${destination.includes("?") ? "&" : "?"}${statusKey}=${status}`;
   const name = String(formData.get("name") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim() || null;
   const replyToEmail = String(formData.get("reply_to_email") ?? "").trim().toLowerCase() || null;
@@ -48,15 +53,15 @@ export async function updateSchoolInfo(schoolId: string, formData: FormData) {
   const region = String(formData.get("region") ?? "").trim() || null;
   const postalCode = String(formData.get("postal_code") ?? "").trim() || null;
 
-  if (!name || name.length > 120) redirect(`/schools/${schoolId}/setup?status=invalid`);
-  if (replyToEmail && (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(replyToEmail) || replyToEmail.length > 320)) redirect(`/schools/${schoolId}/setup?status=invalid`);
+  if (!name || name.length > 120) redirect(withStatus("invalid"));
+  if (replyToEmail && (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(replyToEmail) || replyToEmail.length > 320)) redirect(withStatus("invalid"));
   if ([phone, addressLine1, addressLine2, city, region, postalCode].some((value) => value && value.length > 160)) {
-    redirect(`/schools/${schoolId}/setup?status=invalid`);
+    redirect(withStatus("invalid"));
   }
 
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
-  if (!data?.claims?.sub) redirect(`/login?next=/schools/${schoolId}/setup`);
+  if (!data?.claims?.sub) redirect(`/login?next=${encodeURIComponent(destination)}`);
   if (!await checkSchoolCapability(supabase, schoolId, "school.setup.manage")) redirect(`/schools/${schoolId}`);
 
   const { data: updated, error } = await supabase.from("schools").update({
@@ -70,8 +75,9 @@ export async function updateSchoolInfo(schoolId: string, formData: FormData) {
     postal_code: postalCode,
   }).eq("id", schoolId).select("id").maybeSingle();
 
-  if (error || !updated) redirect(`/schools/${schoolId}/setup?status=error`);
+  if (error || !updated) redirect(withStatus("error"));
   revalidatePath(`/schools/${schoolId}`);
   revalidatePath(`/schools/${schoolId}/setup`);
-  redirect(`/schools/${schoolId}/setup?status=saved`);
+  revalidatePath(`/schools/${schoolId}/onboarding`);
+  redirect(withStatus("saved"));
 }

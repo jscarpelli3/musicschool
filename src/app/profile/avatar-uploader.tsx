@@ -6,7 +6,7 @@ import { ImageUploadControls } from "@/components/media/image-upload-controls";
 import { AVATAR_UPLOAD_MAX_BYTES, AVATAR_UPLOAD_MAX_MB, isAcceptedImageType } from "@/lib/media/image-upload";
 import { uploadAvatar } from "./actions";
 
-export function AvatarUploader({ currentUrl, initial }: { currentUrl: string | null; initial: string }) {
+export function AvatarUploader({ currentUrl, initial, compact = false }: { currentUrl: string | null; initial: string; compact?: boolean }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const previewUrl = useRef<string | null>(null);
@@ -92,9 +92,9 @@ export function AvatarUploader({ currentUrl, initial }: { currentUrl: string | n
     <div>
       {displayUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={displayUrl} alt="Your avatar" className={`h-24 w-24 rounded-full border object-cover transition ${pending ? "animate-pulse border-brand opacity-70" : "border-line"}`} />
-      ) : <div className="grid h-24 w-24 place-items-center rounded-full border border-line font-display text-4xl text-brand">{initial}</div>}
-      <div className="mt-4 w-full">
+        <img src={displayUrl} alt="Your avatar" className={`${compact ? "h-16 w-16" : "h-24 w-24"} rounded-full border object-cover transition ${pending ? "animate-pulse border-brand opacity-70" : "border-line"}`} />
+      ) : <div className={`grid place-items-center rounded-full border border-line font-display text-brand ${compact ? "h-16 w-16 text-2xl" : "h-24 w-24 text-4xl"}`}>{initial}</div>}
+      <div className={`${compact ? "mt-3" : "mt-4"} w-full`}>
         <ImageUploadControls
           id="avatar-image"
           inputName="avatar"
@@ -107,6 +107,7 @@ export function AvatarUploader({ currentUrl, initial }: { currentUrl: string | n
           result={result}
           onChange={chooseAvatar}
           onUpload={() => void upload()}
+          compact={compact}
         />
       </div>
     </div>
