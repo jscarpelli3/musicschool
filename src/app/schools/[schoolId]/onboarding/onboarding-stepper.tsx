@@ -1,15 +1,16 @@
 "use client";
 
 import { Children, useState, type ReactNode } from "react";
-import { MdAccessTime, MdFamilyRestroom, MdGroups, MdMusicNote, MdReceiptLong, MdStorefront } from "react-icons/md";
+import { MdAccessTime, MdFamilyRestroom, MdGroups, MdMusicNote, MdPayments, MdRoute, MdStorefront } from "react-icons/md";
 
 const steps = [
   { key: "school", label: "School", icon: MdStorefront },
-  { key: "offerings", label: "What you teach", icon: MdMusicNote },
+  { key: "instruments", label: "Instruments", icon: MdMusicNote },
   { key: "students", label: "Students & payers", icon: MdFamilyRestroom },
   { key: "team", label: "Teaching team", icon: MdGroups },
   { key: "hours", label: "Teaching hours", icon: MdAccessTime },
-  { key: "billing", label: "Billing", icon: MdReceiptLong },
+  { key: "payments", label: "Payments & offerings", icon: MdPayments },
+  { key: "flow", label: "How it works", icon: MdRoute },
 ] as const;
 
 export function OnboardingStepper({ children, initialStep = "school" }: { children: ReactNode; initialStep?: string }) {
