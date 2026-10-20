@@ -22,6 +22,7 @@ function cents(value: FormDataEntryValue | null) {
 
 export async function createProduct(
   schoolId: string,
+  returnPath: string | undefined,
   _state: ProductState,
   formData: FormData,
 ): Promise<ProductState> {
@@ -150,7 +151,8 @@ export async function createProduct(
   }
 
   revalidatePath(`/schools/${schoolId}/products`);
-  redirect(`/schools/${schoolId}/products?created=1`);
+  const onboardingPath = `/schools/${schoolId}/onboarding?step=offerings`;
+  redirect(returnPath === onboardingPath ? `${onboardingPath}&created=1` : `/schools/${schoolId}/products?created=1`);
 }
 
 export async function updateSchoolBillingTiming(schoolId: string, formData: FormData) {

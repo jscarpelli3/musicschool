@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { LessonCreationOptions } from "./lesson-creation-dialog";
 import { clockTime, minutesFromTime } from "@/lib/scheduling/time-options";
+import { teacherIdsWithAvailabilityOnDates } from "@/lib/scheduling/availability-windows";
 import { MdSearch } from "react-icons/md";
 import { AppSelect } from "@/components/ui/app-select";
 
@@ -40,7 +41,7 @@ function startingMinute(windowStart: number, preference: string, requested: numb
   return windowStart;
 }
 
-export function LessonOpeningFinder({ options, timeZone, onChoose, onManualAdd, size = "dashboard", triggerVariant = "card" }: { options: LessonCreationOptions; timeZone: string; onChoose: (opening: Opening) => void; onManualAdd?: () => void; size?: "dashboard" | "directory" | "detail"; triggerVariant?: "card" | "nav" | "inline" }) {
+export function LessonOpeningFinder({ options, timeZone, onChoose, onManualAdd, onBrowseSchedule, size = "dashboard", triggerVariant = "card" }: { options: LessonCreationOptions; timeZone: string; onChoose: (opening: Opening) => void; onManualAdd?: () => void; onBrowseSchedule: () => void; size?: "dashboard" | "directory" | "detail"; triggerVariant?: "card" | "nav" | "inline" }) {
   const [open, setOpen] = useState(false);
   const [teacherId, setTeacherId] = useState(options.teachers.length === 1 ? options.teachers[0].id : "");
   const [productId, setProductId] = useState(options.entitlement?.productId ?? "");
@@ -53,11 +54,27 @@ export function LessonOpeningFinder({ options, timeZone, onChoose, onManualAdd, 
   const titleId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const product = options.products.find((item) => item.id === productId);
-  const configuredTeacherIds = useMemo(() => new Set(options.availability.map((rule) => rule.teacher_id)), [options.availability]);
-  const selectedTeacherMissingAvailability = Boolean(teacherId && !configuredTeacherIds.has(teacherId));
-  const unconfiguredTeacherCount = options.teachers.filter((teacher) => !configuredTeacherIds.has(teacher.id)).length;
   const activeFilter = Boolean(teacherId || productId || dateMode !== "any" || timePreference !== "any");
   const dates = useMemo(() => Array.from({ length: 7 }, (_, index) => addDays(selectedWeek, index)), [selectedWeek]);
+  const selectableDates = useMemo(() => dates.filter((dateKey) => dateKey >= options.today), [dates, options.today]);
+  const configuredTeacherIds = useMemo(() => teacherIdsWithAvailabilityOnDates(options.availability, selectableDates), [options.availability, selectableDates]);
+  const selectedTeacherMissingAvailability = Boolean(selectableDates.length && teacherId && !configuredTeacherIds.has(teacherId));
+  const unconfiguredTeacherCount = options.teachers.filter((teacher) => !configuredTeacherIds.has(teacher.id)).length;
+  const selectedWeekHasPassed = selectableDates.length === 0;
+
+  const hasAvailabilityMatchingFilters = useMemo(() => {
+    const teachers = teacherId ? options.teachers.filter((item) => item.id === teacherId) : options.teachers;
+    const requested = minutesFromTime(specificTime);
+    return selectableDates.some((dateKey) => {
+      const day = new Date(`${dateKey}T12:00:00Z`).getUTCDay();
+      if ((dateMode === "weekday" && day !== Number(weekday)) || (dateMode === "date" && dateKey !== specificDate)) return false;
+      return teachers.some((teacher) => options.availability.some((rule) => {
+        if (rule.teacher_id !== teacher.id || rule.weekday !== day || rule.effective_from > dateKey || (rule.effective_until && rule.effective_until < dateKey)) return false;
+        const window = { start: minutesFromTime(rule.start_time), end: minutesFromTime(rule.end_time) };
+        return Boolean(filterWindowByTime(window, timePreference, requested));
+      }));
+    });
+  }, [dateMode, options.availability, options.teachers, selectableDates, specificDate, specificTime, teacherId, timePreference, weekday]);
 
   const openings = useMemo(() => {
     if (!activeFilter) return [];
@@ -124,6 +141,17 @@ export function LessonOpeningFinder({ options, timeZone, onChoose, onManualAdd, 
     onManualAdd?.();
   }
 
+  function browseSchedule() {
+    closeFinder();
+    onBrowseSchedule();
+  }
+
+  const alternateSchedulingActions = <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3 rounded-control bg-canvas/55 p-4 text-sm">
+    <button type="button" onClick={browseSchedule} className="font-medium text-brand underline underline-offset-4 transition hover:text-brand-hover">Look at the full schedule →</button>
+    {onManualAdd ? <button type="button" onClick={manuallyAdd} className="text-muted underline underline-offset-4 transition hover:text-ink">Enter a lesson manually</button> : null}
+    <p className="basis-full text-xs leading-5 text-muted">The full calendar can be used to make an intentional outside-hours exception. Existing teacher or student conflicts still cannot be booked.</p>
+  </div>;
+
   const finder = <>
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div className="flex items-center gap-3 text-sm">
@@ -138,7 +166,7 @@ export function LessonOpeningFinder({ options, timeZone, onChoose, onManualAdd, 
       <label><span className="mb-1.5 block text-xs text-muted">Day</span><AppSelect value={dateMode} onChange={(event) => setDateMode(event.target.value as typeof dateMode)} className={control}><option value="any">Any day this week</option><option value="weekday">Day of week</option><option value="date">Specific date</option></AppSelect>{dateMode === "weekday" ? <AppSelect aria-label="Day of week" value={weekday} onChange={(event) => setWeekday(event.target.value)} className={`${control} mt-2`}>{["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"].map((label,index)=><option key={label} value={index}>{label}</option>)}</AppSelect> : null}{dateMode === "date" ? <input aria-label="Specific date" type="date" min={options.today} value={specificDate} onChange={(event) => { setSpecificDate(event.target.value); setSelectedWeek(weekStart(event.target.value)); }} className={`${control} mt-2`} /> : null}</label>
       <label><span className="mb-1.5 block text-xs text-muted">Time</span><AppSelect value={timePreference} onChange={(event) => setTimePreference(event.target.value as typeof timePreference)} className={control}><option value="any">Any time</option><option value="morning">Morning</option><option value="afternoon">Afternoon</option><option value="evening">Evening</option><option value="specific">Specific time</option></AppSelect>{timePreference === "specific" ? <input aria-label="Specific time" type="time" step={900} value={specificTime} onChange={(event) => setSpecificTime(event.target.value)} className={`${control} mt-2`} /> : null}</label>
     </div>
-    {selectedTeacherMissingAvailability ? <div className="mt-5 rounded-control border border-brand/35 bg-brand/10 p-5 text-left"><p className="font-medium text-ink">This teacher’s usual hours are not configured yet.</p><p className="mt-2 text-sm leading-6 text-muted">Add weekly availability to receive useful suggestions here. You can still manually add a lesson and record an outside-availability exception.</p>{onManualAdd ? <button type="button" onClick={manuallyAdd} className="mt-4 text-sm text-brand underline underline-offset-4">Manually add a lesson →</button> : null}</div> : activeFilter ? <><div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-7">{dates.map((dateKey) => { const dayOpenings = openings.filter((item) => item.dateKey === dateKey); return <div key={dateKey} className="min-w-0 rounded-control bg-canvas/45 p-2"><p className="px-1 py-1 text-xs text-muted">{formatDay(dateKey, true)}</p><div className="mt-1 space-y-1.5">{dayOpenings.map((opening,index) => opening.fitsLesson ? <button key={`${opening.teacherId}-${opening.time}-${opening.end}-${index}`} type="button" onClick={() => chooseOpening(opening)} className="block w-full rounded-control bg-surface px-2 py-2 text-left transition hover:bg-brand/15"><strong className="block truncate text-xs font-medium">{opening.label}</strong><span className="mt-1 block text-[0.68rem] text-muted">{opening.detail}</span></button> : <div key={`${opening.teacherId}-${opening.time}-${opening.end}-${index}`} className="block w-full rounded-control bg-surface/40 px-2 py-2 text-left opacity-45" title={`Only ${opening.availableMinutes} minutes are open`}><strong className="block truncate text-xs font-medium">{opening.label}</strong><span className="mt-1 block text-[0.68rem] text-muted">{opening.detail}</span><span className="mt-1 block text-[0.64rem] text-muted">Too short for {product?.durationMinutes} min</span></div>)}{!dayOpenings.length ? <p className="px-1 py-3 text-[0.68rem] text-muted">No openings</p> : null}</div></div>; })}</div>{!teacherId && unconfiguredTeacherCount ? <p className="mt-3 text-xs text-muted">{unconfiguredTeacherCount} {unconfiguredTeacherCount === 1 ? "teacher is" : "teachers are"} omitted because usual teaching hours have not been configured.</p> : null}</> : <p className="mt-5 text-sm text-muted">Choose any filter to reveal the week’s matching openings.</p>}
+    {selectedWeekHasPassed ? <><div className="mt-5 rounded-control bg-brand/10 p-5 text-left"><p className="font-medium text-ink">This week has already passed.</p><p className="mt-2 text-sm leading-6 text-muted">Choose a current or future week to find an opening.</p></div>{alternateSchedulingActions}</> : selectedTeacherMissingAvailability ? <><div className="mt-5 rounded-control bg-brand/10 p-5 text-left"><p className="font-medium text-ink">This teacher has no usual hours during this week.</p><p className="mt-2 text-sm leading-6 text-muted">Their schedule may not be configured yet, or their saved hours may begin or end outside this week.</p></div>{alternateSchedulingActions}</> : activeFilter ? <><div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-7">{dates.map((dateKey) => { const dayOpenings = openings.filter((item) => item.dateKey === dateKey); return <div key={dateKey} className="min-w-0 rounded-control bg-canvas/45 p-2"><p className="px-1 py-1 text-xs text-muted">{formatDay(dateKey, true)}</p><div className="mt-1 space-y-1.5">{dayOpenings.map((opening,index) => opening.fitsLesson ? <button key={`${opening.teacherId}-${opening.time}-${opening.end}-${index}`} type="button" onClick={() => chooseOpening(opening)} className="block w-full rounded-control bg-surface px-2 py-2 text-left transition hover:bg-brand/15"><strong className="block truncate text-xs font-medium">{opening.label}</strong><span className="mt-1 block text-[0.68rem] text-muted">{opening.detail}</span></button> : <div key={`${opening.teacherId}-${opening.time}-${opening.end}-${index}`} className="block w-full rounded-control bg-surface/40 px-2 py-2 text-left opacity-45" title={`Only ${opening.availableMinutes} minutes are open`}><strong className="block truncate text-xs font-medium">{opening.label}</strong><span className="mt-1 block text-[0.68rem] text-muted">{opening.detail}</span><span className="mt-1 block text-[0.64rem] text-muted">Too short for {product?.durationMinutes} min</span></div>)}{!dayOpenings.length ? <p className="px-1 py-3 text-[0.68rem] text-muted">No matching time</p> : null}</div></div>; })}</div>{!openings.length ? <p className="mt-4 text-sm leading-6 text-muted">{hasAvailabilityMatchingFilters ? "Those normal teaching hours have no remaining openings; they may already be booked. Look at the full schedule if an exception might work." : "No normal teaching hours match the selected day and time filters."}</p> : null}{!teacherId && unconfiguredTeacherCount ? <p className="mt-3 text-xs text-muted">{unconfiguredTeacherCount} {unconfiguredTeacherCount === 1 ? "teacher has" : "teachers have"} no usual hours during this week and {unconfiguredTeacherCount === 1 ? "is" : "are"} omitted.</p> : null}{alternateSchedulingActions}</> : <><p className="mt-5 text-sm text-muted">Choose any filter to reveal the week’s matching openings.</p>{alternateSchedulingActions}</>}
   </>;
 
   const triggerSize = size === "dashboard" ? "min-h-40 px-6 py-7" : size === "directory" ? "min-h-24 px-5 py-4" : "min-h-20 px-4 py-3";
