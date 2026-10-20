@@ -7,9 +7,9 @@ import { AppSelect } from "@/components/ui/app-select";
 const initialState: ProductState = { error: null };
 const fieldClass = "w-full border-b border-line bg-transparent py-3 outline-none transition focus:border-brand";
 
-export function ProductForm({ schoolId }: { schoolId: string }) {
+export function ProductForm({ schoolId, returnPath }: { schoolId: string; returnPath?: string }) {
   const [format, setFormat] = useState("private_lesson");
-  const [state, action, pending] = useActionState(createProduct.bind(null, schoolId), initialState);
+  const [state, action, pending] = useActionState(createProduct.bind(null, schoolId, returnPath), initialState);
 
   return (
     <form action={action} className="mt-10">

@@ -5,7 +5,7 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FocusedModal } from "@/components/ui/focused-modal";
 import { AppSelect } from "@/components/ui/app-select";
-import { MdCheckCircle } from "react-icons/md";
+import { MdArrowForward, MdPerson, MdPayments } from "react-icons/md";
 import { addStudentAndPayer, type AddFamilyState } from "../families/actions";
 
 export type OnboardingFamily = {
@@ -49,14 +49,15 @@ export function FamilyForm({ schoolId, families }: { schoolId: string; families:
 
   return (
     <div className="mx-auto mt-7 max-w-2xl text-left">
-      {families.length ? <div className="rounded-control border border-line bg-surface p-6 text-center sm:p-8">
-        <div className="flex min-h-52 flex-col items-center justify-center">
-          <MdCheckCircle aria-hidden="true" className="h-8 w-8 text-brand" />
-          <h3 className="mt-3 font-display text-3xl">You saved your first student and payer!</h3>
-          <p className="mt-3 max-w-lg text-sm leading-6 text-muted">{families.length === 1 ? `${families[0].students[0]?.name ?? "Your student"} and their payer are connected.` : `${families.reduce((total, family) => total + family.students.length, 0)} students are connected across ${families.length} payer accounts.`} You can change their details later.</p>
+      {families.length ? <div className="rounded-control bg-surface p-5 sm:p-6">
+        <div className="space-y-3">
+          {families.flatMap((family) => family.students.map((student) => <Link key={student.id} href={`/schools/${schoolId}/families/${family.id}`} className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-control bg-canvas/60 p-4 transition hover:bg-canvas">
+            <span className="flex min-w-0 items-center gap-2"><MdPerson aria-hidden="true" className="shrink-0 text-xl text-brand" /><span className="truncate text-sm font-medium">{student.name}</span></span>
+            <MdArrowForward aria-hidden="true" className="text-muted" />
+            <span className="flex min-w-0 items-center justify-end gap-2 text-right"><MdPayments aria-hidden="true" className="shrink-0 text-xl text-brand" /><span className="truncate text-sm">{family.payer ? `${family.payer.firstName} ${family.payer.lastName}` : family.name}</span></span>
+          </Link>))}
           <div className="mt-5 flex flex-wrap justify-center gap-4">
             <button type="button" onClick={() => openForm("new")} className="rounded-control border border-brand px-5 py-3 text-sm text-brand transition hover:bg-brand hover:text-canvas">Add another student and payer</button>
-            <Link href={`/schools/${schoolId}/families/${families[0].id}`} className="px-3 py-3 text-sm text-brand underline underline-offset-4">View saved family</Link>
           </div>
         </div>
       </div> : <button type="button" onClick={() => openForm("new")} className="rounded-control border border-brand px-5 py-3 text-sm text-brand transition hover:bg-brand hover:text-canvas">Add student and payer</button>}

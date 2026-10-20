@@ -34,19 +34,18 @@ export function BillingWalkthrough() {
     setActive(index);
   }
 
-  return <div className="mx-auto mt-9 grid max-w-3xl gap-5 sm:grid-cols-[1fr_auto] sm:items-center">
-    <ol ref={scroller} onScroll={updateProgress} className="onboarding-billing-scroll relative flex h-80 snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain scroll-smooth pb-12 text-left" aria-label="How billing works">
+  return <div className="mx-auto grid max-w-3xl gap-5 sm:grid-cols-[1fr_auto] sm:items-center">
+    <ol ref={scroller} onScroll={updateProgress} className="onboarding-billing-scroll relative flex h-72 snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain scroll-smooth pb-10 text-left" aria-label="How billing works">
       {steps.map((step, index) => {
         const Icon = step.icon;
-        return <li key={step.title} className="relative grid min-h-72 snap-start grid-cols-[4rem_1fr] items-center gap-5 py-4">
+        return <li key={step.title} className="relative grid min-h-64 snap-start grid-cols-[3.5rem_1fr] items-center gap-4 py-3">
           <span aria-hidden="true" className={`absolute bottom-0 left-8 top-0 w-px bg-brand/40 ${index === 0 ? "top-1/2" : ""} ${index === steps.length - 1 ? "bottom-1/2" : ""}`} />
-          <div className="relative z-10 grid h-16 w-16 place-items-center rounded-full border-2 border-brand bg-canvas text-brand shadow-[0_0_0_7px_var(--color-canvas)]">
-            <Icon aria-hidden="true" className="h-7 w-7" />
+          <div className="relative z-10 grid h-14 w-14 place-items-center rounded-full border-2 border-brand bg-canvas text-brand shadow-[0_0_0_7px_var(--color-canvas)]">
+            <Icon aria-hidden="true" className="h-6 w-6" />
           </div>
-          <article className="rounded-control border border-line bg-surface p-6 shadow-sm sm:p-8">
-            <span className="text-xs font-medium tracking-[0.14em] text-brand">{step.note ? "BUILT IN" : `STEP ${String(index + 1).padStart(2, "0")}`}</span>
-            <h3 className="mt-3 font-display text-3xl text-ink">{step.title}</h3>
-            <p className="mt-4 text-sm leading-7 text-muted">{step.description}</p>
+          <article className="rounded-control bg-surface p-5 shadow-sm sm:p-6">
+            <h3 className="text-lg font-medium text-ink">{step.title}</h3>
+            <p className="mt-3 text-sm leading-6 text-muted">{step.description}</p>
           </article>
         </li>;
       })}
