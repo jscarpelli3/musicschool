@@ -1,13 +1,16 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { MdCheckCircle, MdMusicNote } from "react-icons/md";
+import type { ReactNode } from "react";
+import { MdAccessTime, MdCheckCircle, MdFamilyRestroom, MdGroups, MdMusicNote, MdPayments, MdRoute, MdStorefront } from "react-icons/md";
+import type { IconType } from "react-icons";
 import { AvatarUploader } from "@/app/profile/avatar-uploader";
 import { SchoolLogoUploader } from "@/components/school-setup/school-logo-uploader";
 import { InstrumentCatalogForm } from "@/components/school-setup/instrument-catalog-form";
 import { AddTeacherDialog } from "@/components/staff/add-teacher-dialog";
 import { WeeklyAvailabilityEditor } from "@/components/scheduling/weekly-availability-editor";
 import { FocusedModal } from "@/components/ui/focused-modal";
+import { AppSelect } from "@/components/ui/app-select";
 import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 import { createClient } from "@/lib/supabase/server";
 import { getStripeMode } from "@/lib/stripe/server";
@@ -19,6 +22,7 @@ import { BillingWalkthrough } from "./billing-walkthrough";
 import { EditableSetupCard } from "./editable-setup-card";
 import { FamilyForm, type OnboardingFamily } from "./family-form";
 import { OnboardingStepper } from "./onboarding-stepper";
+import { updateSchoolBillingTiming } from "../products/actions";
 import { ProductForm } from "../products/product-form";
 
 export const dynamic = "force-dynamic";
@@ -28,9 +32,13 @@ function personName(person: { first_name: string; last_name: string; preferred_n
   return `${person.preferred_name || person.first_name} ${person.last_name}`;
 }
 
+function StepHeading({ icon: Icon, title, children }: { icon: IconType; title: string; children: ReactNode }) {
+  return <header className="mb-7 flex items-start gap-4"><span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand/12 text-brand"><Icon aria-hidden="true" className="h-6 w-6" /></span><div><h2 className="font-display text-3xl text-ink">{title}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{children}</p></div></header>;
+}
+
 export default async function OnboardingPage({ params, searchParams }: {
   params: Promise<{ schoolId: string }>;
-  searchParams: Promise<{ finish?: string; step?: string; created?: string }>;
+  searchParams: Promise<{ finish?: string; step?: string; created?: string; billing?: string }>;
 }) {
   const { schoolId } = await params;
   const query = await searchParams;
@@ -40,7 +48,7 @@ export default async function OnboardingPage({ params, searchParams }: {
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/onboarding`);
 
   const results = await Promise.all([
-    supabase.from("schools").select("id,name,timezone,logo_path,onboarding_completed_at").eq("id", schoolId).maybeSingle(),
+    supabase.from("schools").select("id,name,timezone,logo_path,onboarding_completed_at,phone,reply_to_email,address_line_1,address_line_2,city,region,postal_code,billing_timing_default,billing_day,payer_review_days,intended_charge_day").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("profiles").select("full_name,avatar_path,avatar_url").eq("id", profileId).maybeSingle(),
     supabase.from("teachers").select("person_id").eq("school_id", schoolId),
@@ -92,39 +100,56 @@ export default async function OnboardingPage({ params, searchParams }: {
   const products = productResult.data ?? [];
   const paymentsReady = paymentConnectionResult.data?.status === "enabled" && paymentConnectionResult.data.charges_enabled;
   const money = (cents: number, currency: string) => new Intl.NumberFormat("en-US", { style: "currency", currency }).format(cents / 100);
+  const ownerEmail = typeof auth?.claims?.email === "string" ? auth.claims.email : null;
+  const address = [school.address_line_1, school.address_line_2, [school.city, school.region].filter(Boolean).join(", "), school.postal_code].filter(Boolean).join(" · ");
+  const billingTiming = school.billing_timing_default === "after_service" ? "after_service" : "before_service";
+  const infoItem = "rounded-control bg-canvas/60 px-4 py-3";
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
       <div className="text-center"><p className="text-xs uppercase tracking-[0.14em] text-brand">{school.onboarding_completed_at ? "Setup guide" : "New school setup"}</p><h1 className="mt-3 font-display text-5xl sm:text-6xl">{school.name}</h1></div>
       <OnboardingStepper initialStep={query.step}>
-        <div className="grid gap-6 sm:grid-cols-2">
-          <div className="rounded-control bg-surface p-5"><EditableSetupCard saved={Boolean(logo?.data?.signedUrl)} editLabel="Change school logo" completion={<>{logo?.data?.signedUrl ? <img src={logo.data.signedUrl} alt={`${school.name} logo`} className="h-24 w-24 object-contain" /> : null}<MdCheckCircle aria-hidden="true" className="mt-4 h-6 w-6 text-brand" /><p className="mt-2 text-sm font-medium">School logo saved</p></>}><p className="text-xs uppercase tracking-[0.12em] text-brand">School logo</p>{logo?.data?.signedUrl ? <img src={logo.data.signedUrl} alt={`${school.name} logo`} className="mt-4 h-24 w-24 object-contain" /> : null}<SchoolLogoUploader schoolId={schoolId} /></EditableSetupCard></div>
-          <div className="rounded-control bg-surface p-5"><EditableSetupCard saved={Boolean(avatar?.data?.signedUrl || profile.avatar_url)} editLabel="Change my avatar" completion={<>{avatar?.data?.signedUrl || profile.avatar_url ? <img src={avatar?.data?.signedUrl ?? profile.avatar_url ?? ""} alt="Your avatar" className="h-24 w-24 rounded-full border border-line object-cover" /> : null}<MdCheckCircle aria-hidden="true" className="mt-4 h-6 w-6 text-brand" /><p className="mt-2 text-sm font-medium">Avatar saved</p></>}><p className="text-xs uppercase tracking-[0.12em] text-brand">Your avatar</p><div className="mt-4"><AvatarUploader currentUrl={avatar?.data?.signedUrl ?? profile.avatar_url ?? null} initial={profile.full_name?.[0] ?? "?"} /></div></EditableSetupCard></div>
-          <p className="sm:col-span-2 text-center text-sm text-muted">{school.timezone} · <Link href={`/schools/${schoolId}/setup`} className="text-brand underline underline-offset-4">School details</Link></p>
+        <div>
+          <StepHeading icon={MdStorefront} title="Your school">Keep the details families and teachers use to recognize and contact your school in one place.</StepHeading>
+          <div className="grid gap-6 lg:grid-cols-[1fr_1.35fr]">
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="rounded-control bg-surface p-5"><EditableSetupCard saved={Boolean(logo?.data?.signedUrl)} editLabel="Change school logo" completion={<>{logo?.data?.signedUrl ? <img src={logo.data.signedUrl} alt={`${school.name} logo`} className="h-24 w-24 object-contain" /> : null}<MdCheckCircle aria-hidden="true" className="mt-4 h-6 w-6 text-brand" /><p className="mt-2 text-sm font-medium">School logo saved</p></>}><p className="text-sm font-medium">School logo</p>{logo?.data?.signedUrl ? <img src={logo.data.signedUrl} alt={`${school.name} logo`} className="mt-4 h-24 w-24 object-contain" /> : null}<SchoolLogoUploader schoolId={schoolId} /></EditableSetupCard></div>
+              <div className="rounded-control bg-surface p-5"><EditableSetupCard saved={Boolean(avatar?.data?.signedUrl || profile.avatar_url)} editLabel="Change my avatar" completion={<>{avatar?.data?.signedUrl || profile.avatar_url ? <img src={avatar?.data?.signedUrl ?? profile.avatar_url ?? ""} alt="Your avatar" className="h-24 w-24 rounded-full border border-line object-cover" /> : null}<MdCheckCircle aria-hidden="true" className="mt-4 h-6 w-6 text-brand" /><p className="mt-2 text-sm font-medium">Avatar saved</p></>}><p className="text-sm font-medium">Your avatar</p><div className="mt-4"><AvatarUploader currentUrl={avatar?.data?.signedUrl ?? profile.avatar_url ?? null} initial={profile.full_name?.[0] ?? "?"} /></div></EditableSetupCard></div>
+            </div>
+            <div className="rounded-control bg-surface p-5 sm:p-6"><div className="grid gap-3 sm:grid-cols-2">
+              <div className={infoItem}><p className="text-xs text-muted">School name</p><p className="mt-1 text-sm font-medium">{school.name}</p></div>
+              <div className={infoItem}><p className="text-xs text-muted">Owner</p><p className="mt-1 text-sm font-medium">{profile.full_name || "Not added"}</p></div>
+              <div className={infoItem}><p className="text-xs text-muted">Primary email</p><p className="mt-1 break-words text-sm font-medium">{school.reply_to_email || ownerEmail || "Not added"}</p></div>
+              <div className={infoItem}><p className="text-xs text-muted">Phone</p><p className="mt-1 text-sm font-medium">{school.phone || "Not added"}</p></div>
+              <div className={infoItem}><p className="text-xs text-muted">Billing</p><p className="mt-1 text-sm font-medium">Monthly, {billingTiming === "after_service" ? "after lessons" : "before lessons"}</p></div>
+              <div className={infoItem}><p className="text-xs text-muted">Timezone</p><p className="mt-1 text-sm font-medium">{school.timezone}</p></div>
+              <div className={`${infoItem} sm:col-span-2`}><p className="text-xs text-muted">Address</p><p className="mt-1 text-sm font-medium">{address || "Not added"}</p></div>
+            </div><Link href={`/schools/${schoolId}/setup`} className="mt-5 inline-flex text-sm font-medium text-brand underline underline-offset-4">Edit school details</Link></div>
+          </div>
         </div>
 
-        <div className="rounded-control bg-surface p-5 sm:p-6"><EditableSetupCard saved={instrumentNames.length > 0} editLabel="Edit instruments" completion={<><MdCheckCircle aria-hidden="true" className="h-6 w-6 text-brand" /><p className="mt-3 text-sm font-medium">{instrumentNames.join(" · ")}</p></>}><InstrumentCatalogForm instruments={instrumentNames} action={updateSchoolInstrumentCatalog.bind(null, schoolId)} /></EditableSetupCard></div>
+        <div><StepHeading icon={MdMusicNote} title="Instruments">Choose what your school teaches. You can add more at any time.</StepHeading><div className="rounded-control bg-surface p-5 sm:p-6"><EditableSetupCard saved={instrumentNames.length > 0} editLabel="Edit instruments" completion={<><MdCheckCircle aria-hidden="true" className="h-6 w-6 text-brand" /><p className="mt-3 text-sm font-medium">{instrumentNames.join(" · ")}</p></>}><InstrumentCatalogForm instruments={instrumentNames} action={updateSchoolInstrumentCatalog.bind(null, schoolId)} /></EditableSetupCard></div></div>
 
-        <div><h3 className="text-lg font-medium">Add students and the people who pay.</h3><p className="mt-2 max-w-2xl text-sm leading-6 text-muted">A payer can be a parent, guardian, or an adult student. Students who share a payer stay on one family billing account.</p><FamilyForm schoolId={schoolId} families={families} /></div>
+        <div><StepHeading icon={MdFamilyRestroom} title="Students and payers">Add each student and connect the person responsible for their invoices and payment setup.</StepHeading><FamilyForm schoolId={schoolId} families={families} /></div>
 
-        <div className="rounded-control bg-surface p-5 sm:p-6">
-          {onboardingTeachers.length ? <div className="space-y-2">{onboardingTeachers.map((teacher) => <div key={teacher.id} className="flex items-center gap-3 rounded-control bg-canvas/55 px-4 py-3"><MdCheckCircle aria-hidden="true" className="text-brand" /><span className="text-sm font-medium">{personName(teacher)}</span></div>)}</div> : <p className="text-sm text-muted">No teachers added yet.</p>}
-          <p className="mt-5 text-sm text-muted">If you teach, add yourself as a teacher too.</p>
-          <div className="mt-4"><AddTeacherDialog instruments={instrumentNames} action={createAndInviteTeacher.bind(null, schoolId)} emptyMessage="Save at least one instrument before adding a teacher." triggerLabel={onboardingTeachers.length ? "Add another teacher +" : "Add teacher +"} /></div>
-        </div>
+        <div><StepHeading icon={MdGroups} title="Teaching team">Add the people who teach. If that includes you, add yourself here too.</StepHeading><div className="rounded-control bg-surface p-5 sm:p-6">
+          {onboardingTeachers.length ? <div className="space-y-3"><div className="grid grid-cols-2 gap-3 px-4 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted"><span>Teacher</span><span className="text-right">Email</span></div>{onboardingTeachers.map((teacher) => <div key={teacher.id} className="grid grid-cols-2 items-center gap-3 rounded-control bg-canvas/60 p-4"><span className="flex min-w-0 items-center gap-2"><MdGroups aria-hidden="true" className="shrink-0 text-xl text-brand" /><span className="truncate text-sm font-medium">{personName(teacher)}</span></span><span className="truncate text-right text-sm text-muted">{teacher.email || "No email"}</span></div>)}</div> : <p className="text-sm text-muted">No teachers added yet.</p>}
+          <div className="mt-5 flex justify-center"><AddTeacherDialog instruments={instrumentNames} action={createAndInviteTeacher.bind(null, schoolId)} emptyMessage="Save at least one instrument before adding a teacher." triggerLabel={onboardingTeachers.length ? "Add another teacher +" : "Add teacher +"} /></div>
+        </div></div>
 
-        <div>{onboardingTeachers.length ? <div className="space-y-5"><p className="text-sm leading-6 text-muted">Time blocks show when each teacher normally works. Scheduling outside them is still possible.</p>{onboardingTeachers.map((teacher) => <div key={teacher.id} className="rounded-control bg-canvas/45 p-4 sm:p-5"><h3 className="mb-4 text-sm font-medium">{personName(teacher)}</h3><WeeklyAvailabilityEditor compactSetup initialBlocks={currentAvailability.filter((rule) => rule.teacher_id === teacher.id).map((rule) => ({ weekday: rule.weekday, start_time: rule.start_time.slice(0,5), end_time: rule.end_time.slice(0,5) }))} action={saveTeacherWeeklyAvailability.bind(null,schoolId,teacher.id)} /></div>)}</div> : <p className="rounded-control bg-surface p-5 text-sm text-muted">Add a teacher first. You can also skip this and return later.</p>}</div>
+        <div><StepHeading icon={MdAccessTime} title="Teaching hours">Show when each teacher usually works so Find an Opening can make useful suggestions. You can still schedule an exception outside these times.</StepHeading>{onboardingTeachers.length ? <div className="space-y-5">{onboardingTeachers.map((teacher) => <div key={teacher.id} className="rounded-control bg-surface p-4 sm:p-5"><h3 className="mb-4 text-sm font-medium">{personName(teacher)}</h3><WeeklyAvailabilityEditor compactSetup initialBlocks={currentAvailability.filter((rule) => rule.teacher_id === teacher.id).map((rule) => ({ weekday: rule.weekday, start_time: rule.start_time.slice(0,5), end_time: rule.end_time.slice(0,5) }))} action={saveTeacherWeeklyAvailability.bind(null,schoolId,teacher.id)} /></div>)}</div> : <p className="rounded-control bg-surface p-5 text-sm text-muted">Add a teacher first, or return to teaching hours later.</p>}</div>
 
-        <div className="space-y-6">
-          <div className={`rounded-control p-5 sm:p-6 ${paymentsReady ? "bg-brand/10" : "bg-surface"}`}><p className="text-xs uppercase tracking-[0.12em] text-brand">Stripe payments</p>{paymentsReady ? <p className="mt-3 flex items-center gap-2 text-sm font-medium"><MdCheckCircle aria-hidden="true" className="text-brand" />Payments connected</p> : <><p className="mt-3 text-sm text-muted">Connect Stripe to create priced lesson types and collect payments.</p><Link href={`/schools/${schoolId}/payments`} className="mt-4 inline-flex rounded-control border border-brand px-4 py-2 text-sm text-brand transition hover:bg-brand hover:text-canvas">Set up payments →</Link></>}</div>
-          <div className="rounded-control bg-surface p-5 sm:p-6"><div className="flex items-center gap-3"><MdMusicNote aria-hidden="true" className="text-2xl text-brand" /><p className="text-xs uppercase tracking-[0.12em] text-brand">Lesson types</p></div>
+        <div><StepHeading icon={MdPayments} title="Payments and lesson types">Choose when you normally invoice, connect payments, and add the lessons your school sells.</StepHeading><div className="space-y-6">
+          <form action={updateSchoolBillingTiming.bind(null, schoolId)} className="rounded-control bg-surface p-5 sm:p-6"><input type="hidden" name="return_path" value={`/schools/${schoolId}/onboarding?step=payments`} /><h3 className="text-lg font-medium">When do you invoice?</h3><div className="mt-5 grid gap-5 sm:grid-cols-3"><label className="sm:col-span-3"><span className="text-xs text-muted">Usual timing</span><AppSelect name="billing_timing_default" defaultValue={billingTiming} className="mt-2 w-full border-b border-line bg-transparent py-3"><option value="before_service">Monthly, before lessons happen</option><option value="after_service">Monthly, after lessons happen</option></AppSelect></label><label><span className="text-xs text-muted">Prepare on day</span><input name="billing_day" type="number" min={1} max={28} defaultValue={school.billing_day} className="mt-2 w-full border-b border-line bg-transparent py-3" /></label><label><span className="text-xs text-muted">Payer review time</span><input name="payer_review_days" type="number" min={1} max={14} defaultValue={school.payer_review_days} className="mt-2 w-full border-b border-line bg-transparent py-3" /><span className="mt-1 block text-xs text-muted">days</span></label><label><span className="text-xs text-muted">Plan to charge on day</span><input name="intended_charge_day" type="number" min={1} max={28} defaultValue={school.intended_charge_day} className="mt-2 w-full border-b border-line bg-transparent py-3" /></label></div><button className="mt-5 rounded-control bg-brand px-5 py-3 text-sm text-canvas">Save billing timing</button>{query.billing ? <p className={`mt-3 text-sm ${query.billing === "saved" ? "text-brand" : "text-danger"}`}>{query.billing === "saved" ? "Billing timing saved." : "Check these billing choices and try again."}</p> : null}</form>
+          <div className={`rounded-control p-5 sm:p-6 ${paymentsReady ? "bg-brand/10" : "bg-surface"}`}><h3 className="text-lg font-medium">Take card payments</h3>{paymentsReady ? <p className="mt-3 flex items-center gap-2 text-sm font-medium"><MdCheckCircle aria-hidden="true" className="text-brand" />Stripe is connected</p> : <><p className="mt-3 text-sm text-muted">Connect Stripe before adding priced lesson types or collecting payments.</p><Link href={`/schools/${schoolId}/payments`} className="mt-4 inline-flex rounded-control border border-brand px-4 py-2 text-sm text-brand transition hover:bg-brand hover:text-canvas">Set up payments →</Link></>}</div>
+          <div className="rounded-control bg-surface p-5 sm:p-6"><h3 className="text-lg font-medium">Lesson types</h3>
             {query.created ? <p className="mt-4 text-sm text-brand">Lesson type added.</p> : null}
             {products.length ? <div className="mt-4 space-y-2">{products.map((product) => <div key={product.id} className="flex items-center justify-between gap-4 rounded-control bg-canvas/55 px-4 py-3"><span className="text-sm font-medium">{product.name}</span><span className="text-xs text-muted">{product.duration_minutes} min · {money(product.price_cents, product.currency)}</span></div>)}</div> : <p className="mt-4 text-sm text-muted">No lesson types yet.</p>}
             {paymentsReady ? <div className="mt-5"><FocusedModal triggerLabel="Add lesson type +" eyebrow="Lesson type" title="Add a lesson type" description="Set its length, frequency, and price."><ProductForm schoolId={schoolId} returnPath={`/schools/${schoolId}/onboarding?step=payments`} /></FocusedModal></div> : null}
           </div>
-        </div>
+        </div></div>
 
-        <div className="text-center"><BillingWalkthrough />{school.onboarding_completed_at ? <Link href={`/schools/${schoolId}`} className="mt-8 inline-flex rounded-control bg-ink px-7 py-3 text-sm font-medium text-canvas">Return to my school</Link> : !hasStudent ? <p className="mt-7 text-sm text-danger">Add the first student and payer before finishing setup.</p> : <form action={finishOnboarding.bind(null, schoolId)} className="mt-8"><button className="rounded-control bg-ink px-7 py-3 text-sm font-medium text-canvas">Finish setup</button>{query.finish ? <p className="mt-3 text-sm text-danger">Setup could not be completed. Reload and try again.</p> : null}</form>}</div>
+        <div><StepHeading icon={MdRoute} title="From lesson to payment">Here is the usual path for your school. Open the questions only when you want more detail.</StepHeading><div className="text-center"><BillingWalkthrough timing={billingTiming} billingDay={school.billing_day} reviewDays={school.payer_review_days} chargeDay={school.intended_charge_day} />{school.onboarding_completed_at ? <Link href={`/schools/${schoolId}`} className="mt-8 inline-flex rounded-control bg-ink px-7 py-3 text-sm font-medium text-canvas">Return to my school</Link> : !hasStudent ? <p className="mt-7 text-sm text-danger">Add the first student and payer before finishing setup.</p> : <form action={finishOnboarding.bind(null, schoolId)} className="mt-8"><button className="rounded-control bg-ink px-7 py-3 text-sm font-medium text-canvas">Finish setup</button>{query.finish ? <p className="mt-3 text-sm text-danger">Setup could not be completed. Reload and try again.</p> : null}</form>}</div></div>
       </OnboardingStepper>
     </main>
   );
