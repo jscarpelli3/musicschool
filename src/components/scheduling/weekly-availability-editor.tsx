@@ -19,6 +19,8 @@ export function WeeklyAvailabilityEditor({ initialBlocks, action }: { initialBlo
   const [blocks, setBlocks] = useState<EditorBlock[]>(() => initialBlocks.map((block, index) => ({ ...block, key: `${block.weekday}-${block.start_time}-${index}`, saved: true })));
   const [dirty, setDirty] = useState(false);
   const [revision, setRevision] = useState(0);
+  const [presetBackup, setPresetBackup] = useState<{ blocks: EditorBlock[]; dirty: boolean } | null>(null);
+  const [savedComplete, setSavedComplete] = useState(false);
 
   function changed() {
     setDirty(true);
@@ -35,14 +37,23 @@ export function WeeklyAvailabilityEditor({ initialBlocks, action }: { initialBlo
     if (result.ok) {
       setBlocks((current) => current.map((block) => ({ ...block, saved: true })));
       setDirty(false);
+      setPresetBackup(null);
+      setSavedComplete(true);
     }
     return result;
   }
 
   function applyPreset(preset: (typeof presets)[number]) {
+    setPresetBackup((current) => current ?? { blocks: blocks.map((block) => ({ ...block })), dirty });
     setBlocks(preset.days.map((weekday) => ({ key: crypto.randomUUID(), weekday, start_time: preset.start, end_time: preset.end, saved: false })));
     changed();
   }
+
+  if (savedComplete) return <div className="rounded-card bg-brand/10 px-5 py-7 text-center">
+    <p className="font-display text-2xl text-ink">Weekly availability is saved.</p>
+    <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted">Find an Opening can now use these normal hours. Existing lessons stayed exactly where they were, and exceptions remain available.</p>
+    <button type="button" onClick={() => setSavedComplete(false)} className="mt-5 rounded-control border border-brand px-4 py-2 text-sm text-brand transition hover:bg-brand hover:text-canvas">Edit weekly availability</button>
+  </div>;
 
   return (
     <div>
@@ -50,7 +61,8 @@ export function WeeklyAvailabilityEditor({ initialBlocks, action }: { initialBlo
         <p className="text-sm font-medium text-ink">Start with a usual teaching pattern</p>
         <p className="mt-1 text-xs leading-5 text-muted">These hours power Find an Opening. They describe the normal week, not a hard rule—you can still schedule an exception.</p>
         <div className="mt-3 flex flex-wrap gap-2">
-          {presets.map((preset) => <button key={preset.label} type="button" onClick={() => applyPreset(preset)} className="rounded-control border border-line bg-canvas px-3 py-2 text-xs text-muted transition hover:border-brand hover:text-brand">{preset.label}</button>)}
+          {presets.map((preset) => <button key={preset.label} type="button" onClick={() => applyPreset(preset)} className="rounded-control border border-line bg-canvas px-3 py-2 text-xs text-muted transition hover:border-brand hover:text-brand">Replace draft with {preset.label.toLowerCase()}</button>)}
+          {presetBackup ? <button type="button" onClick={() => { setBlocks(presetBackup.blocks); setDirty(presetBackup.dirty); setPresetBackup(null); setRevision((current) => current + 1); }} className="px-2 py-2 text-xs text-brand underline underline-offset-4">Undo preset</button> : null}
         </div>
       </div>
       <div className="space-y-3">
