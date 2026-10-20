@@ -156,6 +156,9 @@ export async function createProduct(
 }
 
 export async function updateSchoolBillingTiming(schoolId: string, formData: FormData) {
+  const onboardingPath = `/schools/${schoolId}/onboarding?step=payments`;
+  const returnPath = String(formData.get("return_path") ?? "");
+  const destination = returnPath === onboardingPath ? onboardingPath : `/schools/${schoolId}/products`;
   const timing = String(formData.get("billing_timing_default"));
   const billingDay = integer(formData, "billing_day");
   const reviewDays = integer(formData, "payer_review_days");
@@ -164,11 +167,11 @@ export async function updateSchoolBillingTiming(schoolId: string, formData: Form
     || !billingDay || billingDay < 1 || billingDay > 28
     || !reviewDays || reviewDays < 1 || reviewDays > 14
     || !chargeDay || chargeDay < 1 || chargeDay > 28) {
-    redirect(`/schools/${schoolId}/products?billing=invalid`);
+    redirect(`${destination}${destination.includes("?") ? "&" : "?"}billing=invalid`);
   }
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
-  if (!data?.claims?.sub) redirect(`/login?next=/schools/${schoolId}/products`);
+  if (!data?.claims?.sub) redirect(`/login?next=${encodeURIComponent(destination)}`);
   if (!await checkSchoolCapability(supabase, schoolId, "school.products.manage")) redirect(`/schools/${schoolId}`);
   const { data: updated, error } = await supabase.from("schools").update({
     billing_timing_default: timing,
@@ -176,9 +179,10 @@ export async function updateSchoolBillingTiming(schoolId: string, formData: Form
     payer_review_days: reviewDays,
     intended_charge_day: chargeDay,
   }).eq("id", schoolId).select("id").maybeSingle();
-  if (error || !updated) redirect(`/schools/${schoolId}/products?billing=error`);
+  if (error || !updated) redirect(`${destination}${destination.includes("?") ? "&" : "?"}billing=error`);
   revalidatePath(`/schools/${schoolId}/products`);
-  redirect(`/schools/${schoolId}/products?billing=saved`);
+  revalidatePath(`/schools/${schoolId}/onboarding`);
+  redirect(`${destination}${destination.includes("?") ? "&" : "?"}billing=saved`);
 }
 
 export async function archiveProduct(schoolId: string, productId: string) {
