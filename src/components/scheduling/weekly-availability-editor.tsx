@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { AppSelect } from "@/components/ui/app-select";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
 
@@ -14,6 +14,24 @@ const presets = [
   { label: "Broad weekdays", days: [1,2,3,4,5], start: "09:00", end: "18:00" },
   { label: "Saturday", days: [6], start: "09:00", end: "15:00" },
 ] as const;
+const calendarDays = [1, 2, 3, 4, 5, 6, 0];
+const calendarStart = 6 * 60;
+const calendarEnd = 22 * 60;
+const calendarMinutes = calendarEnd - calendarStart;
+const calendarHeight = 448;
+const snapMinutes = 15;
+
+const minuteValue = (time: string) => {
+  const [hour, minute] = time.split(":").map(Number);
+  return hour * 60 + minute;
+};
+const timeValue = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+const shortTime = (time: string) => {
+  const minutes = minuteValue(time);
+  const hour = Math.floor(minutes / 60);
+  const minute = minutes % 60;
+  return `${hour % 12 || 12}${minute ? `:${String(minute).padStart(2, "0")}` : ""}${hour < 12 ? "a" : "p"}`;
+};
 
 export function WeeklyAvailabilityEditor({ initialBlocks, action, compactSetup = false }: { initialBlocks: WeeklyAvailabilityBlock[]; action: (blocks: WeeklyAvailabilityBlock[]) => Promise<Result>; compactSetup?: boolean }) {
   const [blocks, setBlocks] = useState<EditorBlock[]>(() => initialBlocks.map((block, index) => ({ ...block, key: `${block.weekday}-${block.start_time}-${index}`, saved: true })));
@@ -21,6 +39,8 @@ export function WeeklyAvailabilityEditor({ initialBlocks, action, compactSetup =
   const [revision, setRevision] = useState(0);
   const [presetBackup, setPresetBackup] = useState<{ blocks: EditorBlock[]; dirty: boolean } | null>(null);
   const [savedComplete, setSavedComplete] = useState(false);
+  const [showExactTimes, setShowExactTimes] = useState(!compactSetup);
+  const drag = useRef<{ key: string; mode: "move" | "resize"; y: number; start: number; end: number } | null>(null);
 
   function changed() {
     setDirty(true);
@@ -49,6 +69,43 @@ export function WeeklyAvailabilityEditor({ initialBlocks, action, compactSetup =
     changed();
   }
 
+  function addCustomBlock() {
+    setBlocks((current) => [...current, { key: crypto.randomUUID(), weekday: 1, start_time: "09:00", end_time: "12:00", saved: false }]);
+    setShowExactTimes(true);
+    changed();
+  }
+
+  function beginDrag(event: ReactPointerEvent<HTMLElement>, block: EditorBlock, mode: "move" | "resize") {
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    drag.current = { key: block.key, mode, y: event.clientY, start: minuteValue(block.start_time), end: minuteValue(block.end_time) };
+  }
+
+  function moveDrag(event: ReactPointerEvent<HTMLElement>) {
+    const active = drag.current;
+    if (!active || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
+    const delta = Math.round(((event.clientY - active.y) / calendarHeight * calendarMinutes) / snapMinutes) * snapMinutes;
+    setBlocks((current) => current.map((block) => {
+      if (block.key !== active.key) return block;
+      if (active.mode === "resize") {
+        const end = Math.max(active.start + snapMinutes, Math.min(calendarEnd, active.end + delta));
+        return { ...block, end_time: timeValue(end), saved: false };
+      }
+      const duration = active.end - active.start;
+      const start = Math.max(calendarStart, Math.min(calendarEnd - duration, active.start + delta));
+      return { ...block, start_time: timeValue(start), end_time: timeValue(start + duration), saved: false };
+    }));
+    setDirty(true);
+  }
+
+  function endDrag(event: ReactPointerEvent<HTMLElement>) {
+    if (!drag.current) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    drag.current = null;
+    setRevision((current) => current + 1);
+  }
+
   if (savedComplete) return <div className="rounded-card bg-brand/10 px-5 py-7 text-center">
     <p className="font-display text-2xl text-ink">Teaching hours saved</p>
     {!compactSetup ? <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted">Find an Opening can now use these normal hours. Existing lessons stayed exactly where they were, and exceptions remain available.</p> : null}
@@ -58,15 +115,35 @@ export function WeeklyAvailabilityEditor({ initialBlocks, action, compactSetup =
   return (
     <div>
       <div className="mb-5 rounded-control bg-surface p-4">
-        <p className="text-sm font-medium text-ink">Suggested weekly blocks</p>
+        <p className="text-sm font-medium text-ink">Start with a common schedule</p>
         {!compactSetup ? <p className="mt-1 text-xs leading-5 text-muted">These hours power Find an Opening. They describe the normal week, not a hard rule—you can still schedule an exception.</p> : null}
         <div className="mt-3 flex flex-wrap gap-2">
-          {presets.map((preset) => <button key={preset.label} type="button" onClick={() => applyPreset(preset)} className="rounded-control border border-line bg-canvas px-3 py-2 text-xs text-muted transition hover:border-brand hover:text-brand">Replace draft with {preset.label.toLowerCase()}</button>)}
+          {presets.map((preset) => <button key={preset.label} type="button" onClick={() => applyPreset(preset)} className="rounded-control border border-line bg-canvas px-3 py-2 text-xs text-muted transition hover:border-brand hover:text-brand">{preset.label}</button>)}
+          <button type="button" onClick={addCustomBlock} className="rounded-control border border-brand/60 bg-transparent px-3 py-2 text-xs text-brand transition hover:bg-brand hover:text-canvas">Custom time</button>
           {presetBackup ? <button type="button" onClick={() => { setBlocks(presetBackup.blocks); setDirty(presetBackup.dirty); setPresetBackup(null); setRevision((current) => current + 1); }} className="px-2 py-2 text-xs text-brand underline underline-offset-4">Undo preset</button> : null}
         </div>
       </div>
-      <div className="mb-3 flex items-center gap-3"><span className="h-px flex-1 bg-line" /><span className="text-xs uppercase tracking-[0.12em] text-muted">Or set specific hours</span><span className="h-px flex-1 bg-line" /></div>
-      <div className="space-y-3">
+      {compactSetup ? <div className="overflow-x-auto rounded-control bg-canvas/65 p-3">
+        <div className="grid min-w-[46rem] grid-cols-[3.25rem_repeat(7,minmax(5rem,1fr))]">
+          <div />
+          {calendarDays.map((weekday) => <div key={weekday} className="pb-2 text-center text-[0.68rem] font-medium uppercase tracking-[0.1em] text-muted">{days[weekday].slice(0,3)}</div>)}
+          <div className="relative" style={{ height: calendarHeight }}>{Array.from({ length: 9 }, (_, index) => { const minute = calendarStart + index * 120; return <span key={minute} className="absolute right-2 -translate-y-1/2 text-[0.6rem] text-muted" style={{ top: `${(minute - calendarStart) / calendarMinutes * 100}%` }}>{shortTime(timeValue(minute))}</span>; })}</div>
+          {calendarDays.map((weekday) => <div key={weekday} className="relative border-l border-line/70 bg-[repeating-linear-gradient(to_bottom,transparent_0,transparent_27px,var(--ui-line)_28px)]" style={{ height: calendarHeight }}>
+            {blocks.filter((block) => block.weekday === weekday && minuteValue(block.end_time) > calendarStart && minuteValue(block.start_time) < calendarEnd).map((block) => {
+              const start = Math.max(calendarStart, minuteValue(block.start_time));
+              const end = Math.min(calendarEnd, minuteValue(block.end_time));
+              return <div key={block.key} role="group" aria-label={`${days[weekday]} ${shortTime(block.start_time)} to ${shortTime(block.end_time)}`} onPointerDown={(event) => beginDrag(event, block, "move")} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className="absolute inset-x-1 touch-none cursor-grab rounded-control border border-brand/60 bg-brand/25 px-1.5 py-1 text-[0.62rem] text-ink shadow-sm active:cursor-grabbing" style={{ top: `${(start - calendarStart) / calendarMinutes * 100}%`, height: `${Math.max(18, (end - start) / calendarMinutes * calendarHeight)}px` }}>
+                <button type="button" aria-label={`Remove ${days[weekday]} block`} onPointerDown={(event) => event.stopPropagation()} onClick={() => { setBlocks((current) => current.filter((item) => item.key !== block.key)); changed(); }} className="absolute right-1 top-0 text-sm leading-none text-danger">×</button>
+                <span className="block pr-3 font-medium">{shortTime(block.start_time)}</span><span className="block opacity-70">{shortTime(block.end_time)}</span>
+                <span role="presentation" onPointerDown={(event) => beginDrag(event, block, "resize")} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className="absolute inset-x-1 bottom-0 h-3 cursor-ns-resize touch-none border-t border-brand/40" />
+              </div>;
+            })}
+          </div>)}
+        </div>
+        <p className="mt-3 text-center text-xs text-muted">Drag a block to move it. Drag its bottom edge to change its length.</p>
+      </div> : null}
+      {showExactTimes ? <div className="mt-5 space-y-3">
+        {compactSetup ? <div className="flex items-center justify-between"><p className="text-xs font-medium uppercase tracking-[0.12em] text-muted">Exact times</p><button type="button" onClick={() => setShowExactTimes(false)} className="text-xs text-brand">Hide</button></div> : null}
         {dirty ? <p className="text-xs font-medium text-brand">Changes not saved yet</p> : null}
         {blocks.length ? blocks.map((block) => (
           <div key={block.key} className={block.saved ? "rounded-control bg-brand/10 p-3" : "rounded-control border border-brand/60 bg-transparent p-3"}>
@@ -81,8 +158,8 @@ export function WeeklyAvailabilityEditor({ initialBlocks, action, compactSetup =
             </div>
           </div>
         )) : <p className="rounded-control bg-surface p-4 text-sm text-muted">No working hours added yet.</p>}
-      </div>
-      <button type="button" onClick={() => { setBlocks((current) => [...current,{ key: crypto.randomUUID(), weekday: 1, start_time: "09:00", end_time: "12:00", saved: false }]); changed(); }} className="mt-4 rounded-control border border-brand/60 bg-surface px-4 py-2 text-sm text-brand transition hover:-translate-y-px hover:border-brand">Add a time block +</button>
+      </div> : blocks.length === 0 ? <p className="mt-4 text-center text-sm text-muted">Choose a schedule above or add a custom time.</p> : <button type="button" onClick={() => setShowExactTimes(true)} className="mt-4 text-sm text-brand underline underline-offset-4">Edit exact times</button>}
+      {!compactSetup ? <button type="button" onClick={addCustomBlock} className="mt-4 rounded-control border border-brand/60 bg-surface px-4 py-2 text-sm text-brand transition hover:-translate-y-px hover:border-brand">Add a time block +</button> : null}
       <div className="mt-6 max-w-md"><HoldToConfirm key={revision} action={save} disabled={!dirty} disabledMessage={compactSetup ? "No changes to save." : "Add, edit, or remove a block to change this schedule."} idleLabel="Hold to save teaching hours" holdingLabel="Keep holding to replace the schedule…" submittingLabel="Saving teaching hours…" successLabel="Teaching hours saved" refreshOnSuccess /></div>
       {compactSetup ? <details className="mt-3 text-xs text-muted"><summary className="cursor-pointer text-brand">More about teaching hours</summary><p className="mt-2 leading-5">Saving replaces the normal weekly hours from today forward. Existing lessons do not move, and you can still schedule outside these hours when needed.</p></details> : <p className="mt-3 text-xs leading-5 text-muted">Saving replaces the normal recurring schedule from today forward. It never moves existing lessons and does not prevent an owner from making an exception.</p>}
     </div>

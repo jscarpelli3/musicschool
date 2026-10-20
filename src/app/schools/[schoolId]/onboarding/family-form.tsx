@@ -51,6 +51,7 @@ export function FamilyForm({ schoolId, families }: { schoolId: string; families:
     <div className="mx-auto mt-7 max-w-2xl text-left">
       {families.length ? <div className="rounded-control bg-surface p-5 sm:p-6">
         <div className="space-y-3">
+          <div className="grid grid-cols-[1fr_auto_1fr] gap-3 px-4 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted"><span>Student</span><span aria-hidden="true" /><span className="text-right">Payer</span></div>
           {families.flatMap((family) => family.students.map((student) => <Link key={student.id} href={`/schools/${schoolId}/families/${family.id}`} className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-control bg-canvas/60 p-4 transition hover:bg-canvas">
             <span className="flex min-w-0 items-center gap-2"><MdPerson aria-hidden="true" className="shrink-0 text-xl text-brand" /><span className="truncate text-sm font-medium">{student.name}</span></span>
             <MdArrowForward aria-hidden="true" className="text-muted" />

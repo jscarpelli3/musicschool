@@ -94,7 +94,7 @@ export default async function OnboardingPage({ params, searchParams }: {
   const money = (cents: number, currency: string) => new Intl.NumberFormat("en-US", { style: "currency", currency }).format(cents / 100);
 
   return (
-    <main className="mx-auto min-h-screen max-w-3xl px-5 py-12 sm:px-8 sm:py-16">
+    <main className="mx-auto min-h-screen max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
       <div className="text-center"><p className="text-xs uppercase tracking-[0.14em] text-brand">{school.onboarding_completed_at ? "Setup guide" : "New school setup"}</p><h1 className="mt-3 font-display text-5xl sm:text-6xl">{school.name}</h1></div>
       <OnboardingStepper initialStep={query.step}>
         <div className="grid gap-6 sm:grid-cols-2">
