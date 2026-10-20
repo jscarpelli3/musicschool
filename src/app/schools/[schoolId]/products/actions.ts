@@ -151,7 +151,7 @@ export async function createProduct(
   }
 
   revalidatePath(`/schools/${schoolId}/products`);
-  const onboardingPath = `/schools/${schoolId}/onboarding?step=offerings`;
+  const onboardingPath = `/schools/${schoolId}/onboarding?step=payments`;
   redirect(returnPath === onboardingPath ? `${onboardingPath}&created=1` : `/schools/${schoolId}/products?created=1`);
 }
 

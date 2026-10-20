@@ -3,6 +3,7 @@
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { AppSelect } from "@/components/ui/app-select";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
+import { MdDeleteOutline } from "react-icons/md";
 
 export type WeeklyAvailabilityBlock = { weekday: number; start_time: string; end_time: string };
 type Result = { ok: boolean; message: string };
@@ -133,7 +134,7 @@ export function WeeklyAvailabilityEditor({ initialBlocks, action, compactSetup =
               const start = Math.max(calendarStart, minuteValue(block.start_time));
               const end = Math.min(calendarEnd, minuteValue(block.end_time));
               return <div key={block.key} role="group" aria-label={`${days[weekday]} ${shortTime(block.start_time)} to ${shortTime(block.end_time)}`} onPointerDown={(event) => beginDrag(event, block, "move")} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className="absolute inset-x-1 touch-none cursor-grab rounded-control border border-brand/60 bg-brand/25 px-1.5 py-1 text-[0.62rem] text-ink shadow-sm active:cursor-grabbing" style={{ top: `${(start - calendarStart) / calendarMinutes * 100}%`, height: `${Math.max(18, (end - start) / calendarMinutes * calendarHeight)}px` }}>
-                <button type="button" aria-label={`Remove ${days[weekday]} block`} onPointerDown={(event) => event.stopPropagation()} onClick={() => { setBlocks((current) => current.filter((item) => item.key !== block.key)); changed(); }} className="absolute right-1 top-0 text-sm leading-none text-danger">×</button>
+                <button type="button" aria-label={`Delete ${days[weekday]} block`} title="Delete time block" onPointerDown={(event) => event.stopPropagation()} onClick={() => { setBlocks((current) => current.filter((item) => item.key !== block.key)); changed(); }} className="absolute right-1 top-1 z-10 grid h-6 w-6 place-items-center rounded-full bg-canvas/90 text-sm text-danger shadow-sm transition hover:scale-110 hover:bg-canvas"><MdDeleteOutline aria-hidden="true" /></button>
                 <span className="block pr-3 font-medium">{shortTime(block.start_time)}</span><span className="block opacity-70">{shortTime(block.end_time)}</span>
                 <span role="presentation" onPointerDown={(event) => beginDrag(event, block, "resize")} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className="absolute inset-x-1 bottom-0 h-3 cursor-ns-resize touch-none border-t border-brand/40" />
               </div>;
