@@ -6,11 +6,13 @@ import { AvatarUploader } from "@/app/profile/avatar-uploader";
 import { SchoolLogoUploader } from "@/components/school-setup/school-logo-uploader";
 import { InstrumentCatalogForm } from "@/components/school-setup/instrument-catalog-form";
 import { AddTeacherDialog } from "@/components/staff/add-teacher-dialog";
+import { WeeklyAvailabilityEditor } from "@/components/scheduling/weekly-availability-editor";
 import { Term } from "@/components/ui/term";
 import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 import { createClient } from "@/lib/supabase/server";
 import { updateSchoolInstrumentCatalog } from "../setup/instrument-actions";
 import { createAndInviteTeacher } from "../staff/actions";
+import { saveTeacherWeeklyAvailability } from "../availability-actions";
 import { finishOnboarding } from "./actions";
 import { BillingWalkthrough } from "./billing-walkthrough";
 import { EditableSetupCard } from "./editable-setup-card";
@@ -43,11 +45,12 @@ export default async function OnboardingPage({ params, searchParams }: {
     supabase.from("billing_accounts").select("id,name,billing_contact_person_id").eq("school_id", schoolId).eq("status", "active").order("created_at"),
     supabase.from("people").select("id,first_name,last_name,preferred_name,email").eq("school_id", schoolId),
     supabase.from("billing_account_students").select("billing_account_id,student_id").eq("school_id", schoolId),
+    supabase.from("teacher_availability_rules").select("teacher_id,weekday,start_time,end_time,effective_from,effective_until").eq("school_id", schoolId).order("weekday").order("start_time"),
     loadMySchoolCapabilities(schoolId),
   ]);
   const failed = results.find((result) => "error" in result && result.error);
   if (failed && "error" in failed && failed.error) throw new Error("School onboarding could not be loaded.");
-  const [schoolResult, membershipResult, profileResult, teacherResult, instrumentResult, accountResult, peopleResult, studentLinkResult, capabilities] = results;
+  const [schoolResult, membershipResult, profileResult, teacherResult, instrumentResult, accountResult, peopleResult, studentLinkResult, availabilityResult, capabilities] = results;
   const school = schoolResult.data;
   const membership = membershipResult.data;
   const profile = profileResult.data;
@@ -79,6 +82,8 @@ export default async function OnboardingPage({ params, searchParams }: {
     const person = peopleById.get(teacher.person_id);
     return person ? [person] : [];
   }).sort((a, b) => personName(a).localeCompare(personName(b)));
+  const today = new Intl.DateTimeFormat("sv-SE", { timeZone: school.timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const currentAvailability = (availabilityResult.data ?? []).filter((rule) => rule.effective_from <= today && (!rule.effective_until || rule.effective_until >= today));
 
   return (
     <main className="mx-auto min-h-screen max-w-3xl px-5 py-12 text-center sm:px-8 sm:py-20">
@@ -137,6 +142,14 @@ export default async function OnboardingPage({ params, searchParams }: {
               </div>
             </div>
           </div>
+          {onboardingTeachers.length ? <div className="rounded-control border border-line bg-surface p-5 sm:p-6">
+            <p className="text-xs uppercase tracking-[0.12em] text-brand">Then · Set usual teaching hours</p>
+            <h3 className="mt-2 font-display text-3xl">When do lessons normally fit?</h3>
+            <p className="mt-3 text-sm leading-6 text-muted">These blocks give Find an Opening useful boundaries. They are not a wall: owners can still schedule an exception, and existing lessons never move automatically. You may finish setup now and return to this later.</p>
+            <div className="mt-6 space-y-6">
+              {onboardingTeachers.map((teacher) => <div key={teacher.id} className="rounded-control bg-canvas/45 p-4 sm:p-5"><h4 className="mb-4 font-medium text-ink">{personName(teacher)}</h4><WeeklyAvailabilityEditor initialBlocks={currentAvailability.filter((rule) => rule.teacher_id === teacher.id).map((rule) => ({ weekday: rule.weekday, start_time: rule.start_time.slice(0,5), end_time: rule.end_time.slice(0,5) }))} action={saveTeacherWeeklyAvailability.bind(null,schoolId,teacher.id)} /></div>)}
+            </div>
+          </div> : null}
         </div>
       </section>
 

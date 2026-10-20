@@ -8,6 +8,12 @@ export type WeeklyAvailabilityBlock = { weekday: number; start_time: string; end
 type Result = { ok: boolean; message: string };
 type EditorBlock = WeeklyAvailabilityBlock & { key: string; saved: boolean };
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const presets = [
+  { label: "Weekday afternoons", days: [1,2,3,4,5], start: "14:00", end: "19:00" },
+  { label: "Weekday evenings", days: [1,2,3,4,5], start: "16:00", end: "20:00" },
+  { label: "Broad weekdays", days: [1,2,3,4,5], start: "09:00", end: "18:00" },
+  { label: "Saturday", days: [6], start: "09:00", end: "15:00" },
+] as const;
 
 export function WeeklyAvailabilityEditor({ initialBlocks, action }: { initialBlocks: WeeklyAvailabilityBlock[]; action: (blocks: WeeklyAvailabilityBlock[]) => Promise<Result> }) {
   const [blocks, setBlocks] = useState<EditorBlock[]>(() => initialBlocks.map((block, index) => ({ ...block, key: `${block.weekday}-${block.start_time}-${index}`, saved: true })));
@@ -33,8 +39,20 @@ export function WeeklyAvailabilityEditor({ initialBlocks, action }: { initialBlo
     return result;
   }
 
+  function applyPreset(preset: (typeof presets)[number]) {
+    setBlocks(preset.days.map((weekday) => ({ key: crypto.randomUUID(), weekday, start_time: preset.start, end_time: preset.end, saved: false })));
+    changed();
+  }
+
   return (
     <div>
+      <div className="mb-5 rounded-control bg-surface p-4">
+        <p className="text-sm font-medium text-ink">Start with a usual teaching pattern</p>
+        <p className="mt-1 text-xs leading-5 text-muted">These hours power Find an Opening. They describe the normal week, not a hard rule—you can still schedule an exception.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {presets.map((preset) => <button key={preset.label} type="button" onClick={() => applyPreset(preset)} className="rounded-control border border-line bg-canvas px-3 py-2 text-xs text-muted transition hover:border-brand hover:text-brand">{preset.label}</button>)}
+        </div>
+      </div>
       <div className="space-y-3">
         {dirty ? <p className="text-xs font-medium text-brand">Changes not saved yet</p> : null}
         {blocks.length ? blocks.map((block) => (
@@ -49,11 +67,11 @@ export function WeeklyAvailabilityEditor({ initialBlocks, action }: { initialBlo
               <label><span className="text-xs text-muted">Ends</span><input type="time" value={block.end_time} onChange={(event) => update(block.key,"end_time",event.target.value)} className="mt-2 w-full rounded-control border border-line bg-surface px-3 py-2" /></label>
             </div>
           </div>
-        )) : <p className="rounded-control bg-surface p-4 text-sm text-muted">No weekly availability is recorded. Lessons may still exist, but new placements will be flagged as outside availability.</p>}
+        )) : <p className="rounded-control border border-line bg-surface p-4 text-sm leading-6 text-muted"><strong className="text-ink">Availability is not configured yet.</strong><br />Find an Opening cannot suggest useful times for this teacher until their normal teaching hours are saved. Lessons can still be added manually as outside-availability exceptions.</p>}
       </div>
       <button type="button" onClick={() => { setBlocks((current) => [...current,{ key: crypto.randomUUID(), weekday: 1, start_time: "09:00", end_time: "12:00", saved: false }]); changed(); }} className="mt-4 rounded-control border border-brand/60 bg-surface px-4 py-2 text-sm text-brand transition hover:-translate-y-px hover:border-brand">Add a time block +</button>
       <div className="mt-6 max-w-md"><HoldToConfirm key={revision} action={save} disabled={!dirty} disabledMessage="Add, edit, or remove a block to change this schedule." idleLabel="Hold to save weekly availability" holdingLabel="Keep holding to replace the schedule…" submittingLabel="Saving weekly availability…" successLabel="Availability saved" refreshOnSuccess /></div>
-      <p className="mt-3 text-xs leading-5 text-muted">Saving replaces the recurring schedule from today forward. It never moves existing lessons automatically.</p>
+      <p className="mt-3 text-xs leading-5 text-muted">Saving replaces the normal recurring schedule from today forward. It never moves existing lessons and does not prevent an owner from making an exception.</p>
     </div>
   );
 }
