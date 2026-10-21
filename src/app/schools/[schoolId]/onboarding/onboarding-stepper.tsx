@@ -1,7 +1,7 @@
 "use client";
 
 import { Children, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { MdAccessTime, MdFamilyRestroom, MdGroups, MdMusicNote, MdPayments, MdRoute, MdStorefront } from "react-icons/md";
+import { MdAccessTime, MdAutorenew, MdFamilyRestroom, MdGroups, MdMusicNote, MdPayments, MdRoute, MdStorefront } from "react-icons/md";
 
 const steps = [
   { key: "school", label: "School", icon: MdStorefront },
@@ -86,10 +86,10 @@ export function OnboardingStepper({ children, initialStep = "school" }: { childr
       </div>
     </div>
 
-    <nav className="mt-10 flex items-center justify-between border-t border-line pt-6" aria-label="Setup steps">
-      <button type="button" onClick={() => move(active - 1)} disabled={active === 0} className="rounded-control px-4 py-2 text-sm text-muted transition hover:bg-surface disabled:invisible">← Previous</button>
-      <span className="text-xs text-muted">{step.label}</span>
-      <button type="button" onClick={() => move(active + 1)} disabled={active === steps.length - 1} className="rounded-control bg-ink px-5 py-2.5 text-sm text-canvas transition hover:opacity-85 disabled:invisible">Next →</button>
+    <nav className="mt-10 grid grid-cols-3 items-center border-t border-line pt-6" aria-label="Setup steps">
+      <button type="button" onClick={() => move(active - 1)} disabled={active === 0} className="justify-self-start rounded-control px-4 py-2 text-sm text-muted transition hover:bg-surface disabled:invisible">← Previous</button>
+      <span className="justify-self-center" role="status" aria-live="polite">{phase !== "idle" ? <><MdAutorenew aria-hidden="true" className="h-5 w-5 animate-spin text-brand" /><span className="sr-only">Changing setup section</span></> : null}</span>
+      <button type="button" onClick={() => move(active + 1)} disabled={active === steps.length - 1} className="justify-self-end rounded-control bg-ink px-5 py-2.5 text-sm text-canvas transition hover:opacity-85 disabled:invisible">Next →</button>
     </nav>
   </div>;
 }
