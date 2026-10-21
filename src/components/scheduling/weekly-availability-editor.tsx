@@ -3,7 +3,7 @@
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { AppSelect } from "@/components/ui/app-select";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
-import { MdDeleteOutline } from "react-icons/md";
+import { MdDelete } from "react-icons/md";
 
 export type WeeklyAvailabilityBlock = { weekday: number; start_time: string; end_time: string };
 type Result = { ok: boolean; message: string };
@@ -149,7 +149,7 @@ export function WeeklyAvailabilityEditor({ initialBlocks, action, compactSetup =
               const start = Math.max(calendarStart, minuteValue(block.start_time));
               const end = Math.min(calendarEnd, minuteValue(block.end_time));
               return <div key={block.key} role="group" aria-label={`${days[weekday]} ${shortTime(block.start_time)} to ${shortTime(block.end_time)}`} onPointerDown={(event) => beginDrag(event, block, "move")} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className="absolute inset-x-1 touch-none cursor-grab rounded-control border border-brand/60 bg-brand/25 px-1.5 py-1 text-[0.62rem] text-ink shadow-sm active:cursor-grabbing" style={{ top: `${(start - calendarStart) / calendarMinutes * 100}%`, height: `${Math.max(18, (end - start) / calendarMinutes * calendarHeight)}px` }}>
-                <button type="button" aria-label={`Delete ${days[weekday]} block`} title="Delete time block" onPointerDown={(event) => event.stopPropagation()} onClick={() => { setBlocks((current) => current.filter((item) => item.key !== block.key)); changed(); }} className="absolute right-1 top-1 z-10 grid h-6 w-6 place-items-center rounded-full bg-canvas/90 text-sm text-danger shadow-sm transition hover:scale-110 hover:bg-canvas"><MdDeleteOutline aria-hidden="true" /></button>
+                <button type="button" aria-label={`Delete ${days[weekday]} block`} title="Delete time block" onPointerDown={(event) => event.stopPropagation()} onClick={() => { setBlocks((current) => current.filter((item) => item.key !== block.key)); changed(); }} className="absolute right-1 top-1 z-10 grid h-8 w-8 place-items-center rounded-full border border-danger/35 bg-canvas/95 text-danger shadow-md transition hover:scale-110 hover:border-danger hover:bg-danger hover:text-canvas"><MdDelete aria-hidden="true" className="h-5 w-5" /></button>
                 <span className="block pr-3 font-medium">{shortTime(block.start_time)}</span><span className="block opacity-70">{shortTime(block.end_time)}</span>
                 <span role="presentation" onPointerDown={(event) => beginDrag(event, block, "resize")} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className="absolute inset-x-1 bottom-0 h-3 cursor-ns-resize touch-none border-t border-brand/40" />
               </div>;
@@ -165,7 +165,7 @@ export function WeeklyAvailabilityEditor({ initialBlocks, action, compactSetup =
           <div key={block.key} className={block.saved ? "rounded-control bg-brand/10 p-3" : "rounded-control border border-brand/60 bg-transparent p-3"}>
             <div className="flex min-h-7 items-start justify-between gap-3">
               <span className={`text-xs font-medium ${block.saved ? "invisible" : "text-brand"}`}>Not saved yet</span>
-              <button type="button" aria-label={`Remove ${days[block.weekday]} availability block`} title="Remove this block" onClick={() => { setBlocks((current) => current.filter((item) => item.key !== block.key)); changed(); }} className="grid h-7 w-7 place-items-center text-xl leading-none text-danger">×</button>
+              <button type="button" aria-label={`Remove ${days[block.weekday]} availability block`} title="Remove this block" onClick={() => { setBlocks((current) => current.filter((item) => item.key !== block.key)); changed(); }} className="grid h-8 w-8 place-items-center rounded-full border border-danger/35 text-danger transition hover:border-danger hover:bg-danger hover:text-canvas"><MdDelete aria-hidden="true" className="h-5 w-5" /></button>
             </div>
             <div className="mt-1 grid gap-3 sm:grid-cols-[1fr_8rem_8rem] sm:items-end">
               <label><span className="text-xs text-muted">Day</span><AppSelect value={block.weekday} onChange={(event) => update(block.key,"weekday",event.target.value)} className="mt-2 w-full rounded-control border border-line bg-surface px-3 py-2">{days.map((day,index) => <option key={day} value={index}>{day}</option>)}</AppSelect></label>
