@@ -34,7 +34,7 @@ const shortTime = (time: string) => {
   return `${hour % 12 || 12}${minute ? `:${String(minute).padStart(2, "0")}` : ""}${hour < 12 ? "a" : "p"}`;
 };
 
-export function WeeklyAvailabilityEditor({ initialBlocks, action, compactSetup = false }: { initialBlocks: WeeklyAvailabilityBlock[]; action: (blocks: WeeklyAvailabilityBlock[]) => Promise<Result>; compactSetup?: boolean }) {
+export function WeeklyAvailabilityEditor({ initialBlocks, action, compactSetup = false, teacherName }: { initialBlocks: WeeklyAvailabilityBlock[]; action: (blocks: WeeklyAvailabilityBlock[]) => Promise<Result>; compactSetup?: boolean; teacherName?: string }) {
   const [blocks, setBlocks] = useState<EditorBlock[]>(() => initialBlocks.map((block, index) => ({ ...block, key: `${block.weekday}-${block.start_time}-${index}`, saved: true })));
   const [dirty, setDirty] = useState(false);
   const [revision, setRevision] = useState(0);
@@ -73,6 +73,21 @@ export function WeeklyAvailabilityEditor({ initialBlocks, action, compactSetup =
   function addCustomBlock() {
     setBlocks((current) => [...current, { key: crypto.randomUUID(), weekday: 1, start_time: "09:00", end_time: "12:00", saved: false }]);
     setShowExactTimes(true);
+    changed();
+  }
+
+  function addBlockFromCalendar(event: ReactPointerEvent<HTMLDivElement>, weekday: number) {
+    if (event.button !== 0 || event.target !== event.currentTarget) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const rawMinute = calendarStart + (event.clientY - rect.top) / rect.height * calendarMinutes;
+    const start = Math.max(calendarStart, Math.min(calendarEnd - snapMinutes, Math.round(rawMinute / snapMinutes) * snapMinutes));
+    const sameDay = blocks.filter((block) => block.weekday === weekday);
+    if (sameDay.some((block) => minuteValue(block.start_time) <= start && minuteValue(block.end_time) > start)) return;
+    const nextStart = sameDay.map((block) => minuteValue(block.start_time)).filter((minute) => minute > start).sort((a, b) => a - b)[0] ?? calendarEnd;
+    const end = Math.min(start + 60, nextStart, calendarEnd);
+    if (end - start < snapMinutes) return;
+    setBlocks((current) => [...current, { key: crypto.randomUUID(), weekday, start_time: timeValue(start), end_time: timeValue(end), saved: false }]);
+    setPresetBackup(null);
     changed();
   }
 
@@ -125,11 +140,11 @@ export function WeeklyAvailabilityEditor({ initialBlocks, action, compactSetup =
         </div>
       </div>
       {compactSetup ? <div className="overflow-x-auto rounded-control bg-canvas/65 p-3">
-        <div className="grid min-w-[46rem] grid-cols-[3.25rem_repeat(7,minmax(5rem,1fr))]">
+        <div className="grid min-w-[46rem] grid-cols-[3.25rem_repeat(7,minmax(5rem,1fr))]" aria-label={teacherName ? `${teacherName}'s usual teaching hours` : "Usual teaching hours"}>
           <div />
           {calendarDays.map((weekday) => <div key={weekday} className="pb-2 text-center text-[0.68rem] font-medium uppercase tracking-[0.1em] text-muted">{days[weekday].slice(0,3)}</div>)}
           <div className="relative" style={{ height: calendarHeight }}>{Array.from({ length: 9 }, (_, index) => { const minute = calendarStart + index * 120; return <span key={minute} className="absolute right-2 -translate-y-1/2 text-[0.6rem] text-muted" style={{ top: `${(minute - calendarStart) / calendarMinutes * 100}%` }}>{shortTime(timeValue(minute))}</span>; })}</div>
-          {calendarDays.map((weekday) => <div key={weekday} className="relative border-l border-line/70 bg-[repeating-linear-gradient(to_bottom,transparent_0,transparent_27px,var(--ui-line)_28px)]" style={{ height: calendarHeight }}>
+          {calendarDays.map((weekday) => <div key={weekday} onPointerDown={(event) => addBlockFromCalendar(event, weekday)} className="relative cursor-crosshair border-l border-line/70 bg-[repeating-linear-gradient(to_bottom,transparent_0,transparent_27px,var(--ui-line)_28px)] transition hover:bg-brand/[0.035]" style={{ height: calendarHeight }} title={`Add ${teacherName ? `${teacherName}'s ` : ""}working hours on ${days[weekday]}`}>
             {blocks.filter((block) => block.weekday === weekday && minuteValue(block.end_time) > calendarStart && minuteValue(block.start_time) < calendarEnd).map((block) => {
               const start = Math.max(calendarStart, minuteValue(block.start_time));
               const end = Math.min(calendarEnd, minuteValue(block.end_time));
@@ -141,7 +156,7 @@ export function WeeklyAvailabilityEditor({ initialBlocks, action, compactSetup =
             })}
           </div>)}
         </div>
-        <p className="mt-3 text-center text-xs text-muted">Drag a block to move it. Drag its bottom edge to change its length.</p>
+        <p className="mt-3 text-center text-xs text-muted">Click an empty time to add a one-hour block. Drag a block to move it, stretch its bottom edge, or use the trash button to delete it.</p>
       </div> : null}
       {showExactTimes ? <div className="mt-5 space-y-3">
         {compactSetup ? <div className="flex items-center justify-between"><p className="text-xs font-medium uppercase tracking-[0.12em] text-muted">Exact times</p><button type="button" onClick={() => setShowExactTimes(false)} className="text-xs text-brand">Hide</button></div> : null}
