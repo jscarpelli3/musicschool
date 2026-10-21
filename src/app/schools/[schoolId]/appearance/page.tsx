@@ -39,7 +39,7 @@ export default async function AppearancePage({
   if (!capabilities.has("school.appearance.manage")) redirect(`/schools/${schoolId}`);
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
+    <main className="mx-auto min-h-screen min-w-0 max-w-6xl overflow-x-clip px-5 py-10 sm:px-8 sm:py-section">
       <SetupHeader schoolId={schoolId} schoolName={school.name} active="appearance" />
       <section className="ui-card mt-6 grid min-w-0 gap-8 overflow-hidden p-6 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] md:gap-12 md:p-8">
         <div>

@@ -9,8 +9,10 @@ export function ChoiceCarousel({ label, selectedValue, children }: { label: stri
     const container = rail.current;
     const selected = container?.querySelector<HTMLElement>("[data-choice-selected='true']");
     if (!container || !selected) return;
-    const selectedStart = selected.offsetLeft;
-    const selectedEnd = selectedStart + selected.offsetWidth;
+    const containerRect = container.getBoundingClientRect();
+    const selectedRect = selected.getBoundingClientRect();
+    const selectedStart = container.scrollLeft + selectedRect.left - containerRect.left;
+    const selectedEnd = selectedStart + selectedRect.width;
     const visibleStart = container.scrollLeft;
     const visibleEnd = visibleStart + container.clientWidth;
     if (selectedStart < visibleStart) container.scrollTo({ left: selectedStart, behavior: "smooth" });
