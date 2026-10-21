@@ -20,7 +20,6 @@ import { createAndInviteTeacher } from "../staff/actions";
 import { saveTeacherWeeklyAvailability } from "../availability-actions";
 import { finishOnboarding } from "./actions";
 import { BillingWalkthrough } from "./billing-walkthrough";
-import { EditableSetupCard } from "./editable-setup-card";
 import { FamilyForm, type OnboardingFamily } from "./family-form";
 import { OnboardingStepper } from "./onboarding-stepper";
 import { updateSchoolBillingTiming } from "../products/actions";
@@ -130,7 +129,7 @@ export default async function OnboardingPage({ params, searchParams }: {
           </div>
         </div>
 
-        <div><StepHeading icon={MdMusicNote} title="Instruments">Choose what your school teaches. You can add more at any time.</StepHeading><div className="rounded-control bg-surface p-5 sm:p-6"><EditableSetupCard saved={instrumentNames.length > 0} editLabel="Edit instruments" completion={<><MdCheckCircle aria-hidden="true" className="h-6 w-6 text-brand" /><p className="mt-3 text-sm font-medium">{instrumentNames.join(" · ")}</p></>}><InstrumentCatalogForm instruments={instrumentNames} action={updateSchoolInstrumentCatalog.bind(null, schoolId)} /></EditableSetupCard></div></div>
+        <div><StepHeading icon={MdMusicNote} title="Instruments">Choose what your school teaches. Changes save as soon as you check or uncheck an instrument.</StepHeading><div className="rounded-control bg-surface p-5 sm:p-6"><InstrumentCatalogForm instruments={instrumentNames} action={updateSchoolInstrumentCatalog.bind(null, schoolId)} /></div></div>
 
         <div><StepHeading icon={MdFamilyRestroom} title="Students and payers">Add each student and connect the person responsible for their invoices and payment setup.</StepHeading><FamilyForm schoolId={schoolId} families={families} /></div>
 
