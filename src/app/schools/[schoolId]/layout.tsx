@@ -55,7 +55,7 @@ export default async function SchoolLayout({ children, params }: { children: Rea
     <div className="mx-auto max-w-7xl px-5 pt-8 sm:px-8 sm:pt-10">
       <header className="flex items-start justify-between gap-6 border-b border-line pb-7">
         <div className="flex min-w-0 items-center gap-4">
-          {logo?.signedUrl ? <img /* eslint-disable-line @next/next/no-img-element */ src={logo.signedUrl} alt={`${school.name} logo`} className="h-14 w-14 shrink-0 rounded-card border border-line bg-surface object-contain p-2" /> : <span className="grid h-14 w-14 shrink-0 place-items-center rounded-card border border-line bg-surface text-xl font-semibold text-brand">{school.name.slice(0,1).toUpperCase()}</span>}
+          {logo?.signedUrl ? <img /* eslint-disable-line @next/next/no-img-element */ src={logo.signedUrl} alt={`${school.name} logo`} className="h-24 w-auto max-w-48 shrink-0 rounded-card border border-line bg-surface object-contain p-2" /> : <span className="grid h-24 w-24 shrink-0 place-items-center rounded-card border border-line bg-surface text-3xl font-semibold text-brand">{school.name.slice(0,1).toUpperCase()}</span>}
           <span className="min-w-0">
             <Link href={`/schools/${schoolId}`} className="block truncate font-display text-3xl hover:text-brand sm:text-4xl">{school.name}</Link>
             <span className="mt-1 block text-xs text-muted">{school.timezone} · {school.family_billing_mode.replaceAll("_"," ")}</span>

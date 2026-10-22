@@ -1,7 +1,7 @@
 import type { IconType } from "react-icons";
-import { MdApproval, MdDashboard, MdFamilyRestroom, MdGroups, MdNotificationsNone, MdReceiptLong, MdSchool } from "react-icons/md";
+import { MdApproval, MdDashboard, MdFamilyRestroom, MdGroups, MdNotificationsNone, MdReceiptLong, MdSchool, MdSettings } from "react-icons/md";
 
-export type PageHeadingKind = "dashboard" | "students" | "families" | "staff" | "billing" | "approvals" | "notifications";
+export type PageHeadingKind = "dashboard" | "students" | "families" | "staff" | "billing" | "approvals" | "notifications" | "settings";
 
 const icons: Record<PageHeadingKind, IconType> = {
   dashboard: MdDashboard,
@@ -11,6 +11,7 @@ const icons: Record<PageHeadingKind, IconType> = {
   billing: MdReceiptLong,
   approvals: MdApproval,
   notifications: MdNotificationsNone,
+  settings: MdSettings,
 };
 
 export function PageHeading({ kind, title, description, meta, id }: {
