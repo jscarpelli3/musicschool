@@ -1,12 +1,13 @@
 "use client";
 
 import { Children, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { MdAccessTime, MdAutorenew, MdFamilyRestroom, MdGroups, MdMusicNote, MdPayments, MdRoute, MdStorefront } from "react-icons/md";
+import { MdAccessTime, MdAutorenew, MdFamilyRestroom, MdGroups, MdLocationOn, MdMusicNote, MdPayments, MdRoute, MdStorefront } from "react-icons/md";
 
 const steps = [
   { key: "school", label: "School", icon: MdStorefront },
   { key: "instruments", label: "Instruments", icon: MdMusicNote },
   { key: "students", label: "Students & payers", icon: MdFamilyRestroom },
+  { key: "locations", label: "Lesson places", icon: MdLocationOn },
   { key: "team", label: "Teaching team", icon: MdGroups },
   { key: "hours", label: "Teaching hours", icon: MdAccessTime },
   { key: "payments", label: "Payments & offerings", icon: MdPayments },

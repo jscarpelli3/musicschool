@@ -2156,12 +2156,82 @@ export type Database = {
         }
         Relationships: []
       }
+      family_service_locations: {
+        Row: {
+          access_notes: string | null
+          address_line_1: string | null
+          address_line_2: string | null
+          billing_account_id: string
+          city: string | null
+          created_at: string
+          created_by: string
+          id: string
+          label: string
+          mode: string
+          postal_code: string | null
+          region: string | null
+          school_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          access_notes?: string | null
+          address_line_1?: string | null
+          address_line_2?: string | null
+          billing_account_id: string
+          city?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          label?: string
+          mode?: string
+          postal_code?: string | null
+          region?: string | null
+          school_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          access_notes?: string | null
+          address_line_1?: string | null
+          address_line_2?: string | null
+          billing_account_id?: string
+          city?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          label?: string
+          mode?: string
+          postal_code?: string | null
+          region?: string | null
+          school_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_service_locations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_service_locations_school_id_billing_account_id_fkey"
+            columns: ["school_id", "billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      }
       lesson_places: {
         Row: {
           created_at: string
           created_by: string
           details: string | null
           id: string
+          kind: string
           name: string
           school_id: string
           status: string
@@ -2172,6 +2242,7 @@ export type Database = {
           created_by: string
           details?: string | null
           id?: string
+          kind?: string
           name: string
           school_id: string
           status?: string
@@ -2182,6 +2253,7 @@ export type Database = {
           created_by?: string
           details?: string | null
           id?: string
+          kind?: string
           name?: string
           school_id?: string
           status?: string
@@ -4352,6 +4424,36 @@ export type Database = {
             referencedColumns: ["school_id", "id"]
           },
         ]
+      }
+      service_location_access_log: {
+        Row: {
+          accessed_at: string
+          actor_profile_id: string
+          id: string
+          lesson_event_id: string
+          purpose: string
+          school_id: string
+          service_location_id: string
+        }
+        Insert: {
+          accessed_at?: string
+          actor_profile_id: string
+          id?: string
+          lesson_event_id: string
+          purpose?: string
+          school_id: string
+          service_location_id: string
+        }
+        Update: {
+          accessed_at?: string
+          actor_profile_id?: string
+          id?: string
+          lesson_event_id?: string
+          purpose?: string
+          school_id?: string
+          service_location_id?: string
+        }
+        Relationships: []
       }
       service_products: {
         Row: {

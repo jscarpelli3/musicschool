@@ -9,6 +9,7 @@ import { AppSelect } from "@/components/ui/app-select";
 export type LessonFormOption = { id: string; label: string };
 export type LessonFormTeacher = LessonFormOption & { outsideAvailabilityPolicy?: "notify_only" | "require_approval" };
 export type LessonFormProduct = LessonFormOption & { durationMinutes: number; priceLabel: string; defaultScheduleType: "one_time" | "weekly" };
+export type LessonFormPlace = LessonFormOption & { kind: "school" | "student_home" | "online" | "other" };
 export type LessonFormAvailability = {
   id: string;
   teacher_id: string;
@@ -107,7 +108,7 @@ export function NewLessonForm({
   students: LessonFormOption[];
   teachers: LessonFormTeacher[];
   products: LessonFormProduct[];
-  places: LessonFormOption[];
+  places: LessonFormPlace[];
   availability: LessonFormAvailability[];
   today: string;
   defaultTeacherId?: string;
@@ -139,6 +140,7 @@ export function NewLessonForm({
   const [showNewPlace, setShowNewPlace] = useState(false);
   const [placeName, setPlaceName] = useState("");
   const [placeDetails, setPlaceDetails] = useState("");
+  const [newPlaceKind, setNewPlaceKind] = useState<"school" | "student_home" | "online" | "other">("school");
   const [placeMessage, setPlaceMessage] = useState("");
   const [placePending, startPlaceTransition] = useTransition();
   const [conflictMessage, setConflictMessage] = useState("");
@@ -148,6 +150,7 @@ export function NewLessonForm({
   const timeRef = useRef<HTMLSelectElement>(null);
   const teacher = useMemo(() => teachers.find((option) => option.id === teacherId), [teacherId, teachers]);
   const product = useMemo(() => products.find((option) => option.id === productId), [productId, products]);
+  const selectedPlace = useMemo(() => availablePlaces.find((option) => option.id === placeId), [availablePlaces, placeId]);
   const busyWindowsFor = (candidateTeacherId: string, candidateDate: string) => busyLessons.filter((lesson) => lesson.teacherId === candidateTeacherId && !["cancelled", "rescheduled"].includes(lesson.status)).flatMap((lesson) => {
     const start = localLessonParts(lesson.startsAt, timeZone), end = localLessonParts(lesson.endsAt, timeZone);
     return start.date === candidateDate ? [{ start: start.minutes, end: end.minutes }] : [];
@@ -208,17 +211,20 @@ export function NewLessonForm({
       <div className="md:col-span-2">
         <label><span className="text-xs text-muted">Place</span><AppSelect required name="place_id" value={placeId} onChange={(event) => setPlaceId(event.target.value)} className={field}><option value="" disabled>{availablePlaces.length ? "Select a place" : "No lesson places yet"}</option>{availablePlaces.map((place) => <option key={place.id} value={place.id}>{place.label}</option>)}</AppSelect></label>
         <button type="button" onClick={() => { setShowNewPlace((current) => !current); setPlaceMessage(""); }} className="mt-2 text-xs text-brand hover:text-brand-hover">{showNewPlace ? "Cancel" : "+ Add a new place"}</button>
+        {selectedPlace?.kind === "student_home" ? <p className="mt-3 rounded-control bg-brand/10 p-3 text-xs leading-5 text-muted">This student must have a protected home lesson location on their family record, or the family must be marked as arranging the address privately.</p> : null}
         {showNewPlace ? <div className="mt-4 rounded-md bg-surface-raised p-4">
           <p className="text-sm font-medium">New place</p>
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <label><span className="text-xs text-muted">Type</span><AppSelect value={newPlaceKind} onChange={(event) => setNewPlaceKind(event.target.value as typeof newPlaceKind)} className={field}><option value="school">School location</option><option value="student_home">Student home</option><option value="online">Online</option><option value="other">Other</option></AppSelect></label>
             <label><span className="text-xs text-muted">Place name</span><input value={placeName} onChange={(event) => setPlaceName(event.target.value)} maxLength={120} className={field} placeholder="Studio A" /></label>
-            <label><span className="text-xs text-muted">Address, room, or video link <span className="opacity-60">optional</span></span><input value={placeDetails} onChange={(event) => setPlaceDetails(event.target.value)} maxLength={500} className={field} /></label>
+            {newPlaceKind === "student_home" ? <p className="self-end pb-3 text-xs leading-5 text-muted">The private address belongs on the family record, not this shared place.</p> : <label><span className="text-xs text-muted">Room notes, directions, or meeting link <span className="opacity-60">optional</span></span><input value={placeDetails} onChange={(event) => setPlaceDetails(event.target.value)} maxLength={500} className={field} /></label>}
           </div>
           {placeMessage ? <p role="status" className="mt-3 text-xs text-danger">{placeMessage}</p> : null}
           <button type="button" disabled={placePending || !placeName.trim()} onClick={() => {
             const data = new FormData();
             data.set("name", placeName);
             data.set("details", placeDetails);
+            data.set("kind", newPlaceKind);
             startPlaceTransition(async () => {
               const result = await createPlaceAction(data);
               setPlaceMessage(result.message);

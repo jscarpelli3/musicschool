@@ -25,7 +25,7 @@ export default async function PlacesPage({
   const [{ data: school }, { data: membership }, { data: places }, capabilities] = await Promise.all([
     supabase.from("schools").select("id, name").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
-    supabase.from("lesson_places").select("id, name, details, status, created_by").eq("school_id", schoolId).order("status").order("name"),
+    supabase.from("lesson_places").select("id, name, details, kind, status, created_by").eq("school_id", schoolId).order("status").order("name"),
     loadMySchoolCapabilities(schoolId),
   ]);
 
@@ -36,7 +36,7 @@ export default async function PlacesPage({
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
       <SetupHeader schoolId={schoolId} schoolName={school.name} active="spaces" />
-      <p className="mt-5 text-sm leading-6 text-muted">Use the language your school uses. Spaces can be rooms, homes, stages, addresses, or online spaces.</p>
+      <p className="mt-5 text-sm leading-6 text-muted">Set the places where lessons happen. Family home addresses stay protected on each family record.</p>
 
       {created ? <p className="mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm text-brand">Place added.</p> : null}
       {archived ? <p className="mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm text-brand">Space archived.</p> : null}
@@ -54,6 +54,7 @@ export default async function PlacesPage({
               <article key={place.id} className="grid grid-cols-[1fr_auto] gap-5 border-t border-line py-5 first:border-t-0">
                 <div>
                   <h3>{place.name}</h3>
+                  <p className="mt-1 text-xs uppercase tracking-[0.1em] text-brand">{place.kind === "student_home" ? "Student home" : place.kind === "online" ? "Online" : place.kind === "other" ? "Other" : "School location"}</p>
                   {place.details ? <p className="mt-2 text-sm text-muted">{place.details}</p> : null}
                   {place.status === "archived" ? <p className="mt-2 text-xs text-muted">Archived</p> : null}
                 </div>

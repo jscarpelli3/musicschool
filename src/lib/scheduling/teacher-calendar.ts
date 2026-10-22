@@ -44,7 +44,7 @@ export type TeacherCalendarData = {
   }>;
   studentNames: Record<string, string>;
   productNames: Record<string, string>;
-  placeDetails: Record<string, { name: string; details: string | null }>;
+  placeDetails: Record<string, { name: string; details: string | null; kind: string }>;
 };
 
 type PersonName = {
@@ -106,7 +106,7 @@ export async function loadTeacherCalendar(
       ? supabase.from("service_products").select("id, name").eq("school_id", schoolId).in("id", productIds)
       : Promise.resolve({ data: [], error: null }),
     placeIds.length
-      ? supabase.from("lesson_places").select("id, name, details").eq("school_id", schoolId).in("id", placeIds)
+      ? supabase.from("lesson_places").select("id, name, details, kind").eq("school_id", schoolId).in("id", placeIds)
       : Promise.resolve({ data: [], error: null }),
   ]);
   if (studentResult.error || productResult.error || placeResult.error) {
@@ -119,6 +119,6 @@ export async function loadTeacherCalendar(
     pendingProposals,
     studentNames: Object.fromEntries((studentResult.data ?? []).map((student) => [student.id, personDisplayName(student)])),
     productNames: Object.fromEntries((productResult.data ?? []).map((product) => [product.id, product.name])),
-    placeDetails: Object.fromEntries((placeResult.data ?? []).map((place) => [place.id, { name: place.name, details: place.details }])),
+    placeDetails: Object.fromEntries((placeResult.data ?? []).map((place) => [place.id, { name: place.name, details: place.details, kind: place.kind }])),
   };
 }

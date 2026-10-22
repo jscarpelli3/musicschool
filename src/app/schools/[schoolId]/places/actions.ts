@@ -8,13 +8,17 @@ export type PlaceState = { error: string | null };
 
 export async function createPlace(
   schoolId: string,
+  returnPath: string | undefined,
   _state: PlaceState,
   formData: FormData,
 ): Promise<PlaceState> {
   const name = String(formData.get("name") ?? "").trim();
   const details = String(formData.get("details") ?? "").trim() || null;
+  const kind = String(formData.get("kind") ?? "school");
   if (!name || name.length > 120) return { error: "Enter a place name up to 120 characters." };
   if (details && details.length > 500) return { error: "Place details must be 500 characters or fewer." };
+  if (!["school", "student_home", "online", "other"].includes(kind)) return { error: "Choose a valid place type." };
+  if (kind === "student_home" && details) return { error: "Manage a family's private home address from its family record." };
 
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
@@ -25,6 +29,7 @@ export async function createPlace(
     school_id: schoolId,
     name,
     details,
+    kind,
     created_by: profileId,
   });
 
@@ -34,7 +39,9 @@ export async function createPlace(
 
   revalidatePath(`/schools/${schoolId}`);
   revalidatePath(`/schools/${schoolId}/places`);
-  redirect(`/schools/${schoolId}/places?created=1`);
+  revalidatePath(`/schools/${schoolId}/onboarding`);
+  const onboardingPath = `/schools/${schoolId}/onboarding?step=locations`;
+  redirect(returnPath === onboardingPath ? `${onboardingPath}&placeCreated=1` : `/schools/${schoolId}/places?created=1`);
 }
 
 export async function archivePlace(schoolId: string, placeId: string) {
