@@ -136,7 +136,7 @@ export function NewLessonForm({
   const [time, setTime] = useState(initialTime);
   const [placeId, setPlaceId] = useState("");
   const [availablePlaces, setAvailablePlaces] = useState(places);
-  const [showNewPlace, setShowNewPlace] = useState(places.length === 0);
+  const [showNewPlace, setShowNewPlace] = useState(false);
   const [placeName, setPlaceName] = useState("");
   const [placeDetails, setPlaceDetails] = useState("");
   const [placeMessage, setPlaceMessage] = useState("");
@@ -206,8 +206,8 @@ export function NewLessonForm({
       {scheduleType === "weekly" ? <label className="md:col-span-2"><span className="text-xs text-muted">Repeat weekly through</span><input required name="ends_on" type="date" min={date} max={(() => { const max = new Date(`${date}T12:00:00`); max.setDate(max.getDate() + 371); return `${max.getFullYear()}-${String(max.getMonth()+1).padStart(2,"0")}-${String(max.getDate()).padStart(2,"0")}`; })()} defaultValue={defaultEndDate} key={defaultEndDate} className={field} /><span className="mt-2 block text-[11px] text-muted">Defaults to twelve weeks; adjust as needed.</span></label> : null}
       <AvailabilityContext teacher={teacher} date={date} time={time} duration={product?.durationMinutes} availability={availability} />
       <div className="md:col-span-2">
-        <label><span className="text-xs text-muted">Place</span><AppSelect required name="place_id" value={placeId} onChange={(event) => setPlaceId(event.target.value)} className={field}><option value="" disabled>Select a place</option>{availablePlaces.map((place) => <option key={place.id} value={place.id}>{place.label}</option>)}</AppSelect></label>
-        <button type="button" onClick={() => { setShowNewPlace((current) => !current); setPlaceMessage(""); }} className="mt-2 text-xs text-brand hover:text-brand-hover">{showNewPlace ? "Cancel" : "Add a new place"}</button>
+        <label><span className="text-xs text-muted">Place</span><AppSelect required name="place_id" value={placeId} onChange={(event) => setPlaceId(event.target.value)} className={field}><option value="" disabled>{availablePlaces.length ? "Select a place" : "No lesson places yet"}</option>{availablePlaces.map((place) => <option key={place.id} value={place.id}>{place.label}</option>)}</AppSelect></label>
+        <button type="button" onClick={() => { setShowNewPlace((current) => !current); setPlaceMessage(""); }} className="mt-2 text-xs text-brand hover:text-brand-hover">{showNewPlace ? "Cancel" : "+ Add a new place"}</button>
         {showNewPlace ? <div className="mt-4 rounded-md bg-surface-raised p-4">
           <p className="text-sm font-medium">New place</p>
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
