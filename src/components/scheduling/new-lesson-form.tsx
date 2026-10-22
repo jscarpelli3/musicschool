@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
-import type { CreateLessonState } from "@/app/schools/[schoolId]/lessons/new/actions";
+import type { CreateLessonPlaceState, CreateLessonState } from "@/app/schools/[schoolId]/lessons/new/actions";
 import { clockTime, fiveMinuteTimeOptions, minutesFromTime } from "@/lib/scheduling/time-options";
 import { AppSelect } from "@/components/ui/app-select";
 
@@ -79,6 +79,7 @@ function AvailabilityContext({
 
 export function NewLessonForm({
   action,
+  createPlaceAction,
   initialState,
   students,
   teachers,
@@ -101,6 +102,7 @@ export function NewLessonForm({
   timeZone,
 }: {
   action: (state: CreateLessonState, formData: FormData) => Promise<CreateLessonState>;
+  createPlaceAction: (formData: FormData) => Promise<CreateLessonPlaceState>;
   initialState: CreateLessonState;
   students: LessonFormOption[];
   teachers: LessonFormTeacher[];
@@ -132,6 +134,13 @@ export function NewLessonForm({
   const [productId, setProductId] = useState(startingProductId);
   const [date, setDate] = useState(initialDate ?? today);
   const [time, setTime] = useState(initialTime);
+  const [placeId, setPlaceId] = useState("");
+  const [availablePlaces, setAvailablePlaces] = useState(places);
+  const [showNewPlace, setShowNewPlace] = useState(places.length === 0);
+  const [placeName, setPlaceName] = useState("");
+  const [placeDetails, setPlaceDetails] = useState("");
+  const [placeMessage, setPlaceMessage] = useState("");
+  const [placePending, startPlaceTransition] = useTransition();
   const [conflictMessage, setConflictMessage] = useState("");
   const [scheduleType, setScheduleType] = useState<"one_time" | "weekly">(entitlement ? "one_time" : products.find((item) => item.id === startingProductId)?.defaultScheduleType ?? "weekly");
   const createdHandled = useRef(false);
@@ -196,7 +205,36 @@ export function NewLessonForm({
       {entitlement ? <input type="hidden" name="schedule_type" value="one_time" /> : <fieldset className="md:col-span-2"><legend className="text-xs text-muted">Schedule</legend><div className="mt-3 flex gap-6 text-sm"><label className="flex items-center gap-2"><input type="radio" name="schedule_type" value="weekly" checked={scheduleType === "weekly"} onChange={() => setScheduleType("weekly")} />Weekly series</label><label className="flex items-center gap-2"><input type="radio" name="schedule_type" value="one_time" checked={scheduleType === "one_time"} onChange={() => setScheduleType("one_time")} />One lesson</label></div><p className="mt-2 text-[11px] text-muted">This offering’s usual choice is preselected. You can change it for this lesson.</p></fieldset>}
       {scheduleType === "weekly" ? <label className="md:col-span-2"><span className="text-xs text-muted">Repeat weekly through</span><input required name="ends_on" type="date" min={date} max={(() => { const max = new Date(`${date}T12:00:00`); max.setDate(max.getDate() + 371); return `${max.getFullYear()}-${String(max.getMonth()+1).padStart(2,"0")}-${String(max.getDate()).padStart(2,"0")}`; })()} defaultValue={defaultEndDate} key={defaultEndDate} className={field} /><span className="mt-2 block text-[11px] text-muted">Defaults to twelve weeks; adjust as needed.</span></label> : null}
       <AvailabilityContext teacher={teacher} date={date} time={time} duration={product?.durationMinutes} availability={availability} />
-      <label className="md:col-span-2"><span className="text-xs text-muted">Place</span><AppSelect required name="place_id" defaultValue="" className={field}><option value="" disabled>Select a place</option>{places.map((place) => <option key={place.id} value={place.id}>{place.label}</option>)}</AppSelect></label>
+      <div className="md:col-span-2">
+        <div className="flex items-end gap-4">
+          <label className="min-w-0 flex-1"><span className="text-xs text-muted">Place</span><AppSelect required name="place_id" value={placeId} onChange={(event) => setPlaceId(event.target.value)} className={field}><option value="" disabled>Select a place</option>{availablePlaces.map((place) => <option key={place.id} value={place.id}>{place.label}</option>)}</AppSelect></label>
+          <button type="button" onClick={() => { setShowNewPlace((current) => !current); setPlaceMessage(""); }} className="mb-3 shrink-0 text-sm text-brand hover:text-brand-hover">{showNewPlace ? "Cancel" : "New place +"}</button>
+        </div>
+        {showNewPlace ? <div className="mt-4 rounded-md bg-surface-raised p-4">
+          <p className="text-sm font-medium">Add a place without leaving this lesson</p>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <label><span className="text-xs text-muted">Place name</span><input value={placeName} onChange={(event) => setPlaceName(event.target.value)} maxLength={120} className={field} placeholder="Studio A" /></label>
+            <label><span className="text-xs text-muted">Address, room, or video link <span className="opacity-60">optional</span></span><input value={placeDetails} onChange={(event) => setPlaceDetails(event.target.value)} maxLength={500} className={field} /></label>
+          </div>
+          {placeMessage ? <p role="status" className="mt-3 text-xs text-danger">{placeMessage}</p> : null}
+          <button type="button" disabled={placePending || !placeName.trim()} onClick={() => {
+            const data = new FormData();
+            data.set("name", placeName);
+            data.set("details", placeDetails);
+            startPlaceTransition(async () => {
+              const result = await createPlaceAction(data);
+              setPlaceMessage(result.message);
+              if (!result.place) return;
+              setAvailablePlaces((current) => [...current.filter((place) => place.id !== result.place!.id), result.place!].sort((a, b) => a.label.localeCompare(b.label)));
+              setPlaceId(result.place.id);
+              setPlaceName("");
+              setPlaceDetails("");
+              setShowNewPlace(false);
+              window.dispatchEvent(new CustomEvent("common-time:toast", { detail: { title: "Place added", message: result.message } }));
+            });
+          }} className="mt-4 rounded-md bg-brand px-4 py-2 text-sm text-surface transition hover:opacity-90 disabled:opacity-50">{placePending ? "Adding…" : "Add and select place"}</button>
+        </div> : null}
+      </div>
       <label className="md:col-span-2"><span className="text-xs text-muted">Internal notes</span><textarea name="notes" maxLength={1000} rows={3} className={field} /></label>
       <div className="md:col-span-2 flex justify-end"><SubmitLessonButton /></div>
     </div>

@@ -17,6 +17,49 @@ export type CreateLessonState = {
   field?: "time";
 };
 
+export type CreateLessonPlaceState = {
+  status: "success" | "error";
+  message: string;
+  place?: { id: string; label: string };
+};
+
+export async function createLessonPlace(
+  schoolId: string,
+  formData: FormData,
+): Promise<CreateLessonPlaceState> {
+  const name = String(formData.get("name") ?? "").trim();
+  const details = String(formData.get("details") ?? "").trim() || null;
+  if (!name || name.length > 120) return { status: "error", message: "Enter a place name up to 120 characters." };
+  if (details && details.length > 500) return { status: "error", message: "Place details must be 500 characters or fewer." };
+
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId) return { status: "error", message: "Your session expired. Sign in again before adding a place." };
+  if (!await checkSchoolCapability(supabase, schoolId, "school.places.create")) {
+    return { status: "error", message: "You do not have permission to add places for this school." };
+  }
+
+  const { data: place, error } = await supabase.from("lesson_places").insert({
+    school_id: schoolId,
+    name,
+    details,
+    created_by: profileId,
+  }).select("id,name").single();
+  if (error || !place) {
+    if (error?.code === "23505") {
+      const { data: existing } = await supabase.from("lesson_places").select("id,name")
+        .eq("school_id", schoolId).eq("name", name).eq("status", "active").maybeSingle();
+      if (existing) return { status: "success", message: `${existing.name} was already on the list and is now selected.`, place: { id: existing.id, label: existing.name } };
+    }
+    return { status: "error", message: "The place could not be added. Your lesson details are still here." };
+  }
+
+  revalidatePath(`/schools/${schoolId}`);
+  revalidatePath(`/schools/${schoolId}/places`);
+  return { status: "success", message: `${place.name} was added and selected.`, place: { id: place.id, label: place.name } };
+}
+
 const knownErrors: Record<string, string> = {
   outside_teacher_availability: "That lesson does not fit inside the teacher’s saved availability. Choose another time or record an override.",
   teacher_conflict: "That teacher already has a lesson during this time.",
