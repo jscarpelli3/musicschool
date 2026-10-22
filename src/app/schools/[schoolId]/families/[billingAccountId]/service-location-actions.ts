@@ -14,18 +14,12 @@ export async function saveFamilyServiceLocation(
   _state: ServiceLocationState,
   formData: FormData,
 ): Promise<ServiceLocationState> {
-  const mode = String(formData.get("mode") ?? "stored");
-  const label = clean(formData, "label") ?? "Home";
+  const mode = "stored";
+  const label = "Home";
   const addressLine1 = clean(formData, "address_line_1");
-  const addressLine2 = clean(formData, "address_line_2");
   const city = clean(formData, "city");
-  const region = clean(formData, "region");
-  const postalCode = clean(formData, "postal_code");
-  const accessNotes = clean(formData, "access_notes");
-  if (!['stored', 'arranged_privately'].includes(mode)) return { status: "error", message: "Choose how this home address is managed." };
-  if (label.length > 80) return { status: "error", message: "Keep the location label under 80 characters." };
-  if (mode === "stored" && (!addressLine1 || !city || !region || !postalCode)) return { status: "error", message: "Add the street, city, state or region, and postal code." };
-  if ((addressLine1?.length ?? 0) > 160 || (addressLine2?.length ?? 0) > 160 || (city?.length ?? 0) > 120 || (region?.length ?? 0) > 120 || (postalCode?.length ?? 0) > 24 || (accessNotes?.length ?? 0) > 500) return { status: "error", message: "One or more address fields are too long." };
+  if (!addressLine1 || !city) return { status: "error", message: "Add the street address and city." };
+  if (addressLine1.length > 160 || city.length > 120) return { status: "error", message: "One or more address fields are too long." };
 
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
@@ -38,12 +32,12 @@ export async function saveFamilyServiceLocation(
   const payload = {
     mode,
     label,
-    address_line_1: mode === "stored" ? addressLine1 : null,
-    address_line_2: mode === "stored" ? addressLine2 : null,
-    city: mode === "stored" ? city : null,
-    region: mode === "stored" ? region : null,
-    postal_code: mode === "stored" ? postalCode : null,
-    access_notes: mode === "stored" ? accessNotes : null,
+    address_line_1: addressLine1,
+    address_line_2: null,
+    city,
+    region: null,
+    postal_code: null,
+    access_notes: null,
   };
   const { data: existing } = await supabase.from("family_service_locations").select("id").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("status", "active").maybeSingle();
   const result = existing
@@ -52,7 +46,7 @@ export async function saveFamilyServiceLocation(
   if (result.error) return { status: "error", message: "The protected service location could not be saved. Nothing else changed." };
   revalidatePath(`/schools/${schoolId}/families/${billingAccountId}`);
   revalidatePath(`/schools/${schoolId}`);
-  return { status: "success", message: mode === "stored" ? "Home service address saved." : "Home address will be arranged privately." };
+  return { status: "success", message: "Home address saved." };
 }
 
 export async function retireFamilyServiceLocation(schoolId: string, billingAccountId: string) {

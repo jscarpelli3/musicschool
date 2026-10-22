@@ -201,9 +201,13 @@ export default async function FamilyDetailPage({ params, searchParams }: {
         </div>
       </DetailSection>
 
-      {canManagePayments ? <DetailSection title="Home lesson location" description="Used only when a lesson is scheduled at a student home. Teachers see it for their assigned lessons; general calendars and messages show only Student home.">
+      {canManagePayments ? <details className="mt-6 rounded-control bg-surface-raised/45 px-5 py-4">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-medium marker:hidden">
+          <span>{serviceLocationResult.data ? "Home address saved" : "+ Add a home address"}</span><span className="text-brand">Manage →</span>
+        </summary>
+        <p className="mt-4 text-sm leading-6 text-muted">Used only for lessons scheduled at the student’s home.</p>
         <ServiceLocationForm schoolId={schoolId} billingAccountId={billingAccountId} location={serviceLocationResult.data} />
-      </DetailSection> : null}
+      </details> : null}
 
       {canManagePayments ? <section className="mt-6 flex flex-col items-start gap-4 rounded-card bg-surface-raised/55 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8"><div><p className="text-xs uppercase tracking-[0.14em] text-brand">Billing</p><h2 className="mt-2 font-display text-3xl">Prepare an invoice</h2><p className="mt-2 max-w-xl text-sm leading-6 text-muted">Choose a service month in a focused review flow. Nothing is sent or charged until you lock and request approval.</p></div><BillingDraftForm schoolId={schoolId} billingAccountId={billingAccountId} defaultMonth={currentMonth} initialOpen={prepareInvoice === "1"} /></section> : null}
 

@@ -23,6 +23,22 @@ export type CreateLessonPlaceState = {
   place?: { id: string; label: string; kind: "school" | "student_home" | "online" | "other" };
 };
 
+export type StudentHomeLocationState = "idle" | "checking" | "ready" | "missing" | "ambiguous" | "unavailable";
+
+export async function getStudentHomeLocationState(schoolId: string, studentId: string): Promise<StudentHomeLocationState> {
+  if (!/^[0-9a-f-]{36}$/i.test(studentId)) return "unavailable";
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub || !await checkSchoolCapability(supabase, schoolId, "school.lessons.manage")) return "unavailable";
+  const { data: links, error: linkError } = await supabase.from("billing_account_students").select("billing_account_id").eq("school_id", schoolId).eq("student_id", studentId);
+  if (linkError || !links?.length) return "unavailable";
+  const accountIds = links.map((link) => link.billing_account_id);
+  const { data: locations, error } = await supabase.from("family_service_locations").select("id").eq("school_id", schoolId).in("billing_account_id", accountIds).eq("status", "active");
+  if (error) return "unavailable";
+  if ((locations?.length ?? 0) > 1) return "ambiguous";
+  return locations?.length === 1 ? "ready" : links.length === 1 ? "missing" : "ambiguous";
+}
+
 export async function createLessonPlace(
   schoolId: string,
   formData: FormData,
@@ -107,6 +123,8 @@ export async function createSingleLesson(
   const notes = String(formData.get("notes") ?? "").trim() || undefined;
   const outsideNote = String(formData.get("outside_availability_note") ?? "").trim() || undefined;
   const entitlementId = String(formData.get("entitlement_id") ?? "").trim() || undefined;
+  const homeStreet = String(formData.get("home_street") ?? "").trim() || undefined;
+  const homeCity = String(formData.get("home_city") ?? "").trim() || undefined;
 
   if (![schoolId, productId, teacherId, studentId, placeId].every((value) => /^[0-9a-f-]{36}$/i.test(value))
       || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)
@@ -115,7 +133,8 @@ export async function createSingleLesson(
       || Number(time.slice(3)) % 5 !== 0
       || (entitlementId !== undefined && !/^[0-9a-f-]{36}$/i.test(entitlementId))
       || (entitlementId !== undefined && scheduleType !== "one_time")
-      || (notes?.length ?? 0) > 1000 || (outsideNote?.length ?? 0) > 240) {
+      || (notes?.length ?? 0) > 1000 || (outsideNote?.length ?? 0) > 240
+      || (homeStreet?.length ?? 0) > 160 || (homeCity?.length ?? 0) > 120) {
     return { status: "error", message: "Check the lesson details and try again." };
   }
 
@@ -144,8 +163,22 @@ export async function createSingleLesson(
   if (place.kind === "student_home") {
     const { data: accountLinks } = await supabase.from("billing_account_students").select("billing_account_id").eq("school_id", schoolId).eq("student_id", studentId);
     const accountIds = (accountLinks ?? []).map((link) => link.billing_account_id);
-    const { data: homeLocations } = accountIds.length ? await supabase.from("family_service_locations").select("id").eq("school_id", schoolId).in("billing_account_id", accountIds).eq("status", "active").limit(1) : { data: [] };
-    if (!homeLocations?.length) return { status: "error", message: knownErrors.student_home_location_required };
+    const { data: homeLocations } = accountIds.length ? await supabase.from("family_service_locations").select("id").eq("school_id", schoolId).in("billing_account_id", accountIds).eq("status", "active") : { data: [] };
+    if ((homeLocations?.length ?? 0) > 1 || (!homeLocations?.length && accountIds.length !== 1)) return { status: "error", message: knownErrors.student_home_location_ambiguous };
+    if (!homeLocations?.length) {
+      if (!homeStreet || !homeCity) return { status: "error", message: "Add the family’s street address and city for this in-home lesson." };
+      if (!await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) return { status: "error", message: "You do not have permission to save this family’s protected home address." };
+      const { error: locationError } = await supabase.from("family_service_locations").insert({
+        school_id: schoolId,
+        billing_account_id: accountIds[0],
+        created_by: profileId,
+        mode: "stored",
+        label: "Home",
+        address_line_1: homeStreet,
+        city: homeCity,
+      });
+      if (locationError) return { status: "error", message: "The home address could not be saved, so the lesson was not created." };
+    }
   }
   const weekday = new Date(`${date}T12:00:00Z`).getUTCDay();
   const startMinutes = Number(time.slice(0, 2)) * 60 + Number(time.slice(3));

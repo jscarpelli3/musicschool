@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
-import type { CreateLessonPlaceState, CreateLessonState } from "@/app/schools/[schoolId]/lessons/new/actions";
+import type { CreateLessonPlaceState, CreateLessonState, StudentHomeLocationState } from "@/app/schools/[schoolId]/lessons/new/actions";
 import { clockTime, fiveMinuteTimeOptions, minutesFromTime } from "@/lib/scheduling/time-options";
 import { AppSelect } from "@/components/ui/app-select";
 
@@ -81,6 +81,7 @@ function AvailabilityContext({
 export function NewLessonForm({
   action,
   createPlaceAction,
+  checkHomeLocationAction,
   initialState,
   students,
   teachers,
@@ -104,6 +105,7 @@ export function NewLessonForm({
 }: {
   action: (state: CreateLessonState, formData: FormData) => Promise<CreateLessonState>;
   createPlaceAction: (formData: FormData) => Promise<CreateLessonPlaceState>;
+  checkHomeLocationAction: (studentId: string) => Promise<StudentHomeLocationState>;
   initialState: CreateLessonState;
   students: LessonFormOption[];
   teachers: LessonFormTeacher[];
@@ -143,6 +145,9 @@ export function NewLessonForm({
   const [newPlaceKind, setNewPlaceKind] = useState<"school" | "student_home" | "online" | "other">("school");
   const [placeMessage, setPlaceMessage] = useState("");
   const [placePending, startPlaceTransition] = useTransition();
+  const [homeLocationState, setHomeLocationState] = useState<StudentHomeLocationState>("idle");
+  const [homeLocationPending, startHomeLocationTransition] = useTransition();
+  const homeCheckId = useRef(0);
   const [conflictMessage, setConflictMessage] = useState("");
   const [scheduleType, setScheduleType] = useState<"one_time" | "weekly">(entitlement ? "one_time" : products.find((item) => item.id === startingProductId)?.defaultScheduleType ?? "weekly");
   const createdHandled = useRef(false);
@@ -151,6 +156,16 @@ export function NewLessonForm({
   const teacher = useMemo(() => teachers.find((option) => option.id === teacherId), [teacherId, teachers]);
   const product = useMemo(() => products.find((option) => option.id === productId), [productId, products]);
   const selectedPlace = useMemo(() => availablePlaces.find((option) => option.id === placeId), [availablePlaces, placeId]);
+  const checkHomeLocation = (candidatePlaceId: string, candidateStudentId: string) => {
+    const candidatePlace = availablePlaces.find((option) => option.id === candidatePlaceId);
+    const requestId = ++homeCheckId.current;
+    if (candidatePlace?.kind !== "student_home" || !candidateStudentId) { setHomeLocationState("idle"); return; }
+    setHomeLocationState("checking");
+    startHomeLocationTransition(async () => {
+      const result = await checkHomeLocationAction(candidateStudentId);
+      if (homeCheckId.current === requestId) setHomeLocationState(result);
+    });
+  };
   const busyWindowsFor = (candidateTeacherId: string, candidateDate: string) => busyLessons.filter((lesson) => lesson.teacherId === candidateTeacherId && !["cancelled", "rescheduled"].includes(lesson.status)).flatMap((lesson) => {
     const start = localLessonParts(lesson.startsAt, timeZone), end = localLessonParts(lesson.endsAt, timeZone);
     return start.date === candidateDate ? [{ start: start.minutes, end: end.minutes }] : [];
@@ -198,7 +213,7 @@ export function NewLessonForm({
     </div> : null}
     <div className={`grid gap-7 md:grid-cols-2 ${compact ? "py-2" : "py-9 md:pl-10"}`}>
       {state.message ? <p ref={errorRef} role={state.status === "error" ? "alert" : "status"} className={`md:col-span-2 border p-4 text-sm ${state.status === "success" ? "border-brand/40 bg-brand/10 text-brand" : "border-danger/40 bg-danger/10 text-danger"}`}>{state.message}{state.status === "error" ? " Nothing was added; correct the highlighted field and try again." : ""}</p> : null}
-      <label className="md:col-span-2"><span className="text-xs text-muted">Student</span><AppSelect required name="student_id" value={studentId} onChange={(event) => { const nextStudentId = event.target.value; const nextTeacherId = lockedTeacherId ?? primaryTeacherByStudent[nextStudentId] ?? ""; setStudentId(nextStudentId); if (!lockedTeacherId) setTeacherId(nextTeacherId); invalidateConflictingTime(nextTeacherId, date); }} disabled={Boolean(entitlement)} className={field}><option value="" disabled>Select a student</option>{students.map((student) => <option key={student.id} value={student.id}>{student.label}</option>)}</AppSelect>{entitlement ? <><input type="hidden" name="student_id" value={entitlement.studentId} /><span className="mt-2 block text-xs text-brand">Replacement lesson · this student is fixed</span></> : null}</label>
+      <label className="md:col-span-2"><span className="text-xs text-muted">Student</span><AppSelect required name="student_id" value={studentId} onChange={(event) => { const nextStudentId = event.target.value; const nextTeacherId = lockedTeacherId ?? primaryTeacherByStudent[nextStudentId] ?? ""; setStudentId(nextStudentId); if (!lockedTeacherId) setTeacherId(nextTeacherId); invalidateConflictingTime(nextTeacherId, date); checkHomeLocation(placeId, nextStudentId); }} disabled={Boolean(entitlement)} className={field}><option value="" disabled>Select a student</option>{students.map((student) => <option key={student.id} value={student.id}>{student.label}</option>)}</AppSelect>{entitlement ? <><input type="hidden" name="student_id" value={entitlement.studentId} /><span className="mt-2 block text-xs text-brand">Replacement lesson · this student is fixed</span></> : null}</label>
       {lockedTeacherId ? <div><span className="text-xs text-muted">Teacher</span><p className="border-b border-line py-3">{teacher?.label}</p><input type="hidden" name="teacher_id" value={lockedTeacherId} /></div> : <label><span className="text-xs text-muted">Teacher</span><AppSelect required name="teacher_id" value={teacherId} onChange={(event) => { setTeacherId(event.target.value); invalidateConflictingTime(event.target.value, date); }} className={field}><option value="" disabled>Select a teacher</option>{teachers.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</AppSelect></label>}
       <label><span className="text-xs text-muted">Lesson offering</span><AppSelect required name="product_id" value={productId} disabled={Boolean(entitlement)} onChange={(event) => { const nextProduct = products.find((option) => option.id === event.target.value); setProductId(event.target.value); if (nextProduct && !entitlement) setScheduleType(nextProduct.defaultScheduleType); invalidateConflictingTime(teacherId, date, nextProduct); }} className={field}><option value="" disabled>Select an offering</option>{products.map((option) => <option key={option.id} value={option.id}>{option.label} · {option.durationMinutes} min · {entitlement?"no new charge":option.priceLabel}</option>)}</AppSelect>{entitlement ? <input type="hidden" name="product_id" value={entitlement.productId} /> : null}</label>
       <label><span className="text-xs text-muted">Date</span><input required name="date" type="date" min={today} value={date} onChange={(event) => { setDate(event.target.value); invalidateConflictingTime(teacherId, event.target.value); }} className={field} /></label>
@@ -209,9 +224,16 @@ export function NewLessonForm({
       {scheduleType === "weekly" ? <label className="md:col-span-2"><span className="text-xs text-muted">Repeat weekly through</span><input required name="ends_on" type="date" min={date} max={(() => { const max = new Date(`${date}T12:00:00`); max.setDate(max.getDate() + 371); return `${max.getFullYear()}-${String(max.getMonth()+1).padStart(2,"0")}-${String(max.getDate()).padStart(2,"0")}`; })()} defaultValue={defaultEndDate} key={defaultEndDate} className={field} /><span className="mt-2 block text-[11px] text-muted">Defaults to twelve weeks; adjust as needed.</span></label> : null}
       <AvailabilityContext teacher={teacher} date={date} time={time} duration={product?.durationMinutes} availability={availability} />
       <div className="md:col-span-2">
-        <label><span className="text-xs text-muted">Place</span><AppSelect required name="place_id" value={placeId} onChange={(event) => setPlaceId(event.target.value)} className={field}><option value="" disabled>{availablePlaces.length ? "Select a place" : "No lesson places yet"}</option>{availablePlaces.map((place) => <option key={place.id} value={place.id}>{place.label}</option>)}</AppSelect></label>
+        <label><span className="text-xs text-muted">Place</span><AppSelect required name="place_id" value={placeId} onChange={(event) => { setPlaceId(event.target.value); checkHomeLocation(event.target.value, studentId); }} className={field}><option value="" disabled>{availablePlaces.length ? "Select a place" : "No lesson places yet"}</option>{availablePlaces.map((place) => <option key={place.id} value={place.id}>{place.label}</option>)}</AppSelect></label>
         <button type="button" onClick={() => { setShowNewPlace((current) => !current); setPlaceMessage(""); }} className="mt-2 text-xs text-brand hover:text-brand-hover">{showNewPlace ? "Cancel" : "+ Add a new place"}</button>
-        {selectedPlace?.kind === "student_home" ? <p className="mt-3 rounded-control bg-brand/10 p-3 text-xs leading-5 text-muted">This student must have a protected home lesson location on their family record, or the family must be marked as arranging the address privately.</p> : null}
+        {selectedPlace?.kind === "student_home" ? <div className="mt-3 rounded-control bg-brand/10 p-4 text-sm">
+          {homeLocationPending || homeLocationState === "checking" ? <p className="text-muted">Checking for a saved home address…</p> : null}
+          {homeLocationState === "ready" ? <p className="text-brand">The family’s saved home address will be used.</p> : null}
+          {homeLocationState === "missing" ? <div><p className="font-medium">Add the family’s home address</p><p className="mt-1 text-xs leading-5 text-muted">This will be saved to their family record for future in-home lessons.</p><div className="mt-3 grid gap-4 sm:grid-cols-2"><label><span className="text-xs text-muted">Street address</span><input required name="home_street" maxLength={160} autoComplete="off" className={field} /></label><label><span className="text-xs text-muted">City</span><input required name="home_city" maxLength={120} autoComplete="off" className={field} /></label></div></div> : null}
+          {homeLocationState === "ambiguous" ? <p className="text-danger">This student is connected to more than one family record. Open the family you want to use and add or keep its home address there.</p> : null}
+          {homeLocationState === "unavailable" ? <p className="text-danger">The family address could not be checked. Choose the student again or open their family record.</p> : null}
+          {homeLocationState === "idle" && !studentId ? <p className="text-muted">Choose a student to check their home address.</p> : null}
+        </div> : null}
         {showNewPlace ? <div className="mt-4 rounded-md bg-surface-raised p-4">
           <p className="text-sm font-medium">New place</p>
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
@@ -231,6 +253,14 @@ export function NewLessonForm({
               if (!result.place) return;
               setAvailablePlaces((current) => [...current.filter((place) => place.id !== result.place!.id), result.place!].sort((a, b) => a.label.localeCompare(b.label)));
               setPlaceId(result.place.id);
+              if (result.place.kind === "student_home" && studentId) {
+                const requestId = ++homeCheckId.current;
+                setHomeLocationState("checking");
+                startHomeLocationTransition(async () => {
+                  const homeResult = await checkHomeLocationAction(studentId);
+                  if (homeCheckId.current === requestId) setHomeLocationState(homeResult);
+                });
+              } else setHomeLocationState("idle");
               setPlaceName("");
               setPlaceDetails("");
               setShowNewPlace(false);
