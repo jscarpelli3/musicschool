@@ -189,6 +189,16 @@ Do not redo card setup or either successful $2.00 charge. Automatic signed-webho
 
 ## Recent merged work
 
+### Protected home-lesson locations — 2026-10-22
+
+- The first protected-address pass added typed lesson places plus billing-account service locations, management-only RLS, assigned-teacher reveal with fail-closed access logging, and support for keeping an address arranged outside Common Time. It was deployed through production commit `6fe5df8`.
+- Follow-up audit found that a home lesson did not identify one specific household, teacher access had no time boundary, stored addresses had no removal/scrubbing flow, shared place details relied on application code to reject addresses, and management reads were not logged.
+- The current staging work binds every newly created home lesson to exactly one `family_service_locations` row. The database automatically chooses the sole active linked household; no-location and multiple-location cases fail closed. Existing unambiguous home lessons are backfilled. Historical ambiguous lessons remain unbound and reveal no address.
+- Assigned teachers may reveal a bound address only from seven days before the lesson through 48 hours afterward; cancelled and rescheduled lessons never reveal it. Management views are logged. Family records show a compact saved-location summary with Change and protected Remove actions. Removal is refused while an upcoming scheduled home lesson depends on the address; otherwise it atomically archives the row, scrubs address/arrival fields, and writes an audit event.
+- A database constraint now forbids private details on shared `student_home` place records. The migration clears any legacy shared details on those places rather than retaining a potentially exposed address.
+- Unit boundary tests, TypeScript, ESLint, and the Next production build pass locally. Clean database replay is pending CI because Docker was unavailable locally.
+- Future import direction: one provider-neutral preview/dedupe/commit pipeline, beginning with CSV and Google Contacts for students/payers, followed by a separately confirmed Google Calendar schedule import. Imports must not automatically email families, create billing authority, or make calendar events billable lessons.
+
 - PR #36: webhook claim/replay database coverage.
 - PR #37: one-time-payment tenant metadata and connected-account binding hardening.
 - PR #38: payment rejection matrix documentation.

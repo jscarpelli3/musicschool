@@ -83,11 +83,21 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     supabase.from("teacher_availability_rules").select("id,teacher_id,weekday,start_time,end_time,effective_from,effective_until").eq("school_id", schoolId).order("weekday").order("start_time"),
     supabase.from("lesson_events").select("teacher_id,student_id,starts_at,ends_at,status").eq("school_id", schoolId).gte("starts_at", queryStart).lt("starts_at", queryEnd),
     canManagePayments ? supabase.rpc("get_outstanding_lessons_for_billing_account", { p_school_id: schoolId, p_billing_account_id: billingAccountId }) : Promise.resolve({ data: [], error: null }),
-    canManagePayments ? supabase.from("family_service_locations").select("mode,label,address_line_1,address_line_2,city,region,postal_code,access_notes").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("status", "active").maybeSingle() : Promise.resolve({ data: null, error: null }),
+    canManagePayments ? supabase.from("family_service_locations").select("id,mode,label,address_line_1,address_line_2,city,region,postal_code,access_notes").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("status", "active").maybeSingle() : Promise.resolve({ data: null, error: null }),
   ]);
   const failedRelated = related.find((result) => result.error);
   if (failedRelated?.error) throw new Error(`Family detail could not load: ${failedRelated.error.message}`);
   const [peopleResult, studentsResult, periodsResult, archivedPeriodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult, productsResult, placesResult, teachersResult, availabilityResult, busyLessonsResult, outstandingLessonsResult, serviceLocationResult] = related;
+  if (serviceLocationResult.data?.id && serviceLocationResult.data.mode === "stored") {
+    const { error: accessLogError } = await createAdminClient().from("service_location_access_log").insert({
+      school_id: schoolId,
+      service_location_id: serviceLocationResult.data.id,
+      lesson_event_id: null,
+      actor_profile_id: profileId,
+      purpose: "management_review",
+    });
+    if (accessLogError) throw new Error("Protected family address access could not be recorded.");
+  }
   const outstandingLessonChoices = (outstandingLessonsResult.data ?? []).map((lesson) => ({ lessonEventId: lesson.lesson_event_id, studentName: lesson.student_name, offeringName: lesson.offering_name, serviceDate: lesson.service_date, startsAt: lesson.starts_at, amountCents: lesson.amount_cents, currency: lesson.currency }));
   const periodIds = [...(periodsResult.data ?? []), ...(archivedPeriodsResult.data ?? [])].map((period) => period.id);
   const { data: lineItems, error: lineItemsError } = periodIds.length
