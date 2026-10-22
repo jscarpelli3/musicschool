@@ -5,17 +5,18 @@ import { startStripeOnboarding, syncStripeConnection } from "./actions";
 import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 import { stripeConnectionPresentation } from "@/lib/stripe/connection-presentation";
 import { StripeActionButton } from "./stripe-action-button";
+import { StripeReturnToast } from "./stripe-return-toast";
 
 export const dynamic = "force-dynamic";
 
-const messages: Record<string, { text: string; error?: boolean }> = {
-  "returned-synced": { text: "Stripe onboarding ended and the latest account status was checked automatically." },
-  refresh: { text: "That Stripe onboarding link expired or was interrupted. Continue onboarding to create a fresh link." },
-  ready: { text: "Stripe confirmed that charges and payouts are enabled." },
-  synced: { text: "Stripe status synchronized. Additional requirements may still be due." },
-  error: { text: "Stripe onboarding could not be started. Nothing was marked complete; try again.", error: true },
-  "platform-profile": { text: "Stripe requires the platform loss-responsibility profile to be confirmed before a school account can be created. Complete that item in Stripe Connect settings, then try again.", error: true },
-  "sync-error": { text: "Stripe status could not be synchronized. The previous durable status is unchanged.", error: true },
+const messages: Record<string, { title: string; text: string }> = {
+  "returned-synced": { title: "Stripe setup received", text: "Your latest Stripe account status is shown below. Complete any remaining steps when you are ready." },
+  refresh: { title: "A fresh Stripe link is needed", text: "That Stripe setup link expired or was interrupted. Continue setup to open a new secure link." },
+  ready: { title: "Stripe connected", text: "Payments and payouts are enabled. Your school is ready to create priced lesson offerings and collect approved invoices." },
+  synced: { title: "Stripe status updated", text: "The latest account status is shown below. Additional requirements may still be due." },
+  error: { title: "Stripe setup did not open", text: "Nothing was marked complete. Try opening Stripe setup again." },
+  "platform-profile": { title: "Stripe needs a platform setting", text: "Confirm the platform loss-responsibility profile in Stripe Connect settings, then try again." },
+  "sync-error": { title: "Stripe status was not confirmed", text: "The previous saved status is unchanged. Use Check status to try again." },
 };
 
 const requirementLabels: Array<[string, string, string]> = [
@@ -98,7 +99,7 @@ export default async function SchoolPaymentsPage({ params, searchParams }: {
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
       <SetupHeader schoolId={schoolId} schoolName={school.name} active="payments" />
-      {message ? <p className={`mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm ${message.error ? "text-danger" : "text-brand"}`}>{message.text}</p> : null}
+      {message ? <StripeReturnToast title={message.title} message={message.text} /> : null}
 
       <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
         <div>
