@@ -36,22 +36,21 @@ export function ProductForm({ schoolId, returnPath }: { schoolId: string; return
           </AppSelect>
         </label>
         <fieldset className="md:col-span-2">
-          <legend className="text-xs text-muted">Frequency</legend>
-          <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-4">
-            <label>
-              <span className="sr-only">Sessions per interval</span>
-              <input required name="sessions_per_interval" type="number" min={1} max={31} defaultValue={1} className={fieldClass} />
+          <legend className="text-xs text-muted">Usual scheduling</legend>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="rounded-md border border-line bg-surface p-4 transition has-[:checked]:border-brand has-[:checked]:bg-brand/10">
+              <span className="flex items-center gap-3"><input type="radio" name="default_schedule_type" value="weekly" defaultChecked /><span className="font-medium">Weekly series</span></span>
+              <span className="mt-2 block pl-7 text-xs leading-5 text-muted">Use weekly when a lesson is scheduled. The owner can switch it to one time.</span>
             </label>
-            <span className="pb-3 text-sm text-muted">session(s) every</span>
-            <div className="grid grid-cols-[1fr_1.5fr] gap-3">
-              <input required name="interval_count" aria-label="Interval count" type="number" min={1} max={12} defaultValue={1} className={fieldClass} />
-              <AppSelect name="interval_unit" aria-label="Interval unit" defaultValue="week" className={fieldClass}>
-                <option value="week">week(s)</option>
-                <option value="month">month(s)</option>
-              </AppSelect>
-            </div>
+            <label className="rounded-md border border-line bg-surface p-4 transition has-[:checked]:border-brand has-[:checked]:bg-brand/10">
+              <span className="flex items-center gap-3"><input type="radio" name="default_schedule_type" value="one_time" /><span className="font-medium">One lesson</span></span>
+              <span className="mt-2 block pl-7 text-xs leading-5 text-muted">Use one time when scheduled. The owner can still make it weekly.</span>
+            </label>
           </div>
         </fieldset>
+        <input type="hidden" name="sessions_per_interval" value="1" />
+        <input type="hidden" name="interval_count" value="1" />
+        <input type="hidden" name="interval_unit" value="week" />
         <input type="hidden" name="pricing_model" value="per_session" />
         <label className="md:col-span-2">
           <span className="block text-xs text-muted">When this offering is billed</span>
