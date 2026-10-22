@@ -4361,6 +4361,7 @@ export type Database = {
           created_by: string
           currency: string
           description: string | null
+          default_schedule_type: string
           duration_minutes: number
           format: string
           id: string
@@ -4385,6 +4386,7 @@ export type Database = {
           created_by: string
           currency?: string
           description?: string | null
+          default_schedule_type?: string
           duration_minutes: number
           format: string
           id?: string
@@ -4409,6 +4411,7 @@ export type Database = {
           created_by?: string
           currency?: string
           description?: string | null
+          default_schedule_type?: string
           duration_minutes?: number
           format?: string
           id?: string

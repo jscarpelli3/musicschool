@@ -9,16 +9,6 @@ import { AppSelect } from "@/components/ui/app-select";
 
 export const dynamic = "force-dynamic";
 
-function cadence(product: {
-  sessions_per_interval: number;
-  interval_count: number;
-  interval_unit: string;
-}) {
-  const sessions = product.sessions_per_interval === 1 ? "session" : "sessions";
-  const interval = product.interval_count === 1 ? product.interval_unit : `${product.interval_count} ${product.interval_unit}s`;
-  return `${product.sessions_per_interval} ${sessions} every ${interval}`;
-}
-
 function fourWeekEstimate(product: { sessions_per_interval: number; interval_count: number; interval_unit: string; price_cents: number }) {
   const sessions = product.interval_unit === "week"
     ? product.sessions_per_interval * (4 / product.interval_count)
@@ -43,7 +33,7 @@ export default async function ProductsPage({
   const [{ data: school }, { data: membership }, { data: products }, capabilities] = await Promise.all([
     supabase.from("schools").select("id, name, billing_timing_default, billing_day, payer_review_days, intended_charge_day").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
-    supabase.from("service_products").select("id, name, format, duration_minutes, sessions_per_interval, interval_count, interval_unit, pricing_model, price_cents, currency, capacity, status, billing_timing_override, stripe_sync_status").eq("school_id", schoolId).order("status").order("name"),
+    supabase.from("service_products").select("id, name, format, duration_minutes, sessions_per_interval, interval_count, interval_unit, pricing_model, price_cents, currency, capacity, status, billing_timing_override, stripe_sync_status, default_schedule_type").eq("school_id", schoolId).order("status").order("name"),
     loadMySchoolCapabilities(schoolId),
   ]);
 
@@ -83,7 +73,7 @@ export default async function ProductsPage({
               <div>
                 <h3 className="text-lg">{product.name}</h3>
                 <p className="mt-2 text-sm text-muted">
-                  {product.format === "private_lesson" ? "Private" : `Group · ${product.capacity} seats`} · {product.duration_minutes} min · {cadence(product)}
+                  {product.format === "private_lesson" ? "Private" : `Group · ${product.capacity} seats`} · {product.duration_minutes} min · {product.default_schedule_type === "one_time" ? "usually one lesson" : "usually weekly"}
                 </p>
                 <p className="mt-1 text-sm text-muted">
                   {money.format(product.price_cents / 100)} per lesson
@@ -92,7 +82,7 @@ export default async function ProductsPage({
                 <p className={`mt-1 text-xs ${product.stripe_sync_status === "synced" ? "text-brand" : "text-danger"}`}>
                   {product.stripe_sync_status === "synced" ? "Price verified in Stripe" : "Legacy price · must be synchronized before future live billing"}
                 </p>
-                <p className="mt-1 text-xs text-muted">About {money.format(fourWeekEstimate(product) / 100)} across a four-week schedule; the calendar month total follows its actual lesson count.</p>
+                {product.default_schedule_type === "weekly" ? <p className="mt-1 text-xs text-muted">About {money.format(fourWeekEstimate(product) / 100)} across a four-week schedule; the calendar month total follows its actual lesson count.</p> : null}
               </div>
               {canManage && product.status === "active" ? (
                 <form action={archiveProduct.bind(null, schoolId, product.id)}>

@@ -54,7 +54,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
       .gte("starts_at", lessonWindowStartIso)
       .lt("starts_at", lessonWindowEndIso)
       .order("starts_at"),
-    supabase.from("service_products").select("id, name, sessions_per_interval, interval_count, interval_unit, duration_minutes, price_cents, currency, status, format").eq("school_id", schoolId),
+    supabase.from("service_products").select("id, name, sessions_per_interval, interval_count, interval_unit, duration_minutes, price_cents, currency, status, format, default_schedule_type").eq("school_id", schoolId),
     supabase
       .from("student_contacts")
       .select("student_id, contact_person_id, relationship, is_primary, is_billing_contact")
@@ -198,7 +198,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
     students: Object.entries(studentNames).map(([id,label]) => ({ id, label })),
     primaryTeacherByStudent: Object.fromEntries((studentRows ?? []).flatMap((student) => student.primary_teacher_id ? [[student.person_id, student.primary_teacher_id]] : [])),
     teachers: teachers.map((teacher) => ({ id: teacher.id, label: teacher.name, outsideAvailabilityPolicy: teacher.outsideAvailabilityPolicy })),
-    products: (productRows ?? []).filter((product) => product.status === "active" && product.format === "private_lesson").map((product) => ({ id: product.id, label: product.name, durationMinutes: product.duration_minutes, priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price_cents / 100) })),
+    products: (productRows ?? []).filter((product) => product.status === "active" && product.format === "private_lesson").map((product) => ({ id: product.id, label: product.name, durationMinutes: product.duration_minutes, priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price_cents / 100), defaultScheduleType: product.default_schedule_type === "one_time" ? "one_time" as const : "weekly" as const })),
     places: (placeRows ?? []).filter((place) => place.status === "active").map((place) => ({ id: place.id, label: place.name })),
     availability: availabilityRows ?? [],
     busyLessons: (lessonRows ?? []).map((lesson) => ({ teacherId: lesson.teacher_id, studentId: lesson.student_id, startsAt: lesson.starts_at, endsAt: lesson.ends_at, status: lesson.status })),
