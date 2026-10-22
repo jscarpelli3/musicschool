@@ -75,6 +75,8 @@ const knownErrors: Record<string, string> = {
   invalid_student: "That student is no longer available for scheduling. Reload and choose another student.",
   invalid_place: "That lesson place is no longer available. Reload and choose another place.",
   student_home_location_required: "Add a protected home lesson location on this student's family record, or mark the address as arranged privately.",
+  student_home_location_ambiguous: "This student has more than one active family home. Open the family records and keep only the location intended for lessons.",
+  invalid_student_home_location: "The selected home location no longer belongs to this student. Review the family record and try again.",
   lesson_too_far_in_past: "A new lesson cannot be created that far in the past.",
   lesson_start_must_be_future: "Choose a start time in the future. Earlier times today cannot be scheduled.",
   new_lesson_time_must_be_future: "Choose a start time in the future. Earlier times today cannot be scheduled.",

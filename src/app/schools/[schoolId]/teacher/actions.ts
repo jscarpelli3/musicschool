@@ -7,6 +7,7 @@ import { protectServerAction, RequestBoundaryError } from "@/lib/security/reques
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseRescheduleReason } from "@/lib/scheduling/lesson-domain-contracts";
+import { canAssignedTeacherRevealServiceAddress } from "@/lib/scheduling/service-location-policy";
 
 const outcomes = new Set(["completed", "no_show"]);
 
@@ -28,14 +29,16 @@ export async function revealAssignedLessonAddress(schoolId: string, lessonId: st
   if (!teacher) return { status: "error", message: "Your teacher record could not be verified." };
 
   const admin = createAdminClient();
-  const { data: lesson } = await admin.from("lesson_events").select("id,student_id,teacher_id,place_id").eq("school_id", schoolId).eq("id", lessonId).maybeSingle();
+  const { data: lesson } = await admin.from("lesson_events").select("id,student_id,teacher_id,place_id,service_location_id,starts_at,ends_at,status").eq("school_id", schoolId).eq("id", lessonId).maybeSingle();
   if (!lesson || lesson.teacher_id !== teacher.id) return { status: "error", message: "Only the assigned teacher can reveal this address." };
   const { data: place } = await admin.from("lesson_places").select("kind").eq("school_id", schoolId).eq("id", lesson.place_id).maybeSingle();
   if (place?.kind !== "student_home") return { status: "error", message: "This lesson is not scheduled at a student home." };
-  const { data: links } = await admin.from("billing_account_students").select("billing_account_id").eq("school_id", schoolId).eq("student_id", lesson.student_id);
-  const accountIds = (links ?? []).map((link) => link.billing_account_id);
-  const { data: location } = accountIds.length ? await admin.from("family_service_locations").select("id,mode,address_line_1,address_line_2,city,region,postal_code,access_notes").eq("school_id", schoolId).in("billing_account_id", accountIds).eq("status", "active").maybeSingle() : { data: null };
-  if (!location) return { status: "error", message: "The family has not provided a home lesson location." };
+  if (!canAssignedTeacherRevealServiceAddress({ nowMs: Date.now(), startsAt: lesson.starts_at, endsAt: lesson.ends_at, status: lesson.status })) {
+    return { status: "error", message: "This address is available to the assigned teacher from seven days before the lesson until 48 hours afterward." };
+  }
+  if (!lesson.service_location_id) return { status: "error", message: "This older lesson does not have a verified home location. Ask the school to confirm it." };
+  const { data: location } = await admin.from("family_service_locations").select("id,mode,address_line_1,address_line_2,city,region,postal_code,access_notes").eq("school_id", schoolId).eq("id", lesson.service_location_id).maybeSingle();
+  if (!location) return { status: "error", message: "The home lesson location is no longer available." };
   if (location.mode === "arranged_privately") return { status: "success", message: "The school has marked this address as arranged privately." };
   const { error: auditError } = await admin.from("service_location_access_log").insert({ school_id: schoolId, service_location_id: location.id, lesson_event_id: lesson.id, actor_profile_id: profileId, purpose: "assigned_lesson" });
   if (auditError) return { status: "error", message: "The address could not be revealed because its access record could not be saved." };

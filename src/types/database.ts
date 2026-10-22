@@ -1959,6 +1959,7 @@ export type Database = {
           reschedule_reason_detail: string | null
           rescheduled_to_event_id: string | null
           school_id: string
+          service_location_id: string | null
           service_entitlement_id: string | null
           staff_notes: string | null
           starts_at: string
@@ -1989,6 +1990,7 @@ export type Database = {
           reschedule_reason_detail?: string | null
           rescheduled_to_event_id?: string | null
           school_id: string
+          service_location_id?: string | null
           service_entitlement_id?: string | null
           staff_notes?: string | null
           starts_at: string
@@ -2019,6 +2021,7 @@ export type Database = {
           reschedule_reason_detail?: string | null
           rescheduled_to_event_id?: string | null
           school_id?: string
+          service_location_id?: string | null
           service_entitlement_id?: string | null
           staff_notes?: string | null
           starts_at?: string
@@ -2061,6 +2064,13 @@ export type Database = {
             columns: ["school_id", "product_id"]
             isOneToOne: false
             referencedRelation: "service_products"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_events_school_service_location_fkey"
+            columns: ["school_id", "service_location_id"]
+            isOneToOne: false
+            referencedRelation: "family_service_locations"
             referencedColumns: ["school_id", "id"]
           },
           {
@@ -4430,7 +4440,7 @@ export type Database = {
           accessed_at: string
           actor_profile_id: string
           id: string
-          lesson_event_id: string
+          lesson_event_id: string | null
           purpose: string
           school_id: string
           service_location_id: string
@@ -4439,7 +4449,7 @@ export type Database = {
           accessed_at?: string
           actor_profile_id: string
           id?: string
-          lesson_event_id: string
+          lesson_event_id?: string | null
           purpose?: string
           school_id: string
           service_location_id: string
@@ -4448,7 +4458,7 @@ export type Database = {
           accessed_at?: string
           actor_profile_id?: string
           id?: string
-          lesson_event_id?: string
+          lesson_event_id?: string | null
           purpose?: string
           school_id?: string
           service_location_id?: string
@@ -6000,6 +6010,10 @@ export type Database = {
           p_school_id: string
         }
         Returns: Json
+      }
+      retire_family_service_location: {
+        Args: { p_billing_account_id: string; p_school_id: string }
+        Returns: string
       }
       reschedule_lesson_as_owner: {
         Args: {

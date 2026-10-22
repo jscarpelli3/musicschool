@@ -54,3 +54,17 @@ export async function saveFamilyServiceLocation(
   revalidatePath(`/schools/${schoolId}`);
   return { status: "success", message: mode === "stored" ? "Home service address saved." : "Home address will be arranged privately." };
 }
+
+export async function retireFamilyServiceLocation(schoolId: string, billingAccountId: string) {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId) return { ok: false, message: "Your session expired. Sign in again." };
+  if (!await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) return { ok: false, message: "You do not have permission to remove protected family addresses." };
+  const { data, error } = await supabase.rpc("retire_family_service_location", { p_school_id: schoolId, p_billing_account_id: billingAccountId });
+  if (error?.message.includes("home_lessons_pending")) return { ok: false, message: "This address is still attached to an upcoming home lesson. Change that lesson’s place before removing it." };
+  if (error) return { ok: false, message: "The stored address could not be removed. Nothing changed." };
+  revalidatePath(`/schools/${schoolId}/families/${billingAccountId}`);
+  revalidatePath(`/schools/${schoolId}`);
+  return { ok: true, message: data === "already_removed" ? "No active home address remains on this family." : "The stored address was removed." };
+}
