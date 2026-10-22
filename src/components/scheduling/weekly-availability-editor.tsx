@@ -156,7 +156,8 @@ export function WeeklyAvailabilityEditor({ initialBlocks, action, compactSetup =
             })}
           </div>)}
         </div>
-        <p className="mt-3 text-center text-xs text-muted">Click an empty time to add a one-hour block. Drag a block to move it, stretch its bottom edge, or use the trash button to delete it.</p>
+        <p className="mt-3 text-center text-xs text-muted">This is the usual weekly pattern. Click an empty time to add a one-hour block, drag a block to move it, stretch its bottom edge, or use the trash button to delete it.</p>
+        <p className="mt-1 text-center text-xs text-muted">When hours are saved partway through a week, days that already passed begin appearing on dated calendars the following week.</p>
       </div> : null}
       {showExactTimes ? <div className="mt-5 space-y-3">
         {compactSetup ? <div className="flex items-center justify-between"><p className="text-xs font-medium uppercase tracking-[0.12em] text-muted">Exact times</p><button type="button" onClick={() => setShowExactTimes(false)} className="text-xs text-brand">Hide</button></div> : null}

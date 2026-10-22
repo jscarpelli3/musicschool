@@ -61,6 +61,21 @@ export default async function StaffTeacherPage({ params }: {
   const instrumentIds = new Set((teacherInstrumentsResult.data ?? []).map((item) => item.instrument_id));
   const teacherInstruments = (instrumentsResult.data ?? []).filter((item) => instrumentIds.has(item.id)).map((item) => item.name).sort();
   const currentAvailabilityCount = schedule.availability.filter((rule) => rule.effective_from <= initialDate && (!rule.effective_until || rule.effective_until >= initialDate)).length;
+  const initialDateValue = new Date(`${initialDate}T12:00:00Z`);
+  const mondayOffset = initialDateValue.getUTCDay() === 0 ? -6 : 1 - initialDateValue.getUTCDay();
+  const currentWeekStart = new Date(initialDateValue);
+  currentWeekStart.setUTCDate(currentWeekStart.getUTCDate() + mondayOffset);
+  const omittedCurrentWeekDays = schedule.availability.flatMap((rule) => {
+    if (rule.effective_from > initialDate || (rule.effective_until && rule.effective_until < initialDate)) return [];
+    const occurrence = new Date(currentWeekStart);
+    occurrence.setUTCDate(currentWeekStart.getUTCDate() + (rule.weekday === 0 ? 6 : rule.weekday - 1));
+    const occurrenceKey = occurrence.toISOString().slice(0, 10);
+    return occurrenceKey < rule.effective_from ? [rule.weekday] : [];
+  });
+  const omittedDayNames = [...new Set(omittedCurrentWeekDays)].map((weekday) => ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][weekday]);
+  const availabilityCalendarNote = omittedDayNames.length
+    ? `${new Intl.ListFormat("en-US", { style: "long", type: "conjunction" }).format(omittedDayNames)} ${omittedDayNames.length === 1 ? "is" : "are"} part of the usual weekly schedule, but ${omittedDayNames.length === 1 ? "it falls" : "they fall"} before these hours began. ${omittedDayNames.length === 1 ? "It appears" : "They appear"} on the calendar starting next week.`
+    : null;
   const approvals = await loadOwnerApprovals(supabase,schoolId,{teacherId});
   const entitlements = await loadServiceEntitlements(supabase,schoolId,{teacherId});
   const lessonCreationOptions = {
@@ -88,7 +103,7 @@ export default async function StaffTeacherPage({ params }: {
     {approvals.length?<section className="ui-card mt-6 p-6 sm:p-8"><div className="mb-5 flex flex-wrap items-baseline justify-between gap-4"><div><p className="text-xs text-brand">Needs attention</p><h2 className="mt-2 font-display text-3xl">Pending approvals</h2></div><Link href={`/schools/${schoolId}/approvals`} className="text-sm text-muted hover:text-brand">View all →</Link></div><ApprovalList schoolId={schoolId} items={approvals} timezone={school.timezone} compact/></section>:null}
     {entitlements.length?<section className="ui-card mt-6 p-6 sm:p-8"><p className="text-xs text-brand">Needs scheduling</p><h2 className="mt-2 mb-5 font-display text-3xl">Replacement lessons assigned to {teacherName}</h2><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} lessonCreationOptions={lessonCreationOptions} compact/></section>:null}
     {schedule.pendingProposals.length ? <section id="pending-schedule-proposals" className="ui-card mt-6 scroll-mt-24 p-6 sm:p-8"><p className="text-xs text-brand">Proposed calendar times</p><h2 className="mt-2 font-display text-3xl">Waiting for a decision</h2><div className="mt-5 divide-y divide-line">{schedule.pendingProposals.map((proposal) => <div key={proposal.id} className="grid gap-2 py-4 sm:grid-cols-[1fr_auto] sm:items-start"><div><p className="font-medium"><Link href={`/schools/${schoolId}/students/${proposal.student_id}`} className="hover:text-brand">{peopleById.has(proposal.student_id) ? personDisplayName(peopleById.get(proposal.student_id)!) : "Student"}</Link></p><p className="mt-1 text-sm text-muted">{new Intl.DateTimeFormat("en-US",{timeZone:school.timezone,weekday:"long",month:"long",day:"numeric",hour:"numeric",minute:"2-digit"}).format(new Date(proposal.proposed_starts_at))} · {proposal.schedule_type === "weekly" ? "Weekly" : "One time"}</p>{proposal.created_by===profileId?<ProposalManagementControls schoolId={schoolId} proposalId={proposal.id} localStart={proposal.proposed_local_start} reason={proposal.reason}/>:null}</div><span className="text-xs text-brand">{lessonProposalDescriptor(proposal.status).label}</span></div>)}</div></section> : null}
-    <div className="mt-6"><TeacherScheduleCalendar
+    <div className="mt-6">{availabilityCalendarNote ? <p className="mb-4 rounded-control bg-brand/10 px-4 py-3 text-sm leading-6 text-muted"><strong className="font-medium text-ink">Usual hours are saved.</strong> {availabilityCalendarNote}</p> : null}<TeacherScheduleCalendar
       schoolId={schoolId}
       initialDate={initialDate}
       timezone={school.timezone}
