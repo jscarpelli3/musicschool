@@ -3,14 +3,14 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createLessonPlace, createSingleLesson, type CreateLessonState } from "@/app/schools/[schoolId]/lessons/new/actions";
-import { NewLessonForm, type LessonFormAvailability, type LessonFormOption, type LessonFormProduct, type LessonFormTeacher } from "./new-lesson-form";
+import { NewLessonForm, type LessonFormAvailability, type LessonFormOption, type LessonFormPlace, type LessonFormProduct, type LessonFormTeacher } from "./new-lesson-form";
 import styles from "./lesson-creation-dialog.module.css";
 
 export type LessonCreationOptions = {
   students: LessonFormOption[];
   teachers: LessonFormTeacher[];
   products: LessonFormProduct[];
-  places: LessonFormOption[];
+  places: LessonFormPlace[];
   availability: LessonFormAvailability[];
   today: string;
   minimumTimeToday?: string;

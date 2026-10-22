@@ -5,9 +5,43 @@ import { dispatchLessonCreatedEmail } from "@/lib/notifications/dispatch-lesson-
 import { dispatchLessonRequestEmails } from "@/lib/notifications/dispatch-lesson-request-emails";
 import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { parseRescheduleReason } from "@/lib/scheduling/lesson-domain-contracts";
 
 const outcomes = new Set(["completed", "no_show"]);
+
+export type ServiceAddressState = { status: "idle" | "success" | "error"; message: string; address?: string[] };
+
+export async function revealAssignedLessonAddress(schoolId: string, lessonId: string, _state: ServiceAddressState): Promise<ServiceAddressState> {
+  void _state;
+  if (![schoolId, lessonId].every((value) => /^[0-9a-f-]{36}$/i.test(value))) return { status: "error", message: "That lesson could not be verified." };
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId) return { status: "error", message: "Sign in again to view this address." };
+  try {
+    await protectServerAction({ scope: "teacher.service_address.reveal", subject: `actor:${profileId}|school:${schoolId}`, limit: 30, windowSeconds: 600, blockSeconds: 300 });
+  } catch {
+    return { status: "error", message: "Too many address requests were made. Wait a few minutes and try again." };
+  }
+  const { data: teacher } = await supabase.from("people").select("id").eq("school_id", schoolId).eq("profile_id", profileId).maybeSingle();
+  if (!teacher) return { status: "error", message: "Your teacher record could not be verified." };
+
+  const admin = createAdminClient();
+  const { data: lesson } = await admin.from("lesson_events").select("id,student_id,teacher_id,place_id").eq("school_id", schoolId).eq("id", lessonId).maybeSingle();
+  if (!lesson || lesson.teacher_id !== teacher.id) return { status: "error", message: "Only the assigned teacher can reveal this address." };
+  const { data: place } = await admin.from("lesson_places").select("kind").eq("school_id", schoolId).eq("id", lesson.place_id).maybeSingle();
+  if (place?.kind !== "student_home") return { status: "error", message: "This lesson is not scheduled at a student home." };
+  const { data: links } = await admin.from("billing_account_students").select("billing_account_id").eq("school_id", schoolId).eq("student_id", lesson.student_id);
+  const accountIds = (links ?? []).map((link) => link.billing_account_id);
+  const { data: location } = accountIds.length ? await admin.from("family_service_locations").select("id,mode,address_line_1,address_line_2,city,region,postal_code,access_notes").eq("school_id", schoolId).in("billing_account_id", accountIds).eq("status", "active").maybeSingle() : { data: null };
+  if (!location) return { status: "error", message: "The family has not provided a home lesson location." };
+  if (location.mode === "arranged_privately") return { status: "success", message: "The school has marked this address as arranged privately." };
+  const { error: auditError } = await admin.from("service_location_access_log").insert({ school_id: schoolId, service_location_id: location.id, lesson_event_id: lesson.id, actor_profile_id: profileId, purpose: "assigned_lesson" });
+  if (auditError) return { status: "error", message: "The address could not be revealed because its access record could not be saved." };
+  const address = [location.address_line_1, location.address_line_2, [location.city, location.region, location.postal_code].filter(Boolean).join(", "), location.access_notes ? `Arrival notes: ${location.access_notes}` : null].filter((line): line is string => Boolean(line));
+  return { status: "success", message: "Address revealed for this assigned lesson.", address };
+}
 
 export async function reportTeacherCancellation(schoolId: string, lessonId: string, reason: string) {
   if (![schoolId, lessonId].every((value) => /^[0-9a-f-]{36}$/i.test(value)) || !reason.trim() || reason.trim().length > 1000) {

@@ -20,7 +20,7 @@ export type CreateLessonState = {
 export type CreateLessonPlaceState = {
   status: "success" | "error";
   message: string;
-  place?: { id: string; label: string };
+  place?: { id: string; label: string; kind: "school" | "student_home" | "online" | "other" };
 };
 
 export async function createLessonPlace(
@@ -29,8 +29,11 @@ export async function createLessonPlace(
 ): Promise<CreateLessonPlaceState> {
   const name = String(formData.get("name") ?? "").trim();
   const details = String(formData.get("details") ?? "").trim() || null;
+  const kind = String(formData.get("kind") ?? "school") as "school" | "student_home" | "online" | "other";
   if (!name || name.length > 120) return { status: "error", message: "Enter a place name up to 120 characters." };
   if (details && details.length > 500) return { status: "error", message: "Place details must be 500 characters or fewer." };
+  if (!["school", "student_home", "online", "other"].includes(kind)) return { status: "error", message: "Choose a valid place type." };
+  if (kind === "student_home" && details) return { status: "error", message: "Add the protected home address from the family record instead." };
 
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
@@ -44,20 +47,21 @@ export async function createLessonPlace(
     school_id: schoolId,
     name,
     details,
+    kind,
     created_by: profileId,
-  }).select("id,name").single();
+  }).select("id,name,kind").single();
   if (error || !place) {
     if (error?.code === "23505") {
-      const { data: existing } = await supabase.from("lesson_places").select("id,name")
+      const { data: existing } = await supabase.from("lesson_places").select("id,name,kind")
         .eq("school_id", schoolId).eq("name", name).eq("status", "active").maybeSingle();
-      if (existing) return { status: "success", message: `${existing.name} was already on the list and is now selected.`, place: { id: existing.id, label: existing.name } };
+      if (existing) return { status: "success", message: `${existing.name} was already on the list and is now selected.`, place: { id: existing.id, label: existing.name, kind: existing.kind as "school" | "student_home" | "online" | "other" } };
     }
     return { status: "error", message: "The place could not be added. Your lesson details are still here." };
   }
 
   revalidatePath(`/schools/${schoolId}`);
   revalidatePath(`/schools/${schoolId}/places`);
-  return { status: "success", message: `${place.name} was added and selected.`, place: { id: place.id, label: place.name } };
+  return { status: "success", message: `${place.name} was added and selected.`, place: { id: place.id, label: place.name, kind: place.kind as "school" | "student_home" | "online" | "other" } };
 }
 
 const knownErrors: Record<string, string> = {
@@ -70,6 +74,7 @@ const knownErrors: Record<string, string> = {
   invalid_teacher: "That teacher is no longer available at this school. Reload and choose another teacher.",
   invalid_student: "That student is no longer available for scheduling. Reload and choose another student.",
   invalid_place: "That lesson place is no longer available. Reload and choose another place.",
+  student_home_location_required: "Add a protected home lesson location on this student's family record, or mark the address as arranged privately.",
   lesson_too_far_in_past: "A new lesson cannot be created that far in the past.",
   lesson_start_must_be_future: "Choose a start time in the future. Earlier times today cannot be scheduled.",
   new_lesson_time_must_be_future: "Choose a start time in the future. Earlier times today cannot be scheduled.",
@@ -126,13 +131,20 @@ export async function createSingleLesson(
     return { status: "error", message: knownErrors.not_authorized };
   }
 
-  const [{ data: school }, { data: product }, { data: teacherPolicy }, { data: rules }] = await Promise.all([
+  const [{ data: school }, { data: product }, { data: teacherPolicy }, { data: rules }, { data: place }] = await Promise.all([
     supabase.from("schools").select("timezone").eq("id", schoolId).maybeSingle(),
     supabase.from("service_products").select("duration_minutes").eq("school_id", schoolId).eq("id", productId).eq("status", "active").maybeSingle(),
     supabase.from("teachers").select("outside_availability_policy").eq("school_id", schoolId).eq("person_id", teacherId).maybeSingle(),
     supabase.from("teacher_availability_rules").select("weekday,start_time,end_time,effective_from,effective_until").eq("school_id", schoolId).eq("teacher_id", teacherId),
+    supabase.from("lesson_places").select("kind").eq("school_id", schoolId).eq("id", placeId).eq("status", "active").maybeSingle(),
   ]);
-  if (!school || !product || !teacherPolicy) return { status: "error", message: "The teacher’s scheduling policy could not be verified. Nothing was added; reload and try again." };
+  if (!school || !product || !teacherPolicy || !place) return { status: "error", message: "The teacher’s scheduling policy or lesson place could not be verified. Nothing was added; reload and try again." };
+  if (place.kind === "student_home") {
+    const { data: accountLinks } = await supabase.from("billing_account_students").select("billing_account_id").eq("school_id", schoolId).eq("student_id", studentId);
+    const accountIds = (accountLinks ?? []).map((link) => link.billing_account_id);
+    const { data: homeLocations } = accountIds.length ? await supabase.from("family_service_locations").select("id").eq("school_id", schoolId).in("billing_account_id", accountIds).eq("status", "active").limit(1) : { data: [] };
+    if (!homeLocations?.length) return { status: "error", message: knownErrors.student_home_location_required };
+  }
   const weekday = new Date(`${date}T12:00:00Z`).getUTCDay();
   const startMinutes = Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
   const endMinutes = startMinutes + product.duration_minutes;

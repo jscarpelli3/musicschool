@@ -31,6 +31,7 @@ import { schoolCalendarWindow } from "@/lib/calendar/school-calendar-window";
 import { MdExpandMore } from "react-icons/md";
 import { calendarMonthCutoff, formatCompactDate } from "@/lib/date-format";
 import { getStripeMode } from "@/lib/stripe/server";
+import { ServiceLocationForm } from "./service-location-form";
 
 export const dynamic = "force-dynamic";
 
@@ -77,15 +78,16 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     supabase.from("billing_approval_requests").select("id, billing_period_id, approval_status, approved_at, rejected_at, rejection_reason_code, rejection_note, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
     supabase.from("email_deliveries").select("approval_request_id, recipient_email, status, created_at").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).order("created_at", { ascending: false }),
     supabase.from("service_products").select("id,name,duration_minutes,price_cents,currency,default_schedule_type").eq("school_id", schoolId).eq("status", "active").order("name"),
-    supabase.from("lesson_places").select("id,name").eq("school_id", schoolId),
+    supabase.from("lesson_places").select("id,name,kind").eq("school_id", schoolId),
     supabase.from("teachers").select("person_id,outside_availability_policy").eq("school_id", schoolId),
     supabase.from("teacher_availability_rules").select("id,teacher_id,weekday,start_time,end_time,effective_from,effective_until").eq("school_id", schoolId).order("weekday").order("start_time"),
     supabase.from("lesson_events").select("teacher_id,student_id,starts_at,ends_at,status").eq("school_id", schoolId).gte("starts_at", queryStart).lt("starts_at", queryEnd),
     canManagePayments ? supabase.rpc("get_outstanding_lessons_for_billing_account", { p_school_id: schoolId, p_billing_account_id: billingAccountId }) : Promise.resolve({ data: [], error: null }),
+    canManagePayments ? supabase.from("family_service_locations").select("mode,label,address_line_1,address_line_2,city,region,postal_code,access_notes").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("status", "active").maybeSingle() : Promise.resolve({ data: null, error: null }),
   ]);
   const failedRelated = related.find((result) => result.error);
   if (failedRelated?.error) throw new Error(`Family detail could not load: ${failedRelated.error.message}`);
-  const [peopleResult, studentsResult, periodsResult, archivedPeriodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult, productsResult, placesResult, teachersResult, availabilityResult, busyLessonsResult, outstandingLessonsResult] = related;
+  const [peopleResult, studentsResult, periodsResult, archivedPeriodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult, productsResult, placesResult, teachersResult, availabilityResult, busyLessonsResult, outstandingLessonsResult, serviceLocationResult] = related;
   const outstandingLessonChoices = (outstandingLessonsResult.data ?? []).map((lesson) => ({ lessonEventId: lesson.lesson_event_id, studentName: lesson.student_name, offeringName: lesson.offering_name, serviceDate: lesson.service_date, startsAt: lesson.starts_at, amountCents: lesson.amount_cents, currency: lesson.currency }));
   const periodIds = [...(periodsResult.data ?? []), ...(archivedPeriodsResult.data ?? [])].map((period) => period.id);
   const { data: lineItems, error: lineItemsError } = periodIds.length
@@ -141,7 +143,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   const currentMonth = new Intl.DateTimeFormat("en-CA", { timeZone: school.timezone, year: "numeric", month: "2-digit" }).format(new Date());
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: school.timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const minimumTimeToday = new Intl.DateTimeFormat("en-GB", { timeZone: school.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
-  const lessonCreationOptions = canManageLessons ? { students: students.map((student) => ({ id: student.id, label: name(student.person) })), defaultStudentId: students.length === 1 ? students[0].id : "", primaryTeacherByStudent: Object.fromEntries((studentDefaults ?? []).flatMap((student) => student.primary_teacher_id ? [[student.person_id, student.primary_teacher_id]] : [])), teachers: (teachersResult.data ?? []).flatMap((teacher) => { const teacherPerson = people.get(teacher.person_id); return teacherPerson ? [{ id: teacher.person_id, label: name(teacherPerson), outsideAvailabilityPolicy: teacher.outside_availability_policy === "require_approval" ? "require_approval" as const : "notify_only" as const }] : []; }), products: (productsResult.data ?? []).map((product) => ({ id: product.id, label: product.name, durationMinutes: product.duration_minutes, priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price_cents / 100), defaultScheduleType: product.default_schedule_type === "one_time" ? "one_time" as const : "weekly" as const })), places: (placesResult.data ?? []).map((place) => ({ id: place.id, label: place.name })), availability: availabilityResult.data ?? [], busyLessons: (busyLessonsResult.data ?? []).map((lesson) => ({ teacherId: lesson.teacher_id, studentId: lesson.student_id, startsAt: lesson.starts_at, endsAt: lesson.ends_at, status: lesson.status })), today, minimumTimeToday } : undefined;
+  const lessonCreationOptions = canManageLessons ? { students: students.map((student) => ({ id: student.id, label: name(student.person) })), defaultStudentId: students.length === 1 ? students[0].id : "", primaryTeacherByStudent: Object.fromEntries((studentDefaults ?? []).flatMap((student) => student.primary_teacher_id ? [[student.person_id, student.primary_teacher_id]] : [])), teachers: (teachersResult.data ?? []).flatMap((teacher) => { const teacherPerson = people.get(teacher.person_id); return teacherPerson ? [{ id: teacher.person_id, label: name(teacherPerson), outsideAvailabilityPolicy: teacher.outside_availability_policy === "require_approval" ? "require_approval" as const : "notify_only" as const }] : []; }), products: (productsResult.data ?? []).map((product) => ({ id: product.id, label: product.name, durationMinutes: product.duration_minutes, priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price_cents / 100), defaultScheduleType: product.default_schedule_type === "one_time" ? "one_time" as const : "weekly" as const })), places: (placesResult.data ?? []).map((place) => ({ id: place.id, label: place.name, kind: ["student_home", "online", "other"].includes(place.kind) ? place.kind as "student_home" | "online" | "other" : "school" as const })), availability: availabilityResult.data ?? [], busyLessons: (busyLessonsResult.data ?? []).map((lesson) => ({ teacherId: lesson.teacher_id, studentId: lesson.student_id, startsAt: lesson.starts_at, endsAt: lesson.ends_at, status: lesson.status })), today, minimumTimeToday } : undefined;
   const billingMessages: Record<string, string> = {
     prepared: "Draft prepared from the current schedule and saved to the billing ledger.",
     needs_review: "Draft stopped without changing the ledger. At least one lesson needs an outcome or an effective cancellation policy.",
@@ -188,6 +190,10 @@ export default async function FamilyDetailPage({ params, searchParams }: {
           {!students.length ? <EmptyDetail>No students are linked to this account.</EmptyDetail> : null}
         </div>
       </DetailSection>
+
+      {canManagePayments ? <DetailSection title="Home lesson location" description="Used only when a lesson is scheduled at a student home. Teachers see it for their assigned lessons; general calendars and messages show only Student home.">
+        <ServiceLocationForm schoolId={schoolId} billingAccountId={billingAccountId} location={serviceLocationResult.data} />
+      </DetailSection> : null}
 
       {canManagePayments ? <section className="mt-6 flex flex-col items-start gap-4 rounded-card bg-surface-raised/55 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8"><div><p className="text-xs uppercase tracking-[0.14em] text-brand">Billing</p><h2 className="mt-2 font-display text-3xl">Prepare an invoice</h2><p className="mt-2 max-w-xl text-sm leading-6 text-muted">Choose a service month in a focused review flow. Nothing is sent or charged until you lock and request approval.</p></div><BillingDraftForm schoolId={schoolId} billingAccountId={billingAccountId} defaultMonth={currentMonth} initialOpen={prepareInvoice === "1"} /></section> : null}
 

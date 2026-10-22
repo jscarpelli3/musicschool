@@ -7,13 +7,14 @@ import { TeacherCancellationReport } from "@/components/teacher/teacher-cancella
 import { LessonProposalControls } from "@/components/teacher/lesson-proposal-controls";
 import { WeeklyAvailabilityEditor } from "@/components/scheduling/weekly-availability-editor";
 import { ProposalManagementControls } from "@/components/scheduling/proposal-management-controls";
+import { ServiceAddressReveal } from "@/components/teacher/service-address-reveal";
 import { loadTeacherCalendar, personDisplayName } from "@/lib/scheduling/teacher-calendar";
 import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 import { lessonOutcomeDescriptor } from "@/lib/domain/state-descriptors";
 import { lessonEventDescriptor } from "@/lib/scheduling/lesson-domain-contracts";
 import { createClient } from "@/lib/supabase/server";
 import { saveTeacherWeeklyAvailability } from "../availability-actions";
-import { decideLessonProposal, recordTeacherLessonOutcome, reportTeacherCancellation, rescheduleTeacherLesson } from "./actions";
+import { decideLessonProposal, recordTeacherLessonOutcome, reportTeacherCancellation, rescheduleTeacherLesson, revealAssignedLessonAddress } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +75,7 @@ export default async function TeacherPage({ params }: { params: Promise<{ school
             </summary>
             <div className="pt-5 sm:pl-40">
               <p className="text-sm text-muted">{place?.name ?? "Place not assigned"}{place?.details ? ` · ${place.details}` : ""}</p>
+              {place?.kind === "student_home" ? <ServiceAddressReveal action={revealAssignedLessonAddress.bind(null, schoolId, lesson.id)} /> : null}
               {lesson.staff_notes ? <p className="mt-4 border-l border-line pl-4 text-sm leading-6">{lesson.staff_notes}</p> : null}
               {lesson.status === "scheduled" && new Date(lesson.starts_at).getTime() > nowMs ? <TeacherRescheduleControls canSelfReschedule={teacherSettings.scheduling_authority === "manage_assigned_lessons"} earliestLocal={earliestLocal} rescheduleAction={rescheduleTeacherLesson.bind(null, schoolId, lesson.id)} /> : null}
               {lesson.status === "scheduled" && new Date(lesson.starts_at).getTime() > nowMs ? <TeacherCancellationReport action={reportTeacherCancellation.bind(null, schoolId, lesson.id)} /> : null}
