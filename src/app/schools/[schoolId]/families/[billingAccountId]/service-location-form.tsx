@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import { AppSelect } from "@/components/ui/app-select";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
 import { retireFamilyServiceLocation, saveFamilyServiceLocation, type ServiceLocationState } from "./service-location-actions";
@@ -13,10 +13,7 @@ export function ServiceLocationForm({ schoolId, billingAccountId, location }: { 
   const [mode, setMode] = useState(location?.mode === "arranged_privately" ? "arranged_privately" : "stored");
   const [editing, setEditing] = useState(!location);
   const [state, action, pending] = useActionState(saveFamilyServiceLocation.bind(null, schoolId, billingAccountId), initialState);
-  useEffect(() => {
-    if (state.status === "success") setEditing(false);
-  }, [state.status]);
-  if (location && !editing) {
+  if (location && (!editing || state.status === "success")) {
     const address = location.mode === "arranged_privately"
       ? "Arranged directly with the family"
       : [location.address_line_1, location.address_line_2, [location.city, location.region, location.postal_code].filter(Boolean).join(", ")].filter(Boolean).join(" · ");
