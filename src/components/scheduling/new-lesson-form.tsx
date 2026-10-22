@@ -237,14 +237,14 @@ export function NewLessonForm({
         {showNewPlace ? <div className="mt-4 rounded-md bg-surface-raised p-4">
           <p className="text-sm font-medium">New place</p>
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
-            <label><span className="text-xs text-muted">Type</span><AppSelect value={newPlaceKind} onChange={(event) => { const nextKind = event.target.value as typeof newPlaceKind; setNewPlaceKind(nextKind); if (nextKind === "student_home") setPlaceDetails(""); }} className={field}><option value="school">School location</option><option value="student_home">Student home</option><option value="online">Online</option><option value="other">Other</option></AppSelect></label>
-            <label><span className="text-xs text-muted">Place name</span><input value={placeName} onChange={(event) => setPlaceName(event.target.value)} maxLength={120} className={field} placeholder="Studio A" /></label>
-            {newPlaceKind === "student_home" ? <p className="self-end pb-3 text-xs leading-5 text-muted">The private address belongs on the family record, not this shared place.</p> : <label><span className="text-xs text-muted">Room notes, directions, or meeting link <span className="opacity-60">optional</span></span><input value={placeDetails} onChange={(event) => setPlaceDetails(event.target.value)} maxLength={500} className={field} /></label>}
+            <label><span className="text-xs text-muted">Type</span><AppSelect value={newPlaceKind} onChange={(event) => { const nextKind = event.target.value as typeof newPlaceKind; setNewPlaceKind(nextKind); if (nextKind !== "school") { setPlaceName(""); setPlaceDetails(""); } }} className={field}><option value="school">School location</option><option value="student_home">Student home</option><option value="online">Online</option></AppSelect></label>
+            {newPlaceKind === "school" ? <label><span className="text-xs text-muted">Room name</span><input value={placeName} onChange={(event) => setPlaceName(event.target.value)} maxLength={120} className={field} placeholder="Studio A" /></label> : <p className="self-end pb-3 text-xs leading-5 text-muted">{newPlaceKind === "student_home" ? "The family address will be checked after this choice is selected." : "Online is ready as a simple lesson space."}</p>}
+            {newPlaceKind === "school" ? <label><span className="text-xs text-muted">Room notes or directions <span className="opacity-60">optional</span></span><input value={placeDetails} onChange={(event) => setPlaceDetails(event.target.value)} maxLength={500} className={field} /></label> : null}
           </div>
           {placeMessage ? <p role="status" className="mt-3 text-xs text-danger">{placeMessage}</p> : null}
-          <button type="button" disabled={placePending || !placeName.trim()} onClick={() => {
+          <button type="button" disabled={placePending || (newPlaceKind === "school" && !placeName.trim())} onClick={() => {
             const data = new FormData();
-            data.set("name", placeName);
+            data.set("name", newPlaceKind === "student_home" ? "Student home" : newPlaceKind === "online" ? "Online" : placeName);
             data.set("details", placeDetails);
             data.set("kind", newPlaceKind);
             startPlaceTransition(async () => {

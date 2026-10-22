@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadTeacherCalendar, personDisplayName } from "@/lib/scheduling/teacher-calendar";
 import { loadServiceEntitlements } from "@/lib/scheduling/service-entitlements";
 import { PageHeading } from "@/components/ui/page-heading";
+import { lessonPlaceLabel } from "@/lib/scheduling/lesson-place-label";
 
 export const dynamic = "force-dynamic";
 
@@ -83,7 +84,7 @@ export default async function StaffTeacherPage({ params }: {
     primaryTeacherByStudent: Object.fromEntries((studentRowsResult.data ?? []).flatMap((student) => student.primary_teacher_id ? [[student.person_id, student.primary_teacher_id]] : [])),
     teachers: [{id:teacherId,label:teacherName,outsideAvailabilityPolicy:teacherRecord.outside_availability_policy === "require_approval" ? "require_approval" as const : "notify_only" as const}],
     products: (productsResult.data ?? []).map((product) => ({id:product.id,label:product.name,durationMinutes:product.duration_minutes,priceLabel:new Intl.NumberFormat("en-US",{style:"currency",currency:product.currency}).format(product.price_cents/100),defaultScheduleType:product.default_schedule_type === "one_time" ? "one_time" as const : "weekly" as const})),
-    places: (placesResult.data ?? []).map((place) => ({id:place.id,label:place.name,kind:["student_home","online","other"].includes(place.kind)?place.kind as "student_home"|"online"|"other":"school" as const})),availability:schedule.availability,
+    places: (placesResult.data ?? []).map((place) => ({id:place.id,label:lessonPlaceLabel(place),kind:["student_home","online","other"].includes(place.kind)?place.kind as "student_home"|"online"|"other":"school" as const})),availability:schedule.availability,
     busyLessons:schedule.lessons.map((lesson)=>({teacherId,studentId:lesson.student_id,startsAt:lesson.starts_at,endsAt:lesson.ends_at,status:lesson.status})),today:initialDate,minimumTimeToday,
   };
 

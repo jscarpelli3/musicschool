@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { isLessonProposalState } from "@/lib/domain/state-descriptors";
+import { lessonPlaceLabel } from "@/lib/scheduling/lesson-place-label";
 
 export type TeacherCalendarData = {
   availability: Array<{
@@ -119,6 +120,6 @@ export async function loadTeacherCalendar(
     pendingProposals,
     studentNames: Object.fromEntries((studentResult.data ?? []).map((student) => [student.id, personDisplayName(student)])),
     productNames: Object.fromEntries((productResult.data ?? []).map((product) => [product.id, product.name])),
-    placeDetails: Object.fromEntries((placeResult.data ?? []).map((place) => [place.id, { name: place.name, details: place.details, kind: place.kind }])),
+    placeDetails: Object.fromEntries((placeResult.data ?? []).map((place) => [place.id, { name: lessonPlaceLabel(place), details: place.kind === "school" ? place.details : null, kind: place.kind }])),
   };
 }

@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { archiveProduct, updateSchoolBillingTiming } from "./actions";
 import { ProductForm } from "./product-form";
 import { AppSelect } from "@/components/ui/app-select";
+import { archivePlace } from "../places/actions";
+import { PlaceForm } from "../places/place-form";
 
 export const dynamic = "force-dynamic";
 
@@ -21,24 +23,27 @@ export default async function ProductsPage({
   searchParams,
 }: {
   params: Promise<{ schoolId: string }>;
-  searchParams: Promise<{ created?: string; archived?: string; error?: string; billing?: string }>;
+  searchParams: Promise<{ created?: string; archived?: string; error?: string; billing?: string; placeCreated?: string; placeArchived?: string; placeError?: string }>;
 }) {
   const { schoolId } = await params;
-  const { created, archived, error, billing } = await searchParams;
+  const { created, archived, error, billing, placeCreated, placeArchived, placeError } = await searchParams;
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getClaims();
   const profileId = authData?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/products`);
 
-  const [{ data: school }, { data: membership }, { data: products }, capabilities] = await Promise.all([
+  const [{ data: school }, { data: membership }, { data: products }, { data: places }, capabilities] = await Promise.all([
     supabase.from("schools").select("id, name, billing_timing_default, billing_day, payer_review_days, intended_charge_day").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("service_products").select("id, name, format, duration_minutes, sessions_per_interval, interval_count, interval_unit, pricing_model, price_cents, currency, capacity, status, billing_timing_override, stripe_sync_status, default_schedule_type").eq("school_id", schoolId).order("status").order("name"),
+    supabase.from("lesson_places").select("id,name,details,kind,status,created_by").eq("school_id", schoolId).order("status").order("name"),
     loadMySchoolCapabilities(schoolId),
   ]);
 
   if (!school || !membership) notFound();
   const canManage = capabilities.has("school.products.manage");
+  const canCreatePlaces = capabilities.has("school.places.create");
+  const canManagePlaces = capabilities.has("school.places.manage");
   const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
   return (
@@ -50,6 +55,9 @@ export default async function ProductsPage({
       {archived ? <p className="mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm text-brand">Offering archived.</p> : null}
       {error ? <p className="mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm text-danger">The offering could not be archived. Nothing changed.</p> : null}
       {billing ? <p className={`mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm ${billing === "saved" ? "text-brand" : "text-danger"}`}>{billing === "saved" ? "Billing schedule saved for future agreements." : billing === "invalid" ? "Check the billing schedule values." : "The billing schedule could not be saved."}</p> : null}
+      {placeCreated ? <p className="mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm text-brand">Lesson space added.</p> : null}
+      {placeArchived ? <p className="mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm text-brand">Lesson space archived.</p> : null}
+      {placeError ? <p className="mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm text-danger">The lesson space could not be archived. Nothing changed.</p> : null}
 
       {canManage ? <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
         <div><h2 className="font-display text-3xl">Billing schedule</h2><p className="mt-3 text-sm leading-6 text-muted">Defaults for new student agreements. Existing agreements keep their recorded terms.</p></div>
@@ -98,6 +106,18 @@ export default async function ProductsPage({
         <div><h2 className="font-display text-3xl font-normal">Expand your offerings.</h2><p className="mt-2 text-sm text-muted">Define a new lesson or class in a focused form.</p></div>
         <FocusedModal triggerLabel="Add offering +" eyebrow="Lessons and classes" title="New offering." description="Set the format, duration, cadence, and price."><ProductForm schoolId={schoolId} /></FocusedModal>
       </section> : null}
+
+      <section id="lesson-spaces" className="ui-card mt-6 scroll-mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
+        <div><h2 className="font-display text-3xl font-normal">Where lessons happen</h2><p className="mt-3 text-sm leading-6 text-muted">School rooms can have their own names. Student home and Online stay simple shared choices.</p></div>
+        <div>
+          {places?.length ? places.map((place) => {
+            const label = place.kind === "student_home" ? "Student home" : place.kind === "online" ? "Online" : place.name;
+            const canArchive = place.status === "active" && (canManagePlaces || place.created_by === profileId);
+            return <article key={place.id} className="grid grid-cols-[1fr_auto] gap-5 border-t border-line py-5 first:border-t-0"><div><h3>{label}</h3>{place.kind === "school" ? <p className="mt-1 text-xs uppercase tracking-[0.1em] text-brand">School location</p> : null}{place.kind === "school" && place.details ? <p className="mt-2 text-sm text-muted">{place.details}</p> : null}{place.status === "archived" ? <p className="mt-2 text-xs text-muted">Archived</p> : null}</div>{canArchive ? <form action={archivePlace.bind(null, schoolId, place.id)}><button className="text-xs text-muted hover:text-ink">Archive</button></form> : null}</article>;
+          }) : <p className="text-sm text-muted">No lesson spaces yet.</p>}
+          {canCreatePlaces ? <div className="mt-5"><FocusedModal triggerLabel="Add lesson space +" eyebrow="Lesson spaces" title="Where will lessons happen?" description="Choose Student home or Online as-is, or name a room at your school."><PlaceForm schoolId={schoolId} /></FocusedModal></div> : null}
+        </div>
+      </section>
     </main>
   );
 }

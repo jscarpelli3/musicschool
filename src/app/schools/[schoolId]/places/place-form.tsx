@@ -19,16 +19,15 @@ export function PlaceForm({ schoolId, returnPath }: { schoolId: string; returnPa
           <option value="school">School location</option>
           <option value="student_home">Student home</option>
           <option value="online">Online</option>
-          <option value="other">Other</option>
         </AppSelect>
       </label>
-      <label>
+      {kind === "school" ? <label>
         <span className="block text-xs text-muted">What your school calls this place</span>
-        <input required name="name" maxLength={120} className={fieldClass} placeholder={kind === "student_home" ? "Student home" : "Studio A"} />
-      </label>
-      {kind === "student_home" ? <p className="text-sm leading-6 text-muted">The actual address is managed privately from each family record and is never saved in this shared place.</p> : <label>
+        <input required name="name" maxLength={120} className={fieldClass} placeholder="Studio A" />
+      </label> : <input type="hidden" name="name" value={kind === "student_home" ? "Student home" : "Online"} />}
+      {kind === "student_home" ? <p className="text-sm leading-6 text-muted">Each family’s protected address is added only when an in-home lesson needs it.</p> : kind === "online" ? <p className="text-sm leading-6 text-muted">Online lessons use one shared Online choice. Meeting integrations can be added later.</p> : <label>
         <span className="block text-xs text-muted">Details <span className="opacity-60">optional</span></span>
-        <input name="details" maxLength={500} className={fieldClass} placeholder="Room notes, directions, or meeting link" />
+        <input name="details" maxLength={500} className={fieldClass} placeholder="Room notes or directions" />
       </label>}
       {state.error ? <p className="border-l border-danger pl-4 text-sm text-danger">{state.error}</p> : null}
       <button disabled={pending} className="justify-self-start border-b border-brand pb-2 text-sm text-brand-hover disabled:opacity-50">

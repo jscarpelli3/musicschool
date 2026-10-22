@@ -12,19 +12,23 @@ export async function createPlace(
   _state: PlaceState,
   formData: FormData,
 ): Promise<PlaceState> {
-  const name = String(formData.get("name") ?? "").trim();
-  const details = String(formData.get("details") ?? "").trim() || null;
   const kind = String(formData.get("kind") ?? "school");
+  const submittedName = String(formData.get("name") ?? "").trim();
+  const name = kind === "student_home" ? "Student home" : kind === "online" ? "Online" : submittedName;
+  const details = kind === "school" ? String(formData.get("details") ?? "").trim() || null : null;
   if (!name || name.length > 120) return { error: "Enter a place name up to 120 characters." };
   if (details && details.length > 500) return { error: "Place details must be 500 characters or fewer." };
-  if (!["school", "student_home", "online", "other"].includes(kind)) return { error: "Choose a valid place type." };
-  if (kind === "student_home" && details) return { error: "Manage a family's private home address from its family record." };
+  if (!["school", "student_home", "online"].includes(kind)) return { error: "Choose a valid place type." };
 
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const profileId = data?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/places`);
 
+  if (kind !== "school") {
+    const { data: existing } = await supabase.from("lesson_places").select("id").eq("school_id", schoolId).eq("kind", kind).eq("status", "active").limit(1).maybeSingle();
+    if (existing) return { error: `${name} is already available.` };
+  }
   const { error } = await supabase.from("lesson_places").insert({
     school_id: schoolId,
     name,
@@ -38,16 +42,16 @@ export async function createPlace(
   }
 
   revalidatePath(`/schools/${schoolId}`);
-  revalidatePath(`/schools/${schoolId}/places`);
+  revalidatePath(`/schools/${schoolId}/products`);
   revalidatePath(`/schools/${schoolId}/onboarding`);
-  const onboardingPath = `/schools/${schoolId}/onboarding?step=locations`;
-  redirect(returnPath === onboardingPath ? `${onboardingPath}&placeCreated=1` : `/schools/${schoolId}/places?created=1`);
+  const onboardingPath = `/schools/${schoolId}/onboarding?step=payments`;
+  redirect(returnPath === onboardingPath ? `${onboardingPath}&placeCreated=1` : `/schools/${schoolId}/products?placeCreated=1#lesson-spaces`);
 }
 
 export async function archivePlace(schoolId: string, placeId: string) {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
-  if (!data?.claims?.sub) redirect(`/login?next=/schools/${schoolId}/places`);
+  if (!data?.claims?.sub) redirect(`/login?next=/schools/${schoolId}/products`);
 
   const { data: archived, error } = await supabase
     .from("lesson_places")
@@ -57,8 +61,8 @@ export async function archivePlace(schoolId: string, placeId: string) {
     .select("id")
     .maybeSingle();
 
-  if (error || !archived) redirect(`/schools/${schoolId}/places?error=archive`);
+  if (error || !archived) redirect(`/schools/${schoolId}/products?placeError=archive#lesson-spaces`);
 
-  revalidatePath(`/schools/${schoolId}/places`);
-  redirect(`/schools/${schoolId}/places?archived=1`);
+  revalidatePath(`/schools/${schoolId}/products`);
+  redirect(`/schools/${schoolId}/products?placeArchived=1#lesson-spaces`);
 }

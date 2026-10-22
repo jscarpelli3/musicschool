@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { LessonCreationOptions } from "@/components/scheduling/lesson-creation-dialog";
+import { lessonPlaceLabel } from "@/lib/scheduling/lesson-place-label";
 
 export async function loadLessonCreationOptions(client: SupabaseClient<Database>, schoolId: string, timeZone: string): Promise<LessonCreationOptions> {
   const now = new Date();
@@ -26,7 +27,7 @@ export async function loadLessonCreationOptions(client: SupabaseClient<Database>
     primaryTeacherByStudent: Object.fromEntries((studentsResult.data ?? []).flatMap((student) => student.primary_teacher_id ? [[student.person_id, student.primary_teacher_id]] : [])),
     teachers: (teachersResult.data ?? []).flatMap((teacher) => { const person = people.get(teacher.person_id); return person ? [{ id: person.id, label: displayName(person), outsideAvailabilityPolicy: teacher.outside_availability_policy === "require_approval" ? "require_approval" as const : "notify_only" as const }] : []; }),
     products: (productsResult.data ?? []).filter((product) => product.status === "active" && product.format === "private_lesson").map((product) => ({ id: product.id, label: product.name, durationMinutes: product.duration_minutes, priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price_cents / 100), defaultScheduleType: product.default_schedule_type === "one_time" ? "one_time" as const : "weekly" as const })),
-    places: (placesResult.data ?? []).filter((place) => place.status === "active").map((place) => ({ id: place.id, label: place.name, kind: ["student_home", "online", "other"].includes(place.kind) ? place.kind as "student_home" | "online" | "other" : "school" as const })),
+    places: (placesResult.data ?? []).filter((place) => place.status === "active").map((place) => ({ id: place.id, label: lessonPlaceLabel(place), kind: ["student_home", "online", "other"].includes(place.kind) ? place.kind as "student_home" | "online" | "other" : "school" as const })),
     availability: availabilityResult.data ?? [],
     busyLessons: (lessonsResult.data ?? []).map((lesson) => ({ teacherId: lesson.teacher_id, studentId: lesson.student_id, startsAt: lesson.starts_at, endsAt: lesson.ends_at, status: lesson.status })),
     today,

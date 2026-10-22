@@ -43,13 +43,13 @@ export async function createLessonPlace(
   schoolId: string,
   formData: FormData,
 ): Promise<CreateLessonPlaceState> {
-  const name = String(formData.get("name") ?? "").trim();
-  const details = String(formData.get("details") ?? "").trim() || null;
   const kind = String(formData.get("kind") ?? "school") as "school" | "student_home" | "online" | "other";
+  const submittedName = String(formData.get("name") ?? "").trim();
+  const name = kind === "student_home" ? "Student home" : kind === "online" ? "Online" : submittedName;
+  const details = kind === "school" ? String(formData.get("details") ?? "").trim() || null : null;
   if (!name || name.length > 120) return { status: "error", message: "Enter a place name up to 120 characters." };
   if (details && details.length > 500) return { status: "error", message: "Place details must be 500 characters or fewer." };
-  if (!["school", "student_home", "online", "other"].includes(kind)) return { status: "error", message: "Choose a valid place type." };
-  if (kind === "student_home" && details) return { status: "error", message: "Add the protected home address from the family record instead." };
+  if (!["school", "student_home", "online"].includes(kind)) return { status: "error", message: "Choose a valid place type." };
 
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
@@ -57,6 +57,12 @@ export async function createLessonPlace(
   if (!profileId) return { status: "error", message: "Your session expired. Sign in again before adding a place." };
   if (!await checkSchoolCapability(supabase, schoolId, "school.places.create")) {
     return { status: "error", message: "You do not have permission to add places for this school." };
+  }
+
+  if (kind !== "school") {
+    const { data: existing } = await supabase.from("lesson_places").select("id,name,kind")
+      .eq("school_id", schoolId).eq("kind", kind).eq("status", "active").limit(1).maybeSingle();
+    if (existing) return { status: "success", message: `${name} was already available and is now selected.`, place: { id: existing.id, label: name, kind } };
   }
 
   const { data: place, error } = await supabase.from("lesson_places").insert({
@@ -77,7 +83,8 @@ export async function createLessonPlace(
 
   revalidatePath(`/schools/${schoolId}`);
   revalidatePath(`/schools/${schoolId}/places`);
-  return { status: "success", message: `${place.name} was added and selected.`, place: { id: place.id, label: place.name, kind: place.kind as "school" | "student_home" | "online" | "other" } };
+  const label = place.kind === "student_home" ? "Student home" : place.kind === "online" ? "Online" : place.name;
+  return { status: "success", message: `${label} was added and selected.`, place: { id: place.id, label, kind: place.kind as "school" | "student_home" | "online" | "other" } };
 }
 
 const knownErrors: Record<string, string> = {
