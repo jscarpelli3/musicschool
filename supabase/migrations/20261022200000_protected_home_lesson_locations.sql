@@ -46,6 +46,7 @@ before update on public.family_service_locations
 for each row execute function public.set_updated_at();
 
 alter table public.family_service_locations enable row level security;
+revoke all on public.family_service_locations from anon;
 
 create policy family_service_locations_manage
 on public.family_service_locations for all to authenticated
@@ -99,6 +100,7 @@ create index service_location_access_log_school_time
   on public.service_location_access_log(school_id, accessed_at desc);
 
 alter table public.service_location_access_log enable row level security;
+revoke all on public.service_location_access_log from anon;
 create policy service_location_access_log_management_read
 on public.service_location_access_log for select to authenticated
 using (public.has_school_capability(school_id, 'school.billing.manage'));
