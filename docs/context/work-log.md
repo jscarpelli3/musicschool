@@ -246,3 +246,4 @@ Use this file for short chronological notes about meaningful work.
 - When a school has no instruments, lesson creation now says so and offers `+ Add an instrument` in place, matching the established school-room recovery pattern.
 - Saving the instrument preserves all entered lesson details, adds it to the school catalog, selects it immediately, and confirms the result with the shared toast pattern.
 - Find an Opening now centers and emphasizes its week picker. Previous/next are recognizable bordered buttons rather than bare arrow glyphs, while the current weekly range remains the primary label.
+- Header Invoices, Approvals, and Notifications controls now receive a slow, low-contrast traveling border/glow only while their respective queues contain something requiring attention. The cue becomes static for reduced-motion preferences and disappears when the queue is clear.
