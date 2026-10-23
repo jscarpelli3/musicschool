@@ -39,6 +39,7 @@ export function TeacherScheduleCalendar({
     studentNames={schedule.studentNames}
     studentDetails={Object.fromEntries(Object.entries(schedule.studentNames).map(([id, name]) => [id, { name, email: null, phone: null, contacts: [], payers: [] }]))}
     productNames={schedule.productNames}
+    instrumentNames={schedule.instrumentNames}
     placeDetails={schedule.placeDetails}
     availability={schedule.availability}
     lessons={schedule.lessons.map((lesson) => ({

@@ -34,6 +34,7 @@ type Availability = {
 type Lesson = {
   id: string;
   product_id: string;
+  instrument_id: string | null;
   teacher_id: string;
   student_id: string;
   starts_at: string;
@@ -96,6 +97,7 @@ type Props = {
   studentNames: Record<string, string>;
   studentDetails: Record<string, StudentDetail>;
   productNames: Record<string, string>;
+  instrumentNames: Record<string, string>;
   placeDetails: Record<string, { name: string; details: string | null }>;
   availability: Availability[];
   lessons: Lesson[];
@@ -203,6 +205,7 @@ export function OwnerPlanner({
   studentNames,
   studentDetails,
   productNames,
+  instrumentNames,
   placeDetails,
   availability,
   lessons,
@@ -608,6 +611,7 @@ export function OwnerPlanner({
           teacherName={teachers.find((teacher) => teacher.id === selectedLesson.teacher_id)?.name ?? "Teacher"}
           student={studentDetails[selectedLesson.student_id]}
           productName={productNames[selectedLesson.product_id] ?? "Lesson"}
+          instrumentName={selectedLesson.instrument_id ? instrumentNames[selectedLesson.instrument_id] ?? "Instrument not found" : "Not recorded"}
           place={placeDetails[selectedLesson.place_id] ?? { name: "Place not set", details: null }}
           canReschedule={canReschedule}
           canCollectPayment={canCollectPayment}
@@ -1220,6 +1224,7 @@ function LessonSheet({
   teacherName,
   student,
   productName,
+  instrumentName,
   place,
   canReschedule,
   canCollectPayment,
@@ -1236,6 +1241,7 @@ function LessonSheet({
   teacherName: string;
   student: StudentDetail | undefined;
   productName: string;
+  instrumentName: string;
   place: { name: string; details: string | null };
   canReschedule: boolean;
   canCollectPayment: boolean;
@@ -1254,6 +1260,7 @@ function LessonSheet({
           <Detail label="Date" value={new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(fromKey(lesson.start.dateKey))} />
           <Detail label="Time" value={`${clock(lesson.start.minutes)}–${clock(lesson.end.minutes)} · ${duration} minutes`} />
           <div className="grid grid-cols-[6rem_1fr] gap-5 rounded-control px-3 py-3 text-sm odd:bg-canvas/55"><dt className="text-muted">Teacher</dt><dd><Link href={`/schools/${schoolId}/staff/${lesson.teacher_id}`} className="hover:text-brand">{teacherName}</Link></dd></div>
+          <Detail label="Instrument" value={instrumentName} />
           <Detail label="Place" value={place.details ? `${place.name} · ${place.details}` : place.name} />
           <Detail label="Lesson" value={productName} />
           {lesson.notes ? <Detail label="Internal notes" value={lesson.notes} /> : null}

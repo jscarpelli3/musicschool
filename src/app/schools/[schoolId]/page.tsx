@@ -50,7 +50,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
       .eq("school_id", schoolId),
     supabase
       .from("lesson_events")
-      .select("id, product_id, teacher_id, student_id, starts_at, ends_at, status, cancellation_timing, notes, place_id, reschedule_allowed, reschedule_blocked_reason, reschedule_reason_code, reschedule_reason_detail")
+      .select("id, product_id, instrument_id, teacher_id, student_id, starts_at, ends_at, status, cancellation_timing, notes, place_id, reschedule_allowed, reschedule_blocked_reason, reschedule_reason_code, reschedule_reason_detail")
       .eq("school_id", schoolId)
       .gte("starts_at", lessonWindowStartIso)
       .lt("starts_at", lessonWindowEndIso)
@@ -72,6 +72,8 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
     supabase.from("user_view_preferences").select("settings").eq("school_id", schoolId).eq("profile_id", profileId).eq("view_key", "student_roster").maybeSingle(),
     supabase.from("lesson_event_price_snapshots").select("lesson_event_id, billing_service_date").eq("school_id", schoolId),
     supabase.from("lesson_schedule_proposals").select("id,teacher_id,student_id,proposed_starts_at,proposed_ends_at,status,proposal_kind,schedule_type").eq("school_id",schoolId).in("status",["pending_teacher","pending_owner"]),
+    supabase.from("school_instruments").select("id,name,is_active").eq("school_id",schoolId).order("name"),
+    supabase.from("teacher_instruments").select("teacher_id,instrument_id").eq("school_id",schoolId),
   ]), entitlementPromise, invoiceSummaryPromise, paidLessonsPromise]);
 
   if (paidLessonsResult.error) throw new Error(`Paid lesson status could not load: ${paidLessonsResult.error.message}`);
@@ -93,6 +95,8 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
     { data: rosterPreference },
     { data: lessonPriceSnapshots },
     { data: pendingProposalRows },
+    { data: instrumentRows },
+    { data: teacherInstrumentRows },
   ] = dashboardQueries;
 
   const people = new Map((peopleRows ?? []).map((person) => [person.id, person]));
@@ -112,6 +116,8 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
     return person ? [[person.id, `${person.preferred_name || person.first_name} ${person.last_name}`]] : [];
   }));
   const productNames = Object.fromEntries((productRows ?? []).map((product) => [product.id, product.name]));
+  const instrumentNames = Object.fromEntries((instrumentRows ?? []).map((instrument) => [instrument.id, instrument.name]));
+  const instrumentIdsByTeacher = (teacherInstrumentRows ?? []).reduce<Record<string,string[]>>((groups,item)=>{(groups[item.teacher_id]??=[]).push(item.instrument_id);return groups;},{});
   const products = new Map((productRows ?? []).map((product) => [product.id, product]));
   const placeDetails = Object.fromEntries((placeRows ?? []).map((place) => [place.id, { name: lessonPlaceLabel(place), details: place.kind === "school" ? place.details : null }]));
   const billingAccounts = new Map((billingAccountRows ?? []).map((account) => [account.id, account]));
@@ -200,7 +206,8 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
     primaryTeacherByStudent: Object.fromEntries((studentRows ?? []).flatMap((student) => student.primary_teacher_id ? [[student.person_id, student.primary_teacher_id]] : [])),
     teachers: teachers.map((teacher) => ({ id: teacher.id, label: teacher.name, outsideAvailabilityPolicy: teacher.outsideAvailabilityPolicy })),
     products: (productRows ?? []).filter((product) => product.status === "active" && product.format === "private_lesson").map((product) => ({ id: product.id, label: product.name, durationMinutes: product.duration_minutes, priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price_cents / 100), defaultScheduleType: product.default_schedule_type === "one_time" ? "one_time" as const : "weekly" as const })),
-    places: (placeRows ?? []).filter((place) => place.status === "active").map((place) => ({ id: place.id, label: lessonPlaceLabel(place), kind: ["student_home", "online", "other"].includes(place.kind) ? place.kind as "student_home" | "online" | "other" : "school" as const })),
+    instruments: (instrumentRows ?? []).filter((instrument)=>instrument.is_active).map((instrument)=>({id:instrument.id,label:instrument.name})), instrumentIdsByTeacher,
+    places: (placeRows ?? []).filter((place) => place.status === "active" && ["school", "student_home", "online"].includes(place.kind)).map((place) => ({ id: place.id, label: lessonPlaceLabel(place), kind: place.kind as "school" | "student_home" | "online" })),
     availability: availabilityRows ?? [],
     busyLessons: (lessonRows ?? []).map((lesson) => ({ teacherId: lesson.teacher_id, studentId: lesson.student_id, startsAt: lesson.starts_at, endsAt: lesson.ends_at, status: lesson.status })),
     today: initialDate,
@@ -299,6 +306,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
         studentNames={studentNames}
         studentDetails={studentDetails}
         productNames={productNames}
+        instrumentNames={instrumentNames}
         placeDetails={placeDetails}
         availability={availabilityRows ?? []}
         lessons={(lessonRows ?? []).map((lesson) => ({

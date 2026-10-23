@@ -10,6 +10,7 @@ export type LessonCalendarItem = {
   studentName: string;
   teacherName: string;
   productName: string;
+  instrumentName: string | null;
   placeName: string;
   startsAt: string;
   endsAt: string;
@@ -69,6 +70,7 @@ export function LessonCalendar({ id, lessons, rangeStart, rangeEnd, timeZone, sc
         <div className="py-5"><dt className="text-xs text-muted">Date</dt><dd className="mt-2 text-sm">{date.format(new Date(selectedLesson.startsAt))}</dd></div>
         <div className="py-5"><dt className="text-xs text-muted">Time</dt><dd className="mt-2 text-sm">{time.format(new Date(selectedLesson.startsAt))}–{time.format(new Date(selectedLesson.endsAt))}</dd></div>
         <div className="py-5"><dt className="text-xs text-muted">Lesson</dt><dd className="mt-2 text-sm">{selectedLesson.productName}</dd></div>
+        <div className="py-5"><dt className="text-xs text-muted">Instrument</dt><dd className="mt-2 text-sm">{selectedLesson.instrumentName ?? "Not recorded"}</dd></div>
         <div className="py-5"><dt className="text-xs text-muted">Teacher</dt><dd className="mt-2 text-sm">{selectedLesson.teacherName}</dd></div>
         <div className="py-5"><dt className="text-xs text-muted">Place</dt><dd className="mt-2 text-sm">{selectedLesson.placeName}</dd></div>
       </dl>

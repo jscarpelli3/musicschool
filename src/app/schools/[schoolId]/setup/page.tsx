@@ -6,13 +6,16 @@ import { createClient } from "@/lib/supabase/server";
 import { updateSchoolInfo } from "./actions";
 import { updateSchoolInstrumentCatalog } from "./instrument-actions";
 import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
+import { FocusedModal } from "@/components/ui/focused-modal";
+import { PlaceForm } from "../places/place-form";
+import { archivePlace } from "../places/actions";
 
 export const dynamic = "force-dynamic";
 const field = "w-full border-b border-line bg-transparent py-3 outline-none transition focus:border-brand";
 
 export default async function SchoolInfoPage({ params, searchParams }: {
   params: Promise<{ schoolId: string }>;
-  searchParams: Promise<{ status?: string; media?: string }>;
+  searchParams: Promise<{ status?: string; media?: string; roomCreated?: string; roomArchived?: string; roomError?: string }>;
 }) {
   const { schoolId } = await params;
   const query = await searchParams;
@@ -21,10 +24,11 @@ export default async function SchoolInfoPage({ params, searchParams }: {
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/setup`);
 
-  const [{ data: school }, { data: membership }, { data: instruments },capabilities] = await Promise.all([
+  const [{ data: school }, { data: membership }, { data: instruments }, { data: rooms },capabilities] = await Promise.all([
     supabase.from("schools").select("id, name, logo_path, phone, reply_to_email, address_line_1, address_line_2, city, region, postal_code, timezone").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("school_instruments").select("name").eq("school_id", schoolId).eq("is_active", true).order("name"),
+    supabase.from("lesson_places").select("id,name,details,status,created_by").eq("school_id",schoolId).eq("kind","school").order("status").order("name"),
     loadMySchoolCapabilities(schoolId),
   ]);
   if (!school || !membership) notFound();
@@ -81,6 +85,13 @@ export default async function SchoolInfoPage({ params, searchParams }: {
       <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
         <div><h2 className="font-display text-3xl">Instruments</h2><p className="mt-3 text-sm leading-6 text-muted">Choose the instruments this school teaches. Staff profiles use this shared catalog.</p></div>
         <div><InstrumentCatalogForm instruments={(instruments ?? []).map((item) => item.name)} action={updateSchoolInstrumentCatalog.bind(null, schoolId)} /></div>
+      </section>
+      <section id="school-rooms" className="ui-card mt-6 scroll-mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
+        <div><h2 className="font-display text-3xl">Rooms at your school</h2><p className="mt-3 text-sm leading-6 text-muted">Optional named rooms for on-site lessons. Student home and Online are always available while scheduling.</p></div>
+        <div>{query.roomCreated ? <p className="mb-4 text-sm text-brand">Room added.</p> : null}{query.roomArchived ? <p className="mb-4 text-sm text-brand">Room archived.</p> : null}{query.roomError ? <p className="mb-4 text-sm text-danger">The room could not be archived.</p> : null}
+          {(rooms ?? []).length ? (rooms ?? []).map((room)=><article key={room.id} className="grid grid-cols-[1fr_auto] gap-5 border-t border-line py-4 first:border-t-0"><div><p>{room.name}</p>{room.details?<p className="mt-1 text-sm text-muted">{room.details}</p>:null}{room.status==="archived"?<p className="mt-1 text-xs text-muted">Archived</p>:null}</div>{room.status==="active"&&(capabilities.has("school.places.manage")||room.created_by===profileId)?<form action={archivePlace.bind(null,schoolId,room.id)}><button className="text-xs text-muted hover:text-ink">Archive</button></form>:null}</article>) : <p className="text-sm text-muted">No school rooms added.</p>}
+          {capabilities.has("school.places.create")?<div className="mt-5"><FocusedModal triggerLabel="Add room +" eyebrow="School rooms" title="Add a room" description="Name a studio, classroom, or other space at your school."><PlaceForm schoolId={schoolId}/></FocusedModal></div>:null}
+        </div>
       </section>
     </main>
   );

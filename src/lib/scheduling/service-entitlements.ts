@@ -11,6 +11,7 @@ export type ServiceEntitlementItem = {
   teacherName: string | null;
   productId: string;
   productName: string;
+  instrumentId: string | null;
   durationMinutes: number;
   sourceStartsAt: string;
   expiresAt: string | null;
@@ -35,7 +36,7 @@ export async function loadServiceEntitlements(
   const [peopleResult, eventsResult] = await Promise.all([
     supabase.from("people").select("id,first_name,last_name,preferred_name").eq("school_id", schoolId)
       .in("id", [...new Set(rows.flatMap((row) => [row.student_id, row.assigned_teacher_id].filter((id): id is string => Boolean(id))))]),
-    supabase.from("lesson_events").select("id,product_id,starts_at").eq("school_id", schoolId).in("id", rows.map((row) => row.source_lesson_event_id)),
+    supabase.from("lesson_events").select("id,product_id,instrument_id,starts_at").eq("school_id", schoolId).in("id", rows.map((row) => row.source_lesson_event_id)),
   ]);
   if (peopleResult.error || eventsResult.error) throw new Error("Lessons to schedule could not be resolved.");
   const productIds = [...new Set((eventsResult.data ?? []).map((event) => event.product_id))];
@@ -49,7 +50,7 @@ export async function loadServiceEntitlements(
     if (!event) return [];
     return [{ id: row.id, studentId: row.student_id, studentName: people.get(row.student_id) ?? "Student",
       teacherId: row.assigned_teacher_id, teacherName: row.assigned_teacher_id ? people.get(row.assigned_teacher_id) ?? "Teacher" : null, productId: event.product_id,
-      productName: productNames.get(event.product_id) ?? "Lesson", durationMinutes: row.duration_minutes,
+      productName: productNames.get(event.product_id) ?? "Lesson", instrumentId: event.instrument_id, durationMinutes: row.duration_minutes,
       sourceStartsAt: event.starts_at, expiresAt: row.expires_at }];
   });
 }

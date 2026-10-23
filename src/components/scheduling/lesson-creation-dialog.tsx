@@ -10,6 +10,8 @@ export type LessonCreationOptions = {
   students: LessonFormOption[];
   teachers: LessonFormTeacher[];
   products: LessonFormProduct[];
+  instruments: LessonFormOption[];
+  instrumentIdsByTeacher?: Record<string, string[]>;
   places: LessonFormPlace[];
   availability: LessonFormAvailability[];
   today: string;
@@ -17,7 +19,7 @@ export type LessonCreationOptions = {
   defaultStudentId?: string;
   primaryTeacherByStudent?: Record<string, string>;
   busyLessons?: Array<{ teacherId: string; studentId: string; startsAt: string; endsAt: string; status: string }>;
-  entitlement?: { id: string; studentId: string; productId: string; teacherId: string | null; durationMinutes: number };
+  entitlement?: { id: string; studentId: string; productId: string; instrumentId: string | null; teacherId: string | null; durationMinutes: number };
 };
 
 const initialState: CreateLessonState = { status: "idle", message: "" };

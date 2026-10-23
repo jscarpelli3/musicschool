@@ -13,6 +13,7 @@ export type RecordLessonCalendarItem = {
   teacherId: string;
   teacherName: string;
   productName: string;
+  instrumentName: string;
   placeName: string;
   startsAt: string;
   endsAt: string;
@@ -74,8 +75,9 @@ export function RecordLessonCalendar({ schoolId, id, lessons, rangeStart, rangeE
         <div className="rounded-control bg-canvas/55 p-3"><dt className="text-xs text-muted">Date</dt><dd className="mt-2 text-sm">{date.format(new Date(selectedLesson.startsAt))}</dd></div>
         <div className="rounded-control p-3"><dt className="text-xs text-muted">Time</dt><dd className="mt-2 text-sm">{time.format(new Date(selectedLesson.startsAt))}–{time.format(new Date(selectedLesson.endsAt))}</dd></div>
         <div className="rounded-control bg-canvas/55 p-3"><dt className="text-xs text-muted">Teacher</dt><dd className="mt-2 text-sm">{selectedLesson.teacherName}</dd></div>
-        <div className="rounded-control p-3"><dt className="text-xs text-muted">Place</dt><dd className="mt-2 text-sm">{selectedLesson.placeName}</dd></div>
-        <div className="rounded-control bg-canvas/55 p-3"><dt className="text-xs text-muted">Lesson</dt><dd className="mt-2 text-sm">{selectedLesson.productName}</dd></div>
+        <div className="rounded-control p-3"><dt className="text-xs text-muted">Instrument</dt><dd className="mt-2 text-sm">{selectedLesson.instrumentName}</dd></div>
+        <div className="rounded-control bg-canvas/55 p-3"><dt className="text-xs text-muted">Place</dt><dd className="mt-2 text-sm">{selectedLesson.placeName}</dd></div>
+        <div className="rounded-control p-3"><dt className="text-xs text-muted">Lesson</dt><dd className="mt-2 text-sm">{selectedLesson.productName}</dd></div>
       </dl>
   </LessonDrawerShell> : null}</>;
 }

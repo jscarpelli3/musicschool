@@ -16,7 +16,7 @@ export function ProductForm({ schoolId, returnPath }: { schoolId: string; return
       <div className="grid gap-x-10 gap-y-8 md:grid-cols-2">
         <label className="md:col-span-2">
           <span className="block text-xs text-muted">Name</span>
-          <input required name="name" maxLength={120} className={fieldClass} placeholder="Weekly piano lesson" />
+          <input required name="name" maxLength={120} className={fieldClass} placeholder="30-minute private lesson" />
         </label>
         <label>
           <span className="block text-xs text-muted">Format</span>
