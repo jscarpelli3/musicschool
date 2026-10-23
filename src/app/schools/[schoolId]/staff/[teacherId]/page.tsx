@@ -41,7 +41,7 @@ export default async function StaffTeacherPage({ params }: {
   const [studentRowsResult, peopleResult, productsResult, placesResult, membersResult, teacherInstrumentsResult, instrumentsResult] = await Promise.all([
     supabase.from("students").select("person_id,primary_teacher_id").eq("school_id",schoolId).in("enrollment_status",["active","prospect"]),
     supabase.from("people").select("id,first_name,last_name,preferred_name").eq("school_id",schoolId).eq("status","active"),
-    supabase.from("service_products").select("id,name,duration_minutes,price_cents,currency,default_schedule_type").eq("school_id",schoolId).eq("status","active").eq("format","private_lesson").order("name"),
+    supabase.from("service_products").select("id,name,duration_minutes,price_cents,currency").eq("school_id",schoolId).eq("status","active").eq("format","private_lesson").order("name"),
     supabase.from("lesson_places").select("id,name,kind").eq("school_id",schoolId).eq("status","active").order("name"),
     supabase.from("school_members").select("profile_id,role,status").eq("school_id",schoolId),
     supabase.from("teacher_instruments").select("instrument_id").eq("school_id",schoolId).eq("teacher_id",teacherId),
@@ -83,7 +83,7 @@ export default async function StaffTeacherPage({ params }: {
     students: (studentRowsResult.data ?? []).flatMap(({person_id}) => { const person=peopleById.get(person_id); return person ? [{id:person_id,label:personDisplayName(person)}] : []; }),
     primaryTeacherByStudent: Object.fromEntries((studentRowsResult.data ?? []).flatMap((student) => student.primary_teacher_id ? [[student.person_id, student.primary_teacher_id]] : [])),
     teachers: [{id:teacherId,label:teacherName,outsideAvailabilityPolicy:teacherRecord.outside_availability_policy === "require_approval" ? "require_approval" as const : "notify_only" as const}],
-    products: (productsResult.data ?? []).map((product) => ({id:product.id,label:product.name,durationMinutes:product.duration_minutes,priceLabel:new Intl.NumberFormat("en-US",{style:"currency",currency:product.currency}).format(product.price_cents/100),defaultScheduleType:product.default_schedule_type === "one_time" ? "one_time" as const : "weekly" as const})),
+    products: (productsResult.data ?? []).map((product) => ({id:product.id,label:product.name,durationMinutes:product.duration_minutes,priceLabel:new Intl.NumberFormat("en-US",{style:"currency",currency:product.currency}).format(product.price_cents/100)})),
     instruments:(instrumentsResult.data??[]).filter((instrument)=>instrument.is_active).map((instrument)=>({id:instrument.id,label:instrument.name})),instrumentIdsByTeacher:{[teacherId]:(teacherInstrumentsResult.data??[]).map((item)=>item.instrument_id)},
     places: (placesResult.data ?? []).filter((place)=>["school","student_home","online"].includes(place.kind)).map((place) => ({id:place.id,label:lessonPlaceLabel(place),kind:place.kind as "school"|"student_home"|"online"})),availability:schedule.availability,
     busyLessons:schedule.lessons.map((lesson)=>({teacherId,studentId:lesson.student_id,startsAt:lesson.starts_at,endsAt:lesson.ends_at,status:lesson.status})),today:initialDate,minimumTimeToday,

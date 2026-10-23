@@ -4503,17 +4503,13 @@ export type Database = {
           created_by: string
           currency: string
           description: string | null
-          default_schedule_type: string
           duration_minutes: number
           format: string
           id: string
-          interval_count: number
-          interval_unit: string
           name: string
           price_cents: number
           pricing_model: string
           school_id: string
-          sessions_per_interval: number
           status: string
           stripe_account_id: string | null
           stripe_price_id: string | null
@@ -4528,17 +4524,13 @@ export type Database = {
           created_by: string
           currency?: string
           description?: string | null
-          default_schedule_type?: string
           duration_minutes: number
           format: string
           id?: string
-          interval_count?: number
-          interval_unit?: string
           name: string
           price_cents: number
           pricing_model?: string
           school_id: string
-          sessions_per_interval?: number
           status?: string
           stripe_account_id?: string | null
           stripe_price_id?: string | null
@@ -4553,17 +4545,13 @@ export type Database = {
           created_by?: string
           currency?: string
           description?: string | null
-          default_schedule_type?: string
           duration_minutes?: number
           format?: string
           id?: string
-          interval_count?: number
-          interval_unit?: string
           name?: string
           price_cents?: number
           pricing_model?: string
           school_id?: string
-          sessions_per_interval?: number
           status?: string
           stripe_account_id?: string | null
           stripe_price_id?: string | null

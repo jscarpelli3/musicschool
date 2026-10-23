@@ -275,3 +275,10 @@ Use one entry per meaningful technical or product decision.
 - Decision: An offering defines what can be billed: label, duration, format/capacity, cadence default, billing timing, and price. A scheduled lesson occurrence owns its student, teacher, instrument, place, and time. A recurring series supplies default instrument/place values, while an occurrence may retain or override them.
 - Decision: Teacher-instrument mappings guide defaults and make exceptions visible but do not forbid an owner override. Student home and Online are built-in place choices; only physical school rooms are owner-configurable.
 - Consequences: Billing snapshots continue to reference the offering and never recalculate from instrument or place. Scheduling creation boundaries require an active school instrument, future series generators inherit the series default, and historical ambiguous instruments remain unknown rather than guessed.
+
+# 2026-10-23 — Cadence belongs to the scheduled series
+
+- Status: accepted
+- Context: The same billable offering may be used once, weekly, or eventually with another recurrence. Storing a preferred cadence on the offering makes a pricing definition quietly control the calendar.
+- Decision: Offerings do not own recurrence or a scheduling default. The lesson composer owns the one-time/series choice; Common Time may preselect Weekly as an application workflow convenience, but that preference is not stored on or inferred from the offering.
+- Consequences: Selecting a different offering preserves the owner's cadence choice. Series recurrence remains on `lesson_series`; individual lessons remain free-standing occurrences. Financial price and billing-timing terms remain on the offering.

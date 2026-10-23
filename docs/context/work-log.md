@@ -222,3 +222,11 @@ Use this file for short chronological notes about meaningful work.
 - Kept instrument and place out of billing calculations and immutable price snapshots. Owner/student/family/teacher drawers and the payer portal display instrument separately from the offering.
 - Added migration invariants that fail if offerings acquire scheduling columns, recurrence/proposal propagation disappears, or authenticated callers regain an instrument-free lesson creation RPC.
 - Typecheck, ESLint, and the production build pass. There is no generic `npm test` script. Persistent staging accepted migrations `20261022230000` and `20261022231000`; the invariant migration passed. Linked database lint reports only two pre-existing unrelated unused-variable warnings. Local clean replay is unavailable because Docker is not installed.
+
+## 2026-10-23 — Move cadence entirely into scheduling
+
+- Removed the offering-level “usual scheduling” choice and the legacy hidden sessions-per-interval cadence fields.
+- Offerings now describe only the billable lesson/class: name, format/capacity, duration, price, and billing timing.
+- Normal lesson creation defaults to a weekly series, replacement lessons remain one-time, and the owner chooses Weekly or One lesson in the scheduling flow. Changing the offering no longer changes that scheduling choice.
+- Offering lists no longer show a guessed weekly cadence or four-week estimate. Student roster language now reflects the actual occurrence: Weekly series or One lesson.
+- Migration `20261023090000_move_cadence_to_scheduling.sql` removes the four cadence columns and verifies recurrence remains on `lesson_series`.
