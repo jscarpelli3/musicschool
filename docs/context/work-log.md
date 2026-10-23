@@ -247,3 +247,4 @@ Use this file for short chronological notes about meaningful work.
 - Saving the instrument preserves all entered lesson details, adds it to the school catalog, selects it immediately, and confirms the result with the shared toast pattern.
 - Find an Opening now centers and emphasizes its week picker. Previous/next are recognizable bordered buttons rather than bare arrow glyphs, while the current weekly range remains the primary label.
 - Header Invoices, Approvals, and Notifications controls now receive a slow, low-contrast traveling border/glow only while their respective queues contain something requiring attention. The cue becomes static for reduced-motion preferences and disappears when the queue is clear.
+- Moved the compact Find an opening and Prepare invoice actions into the right-side utility cluster directly above Invoices, Approvals, and Notifications, keeping the primary section tabs visually separate from operational shortcuts.
