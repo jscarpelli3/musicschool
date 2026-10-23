@@ -23,6 +23,12 @@ export type CreateLessonPlaceState = {
   place?: { id: string; label: string; kind: "school" };
 };
 
+export type CreateLessonInstrumentState = {
+  status: "success" | "error";
+  message: string;
+  instrument?: { id: string; label: string };
+};
+
 export type StudentHomeLocationState = "idle" | "checking" | "ready" | "missing" | "ambiguous" | "unavailable";
 
 export async function getStudentHomeLocationState(schoolId: string, studentId: string): Promise<StudentHomeLocationState> {
@@ -77,6 +83,36 @@ export async function createLessonPlace(
   revalidatePath(`/schools/${schoolId}`);
   revalidatePath(`/schools/${schoolId}/places`);
   return { status: "success", message: `${place.name} was added and selected.`, place: { id: place.id, label: place.name, kind: "school" } };
+}
+
+export async function createLessonInstrument(
+  schoolId: string,
+  formData: FormData,
+): Promise<CreateLessonInstrumentState> {
+  const name = String(formData.get("name") ?? "").trim().replace(/\s+/g, " ");
+  if (!name || name.length > 80) return { status: "error", message: "Enter an instrument name up to 80 characters." };
+
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) return { status: "error", message: "Your session expired. Sign in again before adding an instrument." };
+  if (!await checkSchoolCapability(supabase, schoolId, "school.staff.directory_manage")) {
+    return { status: "error", message: "You do not have permission to add instruments for this school." };
+  }
+
+  const { data: current, error: currentError } = await supabase.from("school_instruments")
+    .select("name").eq("school_id", schoolId).eq("is_active", true);
+  if (currentError) return { status: "error", message: "The school’s instrument list could not be loaded. Your lesson details are still here." };
+  const names = [...(current ?? []).map((instrument) => instrument.name), name];
+  const { error } = await supabase.rpc("set_school_instrument_catalog", { p_school_id: schoolId, p_names: names });
+  if (error) return { status: "error", message: "The instrument could not be added. Your lesson details are still here." };
+
+  const { data: instrument } = await supabase.from("school_instruments").select("id,name")
+    .eq("school_id", schoolId).eq("normalized_name", name.toLocaleLowerCase()).eq("is_active", true).maybeSingle();
+  if (!instrument) return { status: "error", message: "The instrument was saved, but it could not be selected. Reopen the lesson form and try again." };
+  revalidatePath(`/schools/${schoolId}`);
+  revalidatePath(`/schools/${schoolId}/setup`);
+  revalidatePath(`/schools/${schoolId}/onboarding`);
+  return { status: "success", message: `${instrument.name} was added and selected.`, instrument: { id: instrument.id, label: instrument.name } };
 }
 
 const knownErrors: Record<string, string> = {

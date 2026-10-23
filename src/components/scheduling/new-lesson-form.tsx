@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
-import type { CreateLessonPlaceState, CreateLessonState, StudentHomeLocationState } from "@/app/schools/[schoolId]/lessons/new/actions";
+import type { CreateLessonInstrumentState, CreateLessonPlaceState, CreateLessonState, StudentHomeLocationState } from "@/app/schools/[schoolId]/lessons/new/actions";
 import { clockTime, fiveMinuteTimeOptions, minutesFromTime } from "@/lib/scheduling/time-options";
 import { AppSelect } from "@/components/ui/app-select";
 
@@ -81,6 +81,7 @@ function AvailabilityContext({
 export function NewLessonForm({
   action,
   createPlaceAction,
+  createInstrumentAction,
   checkHomeLocationAction,
   initialState,
   students,
@@ -107,6 +108,7 @@ export function NewLessonForm({
 }: {
   action: (state: CreateLessonState, formData: FormData) => Promise<CreateLessonState>;
   createPlaceAction: (formData: FormData) => Promise<CreateLessonPlaceState>;
+  createInstrumentAction: (formData: FormData) => Promise<CreateLessonInstrumentState>;
   checkHomeLocationAction: (studentId: string) => Promise<StudentHomeLocationState>;
   initialState: CreateLessonState;
   students: LessonFormOption[];
@@ -140,7 +142,12 @@ export function NewLessonForm({
   const startingProductId = entitlement?.productId ?? (products.some((product) => product.id === defaultProductId) ? defaultProductId! : "");
   const [productId, setProductId] = useState(startingProductId);
   const startingTeacherInstruments = instrumentIdsByTeacher[startingTeacherId] ?? [];
+  const [availableInstruments, setAvailableInstruments] = useState(instruments);
   const [instrumentId, setInstrumentId] = useState(entitlement?.instrumentId ?? (startingTeacherInstruments.length === 1 ? startingTeacherInstruments[0] : instruments.length === 1 ? instruments[0].id : ""));
+  const [showNewInstrument, setShowNewInstrument] = useState(false);
+  const [instrumentName, setInstrumentName] = useState("");
+  const [instrumentMessage, setInstrumentMessage] = useState("");
+  const [instrumentPending, startInstrumentTransition] = useTransition();
   const [date, setDate] = useState(initialDate ?? today);
   const [time, setTime] = useState(initialTime);
   const [placeId, setPlaceId] = useState("");
@@ -222,7 +229,30 @@ export function NewLessonForm({
       <label className="md:col-span-2"><span className="text-xs text-muted">Student</span><AppSelect required name="student_id" value={studentId} onChange={(event) => { const nextStudentId = event.target.value; const nextTeacherId = lockedTeacherId ?? primaryTeacherByStudent[nextStudentId] ?? ""; setStudentId(nextStudentId); if (!lockedTeacherId) setTeacherId(nextTeacherId); const qualified = instrumentIdsByTeacher[nextTeacherId] ?? []; if (!instrumentId && qualified.length === 1) setInstrumentId(qualified[0]); invalidateConflictingTime(nextTeacherId, date); checkHomeLocation(placeId, nextStudentId); }} disabled={Boolean(entitlement)} className={field}><option value="" disabled>Select a student</option>{students.map((student) => <option key={student.id} value={student.id}>{student.label}</option>)}</AppSelect>{entitlement ? <><input type="hidden" name="student_id" value={entitlement.studentId} /><span className="mt-2 block text-xs text-brand">Replacement lesson · this student is fixed</span></> : null}</label>
       {lockedTeacherId ? <div><span className="text-xs text-muted">Teacher</span><p className="border-b border-line py-3">{teacher?.label}</p><input type="hidden" name="teacher_id" value={lockedTeacherId} /></div> : <label><span className="text-xs text-muted">Teacher</span><AppSelect required name="teacher_id" value={teacherId} onChange={(event) => { const nextTeacherId = event.target.value; setTeacherId(nextTeacherId); const qualified = instrumentIdsByTeacher[nextTeacherId] ?? []; if (!instrumentId && qualified.length === 1) setInstrumentId(qualified[0]); invalidateConflictingTime(nextTeacherId, date); }} className={field}><option value="" disabled>Select a teacher</option>{teachers.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</AppSelect></label>}
       <label><span className="text-xs text-muted">Lesson offering</span><AppSelect required name="product_id" value={productId} disabled={Boolean(entitlement)} onChange={(event) => { const nextProduct = products.find((option) => option.id === event.target.value); setProductId(event.target.value); invalidateConflictingTime(teacherId, date, nextProduct); }} className={field}><option value="" disabled>Select an offering</option>{products.map((option) => <option key={option.id} value={option.id}>{option.label} · {option.durationMinutes} min · {entitlement?"no new charge":option.priceLabel}</option>)}</AppSelect>{entitlement ? <input type="hidden" name="product_id" value={entitlement.productId} /> : null}</label>
-      <label className="md:col-span-2"><span className="text-xs text-muted">Instrument</span><AppSelect required name="instrument_id" value={instrumentId} onChange={(event) => setInstrumentId(event.target.value)} className={field}><option value="" disabled>{instruments.length ? "Select an instrument" : "Add instruments in School settings first"}</option>{instruments.map((instrument) => <option key={instrument.id} value={instrument.id}>{instrument.label}{teacherId && teacherInstrumentIds.includes(instrument.id) ? " · taught by selected teacher" : ""}</option>)}</AppSelect>{instrumentId && teacherId && teacherInstrumentIds.length > 0 && !teacherInstrumentIds.includes(instrumentId) ? <span className="mt-2 block text-xs text-brand">This is outside the selected teacher’s listed instruments. You can still schedule the exception.</span> : null}</label>
+      <div className="md:col-span-2">
+        <label><span className="text-xs text-muted">Instrument</span><AppSelect required name="instrument_id" value={instrumentId} onChange={(event) => setInstrumentId(event.target.value)} className={field}><option value="" disabled>{availableInstruments.length ? "Select an instrument" : "No instruments yet"}</option>{availableInstruments.map((instrument) => <option key={instrument.id} value={instrument.id}>{instrument.label}{teacherId && teacherInstrumentIds.includes(instrument.id) ? " · taught by selected teacher" : ""}</option>)}</AppSelect></label>
+        <button type="button" onClick={() => { setShowNewInstrument((current) => !current); setInstrumentMessage(""); }} className="mt-2 text-xs text-brand hover:text-brand-hover">{showNewInstrument ? "Cancel" : "+ Add an instrument"}</button>
+        {showNewInstrument ? <div className="mt-4 rounded-md bg-surface-raised p-4">
+          <p className="text-sm font-medium">New instrument</p>
+          <label className="mt-3 block"><span className="text-xs text-muted">Instrument name</span><input value={instrumentName} onChange={(event) => setInstrumentName(event.target.value)} maxLength={80} className={field} placeholder="Piano" /></label>
+          {instrumentMessage ? <p role="status" className="mt-3 text-xs text-danger">{instrumentMessage}</p> : null}
+          <button type="button" disabled={instrumentPending || !instrumentName.trim()} onClick={() => {
+            const data = new FormData();
+            data.set("name", instrumentName);
+            startInstrumentTransition(async () => {
+              const result = await createInstrumentAction(data);
+              setInstrumentMessage(result.message);
+              if (!result.instrument) return;
+              setAvailableInstruments((current) => [...current.filter((instrument) => instrument.id !== result.instrument!.id), result.instrument!].sort((a, b) => a.label.localeCompare(b.label)));
+              setInstrumentId(result.instrument.id);
+              setInstrumentName("");
+              setShowNewInstrument(false);
+              window.dispatchEvent(new CustomEvent("common-time:toast", { detail: { title: "Instrument added", message: result.message } }));
+            });
+          }} className="mt-4 rounded-md bg-brand px-4 py-2 text-sm text-surface transition hover:opacity-90 disabled:opacity-50">{instrumentPending ? "Adding…" : "Add and select instrument"}</button>
+        </div> : null}
+        {instrumentId && teacherId && teacherInstrumentIds.length > 0 && !teacherInstrumentIds.includes(instrumentId) ? <span className="mt-2 block text-xs text-brand">This is outside the selected teacher’s listed instruments. You can still schedule the exception.</span> : null}
+      </div>
       <label><span className="text-xs text-muted">Date</span><input required name="date" type="date" min={today} value={date} onChange={(event) => { setDate(event.target.value); invalidateConflictingTime(teacherId, event.target.value); }} className={field} /></label>
       <label><span className="text-xs text-muted">Start time</span><AppSelect ref={timeRef} required name="time" value={time} aria-invalid={state.field === "time" || Boolean(conflictMessage)} onChange={(event) => { setTime(event.target.value); setConflictMessage(""); }} className={`${field} ${state.field === "time" || conflictMessage ? "border-danger" : ""}`}><option value="" disabled>Select a time</option>{fiveMinuteTimeOptions.map((option) => { const passed = date === today && Boolean(minimumTimeToday) && option.value <= minimumTimeToday!; const booked = conflictsAt(option.value); return <option key={option.value} value={option.value} disabled={passed || booked}>{option.label}{passed ? " · passed" : booked ? " · teacher booked" : ""}</option>; })}</AppSelect><span className="mt-2 block text-[11px] text-muted">Five-minute increments{date === today && minimumTimeToday ? ` · choose a time after ${clockTime(minutesFromTime(minimumTimeToday))}` : ""}</span></label>
       {conflictMessage ? <div role="alert" className="md:col-span-2 border-2 border-danger bg-danger/10 p-4 text-sm text-danger"><p className="font-medium">Selected time cleared</p><p className="mt-1">{conflictMessage}</p></div> : null}

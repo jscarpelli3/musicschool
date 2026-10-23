@@ -230,3 +230,18 @@ Use this file for short chronological notes about meaningful work.
 - Normal lesson creation defaults to a weekly series, replacement lessons remain one-time, and the owner chooses Weekly or One lesson in the scheduling flow. Changing the offering no longer changes that scheduling choice.
 - Offering lists no longer show a guessed weekly cadence or four-week estimate. Student roster language now reflects the actual occurrence: Weekly series or One lesson.
 - Migration `20261023090000_move_cadence_to_scheduling.sql` removes the four cadence columns and verifies recurrence remains on `lesson_series`.
+
+## 2026-10-23 — Prospects, waitlist, and roster intake discovery
+
+- A beta tester's existing roster surfaced the need to track people before they become active students or billing families.
+- Preserve the existing domain distinction: an inquiry or waitlist entry must not silently create an active billing account, payer portal access, invoices, or payment setup work.
+- Build a lightweight prospective-contact pipeline with clear stages such as New inquiry, Waitlist, Ready to enroll, Enrolled, and Not moving forward. A prospect may include a prospective student and responsible contact, but incomplete details must be allowed.
+- Enrollment should be an explicit conversion that reuses the existing connected student/payer creation flow, carries forward known contact information, and keeps a history of the earlier inquiry/waitlist state instead of requiring duplicate entry.
+- Future roster ingestion should map imported records into this reviewable prospect pipeline first. Google Docs should not be treated as a durable integration source; accept a structured CSV/export or a deliberate reviewed import before creating records.
+- This is queued behind the current staging-first scheduling release and production acceptance tests for scheduling, invoice approval/payment, cancellation, and rescheduling.
+
+## 2026-10-23 — Inline instrument recovery while scheduling
+
+- Staging acceptance confirmed that the separated offering, instrument, place, and cadence choices are understandable in the normal lesson flow.
+- When a school has no instruments, lesson creation now says so and offers `+ Add an instrument` in place, matching the established school-room recovery pattern.
+- Saving the instrument preserves all entered lesson details, adds it to the school catalog, selects it immediately, and confirms the result with the shared toast pattern.

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createLessonPlace, createSingleLesson, getStudentHomeLocationState, type CreateLessonState } from "@/app/schools/[schoolId]/lessons/new/actions";
+import { createLessonInstrument, createLessonPlace, createSingleLesson, getStudentHomeLocationState, type CreateLessonState } from "@/app/schools/[schoolId]/lessons/new/actions";
 import { NewLessonForm, type LessonFormAvailability, type LessonFormOption, type LessonFormPlace, type LessonFormProduct, type LessonFormTeacher } from "./new-lesson-form";
 import styles from "./lesson-creation-dialog.module.css";
 
@@ -51,6 +51,7 @@ export function LessonCreationDialog({ schoolId, slot, options, lockTeacher, tim
           key={`${slot.dateKey}-${slot.time}-${slot.teacherId}`}
           action={createSingleLesson.bind(null, schoolId)}
           createPlaceAction={createLessonPlace.bind(null, schoolId)}
+          createInstrumentAction={createLessonInstrument.bind(null, schoolId)}
           checkHomeLocationAction={getStudentHomeLocationState.bind(null, schoolId)}
           initialState={initialState}
           {...options}
