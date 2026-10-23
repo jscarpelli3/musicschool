@@ -211,3 +211,41 @@ Use this file for short chronological notes about meaningful work.
 - Expanded the dashboard quick-launch area into a responsive row of three matching large buttons: Find an opening, Add student, and Add payer. The latter two reuse the existing atomic student+payer creation workflow with tailored titles and explanations; payer creation explicitly includes its required first student. This UI pass remains local.
 - Completed the symmetrical dashboard entry flows. Add student can connect a new student to an existing payer or create a new payer; Add payer can connect a new payer to an existing unconnected student or create a new student. Added an atomic, capability-checked, idempotent, audited database function for the existing-student path while preserving one billing account per student. This change requires applying the new migration before end-to-end testing.
 - Validation passed for TypeScript, ESLint, and diff whitespace. Local Supabase DB lint could not start because the CLI cannot parse the repository's `.env.local`; staging was intentionally left unchanged during this local UI phase. Apply `20261013143000_create_payer_for_existing_student.sql` before testing the existing-student payer path.
+
+## 2026-10-22 — Separate billable offerings from scheduled lesson details
+
+- Audited the offering, lesson, recurring-series, teacher-approval, replacement-lesson, portal, and billing paths after the location-model discussion.
+- Confirmed offerings remain billable definitions only: name, format/capacity, duration, scheduling default, billing timing, and price. They do not own an instrument or place.
+- Added an explicit school instrument to lesson occurrences, recurring-series defaults, and outside-availability proposals. New scheduling requires it; historical rows are inferred only where a teacher has exactly one active instrument and otherwise remain honestly unknown.
+- Carried instruments through weekly occurrences, teacher-approved proposals, proposal replacements, and retained/replacement lessons. Owners may schedule an instrument outside a teacher's listed specialties as a visible exception; it is guidance, not a hard wall.
+- Made Student home and Online built-in scheduling choices. New configurable places are school rooms only, managed under School Info; legacy other-place records remain for historical references but are excluded from new scheduling.
+- Kept instrument and place out of billing calculations and immutable price snapshots. Owner/student/family/teacher drawers and the payer portal display instrument separately from the offering.
+- Added migration invariants that fail if offerings acquire scheduling columns, recurrence/proposal propagation disappears, or authenticated callers regain an instrument-free lesson creation RPC.
+- Typecheck, ESLint, and the production build pass. There is no generic `npm test` script. Persistent staging accepted migrations `20261022230000` and `20261022231000`; the invariant migration passed. Linked database lint reports only two pre-existing unrelated unused-variable warnings. Local clean replay is unavailable because Docker is not installed.
+
+## 2026-10-23 — Move cadence entirely into scheduling
+
+- Removed the offering-level “usual scheduling” choice and the legacy hidden sessions-per-interval cadence fields.
+- Offerings now describe only the billable lesson/class: name, format/capacity, duration, price, and billing timing.
+- Normal lesson creation defaults to a weekly series, replacement lessons remain one-time, and the owner chooses Weekly or One lesson in the scheduling flow. Changing the offering no longer changes that scheduling choice.
+- Offering lists no longer show a guessed weekly cadence or four-week estimate. Student roster language now reflects the actual occurrence: Weekly series or One lesson.
+- Migration `20261023090000_move_cadence_to_scheduling.sql` removes the four cadence columns and verifies recurrence remains on `lesson_series`.
+
+## 2026-10-23 — Prospects, waitlist, and roster intake discovery
+
+- A beta tester's existing roster surfaced the need to track people before they become active students or billing families.
+- Preserve the existing domain distinction: an inquiry or waitlist entry must not silently create an active billing account, payer portal access, invoices, or payment setup work.
+- Build a lightweight prospective-contact pipeline with clear stages such as New inquiry, Waitlist, Ready to enroll, Enrolled, and Not moving forward. A prospect may include a prospective student and responsible contact, but incomplete details must be allowed.
+- Enrollment should be an explicit conversion that reuses the existing connected student/payer creation flow, carries forward known contact information, and keeps a history of the earlier inquiry/waitlist state instead of requiring duplicate entry.
+- Future roster ingestion should map imported records into this reviewable prospect pipeline first. Google Docs should not be treated as a durable integration source; accept a structured CSV/export or a deliberate reviewed import before creating records.
+- This is queued behind the current staging-first scheduling release and production acceptance tests for scheduling, invoice approval/payment, cancellation, and rescheduling.
+
+## 2026-10-23 — Inline instrument recovery while scheduling
+
+- Staging acceptance confirmed that the separated offering, instrument, place, and cadence choices are understandable in the normal lesson flow.
+- When a school has no instruments, lesson creation now says so and offers `+ Add an instrument` in place, matching the established school-room recovery pattern.
+- Saving the instrument preserves all entered lesson details, adds it to the school catalog, selects it immediately, and confirms the result with the shared toast pattern.
+- Find an Opening now centers and emphasizes its week picker. Previous/next are recognizable bordered buttons rather than bare arrow glyphs, while the current weekly range remains the primary label.
+- Header Invoices, Approvals, and Notifications controls now receive a slow, low-contrast traveling border/glow only while their respective queues contain something requiring attention. The cue becomes static for reduced-motion preferences and disappears when the queue is clear.
+- Moved the compact Find an opening and Prepare invoice actions into the right-side utility cluster directly above Invoices, Approvals, and Notifications, keeping the primary section tabs visually separate from operational shortcuts.
+- Refined that header hierarchy into two full rows: Find an opening and Prepare invoice occupy the right-aligned top row; the former primary row moves below with section tabs on the left and the three attention queues on the right.

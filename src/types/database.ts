@@ -1947,6 +1947,7 @@ export type Database = {
           ends_at: string
           exception_reason: string | null
           id: string
+          instrument_id: string | null
           is_series_exception: boolean
           lesson_series_id: string | null
           notes: string | null
@@ -1978,6 +1979,7 @@ export type Database = {
           ends_at: string
           exception_reason?: string | null
           id?: string
+          instrument_id?: string | null
           is_series_exception?: boolean
           lesson_series_id?: string | null
           notes?: string | null
@@ -2009,6 +2011,7 @@ export type Database = {
           ends_at?: string
           exception_reason?: string | null
           id?: string
+          instrument_id?: string | null
           is_series_exception?: boolean
           lesson_series_id?: string | null
           notes?: string | null
@@ -2050,6 +2053,13 @@ export type Database = {
             columns: ["school_id", "actual_place_id"]
             isOneToOne: false
             referencedRelation: "lesson_places"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "lesson_events_school_id_instrument_id_fkey"
+            columns: ["school_id", "instrument_id"]
+            isOneToOne: false
+            referencedRelation: "school_instruments"
             referencedColumns: ["school_id", "id"]
           },
           {
@@ -2444,6 +2454,7 @@ export type Database = {
           decision_note: string | null
           ends_on: string | null
           id: string
+          instrument_id: string | null
           lesson_event_id: string | null
           notes: string | null
           original_ends_at: string | null
@@ -2477,6 +2488,7 @@ export type Database = {
           decision_note?: string | null
           ends_on?: string | null
           id?: string
+          instrument_id?: string | null
           lesson_event_id?: string | null
           notes?: string | null
           original_ends_at?: string | null
@@ -2510,6 +2522,7 @@ export type Database = {
           decision_note?: string | null
           ends_on?: string | null
           id?: string
+          instrument_id?: string | null
           lesson_event_id?: string | null
           notes?: string | null
           original_ends_at?: string | null
@@ -2561,6 +2574,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "schools"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_schedule_proposals_school_id_instrument_id_fkey"
+            columns: ["school_id", "instrument_id"]
+            isOneToOne: false
+            referencedRelation: "school_instruments"
+            referencedColumns: ["school_id", "id"]
           },
           {
             foreignKeyName: "lesson_schedule_proposals_school_id_lesson_event_id_fkey"
@@ -2620,6 +2640,7 @@ export type Database = {
           default_place_id: string
           ends_on: string | null
           id: string
+          instrument_id: string | null
           product_id: string
           recurrence_rule: Json
           school_id: string
@@ -2635,6 +2656,7 @@ export type Database = {
           default_place_id: string
           ends_on?: string | null
           id?: string
+          instrument_id?: string | null
           product_id: string
           recurrence_rule: Json
           school_id: string
@@ -2650,6 +2672,7 @@ export type Database = {
           default_place_id?: string
           ends_on?: string | null
           id?: string
+          instrument_id?: string | null
           product_id?: string
           recurrence_rule?: Json
           school_id?: string
@@ -2680,6 +2703,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "schools"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_series_school_id_instrument_id_fkey"
+            columns: ["school_id", "instrument_id"]
+            isOneToOne: false
+            referencedRelation: "school_instruments"
+            referencedColumns: ["school_id", "id"]
           },
           {
             foreignKeyName: "lesson_series_school_id_product_id_fkey"
@@ -4473,17 +4503,13 @@ export type Database = {
           created_by: string
           currency: string
           description: string | null
-          default_schedule_type: string
           duration_minutes: number
           format: string
           id: string
-          interval_count: number
-          interval_unit: string
           name: string
           price_cents: number
           pricing_model: string
           school_id: string
-          sessions_per_interval: number
           status: string
           stripe_account_id: string | null
           stripe_price_id: string | null
@@ -4498,17 +4524,13 @@ export type Database = {
           created_by: string
           currency?: string
           description?: string | null
-          default_schedule_type?: string
           duration_minutes: number
           format: string
           id?: string
-          interval_count?: number
-          interval_unit?: string
           name: string
           price_cents: number
           pricing_model?: string
           school_id: string
-          sessions_per_interval?: number
           status?: string
           stripe_account_id?: string | null
           stripe_price_id?: string | null
@@ -4523,17 +4545,13 @@ export type Database = {
           created_by?: string
           currency?: string
           description?: string | null
-          default_schedule_type?: string
           duration_minutes?: number
           format?: string
           id?: string
-          interval_count?: number
-          interval_unit?: string
           name?: string
           price_cents?: number
           pricing_model?: string
           school_id?: string
-          sessions_per_interval?: number
           status?: string
           stripe_account_id?: string | null
           stripe_price_id?: string | null
@@ -5448,9 +5466,38 @@ export type Database = {
         }
         Returns: string
       }
+      create_outside_availability_entitlement_proposal_with_instrument: {
+        Args: {
+          p_entitlement_id: string
+          p_instrument_id: string
+          p_local_start: string
+          p_notes: string
+          p_place_id: string
+          p_reason: string
+          p_school_id: string
+          p_teacher_id: string
+        }
+        Returns: string
+      }
       create_outside_availability_lesson_proposal: {
         Args: {
           p_ends_on: string
+          p_local_start: string
+          p_notes: string
+          p_place_id: string
+          p_product_id: string
+          p_reason: string
+          p_schedule_type: string
+          p_school_id: string
+          p_student_id: string
+          p_teacher_id: string
+        }
+        Returns: string
+      }
+      create_outside_availability_lesson_proposal_with_instrument: {
+        Args: {
+          p_ends_on: string
+          p_instrument_id: string
           p_local_start: string
           p_notes: string
           p_place_id: string
@@ -5525,6 +5572,21 @@ export type Database = {
         }
         Returns: string
       }
+      create_single_lesson_with_instrument: {
+        Args: {
+          p_allow_outside_availability?: boolean
+          p_instrument_id: string
+          p_local_start: string
+          p_notes?: string
+          p_override_reason?: string
+          p_place_id: string
+          p_product_id: string
+          p_school_id: string
+          p_student_id: string
+          p_teacher_id: string
+        }
+        Returns: string
+      }
       create_teacher_record: {
         Args: {
           p_email: string
@@ -5539,6 +5601,22 @@ export type Database = {
         Args: {
           p_allow_outside_availability?: boolean
           p_ends_on: string
+          p_local_start: string
+          p_notes?: string
+          p_override_reason?: string
+          p_place_id: string
+          p_product_id: string
+          p_school_id: string
+          p_student_id: string
+          p_teacher_id: string
+        }
+        Returns: Json
+      }
+      create_weekly_lesson_series_with_instrument: {
+        Args: {
+          p_allow_outside_availability?: boolean
+          p_ends_on: string
+          p_instrument_id: string
           p_local_start: string
           p_notes?: string
           p_override_reason?: string
@@ -5681,6 +5759,7 @@ export type Database = {
         Args: never
         Returns: {
           ends_at: string
+          instrument_name: string | null
           lesson_id: string
           pending_request_id: string | null
           pending_request_status: string | null
@@ -6130,6 +6209,20 @@ export type Database = {
         Args: {
           p_allow_outside_availability?: boolean
           p_entitlement_id: string
+          p_local_start: string
+          p_notes?: string
+          p_override_reason?: string
+          p_place_id: string
+          p_school_id: string
+          p_teacher_id: string
+        }
+        Returns: string
+      }
+      schedule_service_entitlement_with_instrument: {
+        Args: {
+          p_allow_outside_availability?: boolean
+          p_entitlement_id: string
+          p_instrument_id: string
           p_local_start: string
           p_notes?: string
           p_override_reason?: string

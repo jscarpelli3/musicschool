@@ -20,20 +20,41 @@ export type CreateLessonState = {
 export type CreateLessonPlaceState = {
   status: "success" | "error";
   message: string;
-  place?: { id: string; label: string; kind: "school" | "student_home" | "online" | "other" };
+  place?: { id: string; label: string; kind: "school" };
 };
+
+export type CreateLessonInstrumentState = {
+  status: "success" | "error";
+  message: string;
+  instrument?: { id: string; label: string };
+};
+
+export type StudentHomeLocationState = "idle" | "checking" | "ready" | "missing" | "ambiguous" | "unavailable";
+
+export async function getStudentHomeLocationState(schoolId: string, studentId: string): Promise<StudentHomeLocationState> {
+  if (!/^[0-9a-f-]{36}$/i.test(studentId)) return "unavailable";
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub || !await checkSchoolCapability(supabase, schoolId, "school.lessons.manage")) return "unavailable";
+  const { data: links, error: linkError } = await supabase.from("billing_account_students").select("billing_account_id").eq("school_id", schoolId).eq("student_id", studentId);
+  if (linkError || !links?.length) return "unavailable";
+  const accountIds = links.map((link) => link.billing_account_id);
+  const { data: locations, error } = await supabase.from("family_service_locations").select("id").eq("school_id", schoolId).in("billing_account_id", accountIds).eq("status", "active");
+  if (error) return "unavailable";
+  if ((locations?.length ?? 0) > 1) return "ambiguous";
+  return locations?.length === 1 ? "ready" : links.length === 1 ? "missing" : "ambiguous";
+}
 
 export async function createLessonPlace(
   schoolId: string,
   formData: FormData,
 ): Promise<CreateLessonPlaceState> {
-  const name = String(formData.get("name") ?? "").trim();
+  const kind = "school" as const;
+  const submittedName = String(formData.get("name") ?? "").trim();
+  const name = submittedName;
   const details = String(formData.get("details") ?? "").trim() || null;
-  const kind = String(formData.get("kind") ?? "school") as "school" | "student_home" | "online" | "other";
   if (!name || name.length > 120) return { status: "error", message: "Enter a place name up to 120 characters." };
   if (details && details.length > 500) return { status: "error", message: "Place details must be 500 characters or fewer." };
-  if (!["school", "student_home", "online", "other"].includes(kind)) return { status: "error", message: "Choose a valid place type." };
-  if (kind === "student_home" && details) return { status: "error", message: "Add the protected home address from the family record instead." };
 
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
@@ -54,14 +75,44 @@ export async function createLessonPlace(
     if (error?.code === "23505") {
       const { data: existing } = await supabase.from("lesson_places").select("id,name,kind")
         .eq("school_id", schoolId).eq("name", name).eq("status", "active").maybeSingle();
-      if (existing) return { status: "success", message: `${existing.name} was already on the list and is now selected.`, place: { id: existing.id, label: existing.name, kind: existing.kind as "school" | "student_home" | "online" | "other" } };
+      if (existing?.kind === "school") return { status: "success", message: `${existing.name} was already on the list and is now selected.`, place: { id: existing.id, label: existing.name, kind: "school" } };
     }
     return { status: "error", message: "The place could not be added. Your lesson details are still here." };
   }
 
   revalidatePath(`/schools/${schoolId}`);
   revalidatePath(`/schools/${schoolId}/places`);
-  return { status: "success", message: `${place.name} was added and selected.`, place: { id: place.id, label: place.name, kind: place.kind as "school" | "student_home" | "online" | "other" } };
+  return { status: "success", message: `${place.name} was added and selected.`, place: { id: place.id, label: place.name, kind: "school" } };
+}
+
+export async function createLessonInstrument(
+  schoolId: string,
+  formData: FormData,
+): Promise<CreateLessonInstrumentState> {
+  const name = String(formData.get("name") ?? "").trim().replace(/\s+/g, " ");
+  if (!name || name.length > 80) return { status: "error", message: "Enter an instrument name up to 80 characters." };
+
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) return { status: "error", message: "Your session expired. Sign in again before adding an instrument." };
+  if (!await checkSchoolCapability(supabase, schoolId, "school.staff.directory_manage")) {
+    return { status: "error", message: "You do not have permission to add instruments for this school." };
+  }
+
+  const { data: current, error: currentError } = await supabase.from("school_instruments")
+    .select("name").eq("school_id", schoolId).eq("is_active", true);
+  if (currentError) return { status: "error", message: "The school’s instrument list could not be loaded. Your lesson details are still here." };
+  const names = [...(current ?? []).map((instrument) => instrument.name), name];
+  const { error } = await supabase.rpc("set_school_instrument_catalog", { p_school_id: schoolId, p_names: names });
+  if (error) return { status: "error", message: "The instrument could not be added. Your lesson details are still here." };
+
+  const { data: instrument } = await supabase.from("school_instruments").select("id,name")
+    .eq("school_id", schoolId).eq("normalized_name", name.toLocaleLowerCase()).eq("is_active", true).maybeSingle();
+  if (!instrument) return { status: "error", message: "The instrument was saved, but it could not be selected. Reopen the lesson form and try again." };
+  revalidatePath(`/schools/${schoolId}`);
+  revalidatePath(`/schools/${schoolId}/setup`);
+  revalidatePath(`/schools/${schoolId}/onboarding`);
+  return { status: "success", message: `${instrument.name} was added and selected.`, instrument: { id: instrument.id, label: instrument.name } };
 }
 
 const knownErrors: Record<string, string> = {
@@ -74,6 +125,7 @@ const knownErrors: Record<string, string> = {
   invalid_teacher: "That teacher is no longer available at this school. Reload and choose another teacher.",
   invalid_student: "That student is no longer available for scheduling. Reload and choose another student.",
   invalid_place: "That lesson place is no longer available. Reload and choose another place.",
+  invalid_instrument: "That instrument is no longer offered by the school. Reload and choose another instrument.",
   student_home_location_required: "Add a protected home lesson location on this student's family record, or mark the address as arranged privately.",
   student_home_location_ambiguous: "This student has more than one active family home. Open the family records and keep only the location intended for lessons.",
   invalid_student_home_location: "The selected home location no longer belongs to this student. Review the family record and try again.",
@@ -100,6 +152,7 @@ export async function createSingleLesson(
   const teacherId = String(formData.get("teacher_id") ?? "");
   const studentId = String(formData.get("student_id") ?? "");
   const placeId = String(formData.get("place_id") ?? "");
+  const instrumentId = String(formData.get("instrument_id") ?? "");
   const date = String(formData.get("date") ?? "");
   const time = String(formData.get("time") ?? "");
   const scheduleType = String(formData.get("schedule_type") ?? "one_time");
@@ -107,15 +160,18 @@ export async function createSingleLesson(
   const notes = String(formData.get("notes") ?? "").trim() || undefined;
   const outsideNote = String(formData.get("outside_availability_note") ?? "").trim() || undefined;
   const entitlementId = String(formData.get("entitlement_id") ?? "").trim() || undefined;
+  const homeStreet = String(formData.get("home_street") ?? "").trim() || undefined;
+  const homeCity = String(formData.get("home_city") ?? "").trim() || undefined;
 
-  if (![schoolId, productId, teacherId, studentId, placeId].every((value) => /^[0-9a-f-]{36}$/i.test(value))
+  if (![schoolId, productId, teacherId, studentId, placeId, instrumentId].every((value) => /^[0-9a-f-]{36}$/i.test(value))
       || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)
       || !["one_time", "weekly"].includes(scheduleType)
       || (scheduleType === "weekly" && !/^\d{4}-\d{2}-\d{2}$/.test(endsOn))
       || Number(time.slice(3)) % 5 !== 0
       || (entitlementId !== undefined && !/^[0-9a-f-]{36}$/i.test(entitlementId))
       || (entitlementId !== undefined && scheduleType !== "one_time")
-      || (notes?.length ?? 0) > 1000 || (outsideNote?.length ?? 0) > 240) {
+      || (notes?.length ?? 0) > 1000 || (outsideNote?.length ?? 0) > 240
+      || (homeStreet?.length ?? 0) > 160 || (homeCity?.length ?? 0) > 120) {
     return { status: "error", message: "Check the lesson details and try again." };
   }
 
@@ -144,8 +200,22 @@ export async function createSingleLesson(
   if (place.kind === "student_home") {
     const { data: accountLinks } = await supabase.from("billing_account_students").select("billing_account_id").eq("school_id", schoolId).eq("student_id", studentId);
     const accountIds = (accountLinks ?? []).map((link) => link.billing_account_id);
-    const { data: homeLocations } = accountIds.length ? await supabase.from("family_service_locations").select("id").eq("school_id", schoolId).in("billing_account_id", accountIds).eq("status", "active").limit(1) : { data: [] };
-    if (!homeLocations?.length) return { status: "error", message: knownErrors.student_home_location_required };
+    const { data: homeLocations } = accountIds.length ? await supabase.from("family_service_locations").select("id").eq("school_id", schoolId).in("billing_account_id", accountIds).eq("status", "active") : { data: [] };
+    if ((homeLocations?.length ?? 0) > 1 || (!homeLocations?.length && accountIds.length !== 1)) return { status: "error", message: knownErrors.student_home_location_ambiguous };
+    if (!homeLocations?.length) {
+      if (!homeStreet || !homeCity) return { status: "error", message: "Add the family’s street address and city for this in-home lesson." };
+      if (!await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) return { status: "error", message: "You do not have permission to save this family’s protected home address." };
+      const { error: locationError } = await supabase.from("family_service_locations").insert({
+        school_id: schoolId,
+        billing_account_id: accountIds[0],
+        created_by: profileId,
+        mode: "stored",
+        label: "Home",
+        address_line_1: homeStreet,
+        city: homeCity,
+      });
+      if (locationError) return { status: "error", message: "The home address could not be saved, so the lesson was not created." };
+    }
   }
   const weekday = new Date(`${date}T12:00:00Z`).getUTCDay();
   const startMinutes = Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
@@ -163,12 +233,12 @@ export async function createSingleLesson(
 
   if (allowOutside && teacherPolicy.outside_availability_policy === "require_approval") {
     const { data: proposalId, error: proposalError } = entitlementId
-      ? await supabase.rpc("create_outside_availability_entitlement_proposal", {
-          p_school_id: schoolId, p_entitlement_id: entitlementId, p_teacher_id: teacherId, p_place_id: placeId,
+      ? await supabase.rpc("create_outside_availability_entitlement_proposal_with_instrument", {
+          p_school_id: schoolId, p_entitlement_id: entitlementId, p_teacher_id: teacherId, p_place_id: placeId, p_instrument_id: instrumentId,
           p_local_start: `${date} ${time}:00`, p_notes: notes ?? "", p_reason: overrideReason!,
         })
-      : await supabase.rpc("create_outside_availability_lesson_proposal", {
-          p_school_id: schoolId, p_product_id: productId, p_teacher_id: teacherId, p_student_id: studentId, p_place_id: placeId,
+      : await supabase.rpc("create_outside_availability_lesson_proposal_with_instrument", {
+          p_school_id: schoolId, p_product_id: productId, p_teacher_id: teacherId, p_student_id: studentId, p_place_id: placeId, p_instrument_id: instrumentId,
           p_local_start: `${date} ${time}:00`, p_schedule_type: scheduleType, p_ends_on: scheduleType === "weekly" ? endsOn : date,
           p_notes: notes ?? "", p_reason: overrideReason!,
         });
@@ -184,20 +254,20 @@ export async function createSingleLesson(
   }
 
   const result = entitlementId
-    ? await supabase.rpc("schedule_service_entitlement", {
-        p_school_id: schoolId, p_entitlement_id: entitlementId, p_teacher_id: teacherId, p_place_id: placeId,
+    ? await supabase.rpc("schedule_service_entitlement_with_instrument", {
+        p_school_id: schoolId, p_entitlement_id: entitlementId, p_teacher_id: teacherId, p_place_id: placeId, p_instrument_id: instrumentId,
         p_local_start: `${date} ${time}:00`, p_notes: notes,
         p_allow_outside_availability: allowOutside, p_override_reason: overrideReason,
       })
     : scheduleType === "weekly"
-    ? await supabase.rpc("create_weekly_lesson_series", {
+    ? await supabase.rpc("create_weekly_lesson_series_with_instrument", {
         p_school_id: schoolId, p_product_id: productId, p_teacher_id: teacherId, p_student_id: studentId,
-        p_place_id: placeId, p_local_start: `${date} ${time}:00`, p_ends_on: endsOn, p_notes: notes,
+        p_place_id: placeId, p_instrument_id: instrumentId, p_local_start: `${date} ${time}:00`, p_ends_on: endsOn, p_notes: notes,
         p_allow_outside_availability: allowOutside, p_override_reason: overrideReason,
       })
-    : await supabase.rpc("create_single_lesson", {
+    : await supabase.rpc("create_single_lesson_with_instrument", {
         p_school_id: schoolId, p_product_id: productId, p_teacher_id: teacherId, p_student_id: studentId,
-        p_place_id: placeId, p_local_start: `${date} ${time}:00`, p_notes: notes,
+        p_place_id: placeId, p_instrument_id: instrumentId, p_local_start: `${date} ${time}:00`, p_notes: notes,
         p_allow_outside_availability: allowOutside, p_override_reason: overrideReason,
       });
   const { data: createdRecord, error } = result;

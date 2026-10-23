@@ -89,7 +89,7 @@ export default async function ClientPortalPage() {
       <div className="mb-8"><CalendarSubscription schoolId={schoolId} schoolName={school.name} active={calendarAccounts?.find((account) => account.school_id === schoolId)?.subscription_active ?? false} /></div>
       <div className="ui-card p-5 sm:p-7"><LessonCalendar
           id={`family-lessons-${schoolId}`}
-          lessons={school.lessons.map((lesson) => ({ lessonId: lesson.lesson_id, studentName: lesson.student_name, teacherName: lesson.teacher_name, productName: lesson.product_name, placeName: lesson.place_name, startsAt: lesson.starts_at, endsAt: lesson.ends_at, pendingRequest: lesson.pending_request_id && lesson.pending_request_type && lesson.pending_request_status && lesson.pending_requested_at ? { id: lesson.pending_request_id, type: lesson.pending_request_type, status: lesson.pending_request_status, requestedAt: lesson.pending_requested_at } : null }))}
+          lessons={school.lessons.map((lesson) => ({ lessonId: lesson.lesson_id, studentName: lesson.student_name, teacherName: lesson.teacher_name, productName: lesson.product_name, instrumentName: lesson.instrument_name, placeName: lesson.place_name, startsAt: lesson.starts_at, endsAt: lesson.ends_at, pendingRequest: lesson.pending_request_id && lesson.pending_request_type && lesson.pending_request_status && lesson.pending_requested_at ? { id: lesson.pending_request_id, type: lesson.pending_request_type, status: lesson.pending_request_status, requestedAt: lesson.pending_requested_at } : null }))}
           rangeStart={rangeStart}
           rangeEnd={rangeEnd}
           timeZone={school.timeZone}

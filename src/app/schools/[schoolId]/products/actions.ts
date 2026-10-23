@@ -30,11 +30,7 @@ export async function createProduct(
   const description = String(formData.get("description") ?? "").trim() || null;
   const format = String(formData.get("format"));
   const durationMinutes = integer(formData, "duration_minutes");
-  const sessionsPerInterval = integer(formData, "sessions_per_interval");
-  const intervalCount = integer(formData, "interval_count");
-  const intervalUnit = String(formData.get("interval_unit"));
   const pricingModel = String(formData.get("pricing_model"));
-  const defaultScheduleType = String(formData.get("default_schedule_type"));
   const billingTiming = String(formData.get("billing_timing"));
   const priceCents = cents(formData.get("price"));
   const requestedCapacity = integer(formData, "capacity");
@@ -43,11 +39,7 @@ export async function createProduct(
   if (!name || name.length > 120) return { error: "Enter an offering name up to 120 characters." };
   if (!(["private_lesson", "group_class"] as string[]).includes(format)) return { error: "Choose a valid format." };
   if (!durationMinutes || durationMinutes < 15 || durationMinutes > 480) return { error: "Duration must be between 15 and 480 minutes." };
-  if (!sessionsPerInterval || sessionsPerInterval < 1 || sessionsPerInterval > 31) return { error: "Enter between 1 and 31 sessions per interval." };
-  if (!intervalCount || intervalCount < 1 || intervalCount > 12) return { error: "The interval must be between 1 and 12 weeks or months." };
-  if (!(["week", "month"] as string[]).includes(intervalUnit)) return { error: "Choose weeks or months." };
   if (!(["fixed_monthly", "per_session"] as string[]).includes(pricingModel)) return { error: "Choose a valid pricing model." };
-  if (!(["one_time", "weekly"] as string[]).includes(defaultScheduleType)) return { error: "Choose whether this is usually one lesson or a weekly series." };
   if (priceCents === null) return { error: "Enter a valid price with no more than two decimal places." };
   if (!capacity || capacity < 1 || capacity > 500) return { error: "Class capacity must be between 2 and 500." };
   if (!(["school_default", "before_service", "after_service"] as string[]).includes(billingTiming)) return { error: "Choose when this offering is billed." };
@@ -74,9 +66,7 @@ export async function createProduct(
   const admin = createAdminClient();
   const requestSnapshot = {
     name, description, format, duration_minutes: durationMinutes,
-    sessions_per_interval: sessionsPerInterval, interval_count: intervalCount,
-    interval_unit: intervalUnit, pricing_model: pricingModel,
-    default_schedule_type: defaultScheduleType,
+    pricing_model: pricingModel,
     billing_timing_override: billingTiming === "school_default" ? null : billingTiming,
     requested_price_cents: priceCents, currency: school.currency, capacity,
   };
@@ -118,11 +108,7 @@ export async function createProduct(
       description,
       format,
       duration_minutes: durationMinutes,
-      sessions_per_interval: sessionsPerInterval,
-      interval_count: intervalCount,
-      interval_unit: intervalUnit,
       pricing_model: pricingModel,
-      default_schedule_type: defaultScheduleType,
       billing_timing_override: billingTiming === "school_default" ? null : billingTiming,
       currency: school.currency,
       capacity,

@@ -14,7 +14,7 @@ function ScheduleEntitlement({schoolId,item,timezone,options}:{schoolId:string;i
     students:options.students.filter((student)=>student.id===item.studentId),defaultStudentId:item.studentId,
     teachers:item.teacherId?options.teachers.filter((teacher)=>teacher.id===item.teacherId):options.teachers,
     products:options.products.filter((product)=>product.id===item.productId).map((product)=>({...product,durationMinutes:item.durationMinutes})),
-    entitlement:{id:item.id,studentId:item.studentId,productId:item.productId,teacherId:item.teacherId,durationMinutes:item.durationMinutes},
+    entitlement:{id:item.id,studentId:item.studentId,productId:item.productId,instrumentId:item.instrumentId,teacherId:item.teacherId,durationMinutes:item.durationMinutes},
   }),[item,options]);
   const manualTeacher=item.teacherId??(contextualOptions.teachers.length===1?contextualOptions.teachers[0].id:"");
   return <><LessonOpeningFinder triggerVariant="inline" options={contextualOptions} timeZone={timezone} onChoose={setSlot} onManualAdd={()=>setSlot({dateKey:contextualOptions.today,time:"",teacherId:manualTeacher,productId:item.productId})} onBrowseSchedule={()=>router.push(`/schools/${schoolId}#school-calendar`)}/>{slot?<LessonCreationDialog schoolId={schoolId} slot={slot} options={contextualOptions} lockTeacher={Boolean(item.teacherId)} timeZone={timezone} onClose={()=>setSlot(null)}/>:null}</>;

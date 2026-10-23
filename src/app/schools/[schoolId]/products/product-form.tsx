@@ -16,7 +16,7 @@ export function ProductForm({ schoolId, returnPath }: { schoolId: string; return
       <div className="grid gap-x-10 gap-y-8 md:grid-cols-2">
         <label className="md:col-span-2">
           <span className="block text-xs text-muted">Name</span>
-          <input required name="name" maxLength={120} className={fieldClass} placeholder="Weekly piano lesson" />
+          <input required name="name" maxLength={120} className={fieldClass} placeholder="30-minute private lesson" />
         </label>
         <label>
           <span className="block text-xs text-muted">Format</span>
@@ -35,22 +35,6 @@ export function ProductForm({ schoolId, returnPath }: { schoolId: string; return
             <option value="120">2 hours</option>
           </AppSelect>
         </label>
-        <fieldset className="md:col-span-2">
-          <legend className="text-xs text-muted">Usual scheduling</legend>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <label className="rounded-md border border-line bg-surface p-4 transition has-[:checked]:border-brand has-[:checked]:bg-brand/10">
-              <span className="flex items-center gap-3"><input type="radio" name="default_schedule_type" value="weekly" defaultChecked /><span className="font-medium">Weekly series</span></span>
-              <span className="mt-2 block pl-7 text-xs leading-5 text-muted">Use weekly when a lesson is scheduled. The owner can switch it to one time.</span>
-            </label>
-            <label className="rounded-md border border-line bg-surface p-4 transition has-[:checked]:border-brand has-[:checked]:bg-brand/10">
-              <span className="flex items-center gap-3"><input type="radio" name="default_schedule_type" value="one_time" /><span className="font-medium">One lesson</span></span>
-              <span className="mt-2 block pl-7 text-xs leading-5 text-muted">Use one time when scheduled. The owner can still make it weekly.</span>
-            </label>
-          </div>
-        </fieldset>
-        <input type="hidden" name="sessions_per_interval" value="1" />
-        <input type="hidden" name="interval_count" value="1" />
-        <input type="hidden" name="interval_unit" value="week" />
         <input type="hidden" name="pricing_model" value="per_session" />
         <label className="md:col-span-2">
           <span className="block text-xs text-muted">When this offering is billed</span>
@@ -67,7 +51,7 @@ export function ProductForm({ schoolId, returnPath }: { schoolId: string; return
             <span className="py-3 text-muted">$</span>
             <input required name="price" inputMode="decimal" className="w-full bg-transparent py-3 pl-2 outline-none" placeholder="40.00" />
           </div>
-          <span className="mt-2 block text-xs leading-5 text-muted">Monthly totals use the number of lessons actually scheduled. A weekly lesson may occur three, four, or five times in a calendar month.</span>
+          <span className="mt-2 block text-xs leading-5 text-muted">Monthly totals use the lessons actually scheduled. Whether it happens once or repeats is chosen when it is added to the calendar.</span>
         </label>
         {format === "group_class" ? (
           <label>

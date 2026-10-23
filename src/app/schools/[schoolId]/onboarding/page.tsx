@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { MdAccessTime, MdCheckCircle, MdFamilyRestroom, MdGroups, MdLocationOn, MdMusicNote, MdPayments, MdRoute, MdStorefront } from "react-icons/md";
+import { MdAccessTime, MdCheckCircle, MdFamilyRestroom, MdGroups, MdMusicNote, MdPayments, MdRoute, MdStorefront } from "react-icons/md";
 import type { IconType } from "react-icons";
 import { AvatarUploader } from "@/app/profile/avatar-uploader";
 import { SchoolLogoUploader } from "@/components/school-setup/school-logo-uploader";
@@ -24,7 +24,6 @@ import { FamilyForm, type OnboardingFamily } from "./family-form";
 import { OnboardingStepper } from "./onboarding-stepper";
 import { updateSchoolBillingTiming } from "../products/actions";
 import { ProductForm } from "../products/product-form";
-import { PlaceForm } from "../places/place-form";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Set up your school · Common Time", robots: { index: false, follow: false } };
@@ -60,12 +59,11 @@ export default async function OnboardingPage({ params, searchParams }: {
     supabase.from("teacher_availability_rules").select("teacher_id,weekday,start_time,end_time,effective_from,effective_until").eq("school_id", schoolId).order("weekday").order("start_time"),
     supabase.from("service_products").select("id,name,duration_minutes,price_cents,currency,status,format").eq("school_id", schoolId).eq("status", "active").order("name"),
     supabase.from("school_payment_connections").select("status,charges_enabled").eq("school_id", schoolId).eq("provider", "stripe").eq("livemode", getStripeMode() === "live").maybeSingle(),
-    supabase.from("lesson_places").select("id,name,kind,details,status").eq("school_id", schoolId).eq("status", "active").order("name"),
     loadMySchoolCapabilities(schoolId),
   ]);
   const failed = results.find((result) => "error" in result && result.error);
   if (failed && "error" in failed && failed.error) throw new Error("School onboarding could not be loaded.");
-  const [schoolResult, membershipResult, profileResult, teacherResult, instrumentResult, accountResult, peopleResult, studentLinkResult, availabilityResult, productResult, paymentConnectionResult, placeResult, capabilities] = results;
+  const [schoolResult, membershipResult, profileResult, teacherResult, instrumentResult, accountResult, peopleResult, studentLinkResult, availabilityResult, productResult, paymentConnectionResult, capabilities] = results;
   const school = schoolResult.data;
   const membership = membershipResult.data;
   const profile = profileResult.data;
@@ -134,11 +132,6 @@ export default async function OnboardingPage({ params, searchParams }: {
         <div><StepHeading icon={MdMusicNote} title="Instruments">Choose what your school teaches. Changes save as soon as you check or uncheck an instrument.</StepHeading><div className="rounded-control bg-surface p-5 sm:p-6"><InstrumentCatalogForm instruments={instrumentNames} action={updateSchoolInstrumentCatalog.bind(null, schoolId)} /></div></div>
 
         <div><StepHeading icon={MdFamilyRestroom} title="Students and payers">Add each student and connect the person responsible for their invoices and payment setup.</StepHeading><FamilyForm schoolId={schoolId} families={families} /></div>
-
-        <div><StepHeading icon={MdLocationOn} title="Lesson places">Add the usual places lessons happen. Student home addresses stay protected on each family record.</StepHeading><div className="rounded-control bg-surface p-5 sm:p-6">
-          {placeResult.data?.length ? <div className="space-y-2">{placeResult.data.map((place) => <div key={place.id} className="flex items-center justify-between gap-4 rounded-control bg-canvas/55 px-4 py-3"><span className="text-sm font-medium">{place.name}</span><span className="text-xs text-muted">{place.kind === "student_home" ? "Student home" : place.kind === "online" ? "Online" : place.kind === "other" ? "Other" : "School location"}</span></div>)}</div> : <p className="text-sm text-muted">No lesson places yet.</p>}
-          <div className="mt-5"><FocusedModal triggerLabel="Add lesson place +" eyebrow="Lesson places" title="Add a lesson place" description="Choose a school location, student home, online meeting, or another place."><PlaceForm schoolId={schoolId} returnPath={`/schools/${schoolId}/onboarding?step=locations`} /></FocusedModal></div>
-        </div></div>
 
         <div><StepHeading icon={MdGroups} title="Teaching team">Add the people who teach. If that includes you, add yourself here too.</StepHeading><div className="rounded-control bg-surface p-5 sm:p-6">
           {onboardingTeachers.length ? <div className="space-y-3"><div className="grid grid-cols-2 gap-3 px-4 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted"><span>Teacher</span><span className="text-right">Email</span></div>{onboardingTeachers.map((teacher) => <div key={teacher.id} className="grid grid-cols-2 items-center gap-3 rounded-control bg-canvas/60 p-4"><span className="flex min-w-0 items-center gap-2"><MdGroups aria-hidden="true" className="shrink-0 text-xl text-brand" /><span className="truncate text-sm font-medium">{personName(teacher)}</span></span><span className="truncate text-right text-sm text-muted">{teacher.email || "No email"}</span></div>)}</div> : <p className="text-sm text-muted">No teachers added yet.</p>}

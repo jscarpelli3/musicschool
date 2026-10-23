@@ -40,6 +40,40 @@
   display: none;
 }
 
+.attention-cue {
+  position: relative;
+  box-shadow: 0 0 0.75rem color-mix(in srgb, var(--ui-brand) 10%, transparent);
+}
+
+.attention-cue::after {
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(105deg, transparent 20%, color-mix(in srgb, var(--ui-brand) 75%, white) 48%, transparent 76%);
+  background-size: 240% 100%;
+  content: "";
+  pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: attention-cue-drift 6s ease-in-out infinite;
+}
+
+@keyframes attention-cue-drift {
+  0%, 24% { background-position: 115% 0; opacity: 0.25; }
+  55% { opacity: 0.7; }
+  82%, 100% { background-position: -115% 0; opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attention-cue::after {
+    animation: none;
+    background-position: 50% 0;
+    opacity: 0.42;
+  }
+}
+
 [data-school-font="editorial"] {
   --ui-font-sans: var(--font-sans), "Helvetica Neue", Arial, sans-serif;
   --ui-font-display: var(--font-display), Georgia, serif;

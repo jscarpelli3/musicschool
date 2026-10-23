@@ -8,17 +8,15 @@ export type PlaceState = { error: string | null };
 
 export async function createPlace(
   schoolId: string,
-  returnPath: string | undefined,
   _state: PlaceState,
   formData: FormData,
 ): Promise<PlaceState> {
-  const name = String(formData.get("name") ?? "").trim();
+  const kind = "school";
+  const submittedName = String(formData.get("name") ?? "").trim();
+  const name = submittedName;
   const details = String(formData.get("details") ?? "").trim() || null;
-  const kind = String(formData.get("kind") ?? "school");
   if (!name || name.length > 120) return { error: "Enter a place name up to 120 characters." };
   if (details && details.length > 500) return { error: "Place details must be 500 characters or fewer." };
-  if (!["school", "student_home", "online", "other"].includes(kind)) return { error: "Choose a valid place type." };
-  if (kind === "student_home" && details) return { error: "Manage a family's private home address from its family record." };
 
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
@@ -38,27 +36,27 @@ export async function createPlace(
   }
 
   revalidatePath(`/schools/${schoolId}`);
-  revalidatePath(`/schools/${schoolId}/places`);
+  revalidatePath(`/schools/${schoolId}/setup`);
   revalidatePath(`/schools/${schoolId}/onboarding`);
-  const onboardingPath = `/schools/${schoolId}/onboarding?step=locations`;
-  redirect(returnPath === onboardingPath ? `${onboardingPath}&placeCreated=1` : `/schools/${schoolId}/places?created=1`);
+  redirect(`/schools/${schoolId}/setup?roomCreated=1#school-rooms`);
 }
 
 export async function archivePlace(schoolId: string, placeId: string) {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
-  if (!data?.claims?.sub) redirect(`/login?next=/schools/${schoolId}/places`);
+  if (!data?.claims?.sub) redirect(`/login?next=/schools/${schoolId}/setup`);
 
   const { data: archived, error } = await supabase
     .from("lesson_places")
     .update({ status: "archived" })
     .eq("school_id", schoolId)
     .eq("id", placeId)
+    .eq("kind", "school")
     .select("id")
     .maybeSingle();
 
-  if (error || !archived) redirect(`/schools/${schoolId}/places?error=archive`);
+  if (error || !archived) redirect(`/schools/${schoolId}/setup?roomError=archive#school-rooms`);
 
-  revalidatePath(`/schools/${schoolId}/places`);
-  redirect(`/schools/${schoolId}/places?archived=1`);
+  revalidatePath(`/schools/${schoolId}/setup`);
+  redirect(`/schools/${schoolId}/setup?roomArchived=1#school-rooms`);
 }

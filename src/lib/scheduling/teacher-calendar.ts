@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { isLessonProposalState } from "@/lib/domain/state-descriptors";
+import { lessonPlaceLabel } from "@/lib/scheduling/lesson-place-label";
 
 export type TeacherCalendarData = {
   availability: Array<{
@@ -16,6 +17,7 @@ export type TeacherCalendarData = {
     id: string;
     student_id: string;
     product_id: string;
+    instrument_id: string | null;
     place_id: string;
     starts_at: string;
     ends_at: string;
@@ -44,6 +46,7 @@ export type TeacherCalendarData = {
   }>;
   studentNames: Record<string, string>;
   productNames: Record<string, string>;
+  instrumentNames: Record<string, string>;
   placeDetails: Record<string, { name: string; details: string | null; kind: string }>;
 };
 
@@ -65,7 +68,7 @@ export async function loadTeacherCalendar(
 ): Promise<TeacherCalendarData> {
   let lessonQuery = supabase
     .from("lesson_events")
-    .select("id, student_id, product_id, place_id, starts_at, ends_at, status, cancellation_timing, notes, outcome, staff_notes, reschedule_allowed, reschedule_blocked_reason, reschedule_reason_code, reschedule_reason_detail")
+    .select("id, student_id, product_id, instrument_id, place_id, starts_at, ends_at, status, cancellation_timing, notes, outcome, staff_notes, reschedule_allowed, reschedule_blocked_reason, reschedule_reason_code, reschedule_reason_detail")
     .eq("school_id", schoolId)
     .eq("teacher_id", teacherId);
   if (options.rangeStart) lessonQuery = lessonQuery.gte("starts_at", options.rangeStart);
@@ -98,7 +101,8 @@ export async function loadTeacherCalendar(
   const studentIds = [...new Set([...lessons.map((lesson) => lesson.student_id), ...pendingProposals.map((item) => item.student_id)])];
   const productIds = [...new Set(lessons.map((lesson) => lesson.product_id))];
   const placeIds = [...new Set(lessons.map((lesson) => lesson.place_id))];
-  const [studentResult, productResult, placeResult] = await Promise.all([
+  const instrumentIds = [...new Set(lessons.flatMap((lesson) => lesson.instrument_id ? [lesson.instrument_id] : []))];
+  const [studentResult, productResult, placeResult, instrumentResult] = await Promise.all([
     studentIds.length
       ? supabase.from("people").select("id, first_name, last_name, preferred_name").eq("school_id", schoolId).in("id", studentIds)
       : Promise.resolve({ data: [], error: null }),
@@ -108,8 +112,11 @@ export async function loadTeacherCalendar(
     placeIds.length
       ? supabase.from("lesson_places").select("id, name, details, kind").eq("school_id", schoolId).in("id", placeIds)
       : Promise.resolve({ data: [], error: null }),
+    instrumentIds.length
+      ? supabase.from("school_instruments").select("id, name").eq("school_id", schoolId).in("id", instrumentIds)
+      : Promise.resolve({ data: [], error: null }),
   ]);
-  if (studentResult.error || productResult.error || placeResult.error) {
+  if (studentResult.error || productResult.error || placeResult.error || instrumentResult.error) {
     throw new Error("Teacher calendar details could not be loaded.");
   }
 
@@ -119,6 +126,7 @@ export async function loadTeacherCalendar(
     pendingProposals,
     studentNames: Object.fromEntries((studentResult.data ?? []).map((student) => [student.id, personDisplayName(student)])),
     productNames: Object.fromEntries((productResult.data ?? []).map((product) => [product.id, product.name])),
-    placeDetails: Object.fromEntries((placeResult.data ?? []).map((place) => [place.id, { name: place.name, details: place.details, kind: place.kind }])),
+    instrumentNames: Object.fromEntries((instrumentResult.data ?? []).map((instrument) => [instrument.id, instrument.name])),
+    placeDetails: Object.fromEntries((placeResult.data ?? []).map((place) => [place.id, { name: lessonPlaceLabel(place), details: place.kind === "school" ? place.details : null, kind: place.kind }])),
   };
 }

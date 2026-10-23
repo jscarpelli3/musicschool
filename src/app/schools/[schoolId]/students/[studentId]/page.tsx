@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadServiceEntitlements } from "@/lib/scheduling/service-entitlements";
 import { RecordLessonCalendar } from "@/components/calendar/record-lesson-calendar";
 import { schoolCalendarWindow } from "@/lib/calendar/school-calendar-window";
+import { lessonPlaceLabel } from "@/lib/scheduling/lesson-place-label";
 
 export const dynamic = "force-dynamic";
 
@@ -43,21 +44,24 @@ export default async function StudentDetailPage({ params }: {
     supabase.from("lesson_events").select("id, starts_at, ends_at, status, outcome, cancellation_timing, teacher_id, product_id, place_id, actual_starts_at, actual_ends_at, actual_place_id").eq("school_id", schoolId).eq("student_id", studentId).order("starts_at", { ascending: false }).limit(18),
     supabase.from("lesson_series").select("id, status, starts_on, ends_on, recurrence_rule, teacher_id, product_id, default_place_id").eq("school_id", schoolId).eq("student_id", studentId).order("starts_on", { ascending: false }),
     supabase.from("people").select("id, first_name, last_name, preferred_name, email, phone").eq("school_id", schoolId),
-    supabase.from("service_products").select("id, name, duration_minutes, price_cents, currency, default_schedule_type").eq("school_id", schoolId),
-    supabase.from("lesson_places").select("id, name, kind").eq("school_id", schoolId),
+    supabase.from("service_products").select("id, name, duration_minutes, price_cents, currency").eq("school_id", schoolId),
+    supabase.from("lesson_places").select("id, name, kind, status").eq("school_id", schoolId),
     supabase.from("billing_accounts").select("id, name, billing_contact_person_id, status").eq("school_id", schoolId),
-    supabase.from("lesson_events").select("id, starts_at, ends_at, status, outcome, teacher_id, product_id, place_id, actual_starts_at, actual_ends_at, actual_place_id").eq("school_id", schoolId).eq("student_id", studentId).gte("starts_at", queryStart).lt("starts_at", queryEnd).order("starts_at"),
+    supabase.from("lesson_events").select("id, starts_at, ends_at, status, outcome, teacher_id, product_id, instrument_id, place_id, actual_starts_at, actual_ends_at, actual_place_id").eq("school_id", schoolId).eq("student_id", studentId).gte("starts_at", queryStart).lt("starts_at", queryEnd).order("starts_at"),
     supabase.from("teachers").select("person_id,outside_availability_policy").eq("school_id", schoolId),
     supabase.from("teacher_availability_rules").select("id,teacher_id,weekday,start_time,end_time,effective_from,effective_until").eq("school_id", schoolId).order("weekday").order("start_time"),
     supabase.from("lesson_events").select("teacher_id,student_id,starts_at,ends_at,status").eq("school_id", schoolId).gte("starts_at", queryStart).lt("starts_at", queryEnd),
+    supabase.from("school_instruments").select("id,name,is_active").eq("school_id",schoolId).order("name"),
+    supabase.from("teacher_instruments").select("teacher_id,instrument_id").eq("school_id",schoolId),
   ]);
   const failedRelated = related.find((result) => result.error);
   if (failedRelated?.error) throw new Error(`Student detail could not load: ${failedRelated.error.message}`);
-  const [contactsResult, billingLinksResult, lessonsResult, seriesResult, peopleResult, productsResult, placesResult, accountsResult, calendarLessonsResult, teachersResult, availabilityResult, busyLessonsResult] = related;
+  const [contactsResult, billingLinksResult, lessonsResult, seriesResult, peopleResult, productsResult, placesResult, accountsResult, calendarLessonsResult, teachersResult, availabilityResult, busyLessonsResult, instrumentsResult, teacherInstrumentsResult] = related;
 
   const people = new Map((peopleResult.data ?? []).map((row) => [row.id, row]));
   const products = new Map((productsResult.data ?? []).map((row) => [row.id, row]));
   const places = new Map((placesResult.data ?? []).map((row) => [row.id, row]));
+  const instrumentNames = new Map((instrumentsResult.data ?? []).map((row) => [row.id, row.name]));
   const billingIds = new Set((billingLinksResult.data ?? []).map((row) => row.billing_account_id));
   const accounts = (accountsResult.data ?? []).filter((account) => billingIds.has(account.id));
   const dateTime = (value: string) => new Intl.DateTimeFormat("en-US", {
@@ -70,7 +74,7 @@ export default async function StudentDetailPage({ params }: {
   const entitlements = canViewSupport ? await loadServiceEntitlements(supabase,schoolId,{studentIds:[studentId]}) : [];
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: school.timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const minimumTimeToday = new Intl.DateTimeFormat("en-GB", { timeZone: school.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
-  const lessonCreationOptions = canManageLessons ? { students: [{ id: studentId, label: displayName(person) }], defaultStudentId: studentId, primaryTeacherByStudent: student.primary_teacher_id ? { [studentId]: student.primary_teacher_id } : {}, teachers: (teachersResult.data ?? []).flatMap((teacher) => { const teacherPerson = people.get(teacher.person_id); return teacherPerson ? [{ id: teacher.person_id, label: displayName(teacherPerson), outsideAvailabilityPolicy: teacher.outside_availability_policy === "require_approval" ? "require_approval" as const : "notify_only" as const }] : []; }), products: (productsResult.data ?? []).map((product) => ({ id: product.id, label: product.name, durationMinutes: product.duration_minutes, priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price_cents / 100), defaultScheduleType: product.default_schedule_type === "one_time" ? "one_time" as const : "weekly" as const })), places: (placesResult.data ?? []).map((place) => ({ id: place.id, label: place.name, kind: ["student_home", "online", "other"].includes(place.kind) ? place.kind as "student_home" | "online" | "other" : "school" as const })), availability: availabilityResult.data ?? [], busyLessons: (busyLessonsResult.data ?? []).map((lesson) => ({ teacherId: lesson.teacher_id, studentId: lesson.student_id, startsAt: lesson.starts_at, endsAt: lesson.ends_at, status: lesson.status })), today, minimumTimeToday } : undefined;
+  const lessonCreationOptions = canManageLessons ? { students: [{ id: studentId, label: displayName(person) }], defaultStudentId: studentId, primaryTeacherByStudent: student.primary_teacher_id ? { [studentId]: student.primary_teacher_id } : {}, teachers: (teachersResult.data ?? []).flatMap((teacher) => { const teacherPerson = people.get(teacher.person_id); return teacherPerson ? [{ id: teacher.person_id, label: displayName(teacherPerson), outsideAvailabilityPolicy: teacher.outside_availability_policy === "require_approval" ? "require_approval" as const : "notify_only" as const }] : []; }), products: (productsResult.data ?? []).map((product) => ({ id: product.id, label: product.name, durationMinutes: product.duration_minutes, priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price_cents / 100) })), instruments:(instrumentsResult.data??[]).filter((instrument)=>instrument.is_active).map((instrument)=>({id:instrument.id,label:instrument.name})), instrumentIdsByTeacher:(teacherInstrumentsResult.data??[]).reduce<Record<string,string[]>>((groups,item)=>{(groups[item.teacher_id]??=[]).push(item.instrument_id);return groups;},{}), places: (placesResult.data ?? []).filter((place)=>place.status==="active"&&["school","student_home","online"].includes(place.kind)).map((place) => ({ id: place.id, label: lessonPlaceLabel(place), kind: place.kind as "school" | "student_home" | "online" })), availability: availabilityResult.data ?? [], busyLessons: (busyLessonsResult.data ?? []).map((lesson) => ({ teacherId: lesson.teacher_id, studentId: lesson.student_id, startsAt: lesson.starts_at, endsAt: lesson.ends_at, status: lesson.status })), today, minimumTimeToday } : undefined;
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
@@ -79,7 +83,7 @@ export default async function StudentDetailPage({ params }: {
       {approvals.length?<DetailSection title="Needs approval" description="Pending owner decisions involving this student. Resolving one here removes it from every active approval list."><ApprovalList schoolId={schoolId} items={approvals} timezone={school.timezone} compact/></DetailSection>:null}
       {entitlements.length?<DetailSection title="Lessons to schedule" description="Replacement lesson time still owed to this student."><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} lessonCreationOptions={lessonCreationOptions} compact/></DetailSection>:null}
 
-      <RecordLessonCalendar title="Lesson calendar" description="This student’s scheduled lessons. Move between months without leaving the record." schoolId={schoolId} id={`student-${studentId}-calendar`} lessons={(calendarLessonsResult.data ?? []).map((lesson) => ({ id: lesson.id, studentId, studentName: displayName(person), teacherId: lesson.teacher_id, teacherName: people.get(lesson.teacher_id) ? displayName(people.get(lesson.teacher_id)!) : "Unassigned teacher", productName: products.get(lesson.product_id)?.name ?? "Lesson", placeName: places.get(lesson.actual_place_id ?? lesson.place_id)?.name ?? "Unassigned place", startsAt: lesson.actual_starts_at ?? lesson.starts_at, endsAt: lesson.actual_ends_at ?? lesson.ends_at, status: lesson.outcome ?? lesson.status, billingAccounts: accounts.map((account) => ({ id: account.id, name: account.name })) }))} rangeStart={calendarStart} rangeEnd={calendarEnd} timeZone={school.timezone} lessonCreationOptions={lessonCreationOptions} />
+      <RecordLessonCalendar title="Lesson calendar" description="This student’s scheduled lessons. Move between months without leaving the record." schoolId={schoolId} id={`student-${studentId}-calendar`} lessons={(calendarLessonsResult.data ?? []).map((lesson) => ({ id: lesson.id, studentId, studentName: displayName(person), teacherId: lesson.teacher_id, teacherName: people.get(lesson.teacher_id) ? displayName(people.get(lesson.teacher_id)!) : "Unassigned teacher", productName: products.get(lesson.product_id)?.name ?? "Lesson", instrumentName: lesson.instrument_id ? instrumentNames.get(lesson.instrument_id) ?? "Instrument not found" : "Not recorded", placeName: places.get(lesson.actual_place_id ?? lesson.place_id) ? lessonPlaceLabel(places.get(lesson.actual_place_id ?? lesson.place_id)!) : "Unassigned place", startsAt: lesson.actual_starts_at ?? lesson.starts_at, endsAt: lesson.actual_ends_at ?? lesson.ends_at, status: lesson.outcome ?? lesson.status, billingAccounts: accounts.map((account) => ({ id: account.id, name: account.name })) }))} rangeStart={calendarStart} rangeEnd={calendarEnd} timeZone={school.timezone} lessonCreationOptions={lessonCreationOptions} />
 
       <DetailSection title="Student record" description="School-facing identity and enrollment information.">
         <dl className="grid gap-x-8 gap-y-6 sm:grid-cols-2">
@@ -110,7 +114,7 @@ export default async function StudentDetailPage({ params }: {
             const teacher = people.get(series.teacher_id);
             const product = products.get(series.product_id);
             const place = places.get(series.default_place_id);
-            return <div key={series.id} className="border-b border-line pb-6 last:border-0"><div className="flex flex-wrap items-baseline justify-between gap-3"><p>{product?.name ?? "Lesson series"}</p><span className="text-xs uppercase tracking-[0.16em] text-brand">{series.status}</span></div><p className="mt-2 text-sm text-muted">{teacher ? <Link href={`/schools/${schoolId}/staff/${teacher.id}`} className="hover:text-brand">{displayName(teacher)}</Link> : "Unassigned teacher"} · {place?.name ?? "Unassigned place"}</p><p className="mt-2 text-xs text-muted">From {series.starts_on}{series.ends_on ? ` through ${series.ends_on}` : " · ongoing"}</p></div>;
+            return <div key={series.id} className="border-b border-line pb-6 last:border-0"><div className="flex flex-wrap items-baseline justify-between gap-3"><p>{product?.name ?? "Lesson series"}</p><span className="text-xs uppercase tracking-[0.16em] text-brand">{series.status}</span></div><p className="mt-2 text-sm text-muted">{teacher ? <Link href={`/schools/${schoolId}/staff/${teacher.id}`} className="hover:text-brand">{displayName(teacher)}</Link> : "Unassigned teacher"} · {place ? lessonPlaceLabel(place) : "Unassigned place"}</p><p className="mt-2 text-xs text-muted">From {series.starts_on}{series.ends_on ? ` through ${series.ends_on}` : " · ongoing"}</p></div>;
           })}
           {!(seriesResult.data ?? []).length ? <EmptyDetail>No lesson series is configured.</EmptyDetail> : null}
         </div>
@@ -122,7 +126,7 @@ export default async function StudentDetailPage({ params }: {
             const teacher = people.get(lesson.teacher_id);
             const product = products.get(lesson.product_id);
             const place = places.get(lesson.actual_place_id ?? lesson.place_id);
-            return <div key={lesson.id} className="grid gap-2 border-b border-line py-5 first:pt-0 sm:grid-cols-[1fr_auto]"><div><p>{product?.name ?? "Lesson"}</p><p className="mt-2 text-sm text-muted">{dateTime(lesson.actual_starts_at ?? lesson.starts_at)} · {teacher ? <Link href={`/schools/${schoolId}/staff/${teacher.id}`} className="hover:text-brand">{displayName(teacher)}</Link> : "Unassigned"} · {place?.name ?? "Unassigned"}</p></div><span className="text-xs uppercase tracking-[0.14em] text-brand">{lesson.outcome ?? lesson.status}</span></div>;
+            return <div key={lesson.id} className="grid gap-2 border-b border-line py-5 first:pt-0 sm:grid-cols-[1fr_auto]"><div><p>{product?.name ?? "Lesson"}</p><p className="mt-2 text-sm text-muted">{dateTime(lesson.actual_starts_at ?? lesson.starts_at)} · {teacher ? <Link href={`/schools/${schoolId}/staff/${teacher.id}`} className="hover:text-brand">{displayName(teacher)}</Link> : "Unassigned"} · {place ? lessonPlaceLabel(place) : "Unassigned"}</p></div><span className="text-xs uppercase tracking-[0.14em] text-brand">{lesson.outcome ?? lesson.status}</span></div>;
           })}
           {!(lessonsResult.data ?? []).length ? <EmptyDetail>No lesson occurrences are recorded.</EmptyDetail> : null}
         </div>

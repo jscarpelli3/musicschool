@@ -1,78 +1,10 @@
-import { notFound, redirect } from "next/navigation";
-import { SetupHeader } from "@/components/school-setup/setup-header";
-import { FocusedModal } from "@/components/ui/focused-modal";
-import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
-import { createClient } from "@/lib/supabase/server";
-import { archivePlace } from "./actions";
-import { PlaceForm } from "./place-form";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default async function PlacesPage({
-  params,
-  searchParams,
-}: {
+export default async function PlacesPage({ params }: {
   params: Promise<{ schoolId: string }>;
-  searchParams: Promise<{ created?: string; archived?: string; error?: string }>;
 }) {
   const { schoolId } = await params;
-  const { created, archived, error } = await searchParams;
-  const supabase = await createClient();
-  const { data: authData } = await supabase.auth.getClaims();
-  const profileId = authData?.claims?.sub;
-  if (!profileId) redirect(`/login?next=/schools/${schoolId}/places`);
-
-  const [{ data: school }, { data: membership }, { data: places }, capabilities] = await Promise.all([
-    supabase.from("schools").select("id, name").eq("id", schoolId).maybeSingle(),
-    supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
-    supabase.from("lesson_places").select("id, name, details, kind, status, created_by").eq("school_id", schoolId).order("status").order("name"),
-    loadMySchoolCapabilities(schoolId),
-  ]);
-
-  if (!school || !membership) notFound();
-  const canCreate = capabilities.has("school.places.create");
-  const canManageAll = capabilities.has("school.places.manage");
-
-  return (
-    <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
-      <SetupHeader schoolId={schoolId} schoolName={school.name} active="spaces" />
-      <p className="mt-5 text-sm leading-6 text-muted">Set the places where lessons happen. Family home addresses stay protected on each family record.</p>
-
-      {created ? <p className="mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm text-brand">Place added.</p> : null}
-      {archived ? <p className="mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm text-brand">Space archived.</p> : null}
-      {error ? <p className="mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm text-danger">The space could not be archived. Nothing changed.</p> : null}
-
-      <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
-        <div>
-          <h2 className="font-display text-3xl font-normal">Current list</h2>
-          <p className="mt-3 text-sm text-muted">{places?.filter((place) => place.status === "active").length ?? 0} active</p>
-        </div>
-        <div>
-          {places?.map((place) => {
-            const canArchive = place.status === "active" && (canManageAll || place.created_by === profileId);
-            return (
-              <article key={place.id} className="grid grid-cols-[1fr_auto] gap-5 border-t border-line py-5 first:border-t-0">
-                <div>
-                  <h3>{place.name}</h3>
-                  <p className="mt-1 text-xs uppercase tracking-[0.1em] text-brand">{place.kind === "student_home" ? "Student home" : place.kind === "online" ? "Online" : place.kind === "other" ? "Other" : "School location"}</p>
-                  {place.details ? <p className="mt-2 text-sm text-muted">{place.details}</p> : null}
-                  {place.status === "archived" ? <p className="mt-2 text-xs text-muted">Archived</p> : null}
-                </div>
-                {canArchive ? (
-                  <form action={archivePlace.bind(null, schoolId, place.id)}>
-                    <button className="text-xs text-muted hover:text-ink">Archive</button>
-                  </form>
-                ) : null}
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      {canCreate ? <section className="mt-6 flex items-center justify-between gap-6 px-1 py-6">
-        <div><h2 className="font-display text-3xl font-normal">Need another space?</h2><p className="mt-2 text-sm text-muted">Add it without leaving the current list.</p></div>
-        <FocusedModal triggerLabel="Add place +" eyebrow="School spaces" title="Add a place." description="Create a room, address, stage, home, or online space."><PlaceForm schoolId={schoolId} /></FocusedModal>
-      </section> : null}
-    </main>
-  );
+  redirect(`/schools/${schoolId}/setup#school-rooms`);
 }

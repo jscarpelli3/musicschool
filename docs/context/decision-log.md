@@ -267,3 +267,18 @@ Use one entry per meaningful technical or product decision.
 - Context: Common Time promises that email links do not lead directly to card entry. Sending or encouraging owners to forward Stripe setup links would contradict that promise, even if a Common Time redirect technically hid the provider URL.
 - Decision: The school sends families to the ordinary Common Time portal. The payer verifies the email already attached to the family through the existing OTP flow; this first verification is their entry into the broader family experience and the same occasional authentication flow used later. When verified setup is needed, the portal presents payment setup first and launches Stripe only from inside the authenticated session. Keep a separately labeled payer-present setup on the owner screen, but do not offer emailed or copyable card-setup links.
 - Consequences: Portal authorization—not possession of a card-setup bearer URL—gates remote payment setup. Families without an email must add one before remote portal access is possible. Saving a card remains separate from statement approval and automatic-payment authorization.
+
+# 2026-10-22 — Keep offerings financial and lessons operational
+
+- Status: accepted
+- Context: A price such as “30-minute private lesson” may apply across instruments, teachers, and locations. Binding an instrument or place to that offering would duplicate products and confuse billing vocabulary with the real appointment.
+- Decision: An offering defines what can be billed: label, duration, format/capacity, cadence default, billing timing, and price. A scheduled lesson occurrence owns its student, teacher, instrument, place, and time. A recurring series supplies default instrument/place values, while an occurrence may retain or override them.
+- Decision: Teacher-instrument mappings guide defaults and make exceptions visible but do not forbid an owner override. Student home and Online are built-in place choices; only physical school rooms are owner-configurable.
+- Consequences: Billing snapshots continue to reference the offering and never recalculate from instrument or place. Scheduling creation boundaries require an active school instrument, future series generators inherit the series default, and historical ambiguous instruments remain unknown rather than guessed.
+
+# 2026-10-23 — Cadence belongs to the scheduled series
+
+- Status: accepted
+- Context: The same billable offering may be used once, weekly, or eventually with another recurrence. Storing a preferred cadence on the offering makes a pricing definition quietly control the calendar.
+- Decision: Offerings do not own recurrence or a scheduling default. The lesson composer owns the one-time/series choice; Common Time may preselect Weekly as an application workflow convenience, but that preference is not stored on or inferred from the offering.
+- Consequences: Selecting a different offering preserves the owner's cadence choice. Series recurrence remains on `lesson_series`; individual lessons remain free-standing occurrences. Financial price and billing-timing terms remain on the offering.
