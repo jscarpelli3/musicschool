@@ -153,12 +153,15 @@ export function LessonOpeningFinder({ options, timeZone, onChoose, onManualAdd, 
   </div>;
 
   const finder = <>
-    <div className="flex flex-wrap items-center justify-between gap-4">
-      <div className="flex items-center gap-3 text-sm">
-        <button type="button" onClick={() => setSelectedWeek((value) => addDays(value, -7))} className="text-muted hover:text-ink">←</button>
-        <span className="text-brand">{formatDay(selectedWeek)}–{formatDay(dates[6])}</span>
-        <button type="button" onClick={() => setSelectedWeek((value) => addDays(value, 7))} className="text-muted hover:text-ink">→</button>
-      </div>
+    <div className="flex justify-center">
+      <nav aria-label="Choose a week" className="flex items-center justify-center gap-3 rounded-control bg-canvas/80 p-2 sm:gap-5">
+        <button type="button" aria-label="Previous week" onClick={() => setSelectedWeek((value) => addDays(value, -7))} className="inline-flex h-10 min-w-10 items-center justify-center rounded-control border border-line bg-surface px-3 text-lg text-muted shadow-[var(--ui-shadow-soft)] transition hover:border-brand/50 hover:text-ink">←</button>
+        <div className="min-w-36 text-center sm:min-w-48">
+          <span className="block text-[0.65rem] uppercase tracking-[0.14em] text-muted">Week</span>
+          <span className="mt-0.5 block font-display text-xl text-brand sm:text-2xl">{formatDay(selectedWeek)}–{formatDay(dates[6])}</span>
+        </div>
+        <button type="button" aria-label="Next week" onClick={() => setSelectedWeek((value) => addDays(value, 7))} className="inline-flex h-10 min-w-10 items-center justify-center rounded-control border border-line bg-surface px-3 text-lg text-muted shadow-[var(--ui-shadow-soft)] transition hover:border-brand/50 hover:text-ink">→</button>
+      </nav>
     </div>
     <div className="mt-5 grid gap-3 rounded-card bg-canvas/80 p-3 sm:grid-cols-2 lg:grid-cols-4">
       <label><span className="mb-1.5 block text-xs text-muted">Teacher</span><AppSelect value={teacherId} onChange={(event) => setTeacherId(event.target.value)} className={control}><option value="">Any teacher</option>{options.teachers.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</AppSelect></label>
