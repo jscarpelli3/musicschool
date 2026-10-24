@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { archiveProduct, updateSchoolBillingTiming } from "./actions";
 import { ProductForm } from "./product-form";
 import { AppSelect } from "@/components/ui/app-select";
+import { PlaceForm } from "../places/place-form";
+import { archivePlace } from "../places/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -14,19 +16,20 @@ export default async function ProductsPage({
   searchParams,
 }: {
   params: Promise<{ schoolId: string }>;
-  searchParams: Promise<{ created?: string; archived?: string; error?: string; billing?: string }>;
+  searchParams: Promise<{ created?: string; archived?: string; error?: string; billing?: string; roomCreated?: string; roomArchived?: string; roomError?: string }>;
 }) {
   const { schoolId } = await params;
-  const { created, archived, error, billing } = await searchParams;
+  const { created, archived, error, billing, roomCreated, roomArchived, roomError } = await searchParams;
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getClaims();
   const profileId = authData?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/products`);
 
-  const [{ data: school }, { data: membership }, { data: products }, capabilities] = await Promise.all([
+  const [{ data: school }, { data: membership }, { data: products }, { data: rooms }, capabilities] = await Promise.all([
     supabase.from("schools").select("id, name, billing_timing_default, billing_day, payer_review_days, intended_charge_day").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     supabase.from("service_products").select("id, name, format, duration_minutes, pricing_model, price_cents, currency, capacity, status, billing_timing_override, stripe_sync_status").eq("school_id", schoolId).order("status").order("name"),
+    supabase.from("lesson_places").select("id,name,details,status,created_by").eq("school_id",schoolId).eq("kind","school").order("status").order("name"),
     loadMySchoolCapabilities(schoolId),
   ]);
 
@@ -90,6 +93,14 @@ export default async function ProductsPage({
         <div><h2 className="font-display text-3xl font-normal">Expand your offerings.</h2><p className="mt-2 text-sm text-muted">Define a new lesson or class in a focused form.</p></div>
         <FocusedModal triggerLabel="Add offering +" eyebrow="Lessons and classes" title="New offering." description="Set what the lesson includes, how long it lasts, and its price."><ProductForm schoolId={schoolId} /></FocusedModal>
       </section> : null}
+
+      <section id="lesson-places" className="ui-card mt-6 scroll-mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
+        <div><h2 className="font-display text-3xl">Lesson places</h2><p className="mt-3 text-sm leading-6 text-muted">Name the rooms used for lessons at your school. Student home and Online are always available when scheduling.</p></div>
+        <div>{roomCreated ? <p className="mb-4 text-sm text-brand">Room added.</p> : null}{roomArchived ? <p className="mb-4 text-sm text-brand">Room archived.</p> : null}{roomError ? <p className="mb-4 text-sm text-danger">The room could not be archived.</p> : null}
+          {(rooms ?? []).length ? (rooms ?? []).map((room)=><article key={room.id} className="grid grid-cols-[1fr_auto] gap-5 border-t border-line py-4 first:border-t-0"><div><p>{room.name}</p>{room.details?<p className="mt-1 text-sm text-muted">{room.details}</p>:null}{room.status==="archived"?<p className="mt-1 text-xs text-muted">Archived</p>:null}</div>{room.status==="active"&&(capabilities.has("school.places.manage")||room.created_by===profileId)?<form action={archivePlace.bind(null,schoolId,room.id)}><button className="text-xs text-muted hover:text-ink">Archive</button></form>:null}</article>) : <p className="text-sm text-muted">No school rooms added yet.</p>}
+          {capabilities.has("school.places.create")?<div className="mt-5"><FocusedModal triggerLabel="Add room +" eyebrow="Lesson places" title="Add a room" description="Name a studio, classroom, or other space at your school."><PlaceForm schoolId={schoolId}/></FocusedModal></div>:null}
+        </div>
+      </section>
 
     </main>
   );
