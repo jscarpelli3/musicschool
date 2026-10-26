@@ -36,15 +36,15 @@ export async function createPlace(
   }
 
   revalidatePath(`/schools/${schoolId}`);
-  revalidatePath(`/schools/${schoolId}/setup`);
+  revalidatePath(`/schools/${schoolId}/products`);
   revalidatePath(`/schools/${schoolId}/onboarding`);
-  redirect(`/schools/${schoolId}/setup?roomCreated=1#school-rooms`);
+  redirect(`/schools/${schoolId}/products?roomCreated=1#lesson-places`);
 }
 
 export async function archivePlace(schoolId: string, placeId: string) {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
-  if (!data?.claims?.sub) redirect(`/login?next=/schools/${schoolId}/setup`);
+  if (!data?.claims?.sub) redirect(`/login?next=/schools/${schoolId}/products`);
 
   const { data: archived, error } = await supabase
     .from("lesson_places")
@@ -55,8 +55,8 @@ export async function archivePlace(schoolId: string, placeId: string) {
     .select("id")
     .maybeSingle();
 
-  if (error || !archived) redirect(`/schools/${schoolId}/setup?roomError=archive#school-rooms`);
+  if (error || !archived) redirect(`/schools/${schoolId}/products?roomError=archive#lesson-places`);
 
-  revalidatePath(`/schools/${schoolId}/setup`);
-  redirect(`/schools/${schoolId}/setup?roomArchived=1#school-rooms`);
+  revalidatePath(`/schools/${schoolId}/products`);
+  redirect(`/schools/${schoolId}/products?roomArchived=1#lesson-places`);
 }
