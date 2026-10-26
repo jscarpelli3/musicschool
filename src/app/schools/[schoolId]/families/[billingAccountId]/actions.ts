@@ -9,7 +9,7 @@ import { getStripe } from "@/lib/stripe/server";
 import { collectApprovedInvoice } from "@/lib/stripe/invoice-collection";
 import { normalizeE164 } from "@/lib/phone";
 import { ensurePortalAuthIdentity } from "@/lib/portal/auth-identities";
-import { billingApprovalEmail } from "@/lib/resend/billing-approval-email";
+import { billingApprovalEmail, type BillingApprovalEmailGroup, type BillingApprovalEmailLine } from "@/lib/resend/billing-approval-email";
 import { billingStatementNoticeEmail } from "@/lib/resend/billing-statement-notice-email";
 import { normalizeReplyTo, schoolEmailSender } from "@/lib/resend/email-security";
 import { EmailDeliveryPolicyError, ResendRequestError, ResendUnknownOutcomeError, sendResendEmail } from "@/lib/resend/server";
@@ -39,6 +39,47 @@ export type PreparedInvoice = {
 export type BillingDraftState = { ok: boolean; message: string; periodId: string | null; invoice: PreparedInvoice | null };
 export type BillingLineDeferState = { ok: boolean; message: string };
 export type BillingLessonAddState = { ok: boolean; message: string };
+
+async function readBillingApprovalEmailDetails(schoolId: string, billingPeriodId: string, currency: string) {
+  const supabase = await createClient();
+  const { data: lines, error: linesError } = await supabase.from("billing_line_items")
+    .select("id,description,service_date,amount_cents,source_type,source_id")
+    .eq("school_id", schoolId).eq("billing_period_id", billingPeriodId)
+    .order("service_date", { ascending: true, nullsFirst: false }).order("created_at");
+  if (linesError || !lines?.length) return null;
+
+  const lessonIds = lines.filter((line) => line.source_type === "lesson" && line.source_id).map((line) => line.source_id as string);
+  const seriesIds = lines.filter((line) => line.source_type === "lesson_series" && line.source_id).map((line) => line.source_id as string);
+  const [{ data: events, error: eventsError }, { data: series, error: seriesError }] = await Promise.all([
+    lessonIds.length ? supabase.from("lesson_events").select("id,student_id").eq("school_id", schoolId).in("id", lessonIds) : Promise.resolve({ data: [], error: null }),
+    seriesIds.length ? supabase.from("lesson_series").select("id,student_id").eq("school_id", schoolId).in("id", seriesIds) : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (eventsError || seriesError) return null;
+  const studentBySource = new Map<string, string>([...(events ?? []), ...(series ?? [])].map((source) => [source.id, source.student_id]));
+  const studentIds = [...new Set(studentBySource.values())];
+  const { data: students, error: studentsError } = studentIds.length
+    ? await supabase.from("people").select("id,first_name,last_name,preferred_name").eq("school_id", schoolId).in("id", studentIds)
+    : { data: [], error: null };
+  if (studentsError) return null;
+
+  const studentName = new Map((students ?? []).map((student) => [student.id, `${student.preferred_name || student.first_name}${student.last_name ? ` ${student.last_name}` : ""}`]));
+  const money = new Intl.NumberFormat("en-US", { style: "currency", currency });
+  const groups = new Map<string, BillingApprovalEmailGroup>();
+  const otherLines: BillingApprovalEmailLine[] = [];
+  for (const line of lines) {
+    const emailLine = { description: line.description, serviceDate: line.service_date, amount: money.format((line.amount_cents ?? 0) / 100) };
+    const studentId = line.source_id ? studentBySource.get(line.source_id) : null;
+    if (!studentId) {
+      otherLines.push(emailLine);
+      continue;
+    }
+    const group = groups.get(studentId) ?? { studentName: studentName.get(studentId) ?? "Student", lessonCount: 0, lines: [] };
+    group.lines.push(emailLine);
+    if (line.source_type === "lesson") group.lessonCount += 1;
+    groups.set(studentId, group);
+  }
+  return { studentGroups: [...groups.values()], otherLines };
+}
 
 async function readPreparedInvoice(schoolId: string, billingAccountId: string, periodId: string): Promise<PreparedInvoice | null> {
   const supabase = await createClient();
@@ -419,11 +460,14 @@ export async function sendBillingApprovalEmail(
     return { ok: false, message: "Add a valid email address to the primary payer first." };
   }
 
+  const invoiceDetails = await readBillingApprovalEmailDetails(schoolId, billingPeriodId, period.currency);
+  if (!invoiceDetails) return { ok: false, message: "The itemized invoice could not be loaded, so no approval email was sent." };
+
   const rawToken = randomBytes(32).toString("base64url");
   const approvalUrl = `${appOrigin()}/approve/${rawToken}`;
   const amount = new Intl.NumberFormat("en-US", { style: "currency", currency: period.currency }).format(period.amount_due_cents / 100);
   const payerName = `${contact?.preferred_name || contact?.first_name || "there"}${contact?.last_name ? ` ${contact.last_name}` : ""}`;
-  const message = billingApprovalEmail({ schoolName: school.name, payerName, periodLabel: period.label, amount, approvalUrl });
+  const message = billingApprovalEmail({ schoolName: school.name, payerName, periodLabel: period.label, amount, approvalUrl, ...invoiceDetails });
   const from = schoolEmailSender(school.name);
   const hash = (value: string) => createHash("sha256").update(value).digest("hex");
   const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
@@ -573,11 +617,14 @@ export async function retryBillingApprovalEmail(
   ]);
   if (!priorDelivery) return { ok: false, message: "The failed email attempt could not be found." };
 
+  const invoiceDetails = await readBillingApprovalEmailDetails(schoolId, billingPeriodId, request.currency);
+  if (!invoiceDetails) return { ok: false, message: "The itemized invoice could not be loaded, so the approval email was not retried." };
+
   const rawToken = randomBytes(32).toString("base64url");
   const approvalUrl = `${appOrigin()}/approve/${rawToken}`;
   const amount = new Intl.NumberFormat("en-US", { style: "currency", currency: request.currency }).format(request.amount_cents / 100);
   const payerName = `${contact?.preferred_name || contact?.first_name || "there"}${contact?.last_name ? ` ${contact.last_name}` : ""}`;
-  const message = billingApprovalEmail({ schoolName: school.name, payerName, periodLabel: request.period_label, amount, approvalUrl });
+  const message = billingApprovalEmail({ schoolName: school.name, payerName, periodLabel: request.period_label, amount, approvalUrl, ...invoiceDetails });
   const hash = (value: string) => createHash("sha256").update(value).digest("hex");
   const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
   const { data: prepared, error: prepareError } = await supabase.rpc("retry_billing_approval_email_delivery", {

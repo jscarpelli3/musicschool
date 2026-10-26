@@ -9,6 +9,7 @@ export type SchoolInvoice = {
   id: string;
   billingAccountId: string;
   familyName: string;
+  studentNames: string[];
   label: string;
   amountDueCents: number;
   currency: string;
@@ -26,12 +27,20 @@ export async function loadSchoolInvoices(client: Client, schoolId: string, limit
     .eq("school_id", schoolId)
     .order("updated_at", { ascending: false });
   if (limit) periodQuery = periodQuery.limit(limit);
-  const [{ data: periods, error: periodError }, { data: accounts, error: accountError }] = await Promise.all([
+  const [{ data: periods, error: periodError }, { data: accounts, error: accountError }, { data: studentLinks, error: studentLinkError }, { data: people, error: peopleError }] = await Promise.all([
     periodQuery,
     client.from("billing_accounts").select("id,name").eq("school_id", schoolId),
+    client.from("billing_account_students").select("billing_account_id,student_id").eq("school_id", schoolId),
+    client.from("people").select("id,first_name,last_name,preferred_name").eq("school_id", schoolId).eq("status", "active"),
   ]);
-  if (periodError || accountError) throw new Error("Invoices could not be loaded.");
+  if (periodError || accountError || studentLinkError || peopleError) throw new Error("Invoices could not be loaded.");
   const accountNames = new Map((accounts ?? []).map((account) => [account.id, account.name]));
+  const personNames = new Map((people ?? []).map((person) => [person.id, `${person.preferred_name || person.first_name} ${person.last_name}`]));
+  const studentsByAccount = (studentLinks ?? []).reduce<Record<string, string[]>>((grouped, link) => {
+    const studentName = personNames.get(link.student_id);
+    if (studentName) (grouped[link.billing_account_id] ??= []).push(studentName);
+    return grouped;
+  }, {});
   const periodIds = (periods ?? []).map((period) => period.id);
   const { data: lines, error: lineError } = periodIds.length
     ? await client.from("billing_line_items").select("billing_period_id").eq("school_id", schoolId).in("billing_period_id", periodIds)
@@ -42,6 +51,7 @@ export async function loadSchoolInvoices(client: Client, schoolId: string, limit
     id: period.id,
     billingAccountId: period.billing_account_id,
     familyName: accountNames.get(period.billing_account_id) ?? "Family account",
+    studentNames: (studentsByAccount[period.billing_account_id] ?? []).sort((a, b) => a.localeCompare(b)),
     label: period.label,
     amountDueCents: period.amount_due_cents,
     currency: period.currency,
