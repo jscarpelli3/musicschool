@@ -27,3 +27,12 @@ Capture unresolved questions here so they do not get lost between sessions.
 
 - Is a CMS needed for public marketing or policy content after v1?
 - Do users need to switch between multiple schools in the initial release, or may v1 enforce one active school membership per user?
+
+## Platform plans and solo schools
+
+- Should **solo school** be purely a reversible workspace preference, a commercial tier, or both? Product behavior must remain reversible even if pricing eventually uses it.
+- Which conveniences should solo mode enable automatically, and which should remain user preferences? Initial candidates are owner-teacher defaults, fewer teacher selectors, simplified setup, and quieter multi-teacher coordination UI.
+- What happens when a solo school adds a second active teacher: automatically leave solo mode, warn and ask, or retain the preference while disabling assumptions that are no longer safe?
+- What should determine subscription price: active teacher count, selected plan, active students, payment volume, or feature access? Provisional discussion points are roughly `$8/month` for solo and `$20/month` for up to five teachers; neither price nor boundary is decided.
+- How should beta promises be represented: fixed trial end, a number of free months beginning at activation, an explicit `comped_through` date, or a combination with an auditable admin note?
+- Which super-admin actions are appropriate for v1, and which require stronger controls or must never exist? School lookup, plan/trial management, account status, and support diagnostics are expected; silent tenant impersonation and direct financial-history editing should not be normal controls.
