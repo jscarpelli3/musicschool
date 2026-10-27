@@ -19,6 +19,8 @@ export type SchoolInvoice = {
   periodEnd: string;
   updatedAt: string;
   lineCount: number;
+  payerReviewReason: string | null;
+  payerReviewNote: string | null;
 };
 
 export async function loadSchoolInvoices(client: Client, schoolId: string, limit?: number): Promise<SchoolInvoice[]> {
@@ -42,11 +44,16 @@ export async function loadSchoolInvoices(client: Client, schoolId: string, limit
     return grouped;
   }, {});
   const periodIds = (periods ?? []).map((period) => period.id);
-  const { data: lines, error: lineError } = periodIds.length
-    ? await client.from("billing_line_items").select("billing_period_id").eq("school_id", schoolId).in("billing_period_id", periodIds)
-    : { data: [], error: null };
-  if (lineError) throw new Error("Invoice line counts could not be loaded.");
+  const [{ data: lines, error: lineError }, { data: approvals, error: approvalError }] = periodIds.length
+    ? await Promise.all([
+      client.from("billing_line_items").select("billing_period_id").eq("school_id", schoolId).in("billing_period_id", periodIds),
+      client.from("billing_approval_requests").select("billing_period_id,approval_status,rejection_reason_code,rejection_note,created_at").eq("school_id", schoolId).in("billing_period_id", periodIds).order("created_at", { ascending: false }),
+    ])
+    : [{ data: [], error: null }, { data: [], error: null }];
+  if (lineError || approvalError) throw new Error("Invoice details could not be loaded.");
   const lineCounts = (lines ?? []).reduce<Record<string, number>>((counts, line) => { counts[line.billing_period_id] = (counts[line.billing_period_id] ?? 0) + 1; return counts; }, {});
+  const latestApproval = new Map<string, (typeof approvals)[number]>();
+  for (const approval of approvals ?? []) if (approval.billing_period_id && !latestApproval.has(approval.billing_period_id)) latestApproval.set(approval.billing_period_id, approval);
   return (periods ?? []).map((period) => ({
     id: period.id,
     billingAccountId: period.billing_account_id,
@@ -61,6 +68,8 @@ export async function loadSchoolInvoices(client: Client, schoolId: string, limit
     periodEnd: period.period_end,
     updatedAt: period.updated_at,
     lineCount: lineCounts[period.id] ?? 0,
+    payerReviewReason: latestApproval.get(period.id)?.approval_status === "rejected" ? latestApproval.get(period.id)?.rejection_reason_code ?? null : null,
+    payerReviewNote: latestApproval.get(period.id)?.approval_status === "rejected" ? latestApproval.get(period.id)?.rejection_note ?? null : null,
   }));
 }
 

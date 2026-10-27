@@ -35,6 +35,8 @@ export type PreparedInvoice = {
   status: string;
   lines: Array<{ id: string; description: string; serviceDate: string | null; amountCents: number }>;
   outstandingLessons: Array<{ lessonEventId: string; studentName: string; offeringName: string; serviceDate: string; startsAt: string; amountCents: number; currency: string }>;
+  payerReviewReason: string | null;
+  payerReviewNote: string | null;
 };
 export type BillingDraftState = { ok: boolean; message: string; periodId: string | null; invoice: PreparedInvoice | null };
 export type BillingLineDeferState = { ok: boolean; message: string };
@@ -83,11 +85,12 @@ async function readBillingApprovalEmailDetails(schoolId: string, billingPeriodId
 
 async function readPreparedInvoice(schoolId: string, billingAccountId: string, periodId: string): Promise<PreparedInvoice | null> {
   const supabase = await createClient();
-  const [{ data: period }, { data: account }, { data: lines }, { data: outstandingLessons }] = await Promise.all([
+  const [{ data: period }, { data: account }, { data: lines }, { data: outstandingLessons }, { data: approvals }] = await Promise.all([
     supabase.from("billing_periods").select("id,label,amount_due_cents,currency,status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", periodId).single(),
     supabase.from("billing_accounts").select("name").eq("school_id", schoolId).eq("id", billingAccountId).single(),
     supabase.from("billing_line_items").select("id,description,service_date,amount_cents").eq("school_id", schoolId).eq("billing_period_id", periodId).order("service_date", { ascending: true, nullsFirst: false }).order("created_at"),
     supabase.rpc("get_outstanding_lessons_for_billing_account", { p_school_id: schoolId, p_billing_account_id: billingAccountId }),
+    supabase.from("billing_approval_requests").select("approval_status,rejection_reason_code,rejection_note").eq("school_id", schoolId).eq("billing_period_id", periodId).order("created_at", { ascending: false }).limit(1),
   ]);
   if (!period || !account || !lines) return null;
   return {
@@ -95,6 +98,8 @@ async function readPreparedInvoice(schoolId: string, billingAccountId: string, p
     currency: period.currency, status: period.status,
     lines: lines.map((line) => ({ id: line.id, description: line.description, serviceDate: line.service_date, amountCents: line.amount_cents ?? 0 })),
     outstandingLessons: (outstandingLessons ?? []).map((lesson) => ({ lessonEventId: lesson.lesson_event_id, studentName: lesson.student_name, offeringName: lesson.offering_name, serviceDate: lesson.service_date, startsAt: lesson.starts_at, amountCents: lesson.amount_cents, currency: lesson.currency })),
+    payerReviewReason: approvals?.[0]?.approval_status === "rejected" ? approvals[0].rejection_reason_code : null,
+    payerReviewNote: approvals?.[0]?.approval_status === "rejected" ? approvals[0].rejection_note : null,
   };
 }
 

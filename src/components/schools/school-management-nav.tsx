@@ -11,6 +11,8 @@ import type { LessonCreationOptions } from "@/components/scheduling/lesson-creat
 import { PrepareInvoiceLauncher, type InvoicePayerChoice } from "@/components/billing/prepare-invoice-launcher";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
 import { lockFamilyBillingPeriod, sendBillingApprovalEmail } from "@/app/schools/[schoolId]/families/[billingAccountId]/actions";
+import { InvoiceWorkspaceList } from "@/components/billing/invoice-workspace-list";
+import { payerReviewReasonLabel } from "@/lib/billing/approval-review";
 
 type RecentApproval = { id: string; kind: "schedule_proposal" | "lesson_change_request"; status: string; teacherId: string; studentId: string; teacher: string; student: string; detail: string };
 
@@ -29,6 +31,7 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
   const [invoiceMessage, setInvoiceMessage] = useState("");
   const [invoiceSendProgress, setInvoiceSendProgress] = useState<Record<string, InvoiceSendProgress>>({});
   const [invoiceActionPending, startInvoiceAction] = useTransition();
+  const [notificationInvoiceId, setNotificationInvoiceId] = useState<string | null>(null);
   const approvalsRef = useRef<HTMLDivElement>(null);
   const invoicesRef = useRef<HTMLDivElement>(null);
   const directoryRef = useRef<HTMLDivElement>(null);
@@ -40,6 +43,16 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
     window.addEventListener("common-time:open-directory", close);
     return () => { window.removeEventListener("common-time:open-notifications", close); window.removeEventListener("common-time:open-invoices", close); window.removeEventListener("common-time:open-lesson-drawer", close); window.removeEventListener("common-time:open-directory", close); };
   }, []);
+  useEffect(() => {
+    const openInvoice = (event: Event) => {
+      const invoiceId = (event as CustomEvent<{ invoiceId?: string }>).detail?.invoiceId;
+      if (!invoiceId || !recentInvoices.some((invoice) => invoice.id === invoiceId)) return;
+      setInvoicesOpen(false);
+      setNotificationInvoiceId(invoiceId);
+    };
+    window.addEventListener("common-time:open-invoice-workspace", openInvoice);
+    return () => window.removeEventListener("common-time:open-invoice-workspace", openInvoice);
+  }, [recentInvoices]);
   useEffect(() => {
     if (!approvalsOpen && !invoicesOpen && !directoryOpen) return;
     const dismiss = (event: PointerEvent) => {
@@ -155,10 +168,11 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
               <div className="max-h-80 overflow-y-auto py-2">{recentInvoices.map((invoice) => {
                 const actionable = ["draft", "review", "locked"].includes(invoice.status);
                 const sendProgress = invoiceSendProgress[invoice.id];
-                const queueStatusClass = invoice.status === "paid" ? "border-brand/50 bg-brand text-canvas" : invoice.status === "draft" || invoice.status === "review" ? "border-ink/25 bg-ink/10 text-ink" : invoice.status === "locked" ? "border-brand/40 bg-brand/15 text-brand" : "border-line bg-surface text-muted";
+                const sentBack = Boolean(invoice.payerReviewReason || invoice.payerReviewNote);
+                const queueStatusClass = sentBack ? "border-danger/60 bg-danger/10 text-danger" : invoice.status === "paid" ? "border-brand/50 bg-brand text-canvas" : invoice.status === "draft" || invoice.status === "review" ? "border-ink/25 bg-ink/10 text-ink" : invoice.status === "locked" ? "border-brand/40 bg-brand/15 text-brand" : "border-line bg-surface text-muted";
                 return <div key={invoice.id} className="grid grid-cols-[auto_1fr_auto] items-start gap-3 rounded-control px-2 py-3 hover:bg-brand/10">
                   <input type="checkbox" aria-label={`Select ${invoice.familyName} ${invoice.label}`} disabled={!actionable || invoiceActionPending || Boolean(sendProgress)} checked={invoiceSelection.includes(invoice.id)} onChange={(event) => setInvoiceSelection((current) => event.target.checked ? [...current, invoice.id] : current.filter((id) => id !== invoice.id))} className="mt-1 size-4 accent-current" />
-                  <Link href={`${base}/families/${invoice.billingAccountId}?period=${invoice.id}`} onClick={() => setInvoicesOpen(false)}><p className="text-sm">{invoice.familyName}</p><p className="mt-1 text-xs text-muted">{invoice.label} · {invoice.lineCount} lines</p><span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.07em] ${queueStatusClass}`}>{invoice.status === "draft" || invoice.status === "review" ? "Not locked" : invoice.status === "locked" ? "Locked · approval not sent" : invoice.statusLabel}</span></Link>
+                  <button type="button" onClick={() => { setInvoicesOpen(false); setNotificationInvoiceId(invoice.id); }} className="text-left"><p className="text-sm">{invoice.familyName}</p><p className="mt-1 text-xs text-muted">{invoice.label} · {invoice.lineCount} lines</p><span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.07em] ${queueStatusClass}`}>{sentBack ? "Sent back for review" : invoice.status === "draft" || invoice.status === "review" ? "Not locked" : invoice.status === "locked" ? "Locked · approval not sent" : invoice.statusLabel}</span>{sentBack ? <span className="mt-2 block rounded-control bg-danger/10 p-2 text-xs leading-5 text-ink"><span className="font-medium text-danger">Payer’s request:</span> {payerReviewReasonLabel(invoice.payerReviewReason)}{invoice.payerReviewNote ? ` “${invoice.payerReviewNote}”` : ""}</span> : null}</button>
                   <div className="text-right"><p className="text-sm">{new Intl.NumberFormat("en-US", { style: "currency", currency: invoice.currency }).format(invoice.amountDueCents / 100)}</p>{sendProgress ? <p role="status" className={`mt-2 text-xs font-medium ${sendProgress === "failed" ? "text-danger" : sendProgress === "sent" ? "text-brand" : "text-muted"}`}>{sendProgress === "waiting" ? "Waiting…" : sendProgress === "sending" ? "Sending…" : sendProgress === "sent" ? "Sent" : "Failed"}</p> : invoice.status === "draft" || invoice.status === "review" ? <button type="button" disabled={invoiceActionPending} onClick={() => setInvoiceSelection([invoice.id])} className="mt-2 text-xs text-brand disabled:opacity-40">Select to lock</button> : invoice.status === "locked" ? <button type="button" disabled={invoiceActionPending} onClick={() => startInvoiceAction(async () => { const result = await sendInvoices([invoice]); setInvoiceMessage(result.message); })} className="mt-2 text-xs text-brand disabled:opacity-40">Send approval</button> : null}</div>
                 </div>;
               })}</div>
@@ -176,6 +190,7 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
         <OwnerNotifications schoolId={schoolId} embedded />
       </div>
       </div>
+      {notificationInvoiceId ? <InvoiceWorkspaceList schoolId={schoolId} invoices={recentInvoices} compact autoOpenId={notificationInvoiceId} hideList onClose={() => setNotificationInvoiceId(null)} /> : null}
     </nav>
   );
 }
