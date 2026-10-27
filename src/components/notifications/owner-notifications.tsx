@@ -112,10 +112,15 @@ export function OwnerNotifications({ schoolId, embedded = false }: { schoolId: s
   function openNotice(event: MouseEvent<HTMLAnchorElement>, notice: Notice) {
     const target = new URL(notice.href, window.location.origin);
     const lessonId = target.pathname === `/schools/${schoolId}` ? target.searchParams.get("lesson") : null;
+    const familyInvoiceMatch = target.pathname.match(new RegExp(`^/schools/${schoolId}/families/[^/]+$`));
+    const invoiceId = familyInvoiceMatch ? target.searchParams.get("period") : null;
     if (lessonId && window.location.pathname === target.pathname) {
       event.preventDefault();
       window.history.replaceState(window.history.state, "", `${target.pathname}${target.search}`);
       window.dispatchEvent(new CustomEvent("common-time:select-lesson", { detail: { lessonId } }));
+    } else if (invoiceId) {
+      event.preventDefault();
+      window.dispatchEvent(new CustomEvent("common-time:open-invoice-workspace", { detail: { invoiceId } }));
     }
     void markRead(notice);
   }
