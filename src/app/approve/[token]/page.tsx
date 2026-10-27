@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
 import { formatCompactDate } from "@/lib/date-format";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { MdCalendarMonth, MdCheckCircleOutline, MdFamilyRestroom, MdReceiptLong } from "react-icons/md";
 import { approveBillingRequest } from "./actions";
 import { AutoChargeEnrollment } from "./auto-charge-enrollment";
@@ -78,6 +80,10 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
 
   if (error || !approval) notFound();
 
+  const portalClient = await createClient();
+  const { data: portalAuth } = await portalClient.auth.getClaims();
+  const portalSignedIn = Boolean(portalAuth?.claims?.sub);
+
   const canApprove = approval.approval_status === "pending";
   const invalidated = ["rejected", "cancelled", "expired"].includes(approval.approval_status);
   const sentBack = approval.approval_status === "rejected" && !approval.has_newer_request;
@@ -152,6 +158,10 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
         {approval.approval_status === "approved" && enrollment ? <AutoChargeEnrollment token={token} schoolName={enrollment.school_name} accountName={enrollment.billing_account_name} methodLabel={enrollment.payment_method_label ?? "saved payment method"} lastFour={enrollment.payment_method_last_four} amountCents={enrollment.current_amount_cents} currency={enrollment.currency} eligible={enrollment.eligible} activeMandate={Boolean(enrollment.active_mandate_id)} initialCapCents={enrollment.monthly_cap_cents} initialNoticeDays={enrollment.advance_notice_days} /> : null}
       </section>
       </>}
+      <aside className="mt-12 rounded-card bg-surface-raised p-6 sm:flex sm:items-center sm:justify-between sm:gap-8 sm:p-8" aria-labelledby="family-portal-heading">
+        <div><p className="text-xs font-medium uppercase tracking-[0.14em] text-brand">Your family account</p><h2 id="family-portal-heading" className="mt-2 font-display text-2xl">Schedules, invoices, and lesson requests</h2><p className="mt-2 max-w-xl text-sm leading-6 text-muted">{portalSignedIn ? "You’re already signed in on this device." : "You’ll verify your email with a one-time code before seeing private family information."}</p></div>
+        <Link href="/portal" className="mt-5 inline-flex shrink-0 items-center justify-center rounded-control bg-brand px-5 py-3 text-sm font-semibold uppercase tracking-[0.06em] text-canvas transition hover:-translate-y-px sm:mt-0">{portalSignedIn ? "Go to family portal" : "Log in to family portal"} →</Link>
+      </aside>
     </main>
   );
 }
