@@ -5296,6 +5296,10 @@ export type Database = {
         Returns: undefined
       }
       approve_billing_request: { Args: { raw_token: string }; Returns: string }
+      approve_client_portal_billing_request: {
+        Args: { p_billing_period_id: string; p_school_id: string }
+        Returns: Json
+      }
       begin_payment_method_revocation: {
         Args: { p_payment_method_id: string }
         Returns: {
@@ -6047,6 +6051,15 @@ export type Database = {
       reject_billing_request: {
         Args: { p_note?: string; p_reason_code: string; raw_token: string }
         Returns: string
+      }
+      reject_client_portal_billing_request: {
+        Args: {
+          p_billing_period_id: string
+          p_note?: string
+          p_reason_code: string
+          p_school_id: string
+        }
+        Returns: Json
       }
       remove_billing_adjustment: {
         Args: {

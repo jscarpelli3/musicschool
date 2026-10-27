@@ -6,6 +6,7 @@ import { CalendarSubscription } from "./calendar-subscription";
 import { AutomaticPaymentSettings } from "./automatic-payment-settings";
 import { billingPeriodDescriptor } from "@/lib/domain/state-descriptors";
 import type { Json } from "@/types/database";
+import { InvoiceDecisionControls } from "./invoice-decision-controls";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +64,7 @@ export default async function ClientPortalPage() {
           <div className="mt-5 rounded-control bg-surface p-4">
             <ul className="grid gap-3 text-sm">{items.map((item, index) => <li key={`${String(item.description)}-${index}`} className="flex justify-between gap-5"><span>{String(item.description ?? "Statement item")}</span><span>{money(Number(item.amount_cents ?? 0), statement.currency)}</span></li>)}</ul>
             <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted"><span>Approval: {statement.approval_status?.replaceAll("_", " ") ?? "not recorded"}</span><span>Payment: {statement.payment_status?.replaceAll("_", " ") ?? (statement.period_status === "paid" ? "paid" : "not completed")}</span></div>
+            {statement.period_status === "approval_pending" && statement.approval_status === "pending" ? <InvoiceDecisionControls schoolId={statement.school_id} billingPeriodId={statement.billing_period_id} amount={money(statement.amount_due_cents, statement.currency)} /> : null}
           </div>
         </details>;
       }) : <div className="ui-card p-6"><p className="text-sm text-muted">No statements have been sent to this family yet.</p></div>}</div>

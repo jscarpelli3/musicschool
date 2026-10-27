@@ -12,8 +12,13 @@ export async function dispatchOwnerResponseEmails(rawToken: string) {
   const tokenHash = createHash("sha256").update(rawToken).digest("hex");
   const { data: request } = await admin.from("billing_approval_requests").select("id, school_id").eq("token_hash", tokenHash).maybeSingle();
   if (!request) return;
+  await dispatchOwnerResponseEmailsByRequestId(request.id);
+}
+
+export async function dispatchOwnerResponseEmailsByRequestId(approvalRequestId: string) {
+  const admin = createAdminClient();
   const { data: deliveries } = await admin.from("owner_notification_email_outbox")
-    .select("id").eq("approval_request_id", request.id).eq("status", "pending");
+    .select("id").eq("approval_request_id", approvalRequestId).eq("status", "pending");
   for (const delivery of deliveries ?? []) {
     await dispatchOwnerNotificationEmail(delivery.id);
   }
