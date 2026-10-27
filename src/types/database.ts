@@ -1301,6 +1301,66 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_checkout_requests: {
+        Row: {
+          amount_cents: number
+          approval_request_id: string
+          billing_account_id: string
+          billing_period_id: string
+          checkout_url: string | null
+          completed_at: string | null
+          created_at: string
+          currency: string
+          expires_at: string
+          id: string
+          payment_attempt_id: string
+          payment_connection_id: string
+          provider_checkout_session_id: string | null
+          provider_customer_id: string
+          school_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          approval_request_id: string
+          billing_account_id: string
+          billing_period_id: string
+          checkout_url?: string | null
+          completed_at?: string | null
+          created_at?: string
+          currency: string
+          expires_at: string
+          id?: string
+          payment_attempt_id: string
+          payment_connection_id: string
+          provider_checkout_session_id?: string | null
+          provider_customer_id: string
+          school_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          approval_request_id?: string
+          billing_account_id?: string
+          billing_period_id?: string
+          checkout_url?: string | null
+          completed_at?: string | null
+          created_at?: string
+          currency?: string
+          expires_at?: string
+          id?: string
+          payment_attempt_id?: string
+          payment_connection_id?: string
+          provider_checkout_session_id?: string | null
+          provider_customer_id?: string
+          school_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lesson_accounting_overrides: {
         Row: {
           created_at: string
@@ -5562,6 +5622,17 @@ export type Database = {
         Args: { p_school_id: string }
         Returns: undefined
       }
+      complete_invoice_checkout_request: {
+        Args: {
+          p_charge_id: string
+          p_checkout_session_id: string
+          p_payment_intent_id: string
+          p_provider_account_id: string
+          p_provider_event_id: string
+          p_request_id: string
+        }
+        Returns: undefined
+      }
       create_single_lesson: {
         Args: {
           p_allow_outside_availability?: boolean
@@ -5615,6 +5686,14 @@ export type Database = {
           p_teacher_id: string
         }
         Returns: Json
+      }
+      expire_invoice_checkout_request: {
+        Args: {
+          p_checkout_session_id: string
+          p_provider_account_id: string
+          p_request_id: string
+        }
+        Returns: undefined
       }
       create_weekly_lesson_series_with_instrument: {
         Args: {

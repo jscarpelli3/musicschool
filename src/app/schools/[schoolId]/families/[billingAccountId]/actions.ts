@@ -7,6 +7,7 @@ import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
 import { CardSetupWorkflowError, createFamilyCardSetup } from "@/lib/stripe/payment-methods";
 import { getStripe } from "@/lib/stripe/server";
 import { collectApprovedInvoice } from "@/lib/stripe/invoice-collection";
+import { createApprovedInvoiceCheckout } from "@/lib/stripe/invoice-checkout";
 import { normalizeE164 } from "@/lib/phone";
 import { ensurePortalAuthIdentity } from "@/lib/portal/auth-identities";
 import { billingApprovalEmail, type BillingApprovalEmailGroup, type BillingApprovalEmailLine } from "@/lib/resend/billing-approval-email";
@@ -146,6 +147,24 @@ export async function collectFamilyInvoice(schoolId: string, billingAccountId: s
     if (message.includes("already in progress or has succeeded")) return { ok: false, message: "This statement already has a payment in progress or completed. Refresh to see its status." };
     if (message.includes("Do not retry")) return { ok: false, message };
     return { ok: false, message: message || "The payment could not be submitted. Nothing was marked paid." };
+  }
+}
+
+export async function createOneTimeInvoicePaymentLink(schoolId: string, billingAccountId: string, billingPeriodId: string) {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId || !await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) return { ok: false as const, message: "You do not have permission to prepare this payment link." };
+  try {
+    await protectServerAction({ scope: "billing.invoice.one_time_link", subject: `actor:${profileId}|school:${schoolId}|period:${billingPeriodId}`, limit: 5, windowSeconds: 3600, blockSeconds: 900 });
+    const url = await createApprovedInvoiceCheckout(null, { schoolId, billingAccountId, billingPeriodId });
+    return { ok: true as const, message: "One-time payment link ready. It expires within 24 hours and does not authorize future charges.", url };
+  } catch (caught) {
+    const detail = caught instanceof Error ? caught.message : "";
+    const message = detail.includes("already in progress") ? "This invoice already has a payment in progress. Refresh before trying again."
+      : detail.includes("connecting Stripe") ? "Finish the school’s Stripe setup before creating a payment link."
+        : "The one-time payment link could not be prepared. Nothing was charged.";
+    return { ok: false as const, message };
   }
 }
 

@@ -156,17 +156,30 @@ export async function reconcileInvoicePaymentIntent(paymentIntentId: string, str
   const [connection, customer, method] = await Promise.all([
     admin.from("school_payment_connections").select("provider_account_id").eq("id", attempt.payment_connection_id).single(),
     admin.from("billing_provider_customers").select("provider_customer_id").eq("id", attempt.provider_customer_id).single(),
-    admin.from("billing_payment_methods").select("provider_payment_method_id").eq("id", attempt.payment_method_id!).single(),
+    attempt.payment_method_id ? admin.from("billing_payment_methods").select("provider_payment_method_id").eq("id", attempt.payment_method_id).single() : Promise.resolve({ data: null, error: null }),
   ]);
   if (connection.error || customer.error || method.error) throw connection.error ?? customer.error ?? method.error;
   const intentCustomer = typeof intent.customer === "string" ? intent.customer : intent.customer?.id;
   const intentMethod = typeof intent.payment_method === "string" ? intent.payment_method : intent.payment_method?.id;
-  assertInvoicePaymentIntentBinding({
-    attemptId: attempt.id, schoolId: attempt.school_id, billingAccountId: attempt.billing_account_id,
-    billingPeriodId: attempt.billing_period_id, amountCents: attempt.amount_cents, currency: attempt.currency,
-    stripeAccount: connection.data.provider_account_id, stripeCustomer: customer.data.provider_customer_id,
-    stripePaymentMethod: method.data.provider_payment_method_id,
-  }, stripeAccount, { amount: intent.amount, currency: intent.currency, customer: intentCustomer ?? null, paymentMethod: intentMethod ?? null, metadata: intent.metadata });
+  if (attempt.payment_method_id && method.data) {
+    assertInvoicePaymentIntentBinding({
+      attemptId: attempt.id, schoolId: attempt.school_id, billingAccountId: attempt.billing_account_id,
+      billingPeriodId: attempt.billing_period_id, amountCents: attempt.amount_cents, currency: attempt.currency,
+      stripeAccount: connection.data.provider_account_id, stripeCustomer: customer.data.provider_customer_id,
+      stripePaymentMethod: method.data.provider_payment_method_id,
+    }, stripeAccount, { amount: intent.amount, currency: intent.currency, customer: intentCustomer ?? null, paymentMethod: intentMethod ?? null, metadata: intent.metadata });
+  } else {
+    const { data: checkoutRequest, error: checkoutError } = await admin.from("invoice_checkout_requests").select("id")
+      .eq("payment_attempt_id", attempt.id).maybeSingle();
+    if (checkoutError || !checkoutRequest || connection.data.provider_account_id !== stripeAccount
+      || intent.amount !== attempt.amount_cents || intent.currency.toUpperCase() !== attempt.currency
+      || intentCustomer !== undefined || !intentMethod
+      || intent.metadata.invoice_checkout_request_id !== checkoutRequest.id
+      || intent.metadata.payment_attempt_id !== attempt.id || intent.metadata.school_id !== attempt.school_id
+      || intent.metadata.billing_account_id !== attempt.billing_account_id || intent.metadata.billing_period_id !== attempt.billing_period_id) {
+      throw new Error("Hosted invoice PaymentIntent binding does not match its reserved invoice attempt.");
+    }
+  }
   await applyPaymentIntent(attempt.id, stripeAccount, intent, providerEventId);
   return true;
 }

@@ -6,6 +6,7 @@ import { synchronizeStripeConnection } from "@/lib/stripe/connections";
 import { expireLessonPayment, reconcileCompletedLessonPayment } from "@/lib/stripe/lesson-quick-pay";
 import { expireCardSetup, reconcileCompletedCardSetup } from "@/lib/stripe/payment-method-reconciliation";
 import { reconcileInvoicePaymentIntent } from "@/lib/stripe/invoice-collection";
+import { expireInvoiceCheckout, reconcileCompletedInvoiceCheckout } from "@/lib/stripe/invoice-checkout";
 import { getStripe, getStripeMode, getStripeWebhookSecrets } from "@/lib/stripe/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/types/database";
@@ -170,20 +171,23 @@ export async function POST(request: Request) {
     }
 
     let lessonPaymentEvent = false;
+    let invoiceCheckoutEvent = false;
     let invoicePaymentEvent = false;
     if (event.checkoutSetupEvent === "completed" && accountId && event.objectId) {
       lessonPaymentEvent = await reconcileCompletedLessonPayment(event.objectId, accountId, event.id, event.createdAt);
-      if (!lessonPaymentEvent) await reconcileCompletedCardSetup(event.objectId, accountId, event.createdAt);
+      invoiceCheckoutEvent = !lessonPaymentEvent && await reconcileCompletedInvoiceCheckout(event.objectId, accountId, event.id);
+      if (!lessonPaymentEvent && !invoiceCheckoutEvent) await reconcileCompletedCardSetup(event.objectId, accountId, event.createdAt);
     } else if (event.checkoutSetupEvent === "expired" && accountId && event.objectId) {
       lessonPaymentEvent = await expireLessonPayment(event.objectId, accountId);
-      if (!lessonPaymentEvent) await expireCardSetup(event.objectId);
+      invoiceCheckoutEvent = !lessonPaymentEvent && await expireInvoiceCheckout(event.objectId, accountId);
+      if (!lessonPaymentEvent && !invoiceCheckoutEvent) await expireCardSetup(event.objectId);
     }
 
     if (event.paymentIntentEvent && accountId && event.objectId) {
       invoicePaymentEvent = await reconcileInvoicePaymentIntent(event.objectId, accountId, event.id);
     }
 
-    const supported = event.accountEvent || lessonPaymentEvent || invoicePaymentEvent || Boolean(event.checkoutSetupEvent);
+    const supported = event.accountEvent || lessonPaymentEvent || invoiceCheckoutEvent || invoicePaymentEvent || Boolean(event.checkoutSetupEvent);
     const { error: completeError } = await admin.from("payment_provider_events").update({
       processing_status: supported ? "processed" : "ignored",
       processed_at: new Date().toISOString(),

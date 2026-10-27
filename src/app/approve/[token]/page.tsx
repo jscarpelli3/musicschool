@@ -9,6 +9,7 @@ import { MdCalendarMonth, MdCheckCircleOutline, MdFamilyRestroom, MdReceiptLong 
 import { approveBillingRequest } from "./actions";
 import { AutoChargeEnrollment } from "./auto-charge-enrollment";
 import { RejectChargesForm } from "./reject-charges-form";
+import { OneTimeInvoicePayment } from "./one-time-invoice-payment";
 
 export const dynamic = "force-dynamic";
 
@@ -137,6 +138,7 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
               <div className="flex items-start gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand/10 text-xl text-brand"><MdCheckCircleOutline aria-hidden="true" /></span><div><p className="text-xs uppercase tracking-[0.14em] text-brand">Everything looks right</p><h2 className="mt-1 font-display text-2xl">Approve {money(approval.amount_cents, approval.currency)}</h2></div></div>
               <p className="mt-4 max-w-xl text-sm leading-6 text-muted">Hold below to approve this exact amount. Approval itself does not charge your card; it allows the school to collect it separately.</p>
               <div className="mt-6"><HoldToConfirm action={approve} idleLabel={`Hold to approve ${money(approval.amount_cents, approval.currency)}`} refreshOnSuccess /></div>
+              <p className="mt-4 text-xs leading-5 text-muted">Want to pay now without leaving a card on file? Approve the amount first, then choose the one-time payment option.</p>
             </div>
             <RejectChargesForm token={token} />
           </>
@@ -150,6 +152,8 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
             </p>
           </div>
         )}
+
+        {approval.approval_status === "approved" && approval.payment_status !== "succeeded" ? <OneTimeInvoicePayment token={token} amount={money(approval.amount_cents, approval.currency)} /> : null}
 
         <div className="mt-10 grid gap-4 border-t border-line pt-6 text-sm text-muted sm:grid-cols-2">
           <p>Expires {new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeStyle: "short" }).format(new Date(approval.expires_at))}</p>

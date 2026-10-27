@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { dispatchOwnerResponseEmails } from "@/lib/notifications/dispatch-owner-notifications";
 import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
+import { createApprovedInvoiceCheckout } from "@/lib/stripe/invoice-checkout";
 
 async function protectApprovalAction(token: string, action: string) {
   if (!/^[A-Za-z0-9_-]{20,256}$/.test(token)) return false;
@@ -124,4 +125,19 @@ export async function revokeAutoChargeMandate(token: string) {
   if (error) return { ok: false, message: "Automatic payment could not be revoked. Please contact the school before the next charge." };
   revalidatePath(`/approve/${token}`);
   return { ok: true, message: data === "revoked" ? "Automatic payment revoked for future charges." : "Automatic payment was already inactive." };
+}
+
+export async function beginOneTimeInvoicePayment(token: string) {
+  if (!await protectApprovalAction(token, "one-time-payment")) return { ok: false, message: "This request could not be validated. Wait a moment, reload, and try again." };
+  try {
+    const url = await createApprovedInvoiceCheckout(token);
+    return { ok: true, message: "Secure payment page ready.", url };
+  } catch (caught) {
+    const detail = caught instanceof Error ? caught.message : "";
+    const message = detail.includes("already in progress") ? "A payment for this invoice is already in progress. Reload before trying again."
+      : detail.includes("connecting Stripe") ? "The school has not finished setting up online payments. Contact the school for another way to pay."
+        : detail.includes("no longer") || detail.includes("no longer matches") ? "This invoice is no longer available for one-time payment. Reload or contact the school."
+          : "The secure payment page could not be opened. Nothing was charged; wait a moment and try again.";
+    return { ok: false, message };
+  }
 }
