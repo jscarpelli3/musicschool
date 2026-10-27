@@ -47,6 +47,29 @@ function money(cents: number, currency: string) {
   }).format(cents / 100);
 }
 
+function StatementDetails({ approval, sentBack = false }: { approval: Approval; sentBack?: boolean }) {
+  return (
+    <section className="relative py-8 sm:py-10" aria-labelledby="charge-breakdown">
+      <div className={sentBack ? "pointer-events-none select-none opacity-45 grayscale" : undefined} aria-hidden={sentBack || undefined}>
+        <div className="ui-card grid gap-6 p-6 sm:grid-cols-[1.25fr_1fr_auto] sm:items-center sm:p-7">
+          <div className="flex items-start gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand/10 text-xl text-brand"><MdFamilyRestroom aria-hidden="true" /></span><div><p className="text-xs uppercase tracking-[0.14em] text-muted">Family</p><p className="mt-1 font-display text-2xl">{approval.billing_account_name}</p><p className="mt-1 text-sm text-muted">{approval.student_names.length ? approval.student_names.join(", ") : "Student details unavailable"}</p></div></div>
+          <div className="flex items-start gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand/10 text-xl text-brand"><MdCalendarMonth aria-hidden="true" /></span><div><p className="text-xs uppercase tracking-[0.14em] text-muted">Billing period</p><p className="mt-1 text-lg">{approval.period_label}</p>{approval.period_start && approval.period_end ? <p className="mt-1 text-sm text-muted">{formatCompactDate(approval.period_start)}–{formatCompactDate(approval.period_end)}</p> : null}</div></div>
+          <div className="border-t border-line pt-5 text-left sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0 sm:text-right"><p className="text-xs uppercase tracking-[0.14em] text-muted">{sentBack ? "Invoice total" : "Amount to approve"}</p><p className="mt-1 font-display text-4xl text-brand">{money(approval.amount_cents, approval.currency)}</p></div>
+        </div>
+
+        <div className="ui-card mt-6 overflow-hidden p-6 sm:p-7">
+          <div className="flex items-center gap-3 border-b border-line pb-5">
+            <span className="grid size-10 place-items-center rounded-full bg-brand/10 text-xl text-brand"><MdReceiptLong aria-hidden="true" /></span>
+            <div><h2 id="charge-breakdown" className="font-display text-2xl">Charge breakdown</h2><p className="mt-1 text-sm text-muted">{sentBack ? "The invoice returned to the school." : "Review each lesson included in this amount."}</p></div>
+          </div>
+          <ul>{approval.line_items.map((item, index) => <li key={`${item.label}-${index}`} className="grid grid-cols-[1fr_auto] gap-5 border-b border-line py-5"><div><p>{item.label}</p>{item.detail ? <p className="mt-1 text-sm text-muted">{formatCompactDate(item.detail)}</p> : null}</div><p>{money(item.amount_cents, approval.currency)}</p></li>)}</ul>
+        </div>
+      </div>
+      {sentBack ? <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center px-3" aria-hidden="true"><div className="-rotate-6 border-4 border-brand bg-canvas/95 px-5 py-4 text-center font-display text-3xl uppercase leading-none tracking-[0.05em] text-brand shadow-xl sm:px-9 sm:py-5 sm:text-5xl">Sent back<br />for review</div></div> : null}
+    </section>
+  );
+}
+
 export default async function ApprovalPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const supabase = createAdminClient();
@@ -57,6 +80,7 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
 
   const canApprove = approval.approval_status === "pending";
   const invalidated = ["rejected", "cancelled", "expired"].includes(approval.approval_status);
+  const sentBack = approval.approval_status === "rejected" && !approval.has_newer_request;
   const invalidatedTitle = approval.has_newer_request
     ? "This statement was updated."
     : approval.approval_status === "rejected"
@@ -81,45 +105,24 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
     <main className="mx-auto min-h-screen max-w-3xl px-5 py-10 sm:px-8 sm:py-16">
       <header className="border-b border-line pb-7">
         <p className="text-xs uppercase tracking-[0.16em] text-brand">{approval.school_name}</p>
-        <h1 className="mt-2 font-display text-3xl leading-none sm:text-4xl">{invalidated ? "Statement unavailable" : "Review lesson charges"}</h1>
+        <h1 className="mt-2 font-display text-3xl leading-none sm:text-4xl">{sentBack ? "Invoice sent back for review" : invalidated ? "Statement unavailable" : "Review lesson charges"}</h1>
       </header>
 
-      {invalidated ? (
+      {sentBack ? <>
+        <section className="pt-10 text-center sm:pt-14" aria-labelledby="sent-back-heading">
+          <p className="text-sm font-medium uppercase tracking-[0.14em] text-brand">Request received</p>
+          <h2 id="sent-back-heading" className="mt-3 font-display text-4xl leading-tight sm:text-5xl">The school has your change request.</h2>
+          <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-muted">Nothing was charged. The school can review your note, update the invoice, and send you a new approval request.</p>
+        </section>
+        <StatementDetails approval={approval} sentBack />
+      </> : invalidated ? (
         <section className="py-14 sm:py-20" aria-labelledby="invalidated-statement">
           <p className="text-sm text-brand">This link is no longer active</p>
           <h2 id="invalidated-statement" className="mt-4 max-w-2xl font-display text-4xl leading-tight sm:text-6xl">{invalidatedTitle}</h2>
           <p className="mt-6 max-w-xl text-lg leading-8 text-muted">{invalidatedMessage}</p>
         </section>
       ) : <>
-      <section className="py-8 sm:py-10" aria-labelledby="charge-breakdown">
-        <div className="ui-card grid gap-6 p-6 sm:grid-cols-[1.25fr_1fr_auto] sm:items-center sm:p-7">
-          <div className="flex items-start gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand/10 text-xl text-brand"><MdFamilyRestroom aria-hidden="true" /></span><div><p className="text-xs uppercase tracking-[0.14em] text-muted">Family</p><p className="mt-1 font-display text-2xl">{approval.billing_account_name}</p><p className="mt-1 text-sm text-muted">{approval.student_names.length ? approval.student_names.join(", ") : "Student details unavailable"}</p></div></div>
-          <div className="flex items-start gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand/10 text-xl text-brand"><MdCalendarMonth aria-hidden="true" /></span><div><p className="text-xs uppercase tracking-[0.14em] text-muted">Billing period</p><p className="mt-1 text-lg">{approval.period_label}</p>{approval.period_start && approval.period_end ? <p className="mt-1 text-sm text-muted">{formatCompactDate(approval.period_start)}–{formatCompactDate(approval.period_end)}</p> : null}</div></div>
-          <div className="border-t border-line pt-5 text-left sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0 sm:text-right"><p className="text-xs uppercase tracking-[0.14em] text-muted">Amount to approve</p><p className="mt-1 font-display text-4xl text-brand">{money(approval.amount_cents, approval.currency)}</p></div>
-        </div>
-
-        <div className="ui-card mt-6 overflow-hidden p-6 sm:p-7">
-          <div className="flex items-center gap-3 border-b border-line pb-5">
-            <span className="grid size-10 place-items-center rounded-full bg-brand/10 text-xl text-brand"><MdReceiptLong aria-hidden="true" /></span>
-            <div>
-              <h2 id="charge-breakdown" className="font-display text-2xl">Charge breakdown</h2>
-              <p className="mt-1 text-sm text-muted">Review each lesson included in this amount.</p>
-            </div>
-          </div>
-
-        <ul>
-          {approval.line_items.map((item, index) => (
-            <li key={`${item.label}-${index}`} className="grid grid-cols-[1fr_auto] gap-5 border-b border-line py-5">
-              <div>
-                <p>{item.label}</p>
-                {item.detail ? <p className="mt-1 text-sm text-muted">{formatCompactDate(item.detail)}</p> : null}
-              </div>
-              <p>{money(item.amount_cents, approval.currency)}</p>
-            </li>
-          ))}
-        </ul>
-        </div>
-      </section>
+      <StatementDetails approval={approval} />
 
       <section>
         {canApprove ? (
