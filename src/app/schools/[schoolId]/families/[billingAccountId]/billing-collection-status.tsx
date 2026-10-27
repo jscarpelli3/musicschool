@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { MdArrowDownward, MdCreditCard } from "react-icons/md";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
 import { collectFamilyInvoice } from "./actions";
@@ -13,6 +15,7 @@ export function BillingCollectionStatus({ schoolId, billingAccountId, billingPer
   readiness: string | null;
   attemptStatus: string | null;
 }) {
+  const router = useRouter();
   const active = attemptStatus !== null && ["created", "submitted", "processing"].includes(attemptStatus);
   const needsAttention = attemptStatus === "requires_action";
   const failed = attemptStatus === "failed";
@@ -30,6 +33,11 @@ export function BillingCollectionStatus({ schoolId, billingAccountId, billingPer
         : hasPaymentMethod
           ? `The payer approved this exact ${amount} statement. Holding the button submits one off-session charge to the family's default saved payment method.`
           : `The payer approved ${amount}, but this family has no active saved payment method. Common Time cannot collect it until the payer securely adds one.`;
+  useEffect(() => {
+    if (!active) return;
+    const interval = window.setInterval(() => router.refresh(), 3000);
+    return () => window.clearInterval(interval);
+  }, [active, router]);
   return (
     <div className="mt-5 rounded-card border border-brand/30 bg-brand/5 p-5 sm:p-6">
       <div className="flex items-start gap-4">
