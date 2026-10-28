@@ -16,7 +16,7 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
   amount: string;
   hasPaymentMethod: boolean;
   initialStatus: string;
-  initialAttempt: { id: string; status: string; failureMessage: string | null } | null;
+  initialAttempt: { id: string; status: string; failureMessage: string | null; usesSavedMethod: boolean } | null;
 }) {
   const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
@@ -73,7 +73,8 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watching, schoolId, billingAccountId, billingPeriodId]);
 
-  const active = ["created", "submitted", "processing"].includes(attempt?.status ?? "");
+  const hostedLinkOpen = attempt?.status === "created" && !attempt.usesSavedMethod;
+  const active = ["submitted", "processing"].includes(attempt?.status ?? "") || (attempt?.status === "created" && attempt.usesSavedMethod);
   const failed = status === "payment_failed" || ["failed", "requires_action", "cancelled"].includes(attempt?.status ?? "");
   const title = status === "paid" ? "Paid"
     : active ? "Payment submitted — awaiting confirmation"
@@ -96,7 +97,8 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
           <div className="rounded-control bg-surface-raised p-4">
             <p className="text-sm font-medium">Charge the saved card</p>
             <p className="mt-2 text-xs leading-5 text-muted">Uses the family’s authorized default payment method.</p>
-            {hasPaymentMethod ? <div className="mt-4"><HoldToConfirm action={() => collectFamilyInvoice(schoolId, billingAccountId, billingPeriodId)} idleLabel={failed ? "Hold to try the saved card again" : `Hold to charge ${amount}`} holdingLabel="Keep holding to submit one charge…" submittingLabel="Submitting securely…" successLabel="Payment submitted" onSuccess={() => void checkPayment(true)} /></div>
+            {hostedLinkOpen ? <p className="mt-4 text-xs font-medium text-muted">A one-time payment link is already open for this invoice. Use or resend that link before starting another collection method.</p>
+              : hasPaymentMethod ? <div className="mt-4"><HoldToConfirm action={() => collectFamilyInvoice(schoolId, billingAccountId, billingPeriodId)} idleLabel={failed ? "Hold to try the saved card again" : `Hold to charge ${amount}`} holdingLabel="Keep holding to submit one charge…" submittingLabel="Submitting securely…" successLabel="Payment submitted" onSuccess={() => void checkPayment(true)} /></div>
               : <p className="mt-4 text-xs font-medium text-muted">No active saved card is available.</p>}
           </div>
           <div className="rounded-control bg-surface-raised p-4">

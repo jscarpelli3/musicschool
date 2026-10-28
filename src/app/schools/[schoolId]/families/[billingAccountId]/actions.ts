@@ -39,7 +39,7 @@ export type PreparedInvoice = {
   payerReviewReason: string | null;
   payerReviewNote: string | null;
   hasActivePaymentMethod: boolean;
-  latestPaymentAttempt: { id: string; status: string; failureMessage: string | null } | null;
+  latestPaymentAttempt: { id: string; status: string; failureMessage: string | null; usesSavedMethod: boolean } | null;
 };
 export type BillingDraftState = { ok: boolean; message: string; periodId: string | null; invoice: PreparedInvoice | null };
 export type BillingLineDeferState = { ok: boolean; message: string };
@@ -94,7 +94,7 @@ async function readPreparedInvoice(schoolId: string, billingAccountId: string, p
     supabase.from("billing_line_items").select("id,description,service_date,amount_cents").eq("school_id", schoolId).eq("billing_period_id", periodId).order("service_date", { ascending: true, nullsFirst: false }).order("created_at"),
     supabase.rpc("get_outstanding_lessons_for_billing_account", { p_school_id: schoolId, p_billing_account_id: billingAccountId }),
     supabase.from("billing_approval_requests").select("approval_status,rejection_reason_code,rejection_note").eq("school_id", schoolId).eq("billing_period_id", periodId).order("created_at", { ascending: false }).limit(1),
-    supabase.from("payment_attempts").select("id,status,failure_message").eq("school_id", schoolId).eq("billing_period_id", periodId).order("created_at", { ascending: false }).limit(1),
+    supabase.from("payment_attempts").select("id,status,failure_message,payment_method_id").eq("school_id", schoolId).eq("billing_period_id", periodId).order("created_at", { ascending: false }).limit(1),
     supabase.from("billing_payment_methods").select("id").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("status", "active").limit(1),
   ]);
   if (!period || !account || !lines) return null;
@@ -106,7 +106,7 @@ async function readPreparedInvoice(schoolId: string, billingAccountId: string, p
     payerReviewReason: approvals?.[0]?.approval_status === "rejected" ? approvals[0].rejection_reason_code : null,
     payerReviewNote: approvals?.[0]?.approval_status === "rejected" ? approvals[0].rejection_note : null,
     hasActivePaymentMethod: Boolean(methods?.length),
-    latestPaymentAttempt: attempts?.[0] ? { id: attempts[0].id, status: attempts[0].status, failureMessage: attempts[0].failure_message } : null,
+    latestPaymentAttempt: attempts?.[0] ? { id: attempts[0].id, status: attempts[0].status, failureMessage: attempts[0].failure_message, usesSavedMethod: Boolean(attempts[0].payment_method_id) } : null,
   };
 }
 
