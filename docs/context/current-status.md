@@ -157,3 +157,7 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 - PR #117 is live as production commit `24235c8`; all required CI checks passed.
 - Production database migrations are current through `20261027142000`, the one-time Checkout table is reachable, Vercel deployment `dpl_9JpoB7Mnx6emn6WMd5dRsDVLrkeh` is Ready, and the canonical application login responds successfully.
 - Next acceptance should use production data: create or choose an approved unpaid invoice, exercise its one-time payment link, and verify both a deliberate decline and subsequent successful retry appear in the owner invoice workspace. Do not expect the old staging fixture to exist in production.
+## 2026-10-28 — Shared invoice payment UI checkpoint
+
+- Staging commit `1b37774` replaces the divergent family-detail and modal payment controls with one shared collection component. The familiar staging alias is Ready.
+- Verify the same approved invoice from both entry points. Both must show identical saved-card/one-time-link choices and payment feedback. Then promote and test a deliberate production decline followed by a successful retry.
