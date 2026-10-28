@@ -7,7 +7,7 @@ import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
 import { CardSetupWorkflowError, createFamilyCardSetup } from "@/lib/stripe/payment-methods";
 import { getStripe } from "@/lib/stripe/server";
 import { collectApprovedInvoice } from "@/lib/stripe/invoice-collection";
-import { createApprovedInvoiceCheckout } from "@/lib/stripe/invoice-checkout";
+import { createApprovedInvoiceCheckout, reconcileOpenInvoiceCheckout } from "@/lib/stripe/invoice-checkout";
 import { normalizeE164 } from "@/lib/phone";
 import { ensurePortalAuthIdentity } from "@/lib/portal/auth-identities";
 import { billingApprovalEmail, type BillingApprovalEmailGroup, type BillingApprovalEmailLine } from "@/lib/resend/billing-approval-email";
@@ -111,6 +111,16 @@ export async function loadPreparedInvoice(schoolId: string, billingAccountId: st
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
   if (!auth?.claims?.sub || !await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) return null;
+  try {
+    await reconcileOpenInvoiceCheckout(schoolId, billingAccountId, periodId);
+  } catch (error) {
+    console.error("Hosted invoice payment status reconciliation failed", {
+      schoolId,
+      billingAccountId,
+      periodId,
+      name: error instanceof Error ? error.name : "unknown",
+    });
+  }
   return readPreparedInvoice(schoolId, billingAccountId, periodId);
 }
 

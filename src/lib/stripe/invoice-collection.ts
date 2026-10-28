@@ -95,14 +95,14 @@ async function prepareExactApprovedCharge(input: {
   return { attemptId: inserted.data.id, idempotencyKey, amountCents: period.amount_due_cents, currency: period.currency, stripeAccount: connection.provider_account_id, stripeCustomer: customer.provider_customer_id, stripePaymentMethod: method.provider_payment_method_id };
 }
 
-async function applyPaymentIntent(attemptId: string, stripeAccount: string, intent: Stripe.PaymentIntent, providerEventId: string | null) {
+async function applyPaymentIntent(attemptId: string, stripeAccount: string, intent: Stripe.PaymentIntent, providerEventId: string | null, authoritative = Boolean(providerEventId)) {
   const admin = createAdminClient();
   const charge = typeof intent.latest_charge === "string" ? intent.latest_charge : intent.latest_charge?.id ?? null;
   const { error } = await admin.rpc("apply_invoice_payment_intent_event", {
     p_payment_attempt_id: attemptId,
     p_provider_account_id: stripeAccount,
     p_payment_intent_id: intent.id,
-    p_status: providerEventId ? paymentIntentState(intent.status) : "submitted",
+    p_status: authoritative ? paymentIntentState(intent.status) : "submitted",
     p_charge_id: charge,
     p_failure_code: intent.last_payment_error?.code ?? null,
     p_failure_message: intent.last_payment_error?.message ?? null,
@@ -142,7 +142,7 @@ export async function collectApprovedInvoice(input: Parameters<typeof prepareExa
   }
 }
 
-export async function reconcileInvoicePaymentIntent(paymentIntentId: string, stripeAccount: string, providerEventId: string) {
+export async function reconcileInvoicePaymentIntent(paymentIntentId: string, stripeAccount: string, providerEventId: string | null, authoritative = Boolean(providerEventId)) {
   const stripe = getStripe();
   const intent = await stripe.paymentIntents.retrieve(paymentIntentId, { expand: ["latest_charge"] }, { stripeAccount });
   const attemptId = intent.metadata.payment_attempt_id;
@@ -180,6 +180,6 @@ export async function reconcileInvoicePaymentIntent(paymentIntentId: string, str
       throw new Error("Hosted invoice PaymentIntent binding does not match its reserved invoice attempt.");
     }
   }
-  await applyPaymentIntent(attempt.id, stripeAccount, intent, providerEventId);
+  await applyPaymentIntent(attempt.id, stripeAccount, intent, providerEventId, authoritative);
   return true;
 }

@@ -3,6 +3,7 @@ import "server-only";
 import crypto from "node:crypto";
 import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { reconcileInvoicePaymentIntent } from "@/lib/stripe/invoice-collection";
 import { getStripe, getStripeMode } from "@/lib/stripe/server";
 
 function applicationUrl() {
@@ -133,7 +134,7 @@ export async function createApprovedInvoiceCheckout(rawToken: string | null, own
 
 type ExpandedCheckout = Stripe.Checkout.Session & { payment_intent: Stripe.PaymentIntent & { latest_charge: Stripe.Charge } };
 
-export async function reconcileCompletedInvoiceCheckout(checkoutSessionId: string, stripeAccount: string, providerEventId: string) {
+export async function reconcileCompletedInvoiceCheckout(checkoutSessionId: string, stripeAccount: string, providerEventId: string | null) {
   const stripe = getStripe();
   const session = await stripe.checkout.sessions.retrieve(checkoutSessionId, { expand: ["payment_intent.latest_charge"] }, { stripeAccount }) as ExpandedCheckout;
   const requestId = session.metadata?.invoice_checkout_request_id;
@@ -159,9 +160,55 @@ export async function reconcileCompletedInvoiceCheckout(checkoutSessionId: strin
   }
   const { error: completeError } = await admin.rpc("complete_invoice_checkout_request", {
     p_request_id: request.id, p_provider_account_id: stripeAccount, p_checkout_session_id: session.id,
-    p_payment_intent_id: intent.id, p_charge_id: charge.id, p_provider_event_id: providerEventId,
+    // PostgreSQL accepts null here for an authoritative API reconciliation; generated types
+    // model only the webhook path, where the provider event id is always present.
+    p_payment_intent_id: intent.id, p_charge_id: charge.id, p_provider_event_id: providerEventId as string,
   });
   if (completeError) throw completeError;
+  return true;
+}
+
+export async function reconcileOpenInvoiceCheckout(schoolId: string, billingAccountId: string, billingPeriodId: string) {
+  const admin = createAdminClient();
+  const { data: request, error } = await admin.from("invoice_checkout_requests")
+    .select("id,payment_attempt_id,payment_connection_id,provider_checkout_session_id,status")
+    .eq("school_id", schoolId)
+    .eq("billing_account_id", billingAccountId)
+    .eq("billing_period_id", billingPeriodId)
+    .eq("status", "open")
+    .maybeSingle();
+  if (error) throw error;
+  if (!request?.provider_checkout_session_id) return false;
+
+  const { data: connection, error: connectionError } = await admin.from("school_payment_connections")
+    .select("provider_account_id")
+    .eq("id", request.payment_connection_id)
+    .single();
+  if (connectionError || !connection.provider_account_id) throw connectionError ?? new Error("The Stripe connection could not be loaded.");
+
+  const stripeAccount = connection.provider_account_id;
+  const session = await getStripe().checkout.sessions.retrieve(
+    request.provider_checkout_session_id,
+    { expand: ["payment_intent"] },
+    { stripeAccount },
+  );
+  if (session.id !== request.provider_checkout_session_id
+    || session.client_reference_id !== request.id
+    || session.metadata?.invoice_checkout_request_id !== request.id
+    || session.metadata?.payment_attempt_id !== request.payment_attempt_id
+    || session.metadata?.school_id !== schoolId
+    || session.metadata?.billing_account_id !== billingAccountId
+    || session.metadata?.billing_period_id !== billingPeriodId) {
+    throw new Error("Invoice Checkout status binding does not match.");
+  }
+
+  if (session.status === "expired") return expireInvoiceCheckout(session.id, stripeAccount);
+  const intent = typeof session.payment_intent === "string" ? null : session.payment_intent;
+  if (!intent) return false;
+  if (session.payment_status === "paid" && intent.status === "succeeded") {
+    return reconcileCompletedInvoiceCheckout(session.id, stripeAccount, null);
+  }
+  await reconcileInvoicePaymentIntent(intent.id, stripeAccount, null, true);
   return true;
 }
 
