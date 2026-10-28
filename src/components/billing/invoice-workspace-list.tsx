@@ -1,19 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MdClose, MdOpenInNew } from "react-icons/md";
 import type { SchoolInvoice } from "@/lib/billing/school-invoices";
 import { AppSelect } from "@/components/ui/app-select";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
+import { InvoicePaymentCollection } from "@/components/billing/invoice-payment-collection";
 import { BillingAdjustmentForm } from "@/app/schools/[schoolId]/families/[billingAccountId]/billing-adjustments";
-import { collectFamilyInvoice, createOneTimeInvoicePaymentLink, loadPreparedInvoice, lockFamilyBillingPeriod, sendBillingApprovalEmail, type PreparedInvoice } from "@/app/schools/[schoolId]/families/[billingAccountId]/actions";
+import { loadPreparedInvoice, lockFamilyBillingPeriod, sendBillingApprovalEmail, type PreparedInvoice } from "@/app/schools/[schoolId]/families/[billingAccountId]/actions";
 import { payerReviewReasonLabel } from "@/lib/billing/approval-review";
 
 type SortKey = "status" | "payer" | "student";
 const money = (amount: number, currency: string) => new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount / 100);
-const PAYMENT_POLL_INTERVAL_MS = 3_000;
-const PAYMENT_POLL_WINDOW_MS = 2 * 60_000;
 
 export function InvoiceWorkspaceList({ schoolId, invoices, compact, autoOpenId = null, hideList = false, onClose }: { schoolId: string; invoices: SchoolInvoice[]; compact: boolean; autoOpenId?: string | null; hideList?: boolean; onClose?: () => void }) {
   const [sort, setSort] = useState<SortKey>("status");
@@ -21,29 +20,11 @@ export function InvoiceWorkspaceList({ schoolId, invoices, compact, autoOpenId =
   const [detail, setDetail] = useState<PreparedInvoice | null>(null);
   const [loading, setLoading] = useState(Boolean(autoOpenId));
   const [adjustmentEditing, setAdjustmentEditing] = useState(false);
-  const [paymentLinkPending, setPaymentLinkPending] = useState(false);
-  const [paymentLinkMessage, setPaymentLinkMessage] = useState("");
-  const [paymentLinkCopied, setPaymentLinkCopied] = useState(false);
-  const [watchedPaymentAttemptId, setWatchedPaymentAttemptId] = useState<string | null>(null);
-  const [paymentResultMessage, setPaymentResultMessage] = useState("");
-  const paymentPollDeadline = useRef(0);
   const sorted = useMemo(() => [...invoices].sort((a, b) => sort === "payer" ? a.familyName.localeCompare(b.familyName) || b.updatedAt.localeCompare(a.updatedAt) : sort === "student" ? a.studentNames.join(", ").localeCompare(b.studentNames.join(", ")) || a.familyName.localeCompare(b.familyName) : a.statusLabel.localeCompare(b.statusLabel) || b.updatedAt.localeCompare(a.updatedAt)), [invoices, sort]);
 
-  async function open(invoice: SchoolInvoice) { setAdjustmentEditing(false); setPaymentLinkMessage(""); setPaymentLinkCopied(false); setWatchedPaymentAttemptId(null); setPaymentResultMessage(""); setSelected(invoice); setDetail(null); setLoading(true); setDetail(await loadPreparedInvoice(schoolId, invoice.billingAccountId, invoice.id)); setLoading(false); }
-  function close() { setAdjustmentEditing(false); setPaymentLinkMessage(""); setPaymentLinkCopied(false); setWatchedPaymentAttemptId(null); setPaymentResultMessage(""); setSelected(null); setDetail(null); onClose?.(); }
+  async function open(invoice: SchoolInvoice) { setAdjustmentEditing(false); setSelected(invoice); setDetail(null); setLoading(true); setDetail(await loadPreparedInvoice(schoolId, invoice.billingAccountId, invoice.id)); setLoading(false); }
+  function close() { setAdjustmentEditing(false); setSelected(null); setDetail(null); onClose?.(); }
   async function refresh() { if (!selected) return; const next = await loadPreparedInvoice(schoolId, selected.billingAccountId, selected.id); setDetail(next); if (next) setSelected((current) => current && current.status !== next.status ? { ...current, status: next.status } : current); }
-
-  async function startWatchingPayment() {
-    if (!selected) return;
-    const next = await loadPreparedInvoice(schoolId, selected.billingAccountId, selected.id);
-    setDetail(next);
-    if (next) {
-      setSelected((current) => current && current.status !== next.status ? { ...current, status: next.status } : current);
-      setWatchedPaymentAttemptId(next.latestPaymentAttempt?.id ?? null);
-      paymentPollDeadline.current = Date.now() + PAYMENT_POLL_WINDOW_MS;
-      setPaymentResultMessage("Watching for Stripe’s confirmation…");
-    }
-  }
 
   useEffect(() => {
     if (!autoOpenId || !selected || detail) return;
@@ -55,34 +36,6 @@ export function InvoiceWorkspaceList({ schoolId, invoices, compact, autoOpenId =
     });
     return () => { active = false; };
   }, [autoOpenId, detail, schoolId, selected]);
-
-  useEffect(() => {
-    if (!selected || !watchedPaymentAttemptId) return;
-    let active = true;
-    const check = async () => {
-      if (document.visibilityState !== "visible") return;
-      if (Date.now() >= paymentPollDeadline.current) {
-        setPaymentResultMessage("Automatic checking paused after two minutes. Use “Check payment status” whenever you want to look again.");
-        setWatchedPaymentAttemptId(null);
-        return;
-      }
-      const next = await loadPreparedInvoice(schoolId, selected.billingAccountId, selected.id);
-      if (!active || !next) return;
-      setDetail(next);
-      setSelected((current) => current && current.status !== next.status ? { ...current, status: next.status } : current);
-      const attempt = next.latestPaymentAttempt;
-      if (next.status === "paid" || attempt?.status === "succeeded") {
-        setPaymentResultMessage("Payment confirmed. This invoice is paid.");
-        setWatchedPaymentAttemptId(null);
-      } else if (attempt?.id === watchedPaymentAttemptId && ["failed", "requires_action", "cancelled"].includes(attempt.status)) {
-        setPaymentResultMessage(attempt.failureMessage ? `Payment failed: ${attempt.failureMessage}` : "Payment did not complete. No successful charge was recorded; review the payment method before trying again.");
-        setWatchedPaymentAttemptId(null);
-      }
-    };
-    const interval = window.setInterval(() => void check(), PAYMENT_POLL_INTERVAL_MS);
-    void check();
-    return () => { active = false; window.clearInterval(interval); };
-  }, [schoolId, selected, watchedPaymentAttemptId]);
 
   if (!invoices.length && !hideList) return <p className="py-5 text-sm text-muted">No invoices have been prepared.</p>;
   return <>
@@ -99,8 +52,7 @@ export function InvoiceWorkspaceList({ schoolId, invoices, compact, autoOpenId =
         {detail.status === "draft" || detail.status === "review" ? <><BillingAdjustmentForm schoolId={schoolId} billingAccountId={detail.billingAccountId} billingPeriodId={detail.id} outstandingLessons={detail.outstandingLessons} embedded onEditingChange={setAdjustmentEditing} onChanged={() => void refresh()} /><div className="mt-5"><HoldToConfirm action={() => lockFamilyBillingPeriod(schoolId, detail.billingAccountId, detail.id)} disabled={adjustmentEditing} disabledMessage="Finish or cancel the open adjustment before locking this amount." idleLabel="Hold to lock this exact amount" holdingLabel="Keep holding to freeze the invoice…" successLabel="Invoice locked" onSuccess={() => void refresh()} /></div></> : null}
         {detail.status === "locked" ? <div className="mt-6"><p className="mb-3 text-sm text-muted">The amount is locked. Holding below creates the payer’s approval request and emails the itemized invoice.</p><HoldToConfirm prominent centered action={() => sendBillingApprovalEmail(schoolId, detail.billingAccountId, detail.id, { ok: false, message: "" })} idleLabel="Hold to email payer approval" holdingLabel="Keep holding to send the approval…" submittingLabel="Sending approval email…" successLabel="Approval email sent" onSuccess={() => void refresh()} /></div> : null}
         {detail.status === "approval_pending" ? <p className="mt-6 rounded-control bg-brand/10 p-4 text-sm text-brand">Waiting for the payer to review this exact amount.</p> : null}
-        {detail.status === "approved" || detail.status === "payment_failed" ? <div className="mt-6 grid gap-5"><div><HoldToConfirm prominent centered action={() => collectFamilyInvoice(schoolId, detail.billingAccountId, detail.id)} idleLabel={detail.status === "payment_failed" ? "Hold to try the saved card again" : `Hold to charge saved card ${money(detail.amountDueCents, detail.currency)}`} holdingLabel="Keep holding to submit the charge…" submittingLabel="Submitting securely…" successLabel="Payment submitted" onSuccess={() => void startWatchingPayment()} /></div><div className="rounded-control bg-surface-raised p-5"><p className="text-sm font-medium">No active card on file?</p><p className="mt-2 text-xs leading-5 text-muted">Create a short-lived Stripe link for this exact invoice. The payer enters their card securely, and it is not authorized for future school charges.</p><button type="button" disabled={paymentLinkPending} onClick={async () => { setPaymentLinkPending(true); setPaymentLinkMessage(""); const result = await createOneTimeInvoicePaymentLink(schoolId, detail.billingAccountId, detail.id); if (result.ok && result.url) { try { await navigator.clipboard.writeText(result.url); setPaymentLinkCopied(true); setPaymentLinkMessage("Copied. Send this link directly to the payer."); } catch { setPaymentLinkCopied(false); setPaymentLinkMessage(`Copy this payment link: ${result.url}`); } await startWatchingPayment(); } else setPaymentLinkMessage(result.message); setPaymentLinkPending(false); }} className="mt-4 rounded-control border border-brand px-4 py-3 text-sm text-brand transition hover:bg-brand hover:text-canvas disabled:cursor-wait disabled:opacity-50">{paymentLinkPending ? "Preparing link…" : paymentLinkCopied ? "Copy link again" : "Copy one-time payment link"}</button>{paymentLinkMessage ? <p role="status" className="mt-3 break-words text-sm font-medium leading-5 text-brand">{paymentLinkMessage}</p> : null}<p className="mt-3 text-xs leading-5 text-muted">Automatic checking runs for two minutes while this tab is visible, then pauses. You can check again at any time.</p><button type="button" onClick={() => void startWatchingPayment()} className="mt-3 text-xs font-medium text-brand underline-offset-4 hover:underline">Check payment status</button></div></div> : null}
-        {detail.status === "collecting" ? <p className="mt-6 rounded-control bg-brand/10 p-4 text-sm text-brand">Payment submitted — awaiting Stripe confirmation. This window checks automatically. Do not submit another charge.</p> : null}{detail.status === "paid" ? <p className="mt-6 rounded-control bg-brand/10 p-4 text-sm font-medium text-brand">Paid. Stripe confirmed the payment; no further action is needed.</p> : null}{paymentResultMessage ? <p role="status" className={`mt-4 rounded-control p-4 text-sm ${detail.status === "payment_failed" ? "bg-danger/10 text-danger" : "bg-surface-raised text-ink"}`}>{paymentResultMessage}</p> : null}
+        {["approved", "payment_failed", "collecting", "paid"].includes(detail.status) ? <InvoicePaymentCollection schoolId={schoolId} billingAccountId={detail.billingAccountId} billingPeriodId={detail.id} amount={money(detail.amountDueCents, detail.currency)} hasPaymentMethod={detail.hasActivePaymentMethod} initialStatus={detail.status} initialAttempt={detail.latestPaymentAttempt} /> : null}
         <div className="mt-6 flex justify-end"><Link href={`/schools/${schoolId}/families/${detail.billingAccountId}?period=${detail.id}`} className="inline-flex items-center gap-1 text-xs text-muted hover:text-brand">Open the full family record <MdOpenInNew /></Link></div>
       </div> : <p role="alert" className="py-12 text-center text-sm text-danger">This invoice could not be loaded. Open the family record and try again.</p>}
     </section></div> : null}

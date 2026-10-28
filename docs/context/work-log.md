@@ -281,3 +281,15 @@ Use this file for short chronological notes about meaningful work.
 - Commit `2b59904` adds authenticated, tenant-bound status reconciliation. Owner checks retrieve the exact connected-account Checkout session, verify request/attempt/school/account/period metadata, and apply Stripe's authoritative failed or paid state.
 - Typecheck, lint, all 65 tests, and the production build pass. The familiar staging alias is Ready.
 - Next human check: open this invoice on the **staging** dashboard and press `Check payment status`; it should become payment failed and show Stripe's decline message. Do not look for this fixture on production and do not promote until that check passes.
+## 2026-10-28 — Production invoice-payment release
+
+- PR #117 merged as production commit `24235c8`. Required application verification, browser smoke, clean database replay/lint, and authorization-boundary checks passed.
+- Production Supabase ref `twhexxokrjwzsoxgzlme` reports migrations through `20261027142000`; direct REST read-back confirms `invoice_checkout_requests` is available.
+- Vercel production deployment `dpl_9JpoB7Mnx6emn6WMd5dRsDVLrkeh` is Ready, and `https://app.commontime.studio/` reaches the live login successfully.
+- Production now includes portal invoice decisions, invoice-adjustment locking safeguards, one-time exact-invoice Checkout, bounded payment polling, approval reminders, and authoritative reconciliation for immediate hosted-Checkout declines.
+## 2026-10-28 — Shared invoice payment workspace
+
+- Removed the separate family-detail collection component and replaced it with one canonical `InvoicePaymentCollection` used by both the embedded family invoice and dashboard invoice modal.
+- Both surfaces now expose the same saved-card action, one-time Stripe link, copied-link feedback, bounded polling, manual status check, decline details, retry state, and paid confirmation. The surrounding page/modal shell may differ; payment behavior and language no longer do.
+- Staging commit `1b37774` passed typecheck, lint, all 65 tests, and production build. Vercel deployment `dpl_2ENANH2gq4dektGhqi7X1v6gheUS` is Ready and assigned to the familiar staging alias.
+- Next acceptance: compare the same approved invoice in the dashboard modal and family detail, then promote. After promotion, perform one deliberate production decline and a successful retry on that exact invoice.
