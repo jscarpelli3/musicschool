@@ -497,7 +497,7 @@ export async function sendBillingApprovalEmail(
   const message = billingApprovalEmail({ schoolName: school.name, payerName, periodLabel: period.label, amount, approvalUrl, ...invoiceDetails });
   const from = schoolEmailSender(school.name);
   const hash = (value: string) => createHash("sha256").update(value).digest("hex");
-  const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000 - 60_000).toISOString();
   const { data: prepared, error: prepareError } = await supabase.rpc("create_billing_approval_email_delivery", {
     p_body_sha256: hash(`${message.text}\n${message.html}`),
     p_billing_period_id: billingPeriodId,
@@ -653,7 +653,7 @@ export async function retryBillingApprovalEmail(
   const payerName = `${contact?.preferred_name || contact?.first_name || "there"}${contact?.last_name ? ` ${contact.last_name}` : ""}`;
   const message = billingApprovalEmail({ schoolName: school.name, payerName, periodLabel: request.period_label, amount, approvalUrl, ...invoiceDetails });
   const hash = (value: string) => createHash("sha256").update(value).digest("hex");
-  const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000 - 60_000).toISOString();
   const { data: prepared, error: prepareError } = await supabase.rpc("retry_billing_approval_email_delivery", {
     p_approval_request_id: request.id,
     p_body_sha256: hash(`${message.text}\n${message.html}`),

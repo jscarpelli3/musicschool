@@ -5355,6 +5355,38 @@ export type Database = {
         }
         Returns: undefined
       }
+      list_due_billing_approval_reminders: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          amount_cents: number
+          approval_request_id: string
+          currency: string
+          payer_first_name: string
+          payer_last_name: string
+          payer_preferred_name: string
+          period_label: string
+          recipient_email: string
+          reply_to_email: string
+          school_id: string
+          school_name: string
+        }[]
+      }
+      prepare_billing_approval_reminder: {
+        Args: {
+          p_approval_request_id: string
+          p_body_sha256: string
+          p_expires_at: string
+          p_from_address: string
+          p_recipient_email: string
+          p_subject: string
+          p_token_hash: string
+        }
+        Returns: {
+          email_delivery_id: string
+          idempotency_key: string
+          recipient_email: string
+        }[]
+      }
       approve_billing_request: { Args: { raw_token: string }; Returns: string }
       approve_client_portal_billing_request: {
         Args: { p_billing_period_id: string; p_school_id: string }

@@ -36,7 +36,8 @@ export function BillingCollectionStatus({ schoolId, billingAccountId, billingPer
   useEffect(() => {
     if (!active) return;
     const interval = window.setInterval(() => router.refresh(), 3000);
-    return () => window.clearInterval(interval);
+    const stop = window.setTimeout(() => window.clearInterval(interval), 2 * 60_000);
+    return () => { window.clearInterval(interval); window.clearTimeout(stop); };
   }, [active, router]);
   return (
     <div className="mt-5 rounded-card border border-brand/30 bg-brand/5 p-5 sm:p-6">
