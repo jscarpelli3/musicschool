@@ -7,6 +7,7 @@ import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
 import { CardSetupWorkflowError, createFamilyCardSetup } from "@/lib/stripe/payment-methods";
 import { getStripe } from "@/lib/stripe/server";
 import { collectApprovedInvoice } from "@/lib/stripe/invoice-collection";
+import { createApprovedInvoiceCheckout, reconcileOpenInvoiceCheckout } from "@/lib/stripe/invoice-checkout";
 import { normalizeE164 } from "@/lib/phone";
 import { ensurePortalAuthIdentity } from "@/lib/portal/auth-identities";
 import { billingApprovalEmail, type BillingApprovalEmailGroup, type BillingApprovalEmailLine } from "@/lib/resend/billing-approval-email";
@@ -37,6 +38,7 @@ export type PreparedInvoice = {
   outstandingLessons: Array<{ lessonEventId: string; studentName: string; offeringName: string; serviceDate: string; startsAt: string; amountCents: number; currency: string }>;
   payerReviewReason: string | null;
   payerReviewNote: string | null;
+  latestPaymentAttempt: { id: string; status: string; failureMessage: string | null } | null;
 };
 export type BillingDraftState = { ok: boolean; message: string; periodId: string | null; invoice: PreparedInvoice | null };
 export type BillingLineDeferState = { ok: boolean; message: string };
@@ -85,12 +87,13 @@ async function readBillingApprovalEmailDetails(schoolId: string, billingPeriodId
 
 async function readPreparedInvoice(schoolId: string, billingAccountId: string, periodId: string): Promise<PreparedInvoice | null> {
   const supabase = await createClient();
-  const [{ data: period }, { data: account }, { data: lines }, { data: outstandingLessons }, { data: approvals }] = await Promise.all([
+  const [{ data: period }, { data: account }, { data: lines }, { data: outstandingLessons }, { data: approvals }, { data: attempts }] = await Promise.all([
     supabase.from("billing_periods").select("id,label,amount_due_cents,currency,status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", periodId).single(),
     supabase.from("billing_accounts").select("name").eq("school_id", schoolId).eq("id", billingAccountId).single(),
     supabase.from("billing_line_items").select("id,description,service_date,amount_cents").eq("school_id", schoolId).eq("billing_period_id", periodId).order("service_date", { ascending: true, nullsFirst: false }).order("created_at"),
     supabase.rpc("get_outstanding_lessons_for_billing_account", { p_school_id: schoolId, p_billing_account_id: billingAccountId }),
     supabase.from("billing_approval_requests").select("approval_status,rejection_reason_code,rejection_note").eq("school_id", schoolId).eq("billing_period_id", periodId).order("created_at", { ascending: false }).limit(1),
+    supabase.from("payment_attempts").select("id,status,failure_message").eq("school_id", schoolId).eq("billing_period_id", periodId).order("created_at", { ascending: false }).limit(1),
   ]);
   if (!period || !account || !lines) return null;
   return {
@@ -100,6 +103,7 @@ async function readPreparedInvoice(schoolId: string, billingAccountId: string, p
     outstandingLessons: (outstandingLessons ?? []).map((lesson) => ({ lessonEventId: lesson.lesson_event_id, studentName: lesson.student_name, offeringName: lesson.offering_name, serviceDate: lesson.service_date, startsAt: lesson.starts_at, amountCents: lesson.amount_cents, currency: lesson.currency })),
     payerReviewReason: approvals?.[0]?.approval_status === "rejected" ? approvals[0].rejection_reason_code : null,
     payerReviewNote: approvals?.[0]?.approval_status === "rejected" ? approvals[0].rejection_note : null,
+    latestPaymentAttempt: attempts?.[0] ? { id: attempts[0].id, status: attempts[0].status, failureMessage: attempts[0].failure_message } : null,
   };
 }
 
@@ -107,6 +111,16 @@ export async function loadPreparedInvoice(schoolId: string, billingAccountId: st
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
   if (!auth?.claims?.sub || !await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) return null;
+  try {
+    await reconcileOpenInvoiceCheckout(schoolId, billingAccountId, periodId);
+  } catch (error) {
+    console.error("Hosted invoice payment status reconciliation failed", {
+      schoolId,
+      billingAccountId,
+      periodId,
+      name: error instanceof Error ? error.name : "unknown",
+    });
+  }
   return readPreparedInvoice(schoolId, billingAccountId, periodId);
 }
 
@@ -146,6 +160,24 @@ export async function collectFamilyInvoice(schoolId: string, billingAccountId: s
     if (message.includes("already in progress or has succeeded")) return { ok: false, message: "This statement already has a payment in progress or completed. Refresh to see its status." };
     if (message.includes("Do not retry")) return { ok: false, message };
     return { ok: false, message: message || "The payment could not be submitted. Nothing was marked paid." };
+  }
+}
+
+export async function createOneTimeInvoicePaymentLink(schoolId: string, billingAccountId: string, billingPeriodId: string) {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId || !await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) return { ok: false as const, message: "You do not have permission to prepare this payment link." };
+  try {
+    await protectServerAction({ scope: "billing.invoice.one_time_link", subject: `actor:${profileId}|school:${schoolId}|period:${billingPeriodId}`, limit: 5, windowSeconds: 3600, blockSeconds: 900 });
+    const url = await createApprovedInvoiceCheckout(null, { schoolId, billingAccountId, billingPeriodId });
+    return { ok: true as const, message: "One-time payment link ready. It expires within 24 hours and does not authorize future charges.", url };
+  } catch (caught) {
+    const detail = caught instanceof Error ? caught.message : "";
+    const message = detail.includes("already in progress") ? "This invoice already has a payment in progress. Refresh before trying again."
+      : detail.includes("connecting Stripe") ? "Finish the school’s Stripe setup before creating a payment link."
+        : "The one-time payment link could not be prepared. Nothing was charged.";
+    return { ok: false as const, message };
   }
 }
 
@@ -475,7 +507,7 @@ export async function sendBillingApprovalEmail(
   const message = billingApprovalEmail({ schoolName: school.name, payerName, periodLabel: period.label, amount, approvalUrl, ...invoiceDetails });
   const from = schoolEmailSender(school.name);
   const hash = (value: string) => createHash("sha256").update(value).digest("hex");
-  const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000 - 60_000).toISOString();
   const { data: prepared, error: prepareError } = await supabase.rpc("create_billing_approval_email_delivery", {
     p_body_sha256: hash(`${message.text}\n${message.html}`),
     p_billing_period_id: billingPeriodId,
@@ -631,7 +663,7 @@ export async function retryBillingApprovalEmail(
   const payerName = `${contact?.preferred_name || contact?.first_name || "there"}${contact?.last_name ? ` ${contact.last_name}` : ""}`;
   const message = billingApprovalEmail({ schoolName: school.name, payerName, periodLabel: request.period_label, amount, approvalUrl, ...invoiceDetails });
   const hash = (value: string) => createHash("sha256").update(value).digest("hex");
-  const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000 - 60_000).toISOString();
   const { data: prepared, error: prepareError } = await supabase.rpc("retry_billing_approval_email_delivery", {
     p_approval_request_id: request.id,
     p_body_sha256: hash(`${message.text}\n${message.html}`),

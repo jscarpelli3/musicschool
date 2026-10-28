@@ -17,6 +17,7 @@ export function BillingDraftForm({ schoolId, billingAccountId, defaultMonth, ini
   const [open, setOpen] = useState(initialOpen);
   const [invoice, setInvoice] = useState<PreparedInvoice | null>(null);
   const [message, setMessage] = useState("");
+  const [adjustmentEditing, setAdjustmentEditing] = useState(false);
   const [state, action, pending] = useActionState(async (previous: BillingDraftState, formData: FormData) => {
     const result = await prepareFamilyBillingDraft(schoolId, billingAccountId, previous, formData);
     if (result.invoice) {
@@ -38,10 +39,10 @@ export function BillingDraftForm({ schoolId, billingAccountId, defaultMonth, ini
       <div className="mt-5 divide-y divide-line border-y border-line">{invoice.lines.map((line) => <div key={line.id} className="grid grid-cols-[1fr_auto] gap-4 py-3 text-sm"><div><p>{line.description}</p>{line.serviceDate ? <p className="mt-1 text-xs text-muted">{line.serviceDate}</p> : null}</div><p>{money(line.amountCents, invoice.currency)}</p></div>)}</div>
       {message ? <p role="status" className="mt-4 border-l-2 border-brand pl-3 text-sm">{message}</p> : null}
       {invoice.status === "draft" || invoice.status === "review" ? <>
-        <BillingAdjustmentForm schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={invoice.id} outstandingLessons={invoice.outstandingLessons} embedded onChanged={() => { void refreshInvoice(); }} />
-        <div className="mt-5"><HoldToConfirm action={() => lockFamilyBillingPeriod(schoolId, billingAccountId, invoice.id)} idleLabel="Hold to lock this exact amount" holdingLabel="Keep holding to freeze the invoice…" successLabel="Invoice locked" onSuccess={() => { setInvoice((current) => current ? { ...current, status: "locked" } : current); setMessage("Invoice locked. It is ready for its separate payer-approval step."); }} /></div>
+        <BillingAdjustmentForm schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={invoice.id} outstandingLessons={invoice.outstandingLessons} embedded onEditingChange={setAdjustmentEditing} onChanged={() => { void refreshInvoice(); }} />
+        <div className="mt-5"><HoldToConfirm action={() => lockFamilyBillingPeriod(schoolId, billingAccountId, invoice.id)} disabled={adjustmentEditing} disabledMessage="Finish or cancel the open adjustment before locking this amount." idleLabel="Hold to lock this exact amount" holdingLabel="Keep holding to freeze the invoice…" successLabel="Invoice locked" onSuccess={() => { setInvoice((current) => current ? { ...current, status: "locked" } : current); setMessage("Invoice locked. It is ready for its separate payer-approval step."); }} /></div>
       </> : <p className="mt-5 rounded-control bg-brand/10 p-4 text-sm text-brand">This invoice is locked. It is ready for payer approval.</p>}
-      <div className="mt-5 flex flex-wrap justify-between gap-3"><button type="button" onClick={() => { setInvoice(null); setMessage(""); }} className="text-sm text-brand">Prepare another invoice</button><button type="button" onClick={() => setOpen(false)} className="text-sm text-muted hover:text-ink">Done for now</button></div>
+      <div className="mt-5 flex flex-wrap justify-between gap-3"><button type="button" onClick={() => { setAdjustmentEditing(false); setInvoice(null); setMessage(""); }} className="text-sm text-brand">Prepare another invoice</button><button type="button" onClick={() => setOpen(false)} className="text-sm text-muted hover:text-ink">Done for now</button></div>
     </div> : <form action={action} className="grid gap-6">
       <label><span className="block text-xs text-muted">Service month</span><input required type="month" name="month" defaultValue={defaultMonth} onClick={(event) => event.currentTarget.showPicker?.()} className="mt-2 w-full cursor-pointer rounded-control border border-line bg-canvas px-3 py-3 outline-none transition focus:border-brand" /></label>
       <p className="text-xs leading-5 text-muted">Preparing does not send or charge anything. You will review the included lessons and choose what to leave for later.</p>

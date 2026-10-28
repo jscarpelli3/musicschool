@@ -1301,6 +1301,66 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_checkout_requests: {
+        Row: {
+          amount_cents: number
+          approval_request_id: string
+          billing_account_id: string
+          billing_period_id: string
+          checkout_url: string | null
+          completed_at: string | null
+          created_at: string
+          currency: string
+          expires_at: string
+          id: string
+          payment_attempt_id: string
+          payment_connection_id: string
+          provider_checkout_session_id: string | null
+          provider_customer_id: string
+          school_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          approval_request_id: string
+          billing_account_id: string
+          billing_period_id: string
+          checkout_url?: string | null
+          completed_at?: string | null
+          created_at?: string
+          currency: string
+          expires_at: string
+          id?: string
+          payment_attempt_id: string
+          payment_connection_id: string
+          provider_checkout_session_id?: string | null
+          provider_customer_id: string
+          school_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          approval_request_id?: string
+          billing_account_id?: string
+          billing_period_id?: string
+          checkout_url?: string | null
+          completed_at?: string | null
+          created_at?: string
+          currency?: string
+          expires_at?: string
+          id?: string
+          payment_attempt_id?: string
+          payment_connection_id?: string
+          provider_checkout_session_id?: string | null
+          provider_customer_id?: string
+          school_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lesson_accounting_overrides: {
         Row: {
           created_at: string
@@ -5295,7 +5355,43 @@ export type Database = {
         }
         Returns: undefined
       }
+      list_due_billing_approval_reminders: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          amount_cents: number
+          approval_request_id: string
+          currency: string
+          payer_first_name: string
+          payer_last_name: string
+          payer_preferred_name: string
+          period_label: string
+          recipient_email: string
+          reply_to_email: string
+          school_id: string
+          school_name: string
+        }[]
+      }
+      prepare_billing_approval_reminder: {
+        Args: {
+          p_approval_request_id: string
+          p_body_sha256: string
+          p_expires_at: string
+          p_from_address: string
+          p_recipient_email: string
+          p_subject: string
+          p_token_hash: string
+        }
+        Returns: {
+          email_delivery_id: string
+          idempotency_key: string
+          recipient_email: string
+        }[]
+      }
       approve_billing_request: { Args: { raw_token: string }; Returns: string }
+      approve_client_portal_billing_request: {
+        Args: { p_billing_period_id: string; p_school_id: string }
+        Returns: Json
+      }
       begin_payment_method_revocation: {
         Args: { p_payment_method_id: string }
         Returns: {
@@ -5558,6 +5654,17 @@ export type Database = {
         Args: { p_school_id: string }
         Returns: undefined
       }
+      complete_invoice_checkout_request: {
+        Args: {
+          p_charge_id: string
+          p_checkout_session_id: string
+          p_payment_intent_id: string
+          p_provider_account_id: string
+          p_provider_event_id: string
+          p_request_id: string
+        }
+        Returns: undefined
+      }
       create_single_lesson: {
         Args: {
           p_allow_outside_availability?: boolean
@@ -5611,6 +5718,14 @@ export type Database = {
           p_teacher_id: string
         }
         Returns: Json
+      }
+      expire_invoice_checkout_request: {
+        Args: {
+          p_checkout_session_id: string
+          p_provider_account_id: string
+          p_request_id: string
+        }
+        Returns: undefined
       }
       create_weekly_lesson_series_with_instrument: {
         Args: {
@@ -6047,6 +6162,15 @@ export type Database = {
       reject_billing_request: {
         Args: { p_note?: string; p_reason_code: string; raw_token: string }
         Returns: string
+      }
+      reject_client_portal_billing_request: {
+        Args: {
+          p_billing_period_id: string
+          p_note?: string
+          p_reason_code: string
+          p_school_id: string
+        }
+        Returns: Json
       }
       remove_billing_adjustment: {
         Args: {
