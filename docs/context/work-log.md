@@ -281,3 +281,9 @@ Use this file for short chronological notes about meaningful work.
 - Commit `2b59904` adds authenticated, tenant-bound status reconciliation. Owner checks retrieve the exact connected-account Checkout session, verify request/attempt/school/account/period metadata, and apply Stripe's authoritative failed or paid state.
 - Typecheck, lint, all 65 tests, and the production build pass. The familiar staging alias is Ready.
 - Next human check: open this invoice on the **staging** dashboard and press `Check payment status`; it should become payment failed and show Stripe's decline message. Do not look for this fixture on production and do not promote until that check passes.
+## 2026-10-28 — Production invoice-payment release
+
+- PR #117 merged as production commit `24235c8`. Required application verification, browser smoke, clean database replay/lint, and authorization-boundary checks passed.
+- Production Supabase ref `twhexxokrjwzsoxgzlme` reports migrations through `20261027142000`; direct REST read-back confirms `invoice_checkout_requests` is available.
+- Vercel production deployment `dpl_9JpoB7Mnx6emn6WMd5dRsDVLrkeh` is Ready, and `https://app.commontime.studio/` reaches the live login successfully.
+- Production now includes portal invoice decisions, invoice-adjustment locking safeguards, one-time exact-invoice Checkout, bounded payment polling, approval reminders, and authoritative reconciliation for immediate hosted-Checkout declines.
