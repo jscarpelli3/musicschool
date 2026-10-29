@@ -299,3 +299,11 @@ Use this file for short chronological notes about meaningful work.
 - An open hosted link is no longer mistaken for a submitted charge. It stays copyable, while competing saved-card collection remains unavailable until that reserved Checkout resolves or expires.
 - Required application, browser, and database checks passed. Production deployment `dpl_AtgMJVUFUPdrqBYwXy3Q9JrVzuXt` is Ready on `app.commontime.studio`; canonical login smoke returns 200.
 - Next test: on one approved unpaid production invoice, use the one-time link with Stripe decline card `4000 0000 0000 0002`, verify both owner surfaces show the failure and remain unpaid, then retry the same link with `4242 4242 4242 4242` and verify one paid result.
+
+## 2026-10-29 — Production decline accepted and payer billing status surfaced
+
+- Production decline acceptance passed. After an immediate hosted-Checkout decline, the owner’s authenticated `Check payment status` action reconciled Stripe’s authoritative `requires_payment_method` result and displayed `Your card was declined.` The invoice remained unpaid and the failed attempt was durably recorded. PR #119 / production commit `ba3d745` contains the narrow reconciliation fix for declined PaymentIntents that do not expose a reusable payment-method ID.
+- Consolidated the family detail’s separate invoice-preparation and invoice-history cards into one Invoices section. Preparing a month, reviewing existing invoices, and continuing their workflow now share one visual workspace.
+- Added an at-a-glance family billing strip beside the family heading: open invoice count and total, pending payer approvals, payment failures, saved-payment-method readiness, and active automatic-payment authorization.
+- Family directory cards now call out missing payment setup and active automatic-payment authorization alongside the existing open-invoice summary.
+- Typecheck, ESLint, all 65 unit/invariant tests, and the production build pass. Next acceptance is a visual/data check on staging, followed by the successful `4242 4242 4242 4242` retry of the production invoice used for the decline test; confirm one paid result and no duplicate charge.

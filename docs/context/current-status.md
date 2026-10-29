@@ -165,3 +165,11 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 
 - Shared invoice payment UI is live via PR #118 / production commit `92c9201`; Vercel deployment `dpl_AtgMJVUFUPdrqBYwXy3Q9JrVzuXt` is Ready.
 - Next: deliberately decline one approved unpaid production invoice through its one-time link, verify failure on both owner surfaces, then successfully retry that same link. Confirm the invoice is charged once and ends paid.
+
+## 2026-10-29 — Production decline passed; payer status UI staged next
+
+- Production `Check payment status` now correctly reports the deliberate hosted-Checkout decline as `Your card was declined.` The local attempt is failed, the invoice is unpaid, and no reusable payment method was inferred from the one-time Checkout attempt.
+- The family detail now uses one Invoices section for both preparation and invoice history. Its heading area reports open invoice count/total, approvals waiting, payment failures, payment-method readiness, and active automatic-payment authorization.
+- Family list cards additionally flag `No payment method set up` and `Automatic payment authorized` when applicable.
+- Verification passes: typecheck, ESLint, 65 unit/invariant tests, and production build.
+- Next: visually accept these badges and the consolidated invoice section on staging. Then return to the production declined invoice, retry with `4242 4242 4242 4242`, and verify exactly one successful payment and a paid invoice.
