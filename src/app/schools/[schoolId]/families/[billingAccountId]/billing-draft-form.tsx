@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { FocusedModal } from "@/components/ui/focused-modal";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
 import { BillingAdjustmentForm } from "./billing-adjustments";
+import { BillingLineDefer } from "./billing-line-defer";
 import { loadPreparedInvoice, lockFamilyBillingPeriod, prepareFamilyBillingDraft, type BillingDraftState, type PreparedInvoice } from "./actions";
 
 const initialState: BillingDraftState = { ok: false, message: "", periodId: null, invoice: null };
@@ -36,7 +37,7 @@ export function BillingDraftForm({ schoolId, billingAccountId, defaultMonth, ini
   return <FocusedModal open={open} onOpenChange={setOpen} triggerLabel="Prepare invoice" eyebrow="Invoice workspace" title={invoice ? "Review the prepared invoice." : "Choose what you want to bill."} description={invoice ? "Adjust and lock this exact invoice here, or prepare another without moving the page underneath you." : "Start with the unpaid eligible lessons in a service month. You can leave individual lessons for a later invoice before locking."} triggerClassName="rounded-control bg-brand px-5 py-3 text-sm text-canvas transition hover:-translate-y-px hover:bg-brand-hover">
     {invoice ? <div>
       <div className="flex items-start justify-between gap-5"><div><p className="font-display text-2xl">{invoice.familyName}</p><p className="mt-1 text-sm text-muted">{invoice.label} · <span className="capitalize">{invoice.status.replaceAll("_", " ")}</span></p></div><p className="text-xl">{money(invoice.amountDueCents, invoice.currency)}</p></div>
-      <div className="mt-5 divide-y divide-line border-y border-line">{invoice.lines.map((line) => <div key={line.id} className="grid grid-cols-[1fr_auto] gap-4 py-3 text-sm"><div><p>{line.description}</p>{line.serviceDate ? <p className="mt-1 text-xs text-muted">{line.serviceDate}</p> : null}</div><p>{money(line.amountCents, invoice.currency)}</p></div>)}</div>
+      <div className="mt-5 divide-y divide-line border-y border-line">{invoice.lines.map((line) => <div key={line.id} className="grid grid-cols-[1fr_auto] gap-4 py-3 text-sm"><div><p>{line.description}</p>{line.serviceDate ? <p className="mt-1 text-xs text-muted">{line.serviceDate}</p> : null}{["lesson","lesson_series"].includes(line.sourceType)&&(invoice.status==="draft"||invoice.status==="review")?<BillingLineDefer schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={invoice.id} lineItemId={line.id} description={line.description} onRemoved={refreshInvoice}/>:null}</div><p>{money(line.amountCents, invoice.currency)}</p></div>)}</div>
       {message ? <p role="status" className="mt-4 border-l-2 border-brand pl-3 text-sm">{message}</p> : null}
       {invoice.status === "draft" || invoice.status === "review" ? <>
         <BillingAdjustmentForm schoolId={schoolId} billingAccountId={billingAccountId} billingPeriodId={invoice.id} outstandingLessons={invoice.outstandingLessons} embedded onEditingChange={setAdjustmentEditing} onChanged={() => { void refreshInvoice(); }} />
