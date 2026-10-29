@@ -28,10 +28,12 @@ export default async function FamiliesPage({ params }: { params: Promise<{ schoo
     supabase.from("billing_account_students").select("billing_account_id, student_id").eq("school_id", schoolId),
     loadMySchoolCapabilities(schoolId),
     loadSchoolInvoices(supabase, schoolId),
+    supabase.from("billing_payment_methods").select("billing_account_id").eq("school_id", schoolId).eq("status", "active"),
+    supabase.from("billing_collection_mandates").select("billing_account_id").eq("school_id", schoolId).eq("status", "active"),
   ]);
   const failed = results.find((result) => "error" in result && result.error);
   if (failed && "error" in failed && failed.error) throw new Error(`Families could not load: ${failed.error.message}`);
-  const [{ data: school }, { data: membership }, { data: accounts }, { data: people }, { data: studentLinks }, capabilities, invoices] = results;
+  const [{ data: school }, { data: membership }, { data: accounts }, { data: people }, { data: studentLinks }, capabilities, invoices, { data: paymentMethods }, { data: collectionMandates }] = results;
   if (!school || !membership) notFound();
 
   const peopleById = new Map((people ?? []).map((person) => [person.id, person]));
@@ -43,6 +45,8 @@ export default async function FamiliesPage({ params }: { params: Promise<{ schoo
   for (const invoice of invoices) {
     if (invoiceNeedsAttention(invoice) && !activeInvoiceByAccount.has(invoice.billingAccountId)) activeInvoiceByAccount.set(invoice.billingAccountId, invoice);
   }
+  const accountsWithPaymentMethods = new Set((paymentMethods ?? []).map((method) => method.billing_account_id));
+  const accountsWithAutoCharge = new Set((collectionMandates ?? []).map((mandate) => mandate.billing_account_id));
   const directoryRows: FamilyDirectoryRow[] = (accounts ?? []).map((account) => {
     const contact = peopleById.get(account.billing_contact_person_id);
     const invoice = activeInvoiceByAccount.get(account.id);
@@ -54,6 +58,8 @@ export default async function FamiliesPage({ params }: { params: Promise<{ schoo
       contactName: contact ? displayName(contact) : "No payer assigned",
       contactDetail: contact?.email || contact?.phone || "No contact details",
       studentCount: studentCount[account.id] ?? 0,
+      hasPaymentMethod: accountsWithPaymentMethods.has(account.id),
+      autoChargeActive: accountsWithAutoCharge.has(account.id),
       invoice: invoice ? {
         statusLabel: invoice.statusLabel,
         label: invoice.label,

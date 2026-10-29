@@ -88,10 +88,11 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     canManagePayments ? supabase.from("family_service_locations").select("id,mode,label,address_line_1,address_line_2,city,region,postal_code,access_notes").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("status", "active").maybeSingle() : Promise.resolve({ data: null, error: null }),
     supabase.from("school_instruments").select("id,name,is_active").eq("school_id",schoolId).order("name"),
     supabase.from("teacher_instruments").select("teacher_id,instrument_id").eq("school_id",schoolId),
+    supabase.from("billing_collection_mandates").select("id").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("status", "active").maybeSingle(),
   ]);
   const failedRelated = related.find((result) => result.error);
   if (failedRelated?.error) throw new Error(`Family detail could not load: ${failedRelated.error.message}`);
-  const [peopleResult, studentsResult, periodsResult, archivedPeriodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult, productsResult, placesResult, teachersResult, availabilityResult, busyLessonsResult, outstandingLessonsResult, serviceLocationResult, instrumentsResult, teacherInstrumentsResult] = related;
+  const [peopleResult, studentsResult, periodsResult, archivedPeriodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult, productsResult, placesResult, teachersResult, availabilityResult, busyLessonsResult, outstandingLessonsResult, serviceLocationResult, instrumentsResult, teacherInstrumentsResult, mandateResult] = related;
   if (serviceLocationResult.data?.id && serviceLocationResult.data.mode === "stored") {
     const { error: accessLogError } = await createAdminClient().from("service_location_access_log").insert({
       school_id: schoolId,
@@ -176,6 +177,11 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   const periodByApprovalRequest = new Map((approvalRequestsResult.data ?? []).map((request) => [request.id, request.billing_period_id]));
   const latestApprovalByPeriod = new Map<string, (typeof approvalRequestsResult.data extends (infer T)[] | null ? T : never)>();
   for (const request of approvalRequestsResult.data ?? []) if (request.billing_period_id && !latestApprovalByPeriod.has(request.billing_period_id)) latestApprovalByPeriod.set(request.billing_period_id, request);
+  const openPeriods = (periodsResult.data ?? []).filter((billingPeriod) => !["paid", "void"].includes(billingPeriod.status));
+  const openAmountCents = openPeriods.reduce((total, billingPeriod) => total + billingPeriod.amount_due_cents, 0);
+  const pendingApprovalCount = [...latestApprovalByPeriod.values()].filter((request) => request.approval_status === "pending").length;
+  const failedPaymentCount = openPeriods.filter((billingPeriod) => billingPeriod.status === "payment_failed").length;
+  const autoChargeActive = Boolean(mandateResult.data);
   const latestEmailStatusByPeriod = new Map<string, string>();
   const latestEmailRecipientByPeriod = new Map<string, string>();
   for (const delivery of emailDeliveriesResult.data ?? []) {
@@ -188,7 +194,13 @@ export default async function FamilyDetailPage({ params, searchParams }: {
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
-      <DetailHeader kind="families" eyebrow={`${school.name} · Family account`} title={account.name} meta={`${account.status} billing relationship · ${students.length} ${students.length === 1 ? "student" : "students"}`} />
+      <DetailHeader kind="families" eyebrow={`${school.name} · Family account`} title={account.name} meta={`${account.status} billing relationship · ${students.length} ${students.length === 1 ? "student" : "students"}`}>
+        <span className={`rounded-full border px-3 py-1.5 text-xs font-medium ${openPeriods.length ? "border-brand/40 bg-brand/10 text-brand" : "border-line bg-surface text-muted"}`}>{openPeriods.length ? `${openPeriods.length} open · ${money(openAmountCents, school.currency)}` : "No open invoices"}</span>
+        {pendingApprovalCount ? <span className="rounded-full border border-danger/40 bg-danger/10 px-3 py-1.5 text-xs font-medium text-danger">{pendingApprovalCount} {pendingApprovalCount === 1 ? "approval" : "approvals"} waiting</span> : null}
+        {failedPaymentCount ? <span className="rounded-full border border-danger/50 bg-danger/15 px-3 py-1.5 text-xs font-semibold text-danger">Payment failed</span> : null}
+        <span className={`rounded-full border px-3 py-1.5 text-xs font-medium ${hasActivePaymentMethod ? "border-brand/40 bg-brand/10 text-brand" : "border-danger/40 bg-danger/10 text-danger"}`}>{hasActivePaymentMethod ? "Payment method ready" : "No payment method set up"}</span>
+        {autoChargeActive ? <span className="rounded-full border border-brand/40 bg-brand/10 px-3 py-1.5 text-xs font-medium text-brand">Automatic payment authorized</span> : null}
+      </DetailHeader>
 
       {approvals.length?<DetailSection title="Needs approval" description="Pending owner decisions involving students in this family."><ApprovalList schoolId={schoolId} items={approvals} timezone={school.timezone} compact/></DetailSection>:null}
       {entitlements.length?<DetailSection title="Lessons to schedule" description="Replacement lesson time still owed to this family."><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} lessonCreationOptions={lessonCreationOptions} compact/></DetailSection>:null}
@@ -214,11 +226,10 @@ export default async function FamilyDetailPage({ params, searchParams }: {
         <ServiceLocationForm schoolId={schoolId} billingAccountId={billingAccountId} location={serviceLocationResult.data} />
       </details> : null}
 
-      {canManagePayments ? <section className="mt-6 flex flex-col items-start gap-4 rounded-card bg-surface-raised/55 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8"><div><p className="text-xs uppercase tracking-[0.14em] text-brand">Billing</p><h2 className="mt-2 font-display text-3xl">Prepare an invoice</h2><p className="mt-2 max-w-xl text-sm leading-6 text-muted">Choose a service month in a focused review flow. Nothing is sent or charged until you lock and request approval.</p></div><BillingDraftForm schoolId={schoolId} billingAccountId={billingAccountId} defaultMonth={currentMonth} initialOpen={prepareInvoice === "1"} /></section> : null}
-
       <div id="billing-history" className="scroll-mt-6"><DetailSection title="Invoices" description="Draft, active, and completed invoices. A service month may have more than one invoice when lessons are intentionally billed later.">
         <ScrollToInvoice invoiceId={selectedPeriodId} />
         <div className="space-y-7">
+          {canManagePayments ? <div className="flex flex-col items-start gap-4 rounded-control bg-surface p-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-display text-2xl">Prepare an invoice</p><p className="mt-2 max-w-lg text-sm leading-6 text-muted">Choose a service month. Nothing is sent or charged until you review, lock, and request approval.</p></div><BillingDraftForm schoolId={schoolId} billingAccountId={billingAccountId} defaultMonth={currentMonth} initialOpen={prepareInvoice === "1"} /></div> : null}
           {billing && billingMessages[billing] ? <p role="status" className={`border-l-2 pl-4 text-sm leading-6 ${billing === "prepared" ? "border-brand text-ink" : "border-danger text-danger"}`}>{billingMessages[billing]}</p> : null}
           <div className="space-y-4">
           {(periodsResult.data ?? []).map((billingPeriod) => {
