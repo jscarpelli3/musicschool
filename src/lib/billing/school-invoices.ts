@@ -45,18 +45,22 @@ export async function loadSchoolInvoices(client: Client, schoolId: string, limit
     return grouped;
   }, {});
   const periodIds = (periods ?? []).map((period) => period.id);
-  const [{ data: lines, error: lineError }, { data: approvals, error: approvalError }, { data: attempts, error: attemptError }] = periodIds.length
+  const [{ data: lines, error: lineError }, { data: approvals, error: approvalError }, { data: failedEvents, error: failedEventError }] = periodIds.length
     ? await Promise.all([
       client.from("billing_line_items").select("billing_period_id").eq("school_id", schoolId).in("billing_period_id", periodIds),
-      client.from("billing_approval_requests").select("billing_period_id,approval_status,rejection_reason_code,rejection_note,created_at").eq("school_id", schoolId).in("billing_period_id", periodIds).order("created_at", { ascending: false }),
-      client.from("payment_attempts").select("billing_period_id,status").eq("school_id", schoolId).in("billing_period_id", periodIds).in("status", ["failed", "requires_action"]),
+      client.from("billing_approval_requests").select("id,billing_period_id,approval_status,rejection_reason_code,rejection_note,created_at").eq("school_id", schoolId).in("billing_period_id", periodIds).order("created_at", { ascending: false }),
+      client.from("billing_approval_events").select("approval_request_id").eq("school_id", schoolId).eq("event_type", "payment_failed"),
     ])
     : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }];
-  if (lineError || approvalError || attemptError) throw new Error("Invoice details could not be loaded.");
+  if (lineError || approvalError || failedEventError) throw new Error("Invoice details could not be loaded.");
   const lineCounts = (lines ?? []).reduce<Record<string, number>>((counts, line) => { counts[line.billing_period_id] = (counts[line.billing_period_id] ?? 0) + 1; return counts; }, {});
   const latestApproval = new Map<string, (typeof approvals)[number]>();
   for (const approval of approvals ?? []) if (approval.billing_period_id && !latestApproval.has(approval.billing_period_id)) latestApproval.set(approval.billing_period_id, approval);
-  const periodsWithFailedPayment = new Set((attempts ?? []).map((attempt) => attempt.billing_period_id));
+  const periodByApprovalId = new Map((approvals ?? []).flatMap((approval) => approval.billing_period_id ? [[approval.id, approval.billing_period_id] as const] : []));
+  const periodsWithFailedPayment = new Set((failedEvents ?? []).flatMap((event) => {
+    const periodId = periodByApprovalId.get(event.approval_request_id);
+    return periodId ? [periodId] : [];
+  }));
   return (periods ?? []).map((period) => ({
     id: period.id,
     billingAccountId: period.billing_account_id,

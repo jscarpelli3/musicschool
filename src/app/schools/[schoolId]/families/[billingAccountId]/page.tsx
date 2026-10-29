@@ -90,10 +90,11 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     supabase.from("teacher_instruments").select("teacher_id,instrument_id").eq("school_id",schoolId),
     supabase.from("billing_collection_mandates").select("id").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("status", "active").maybeSingle(),
     canManagePayments ? createAdminClient().from("invoice_checkout_requests").select("payment_attempt_id").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("status", "open") : Promise.resolve({ data: [], error: null }),
+    supabase.from("billing_approval_events").select("approval_request_id").eq("school_id", schoolId).eq("event_type", "payment_failed"),
   ]);
   const failedRelated = related.find((result) => result.error);
   if (failedRelated?.error) throw new Error(`Family detail could not load: ${failedRelated.error.message}`);
-  const [peopleResult, studentsResult, periodsResult, archivedPeriodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult, productsResult, placesResult, teachersResult, availabilityResult, busyLessonsResult, outstandingLessonsResult, serviceLocationResult, instrumentsResult, teacherInstrumentsResult, mandateResult, activeCheckoutsResult] = related;
+  const [peopleResult, studentsResult, periodsResult, archivedPeriodsResult, methodsResult, attemptsResult, setupRequestsResult, connectionResult, approvalRequestsResult, emailDeliveriesResult, productsResult, placesResult, teachersResult, availabilityResult, busyLessonsResult, outstandingLessonsResult, serviceLocationResult, instrumentsResult, teacherInstrumentsResult, mandateResult, activeCheckoutsResult, failedPaymentEventsResult] = related;
   if (serviceLocationResult.data?.id && serviceLocationResult.data.mode === "stored") {
     const { error: accessLogError } = await createAdminClient().from("service_location_access_log").insert({
       school_id: schoolId,
@@ -146,7 +147,6 @@ export default async function FamilyDetailPage({ params, searchParams }: {
   const latestAttemptByPeriod = new Map<string, (typeof attemptsResult.data extends (infer T)[] | null ? T : never)>();
   for (const attempt of attemptsResult.data ?? []) if (!latestAttemptByPeriod.has(attempt.billing_period_id)) latestAttemptByPeriod.set(attempt.billing_period_id, attempt);
   const openCheckoutAttemptIds = new Set((activeCheckoutsResult.data ?? []).map((request) => request.payment_attempt_id));
-  const failedPaymentPeriods = new Set((attemptsResult.data ?? []).filter((attempt) => ["failed", "requires_action"].includes(attempt.status)).map((attempt) => attempt.billing_period_id));
   const hasActivePaymentMethod = (methodsResult.data ?? []).some((method) => method.status === "active");
   const activePaymentMethodCount = (methodsResult.data ?? []).filter((method) => method.status === "active").length;
   const readinessResults = canManagePayments ? await Promise.all(periodIds.map((billingPeriodId) =>
@@ -178,6 +178,10 @@ export default async function FamilyDetailPage({ params, searchParams }: {
     return groups;
   }, {});
   const periodByApprovalRequest = new Map((approvalRequestsResult.data ?? []).map((request) => [request.id, request.billing_period_id]));
+  const failedPaymentPeriods = new Set((failedPaymentEventsResult.data ?? []).flatMap((event) => {
+    const billingPeriodId = periodByApprovalRequest.get(event.approval_request_id);
+    return billingPeriodId ? [billingPeriodId] : [];
+  }));
   const latestApprovalByPeriod = new Map<string, (typeof approvalRequestsResult.data extends (infer T)[] | null ? T : never)>();
   for (const request of approvalRequestsResult.data ?? []) if (request.billing_period_id && !latestApprovalByPeriod.has(request.billing_period_id)) latestApprovalByPeriod.set(request.billing_period_id, request);
   const openPeriods = (periodsResult.data ?? []).filter((billingPeriod) => !["paid", "void"].includes(billingPeriod.status));
