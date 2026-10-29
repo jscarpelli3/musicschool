@@ -16,7 +16,7 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
   amount: string;
   hasPaymentMethod: boolean;
   initialStatus: string;
-  initialAttempt: { id: string; status: string; failureMessage: string | null; usesSavedMethod: boolean } | null;
+  initialAttempt: { id: string; status: string; failureMessage: string | null; usesSavedMethod: boolean; hostedLinkOpen: boolean } | null;
 }) {
   const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
@@ -26,6 +26,7 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
   const [linkPending, setLinkPending] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [linkMessage, setLinkMessage] = useState("");
+  const [paymentUrl, setPaymentUrl] = useState("");
   const deadline = useRef(0);
 
   async function checkPayment(startWindow = false) {
@@ -73,16 +74,36 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watching, schoolId, billingAccountId, billingPeriodId]);
 
-  const hostedLinkOpen = attempt?.status === "created" && !attempt.usesSavedMethod;
-  const active = ["submitted", "processing"].includes(attempt?.status ?? "") || (attempt?.status === "created" && attempt.usesSavedMethod);
+  async function copyPaymentLink(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      return true;
+    } catch {
+      const field = document.createElement("textarea");
+      field.value = url;
+      field.setAttribute("readonly", "");
+      field.style.position = "fixed";
+      field.style.opacity = "0";
+      document.body.appendChild(field);
+      field.select();
+      const copied = document.execCommand("copy");
+      field.remove();
+      return copied;
+    }
+  }
+
+  const hostedLinkOpen = Boolean(attempt?.hostedLinkOpen);
+  const active = !hostedLinkOpen && (["submitted", "processing"].includes(attempt?.status ?? "") || (attempt?.status === "created" && attempt.usesSavedMethod));
   const failed = status === "payment_failed" || ["failed", "requires_action", "cancelled"].includes(attempt?.status ?? "");
   const title = status === "paid" ? "Paid"
     : active ? "Payment submitted — awaiting confirmation"
       : failed ? "Payment failed — ready to retry"
+        : hostedLinkOpen ? "One-time payment link ready"
         : "Approved — ready to collect";
   const detail = status === "paid" ? "Stripe confirmed this payment. No further action is needed."
     : active ? `Stripe is processing ${amount}. Do not submit another charge while confirmation is pending.`
       : failed ? `The prior attempt did not collect ${amount}. The payer can retry the one-time link, or you can use the saved card after confirming it is current.`
+        : hostedLinkOpen ? `A secure payment page is ready for ${amount}. No payment has been submitted yet.`
         : `The payer approved this exact ${amount} invoice. Choose the saved card or send a one-time Stripe payment link.`;
 
   return <section className="mt-6 rounded-card border border-brand/30 bg-brand/5 p-5 sm:p-6">
@@ -107,21 +128,21 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
             <button type="button" disabled={linkPending} onClick={async () => {
               setLinkPending(true);
               setLinkMessage("");
-              const result = await createOneTimeInvoicePaymentLink(schoolId, billingAccountId, billingPeriodId);
+              const result = paymentUrl ? { ok: true as const, url: paymentUrl, message: "" } : await createOneTimeInvoicePaymentLink(schoolId, billingAccountId, billingPeriodId);
               if (result.ok && result.url) {
-                try {
-                  await navigator.clipboard.writeText(result.url);
+                setPaymentUrl(result.url);
+                if (await copyPaymentLink(result.url)) {
                   setLinkCopied(true);
                   setLinkMessage("Copied. Send this link directly to the payer.");
-                } catch {
+                } else {
                   setLinkCopied(false);
-                  setLinkMessage(`Copy this payment link: ${result.url}`);
+                  setLinkMessage("Copy did not work in this browser. Select the link below and copy it manually.");
                 }
-                await checkPayment(true);
               } else setLinkMessage(result.message);
               setLinkPending(false);
             }} className="mt-4 rounded-control border border-brand px-4 py-3 text-sm text-brand transition hover:bg-brand hover:text-canvas disabled:cursor-wait disabled:opacity-50">{linkPending ? "Preparing link…" : linkCopied ? "Copy link again" : "Copy one-time payment link"}</button>
             {linkMessage ? <p role="status" className="mt-3 break-words text-sm font-medium leading-5 text-brand">{linkMessage}</p> : null}
+            {paymentUrl ? <label className="mt-3 block"><span className="text-[11px] text-muted">One-time payment link</span><input aria-label="One-time payment link" readOnly value={paymentUrl} onFocus={(event) => event.currentTarget.select()} className="mt-1.5 w-full rounded-control border border-line bg-canvas px-3 py-2 text-xs text-ink outline-none focus:border-brand" /></label> : null}
           </div>
         </div> : null}
 

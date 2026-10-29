@@ -5727,6 +5727,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      reset_unsubmitted_invoice_checkout_attempt: {
+        Args: {
+          p_checkout_session_id: string
+          p_provider_account_id: string
+          p_request_id: string
+        }
+        Returns: undefined
+      }
       create_weekly_lesson_series_with_instrument: {
         Args: {
           p_allow_outside_availability?: boolean

@@ -204,6 +204,19 @@ export async function reconcileOpenInvoiceCheckout(schoolId: string, billingAcco
 
   if (session.status === "expired") return expireInvoiceCheckout(session.id, stripeAccount);
   const intent = typeof session.payment_intent === "string" ? null : session.payment_intent;
+  if (session.status === "open" && session.payment_status === "unpaid") {
+    if (intent && (intent.status === "canceled" || (intent.status === "requires_payment_method" && intent.last_payment_error))) {
+      await reconcileInvoicePaymentIntent(intent.id, stripeAccount, null, true);
+      return true;
+    }
+    const { error: resetError } = await admin.rpc("reset_unsubmitted_invoice_checkout_attempt", {
+      p_request_id: request.id,
+      p_provider_account_id: stripeAccount,
+      p_checkout_session_id: session.id,
+    });
+    if (resetError) throw resetError;
+    return true;
+  }
   if (!intent) return false;
   if (session.payment_status === "paid" && intent.status === "succeeded") {
     return reconcileCompletedInvoiceCheckout(session.id, stripeAccount, null);

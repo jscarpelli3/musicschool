@@ -173,3 +173,8 @@ Owner scheduling and family billing foundation are live in test mode. Payment ro
 - Family list cards additionally flag `No payment method set up` and `Automatic payment authorized` when applicable.
 - Verification passes: typecheck, ESLint, 65 unit/invariant tests, and production build.
 - Next: visually accept these badges and the consolidated invoice section on staging. Then return to the production declined invoice, retry with `4242 4242 4242 4242`, and verify exactly one successful payment and a paid invoice.
+- The payer status UI is now live through PR #120 / production commit `eaf4d5c`; required checks passed and `app.commontime.studio/login` returns 200.
+- Teacher-request testing is intentionally deferred for the solo-teacher beta. The immediate gate remains the exact declined production invoice: retry its one-time payment with `4242 4242 4242 4242`, then verify one successful attempt, paid invoice state, and no duplicate collection.
+- After that, close payment escape hatches: rehearse one-time payment with no saved card, build explicit failed-payment recovery guidance, and add an audited owner action to record payment received outside Common Time without representing it as a Stripe charge.
+- Student and family calendars now lead with the contextual `Find a time` flow instead of the confusing `Add without finding a time` action. Manual entry remains the secondary finder action.
+- Staging-next payment fix separates `link prepared` from `payment submitted`, removes polling from the copy action, supplies clipboard fallback plus a selectable URL, repairs stale open/unpaid reservations through a bound service-only transition, shows failed attempts on collapsed invoice rows, and replaces `$0.00 paid` with `Not paid`.

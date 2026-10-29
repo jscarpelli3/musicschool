@@ -39,7 +39,7 @@ export type PreparedInvoice = {
   payerReviewReason: string | null;
   payerReviewNote: string | null;
   hasActivePaymentMethod: boolean;
-  latestPaymentAttempt: { id: string; status: string; failureMessage: string | null; usesSavedMethod: boolean } | null;
+  latestPaymentAttempt: { id: string; status: string; failureMessage: string | null; usesSavedMethod: boolean; hostedLinkOpen: boolean } | null;
 };
 export type BillingDraftState = { ok: boolean; message: string; periodId: string | null; invoice: PreparedInvoice | null };
 export type BillingLineDeferState = { ok: boolean; message: string };
@@ -98,6 +98,11 @@ async function readPreparedInvoice(schoolId: string, billingAccountId: string, p
     supabase.from("billing_payment_methods").select("id").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("status", "active").limit(1),
   ]);
   if (!period || !account || !lines) return null;
+  const latestAttempt = attempts?.[0] ?? null;
+  const activeCheckout = latestAttempt && !latestAttempt.payment_method_id
+    ? await createAdminClient().from("invoice_checkout_requests").select("id").eq("payment_attempt_id", latestAttempt.id).eq("status", "open").maybeSingle()
+    : { data: null, error: null };
+  if (activeCheckout.error) return null;
   return {
     id: period.id, billingAccountId, familyName: account.name, label: period.label, amountDueCents: period.amount_due_cents,
     currency: period.currency, status: period.status,
@@ -106,7 +111,7 @@ async function readPreparedInvoice(schoolId: string, billingAccountId: string, p
     payerReviewReason: approvals?.[0]?.approval_status === "rejected" ? approvals[0].rejection_reason_code : null,
     payerReviewNote: approvals?.[0]?.approval_status === "rejected" ? approvals[0].rejection_note : null,
     hasActivePaymentMethod: Boolean(methods?.length),
-    latestPaymentAttempt: attempts?.[0] ? { id: attempts[0].id, status: attempts[0].status, failureMessage: attempts[0].failure_message, usesSavedMethod: Boolean(attempts[0].payment_method_id) } : null,
+    latestPaymentAttempt: latestAttempt ? { id: latestAttempt.id, status: latestAttempt.status, failureMessage: latestAttempt.failure_message, usesSavedMethod: Boolean(latestAttempt.payment_method_id), hostedLinkOpen: Boolean(activeCheckout.data) } : null,
   };
 }
 
