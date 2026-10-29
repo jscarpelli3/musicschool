@@ -293,3 +293,9 @@ Use this file for short chronological notes about meaningful work.
 - Both surfaces now expose the same saved-card action, one-time Stripe link, copied-link feedback, bounded polling, manual status check, decline details, retry state, and paid confirmation. The surrounding page/modal shell may differ; payment behavior and language no longer do.
 - Staging commit `1b37774` passed typecheck, lint, all 65 tests, and production build. Vercel deployment `dpl_2ENANH2gq4dektGhqi7X1v6gheUS` is Ready and assigned to the familiar staging alias.
 - Next acceptance: compare the same approved invoice in the dashboard modal and family detail, then promote. After promotion, perform one deliberate production decline and a successful retry on that exact invoice.
+## 2026-10-28 — Shared payment UI production release
+
+- PR #118 merged as production commit `92c9201`. Every approved unpaid invoice now offers a one-time exact-invoice Stripe link in both the dashboard modal and family-detail invoice; saved-card collection appears alongside it when usable.
+- An open hosted link is no longer mistaken for a submitted charge. It stays copyable, while competing saved-card collection remains unavailable until that reserved Checkout resolves or expires.
+- Required application, browser, and database checks passed. Production deployment `dpl_AtgMJVUFUPdrqBYwXy3Q9JrVzuXt` is Ready on `app.commontime.studio`; canonical login smoke returns 200.
+- Next test: on one approved unpaid production invoice, use the one-time link with Stripe decline card `4000 0000 0000 0002`, verify both owner surfaces show the failure and remain unpaid, then retry the same link with `4242 4242 4242 4242` and verify one paid result.

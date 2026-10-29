@@ -173,7 +173,8 @@ export async function reconcileInvoicePaymentIntent(paymentIntentId: string, str
       .eq("payment_attempt_id", attempt.id).maybeSingle();
     if (checkoutError || !checkoutRequest || connection.data.provider_account_id !== stripeAccount
       || intent.amount !== attempt.amount_cents || intent.currency.toUpperCase() !== attempt.currency
-      || intentCustomer !== undefined || !intentMethod
+      || intentCustomer !== undefined
+      || (!["requires_payment_method", "canceled"].includes(intent.status) && !intentMethod)
       || intent.metadata.invoice_checkout_request_id !== checkoutRequest.id
       || intent.metadata.payment_attempt_id !== attempt.id || intent.metadata.school_id !== attempt.school_id
       || intent.metadata.billing_account_id !== attempt.billing_account_id || intent.metadata.billing_period_id !== attempt.billing_period_id) {
