@@ -1,13 +1,13 @@
 "use server";
 
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
 import { CardSetupWorkflowError, createFamilyCardSetup } from "@/lib/stripe/payment-methods";
 import { getStripe } from "@/lib/stripe/server";
 import { collectApprovedInvoice } from "@/lib/stripe/invoice-collection";
-import { createApprovedInvoiceCheckout, reconcileOpenInvoiceCheckout } from "@/lib/stripe/invoice-checkout";
+import { cancelOpenInvoiceCheckout, createApprovedInvoiceCheckout, reconcileOpenInvoiceCheckout } from "@/lib/stripe/invoice-checkout";
 import { normalizeE164 } from "@/lib/phone";
 import { ensurePortalAuthIdentity } from "@/lib/portal/auth-identities";
 import { billingApprovalEmail, type BillingApprovalEmailGroup, type BillingApprovalEmailLine } from "@/lib/resend/billing-approval-email";
@@ -40,6 +40,10 @@ export type PreparedInvoice = {
   payerReviewNote: string | null;
   hasActivePaymentMethod: boolean;
   latestPaymentAttempt: { id: string; status: string; failureMessage: string | null; usesSavedMethod: boolean; hostedLinkOpen: boolean } | null;
+  settlements: Array<{ id: string; entryType: string; method: string | null; amountCents: number; occurredAt: string; reference: string | null; note: string | null; sourceEntryId: string | null }>;
+  stripePayments: Array<{ id: string; amountCents: number; succeededAt: string | null }>;
+  stripeRefunds: Array<{ id: string; paymentAttemptId: string; amountCents: number; status: string; reason: string | null }>;
+  outstandingCents: number;
 };
 export type BillingDraftState = { ok: boolean; message: string; periodId: string | null; invoice: PreparedInvoice | null };
 export type BillingLineDeferState = { ok: boolean; message: string };
@@ -88,14 +92,15 @@ async function readBillingApprovalEmailDetails(schoolId: string, billingPeriodId
 
 async function readPreparedInvoice(schoolId: string, billingAccountId: string, periodId: string): Promise<PreparedInvoice | null> {
   const supabase = await createClient();
-  const [{ data: period }, { data: account }, { data: lines }, { data: outstandingLessons }, { data: approvals }, { data: attempts }, { data: methods }] = await Promise.all([
+  const [{ data: period }, { data: account }, { data: lines }, { data: outstandingLessons }, { data: approvals }, { data: attempts }, { data: methods }, { data: settlements }] = await Promise.all([
     supabase.from("billing_periods").select("id,label,amount_due_cents,currency,status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", periodId).single(),
     supabase.from("billing_accounts").select("name").eq("school_id", schoolId).eq("id", billingAccountId).single(),
     supabase.from("billing_line_items").select("id,description,service_date,amount_cents").eq("school_id", schoolId).eq("billing_period_id", periodId).order("service_date", { ascending: true, nullsFirst: false }).order("created_at"),
     supabase.rpc("get_outstanding_lessons_for_billing_account", { p_school_id: schoolId, p_billing_account_id: billingAccountId }),
     supabase.from("billing_approval_requests").select("approval_status,rejection_reason_code,rejection_note").eq("school_id", schoolId).eq("billing_period_id", periodId).order("created_at", { ascending: false }).limit(1),
-    supabase.from("payment_attempts").select("id,status,failure_message,payment_method_id").eq("school_id", schoolId).eq("billing_period_id", periodId).order("created_at", { ascending: false }).limit(1),
+    supabase.from("payment_attempts").select("id,status,failure_message,payment_method_id,amount_cents,succeeded_at").eq("school_id", schoolId).eq("billing_period_id", periodId).order("created_at", { ascending: false }),
     supabase.from("billing_payment_methods").select("id").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("status", "active").limit(1),
+    supabase.from("invoice_settlement_entries").select("id,entry_type,method,amount_cents,occurred_at,reference,note,source_entry_id").eq("school_id",schoolId).eq("billing_period_id",periodId).order("created_at"),
   ]);
   if (!period || !account || !lines) return null;
   const latestAttempt = attempts?.[0] ?? null;
@@ -103,6 +108,11 @@ async function readPreparedInvoice(schoolId: string, billingAccountId: string, p
     ? await createAdminClient().from("invoice_checkout_requests").select("id").eq("payment_attempt_id", latestAttempt.id).eq("status", "open").maybeSingle()
     : { data: null, error: null };
   if (activeCheckout.error) return null;
+  const succeededAttempts = (attempts ?? []).filter((item) => item.status === "succeeded");
+  const refundResult = succeededAttempts.length ? await supabase.from("payment_refunds").select("id,payment_attempt_id,amount_cents,status,reason").eq("school_id",schoolId).in("payment_attempt_id",succeededAttempts.map((item)=>item.id)) : { data: [], error: null };
+  const reversedIds = new Set((settlements ?? []).filter((entry)=>entry.entry_type==="reversal"&&entry.source_entry_id).map((entry)=>entry.source_entry_id));
+  const resolvedOutside = (settlements ?? []).filter((entry)=>!reversedIds.has(entry.id)&&["external_payment","write_off"].includes(entry.entry_type)).reduce((sum,entry)=>sum+entry.amount_cents,0);
+  const stripePaid = succeededAttempts.reduce((sum,item)=>sum+item.amount_cents,0);
   return {
     id: period.id, billingAccountId, familyName: account.name, label: period.label, amountDueCents: period.amount_due_cents,
     currency: period.currency, status: period.status,
@@ -112,6 +122,10 @@ async function readPreparedInvoice(schoolId: string, billingAccountId: string, p
     payerReviewNote: approvals?.[0]?.approval_status === "rejected" ? approvals[0].rejection_note : null,
     hasActivePaymentMethod: Boolean(methods?.length),
     latestPaymentAttempt: latestAttempt ? { id: latestAttempt.id, status: latestAttempt.status, failureMessage: latestAttempt.failure_message, usesSavedMethod: Boolean(latestAttempt.payment_method_id), hostedLinkOpen: Boolean(activeCheckout.data) } : null,
+    settlements: (settlements ?? []).map((entry)=>({ id:entry.id,entryType:entry.entry_type,method:entry.method,amountCents:entry.amount_cents,occurredAt:entry.occurred_at,reference:entry.reference,note:entry.note,sourceEntryId:entry.source_entry_id })),
+    stripePayments: succeededAttempts.map((item)=>({ id:item.id,amountCents:item.amount_cents,succeededAt:item.succeeded_at })),
+    stripeRefunds: (refundResult.data ?? []).map((item)=>({ id:item.id,paymentAttemptId:item.payment_attempt_id,amountCents:item.amount_cents,status:item.status,reason:item.reason })),
+    outstandingCents: Math.max(period.amount_due_cents-stripePaid-resolvedOutside,0),
   };
 }
 
@@ -187,6 +201,70 @@ export async function createOneTimeInvoicePaymentLink(schoolId: string, billingA
         : "The one-time payment link could not be prepared. Nothing was charged.";
     return { ok: false as const, message };
   }
+}
+
+export async function cancelOneTimeInvoicePaymentLink(schoolId: string, billingAccountId: string, billingPeriodId: string) {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId || !await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) return { ok:false as const,message:"You do not have permission to cancel this payment link." };
+  try {
+    await protectServerAction({scope:"billing.invoice.cancel_one_time_link",subject:`actor:${profileId}|school:${schoolId}|period:${billingPeriodId}`,limit:10,windowSeconds:3600});
+    await cancelOpenInvoiceCheckout(schoolId,billingAccountId,billingPeriodId);
+    revalidatePath(`/schools/${schoolId}/families/${billingAccountId}`);
+    return {ok:true as const,message:"The one-time payment link is cancelled. It can no longer be used."};
+  } catch (caught) {
+    return {ok:false as const,message:caught instanceof Error ? caught.message : "The link could not be cancelled safely."};
+  }
+}
+
+export async function recordInvoiceSettlement(schoolId:string,billingAccountId:string,billingPeriodId:string,input:{type:"external_payment"|"write_off"|"external_refund"|"reversal";method?:string;amountCents:number;occurredAt?:string;reference?:string;note?:string;sourceEntryId?:string}) {
+  const supabase=await createClient();
+  const {data:auth}=await supabase.auth.getClaims();
+  const profileId=auth?.claims?.sub;
+  if(!profileId||!await checkSchoolCapability(supabase,schoolId,"school.billing.manage"))return{ok:false as const,message:"You do not have permission to change this invoice balance."};
+  if(!Number.isSafeInteger(input.amountCents)||input.amountCents<=0)return{ok:false as const,message:"Enter a valid amount greater than zero."};
+  try{
+    await protectServerAction({scope:"billing.invoice.settlement",subject:`actor:${profileId}|school:${schoolId}|period:${billingPeriodId}`,limit:20,windowSeconds:3600});
+    const {error}=await createAdminClient().rpc("record_invoice_settlement_entry",{p_school_id:schoolId,p_billing_account_id:billingAccountId,p_billing_period_id:billingPeriodId,p_entry_type:input.type,p_method:input.method??null,p_amount_cents:input.amountCents,p_occurred_at:input.occurredAt?new Date(input.occurredAt).toISOString():new Date().toISOString(),p_reference:input.reference??null,p_note:input.note??null,p_source_entry_id:input.sourceEntryId??null,p_created_by:profileId});
+    if(error)throw error;
+    revalidatePath(`/schools/${schoolId}/families/${billingAccountId}`);
+    const message=input.type==="external_payment"?"Payment received elsewhere was recorded.":input.type==="write_off"?"The balance write-off was recorded.":input.type==="external_refund"?"The outside refund was recorded.":"The prior entry was reversed with a new audit entry.";
+    return{ok:true as const,message};
+  }catch(caught){
+    const detail=caught instanceof Error?caught.message:"";
+    const message=detail.includes("active_stripe")?"Cancel the open one-time link or wait for the active Stripe attempt to finish before recording another payment path.":detail.includes("amount_exceeds")?"That amount is greater than the remaining invoice balance.":detail.includes("write_off_note")?"Add a short reason for the write-off.":detail.includes("refund_exceeds")?"That refund is greater than the unrefunded payment.":"Nothing changed. Review the amount and try again.";
+    return{ok:false as const,message};
+  }
+}
+
+export async function refundStripeInvoicePayment(schoolId:string,billingAccountId:string,billingPeriodId:string,paymentAttemptId:string,amountCents:number,reason:string){
+  const supabase=await createClient();const{data:auth}=await supabase.auth.getClaims();const profileId=auth?.claims?.sub;
+  if(!profileId||!await checkSchoolCapability(supabase,schoolId,"school.billing.manage"))return{ok:false as const,message:"You do not have permission to refund this payment."};
+  if(!Number.isSafeInteger(amountCents)||amountCents<=0||!reason.trim())return{ok:false as const,message:"Enter a refund amount and a reason."};
+  const admin=createAdminClient();
+  try{
+    await protectServerAction({scope:"billing.invoice.refund",subject:`actor:${profileId}|school:${schoolId}|attempt:${paymentAttemptId}`,limit:5,windowSeconds:3600});
+    const{data:attempt,error:attemptError}=await admin.from("payment_attempts").select("id,amount_cents,currency,status,provider_charge_id,payment_connection_id").eq("id",paymentAttemptId).eq("school_id",schoolId).eq("billing_account_id",billingAccountId).eq("billing_period_id",billingPeriodId).single();
+    if(attemptError||!attempt||attempt.status!=="succeeded"||!attempt.provider_charge_id)throw new Error("refundable_payment_not_found");
+    const{data:connection,error:connectionError}=await admin.from("school_payment_connections").select("provider_account_id").eq("id",attempt.payment_connection_id).single();
+    if(connectionError||!connection.provider_account_id)throw new Error("stripe_connection_not_found");
+    const idempotencyKey=randomUUID();
+    const{data:refund,error:refundError}=await admin.from("payment_refunds").insert({school_id:schoolId,payment_attempt_id:attempt.id,amount_cents:amountCents,currency:attempt.currency,status:"created",reason:reason.trim(),idempotency_key:idempotencyKey,created_by:profileId}).select("id").single();
+    if(refundError)throw refundError;
+    await admin.from("payment_refunds").update({status:"submitted"}).eq("id",refund.id).eq("status","created");
+    try{
+      const stripeRefund=await getStripe().refunds.create({charge:attempt.provider_charge_id,amount:amountCents,metadata:{school_id:schoolId,billing_period_id:billingPeriodId,payment_refund_id:refund.id}},{stripeAccount:connection.provider_account_id,idempotencyKey:`invoice-refund-${refund.id}`});
+      const refundStatus=String(stripeRefund.status);
+      await admin.from("payment_refunds").update({status:refundStatus==="succeeded"?"succeeded":["failed","canceled"].includes(refundStatus)?"failed":"submitted",provider_refund_id:stripeRefund.id,failure_message:["failed","canceled"].includes(refundStatus)?"Stripe could not complete this refund.":null}).eq("id",refund.id);
+      if(["failed","canceled"].includes(refundStatus))return{ok:false as const,message:"Stripe did not complete the refund. The original payment remains recorded."};
+    }catch(error){
+      await admin.from("payment_refunds").update({status:"failed",failure_message:error instanceof Error?error.message:"Stripe rejected the refund."}).eq("id",refund.id);
+      throw error;
+    }
+    revalidatePath(`/schools/${schoolId}/families/${billingAccountId}`);
+    return{ok:true as const,message:"The refund was submitted to Stripe. It remains separate from the original invoice balance."};
+  }catch(caught){return{ok:false as const,message:caught instanceof Error&&caught.message.includes("Refund total")?"That refund would exceed the original Stripe payment.":"The refund was not completed. Review the original payment and try again."};}
 }
 
 function appOrigin() {

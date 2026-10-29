@@ -1301,6 +1301,57 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_settlement_entries: {
+        Row: {
+          amount_cents: number
+          billing_account_id: string
+          billing_period_id: string
+          created_at: string
+          created_by: string
+          currency: string
+          entry_type: string
+          id: string
+          method: string | null
+          note: string | null
+          occurred_at: string
+          reference: string | null
+          school_id: string
+          source_entry_id: string | null
+        }
+        Insert: {
+          amount_cents: number
+          billing_account_id: string
+          billing_period_id: string
+          created_at?: string
+          created_by: string
+          currency: string
+          entry_type: string
+          id?: string
+          method?: string | null
+          note?: string | null
+          occurred_at: string
+          reference?: string | null
+          school_id: string
+          source_entry_id?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          billing_account_id?: string
+          billing_period_id?: string
+          created_at?: string
+          created_by?: string
+          currency?: string
+          entry_type?: string
+          id?: string
+          method?: string | null
+          note?: string | null
+          occurred_at?: string
+          reference?: string | null
+          school_id?: string
+          source_entry_id?: string | null
+        }
+        Relationships: []
+      }
       invoice_checkout_requests: {
         Row: {
           amount_cents: number
@@ -6101,6 +6152,33 @@ export type Database = {
       }
       record_early_access_signup: {
         Args: { p_email: string; p_name?: string; p_school_name?: string }
+        Returns: undefined
+      }
+      record_invoice_settlement_entry: {
+        Args: {
+          p_amount_cents: number
+          p_billing_account_id: string
+          p_billing_period_id: string
+          p_created_by: string
+          p_entry_type: string
+          p_method: string | null
+          p_note: string | null
+          p_occurred_at: string
+          p_reference: string | null
+          p_school_id: string
+          p_source_entry_id: string | null
+        }
+        Returns: string
+      }
+      apply_invoice_refund_event: {
+        Args: {
+          p_failure_message: string | null
+          p_payment_refund_id: string
+          p_provider_account_id: string
+          p_provider_event_id: string
+          p_provider_refund_id: string
+          p_status: string
+        }
         Returns: undefined
       }
       record_lesson_created_email_submission: {

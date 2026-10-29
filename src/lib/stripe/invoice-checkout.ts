@@ -233,3 +233,24 @@ export async function expireInvoiceCheckout(checkoutSessionId: string, stripeAcc
   if (error) throw error;
   return true;
 }
+
+export async function cancelOpenInvoiceCheckout(schoolId: string, billingAccountId: string, billingPeriodId: string) {
+  const admin = createAdminClient();
+  const { data: request, error } = await admin.from("invoice_checkout_requests")
+    .select("id,payment_connection_id,provider_checkout_session_id")
+    .eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("billing_period_id", billingPeriodId)
+    .eq("status", "open").maybeSingle();
+  if (error) throw error;
+  if (!request?.provider_checkout_session_id) throw new Error("No open one-time payment link was found.");
+  const { data: connection, error: connectionError } = await admin.from("school_payment_connections")
+    .select("provider_account_id").eq("id", request.payment_connection_id).single();
+  if (connectionError || !connection.provider_account_id) throw connectionError ?? new Error("The Stripe connection could not be found.");
+  const stripe = getStripe();
+  const session = await stripe.checkout.sessions.retrieve(request.provider_checkout_session_id, {}, { stripeAccount: connection.provider_account_id });
+  if (session.payment_status === "paid") {
+    await reconcileCompletedInvoiceCheckout(session.id, connection.provider_account_id, null);
+    throw new Error("This payment link has already been paid. The invoice was refreshed instead of cancelling it.");
+  }
+  if (session.status === "open") await stripe.checkout.sessions.expire(session.id, {}, { stripeAccount: connection.provider_account_id });
+  await expireInvoiceCheckout(session.id, connection.provider_account_id);
+}

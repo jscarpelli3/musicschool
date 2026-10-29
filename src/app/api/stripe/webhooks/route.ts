@@ -6,6 +6,7 @@ import { synchronizeStripeConnection } from "@/lib/stripe/connections";
 import { expireLessonPayment, reconcileCompletedLessonPayment } from "@/lib/stripe/lesson-quick-pay";
 import { expireCardSetup, reconcileCompletedCardSetup } from "@/lib/stripe/payment-method-reconciliation";
 import { reconcileInvoicePaymentIntent } from "@/lib/stripe/invoice-collection";
+import { reconcileInvoiceRefund } from "@/lib/stripe/invoice-refunds";
 import { expireInvoiceCheckout, reconcileCompletedInvoiceCheckout } from "@/lib/stripe/invoice-checkout";
 import { getStripe, getStripeMode, getStripeWebhookSecrets } from "@/lib/stripe/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -37,6 +38,7 @@ type VerifiedEvent = {
   accountEvent: boolean;
   checkoutSetupEvent: "completed" | "expired" | null;
   paymentIntentEvent: boolean;
+  refundEvent: boolean;
 };
 
 async function verifyEvent(rawBody: string, signature: string, stripe: ReturnType<typeof getStripe>, secrets: string[]): Promise<VerifiedEvent> {
@@ -63,6 +65,7 @@ async function verifyEvent(rawBody: string, signature: string, stripe: ReturnTyp
           accountEvent,
           checkoutSetupEvent: null,
           paymentIntentEvent: false,
+          refundEvent: false,
         };
       }
 
@@ -81,6 +84,7 @@ async function verifyEvent(rawBody: string, signature: string, stripe: ReturnTyp
           ? "completed"
           : event.type === "checkout.session.expired" ? "expired" : null,
         paymentIntentEvent: ["payment_intent.succeeded", "payment_intent.payment_failed", "payment_intent.processing", "payment_intent.requires_action"].includes(event.type),
+        refundEvent: ["refund.created","refund.updated","refund.failed"].includes(event.type),
       };
     } catch (error) {
       lastVerificationError = error;
@@ -173,6 +177,7 @@ export async function POST(request: Request) {
     let lessonPaymentEvent = false;
     let invoiceCheckoutEvent = false;
     let invoicePaymentEvent = false;
+    let invoiceRefundEvent = false;
     if (event.checkoutSetupEvent === "completed" && accountId && event.objectId) {
       lessonPaymentEvent = await reconcileCompletedLessonPayment(event.objectId, accountId, event.id, event.createdAt);
       invoiceCheckoutEvent = !lessonPaymentEvent && await reconcileCompletedInvoiceCheckout(event.objectId, accountId, event.id);
@@ -186,8 +191,11 @@ export async function POST(request: Request) {
     if (event.paymentIntentEvent && accountId && event.objectId) {
       invoicePaymentEvent = await reconcileInvoicePaymentIntent(event.objectId, accountId, event.id);
     }
+    if(event.refundEvent&&accountId&&event.objectId){
+      invoiceRefundEvent=await reconcileInvoiceRefund(event.objectId,accountId,event.id);
+    }
 
-    const supported = event.accountEvent || lessonPaymentEvent || invoiceCheckoutEvent || invoicePaymentEvent || Boolean(event.checkoutSetupEvent);
+    const supported = event.accountEvent || lessonPaymentEvent || invoiceCheckoutEvent || invoicePaymentEvent || invoiceRefundEvent || Boolean(event.checkoutSetupEvent);
     const { error: completeError } = await admin.from("payment_provider_events").update({
       processing_status: supported ? "processed" : "ignored",
       processed_at: new Date().toISOString(),
