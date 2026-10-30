@@ -229,7 +229,7 @@ export async function recordInvoiceSettlement(schoolId:string,billingAccountId:s
     const {error}=await createAdminClient().rpc("record_invoice_settlement_entry",{p_school_id:schoolId,p_billing_account_id:billingAccountId,p_billing_period_id:billingPeriodId,p_entry_type:input.type,p_method:input.method??null,p_amount_cents:input.amountCents,p_occurred_at:input.occurredAt?new Date(input.occurredAt).toISOString():new Date().toISOString(),p_reference:input.reference??null,p_note:input.note??null,p_source_entry_id:input.sourceEntryId??null,p_created_by:profileId});
     if(error)throw error;
     revalidatePath(`/schools/${schoolId}/families/${billingAccountId}`);
-    const message=input.type==="external_payment"?"Payment received elsewhere was recorded.":input.type==="write_off"?"The balance write-off was recorded.":input.type==="external_refund"?"The outside refund was recorded.":"The prior entry was reversed with a new audit entry.";
+    const message=input.type==="external_payment"?"Payment received elsewhere was recorded.":input.type==="write_off"?"The balance write-off was recorded.":input.type==="external_refund"?"The outside refund was recorded without reopening the invoice balance.":"The prior entry was reversed and the amount owed was restored.";
     return{ok:true as const,message};
   }catch(caught){
     const detail=caught instanceof Error?caught.message:"";
