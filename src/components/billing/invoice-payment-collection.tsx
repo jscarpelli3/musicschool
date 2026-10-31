@@ -11,6 +11,11 @@ const POLL_WINDOW_MS = 2 * 60_000;
 
 type Settlement = { id:string;entryType:string;method:string|null;amountCents:number;occurredAt:string;reference:string|null;note:string|null;sourceEntryId:string|null };
 
+function localDateInputValue(date=new Date()) {
+  const offsetDate=new Date(date.getTime()-date.getTimezoneOffset()*60_000);
+  return offsetDate.toISOString().slice(0,10);
+}
+
 export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPeriodId, amount, amountCents, currency, hasPaymentMethod, initialStatus, initialAttempt, initialSettlements=[], initialOutstandingCents=amountCents, stripePayments=[], stripeRefunds=[] }: {
   schoolId: string;
   billingAccountId: string;
@@ -68,6 +73,8 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
       deadline.current = Date.now() + POLL_WINDOW_MS;
       setWatching(true);
       setResultMessage("Watching for Stripe’s confirmation…");
+    } else {
+      setResultMessage("");
     }
   }
 
@@ -114,6 +121,7 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
   const hasRefund=settlements.some((entry)=>entry.entryType==="external_refund")||stripeRefunds.some((entry)=>["created","submitted","succeeded"].includes(entry.status));
   const active = !hostedLinkOpen && (["submitted", "processing"].includes(attempt?.status ?? "") || (attempt?.status === "created" && attempt.usesSavedMethod));
   const failed = status === "payment_failed" || ["failed", "requires_action", "cancelled"].includes(attempt?.status ?? "");
+  const canCheckStripeStatus=hostedLinkOpen||active||["failed","requires_action"].includes(attempt?.status??"");
   const title = status === "paid" ? hasWriteOff ? "Balance resolved with a write-off" : hasOutsidePayment ? "Payment recorded outside Stripe" : "Paid"
     : hasOutsideResolution ? "Partially resolved — balance remains"
     : active ? "Payment submitted — awaiting confirmation"
@@ -168,7 +176,7 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
           </div>
         </div> : null}
 
-        {status !== "paid" ? <div className="mt-4 flex flex-wrap items-center gap-3"><button type="button" onClick={() => void checkPayment(true)} className="text-xs font-medium text-brand underline-offset-4 hover:underline">Check payment status</button><p className="text-xs leading-5 text-muted">Automatic checking runs for two visible minutes, then pauses.</p></div> : null}
+        {status !== "paid"&&canCheckStripeStatus ? <div className="mt-4 flex flex-wrap items-center gap-3"><button type="button" onClick={() => void checkPayment(true)} className="text-xs font-medium text-brand underline-offset-4 hover:underline">Check payment status</button><p className="text-xs leading-5 text-muted">Automatic checking runs for two visible minutes, then pauses.</p></div> : null}
         {resultMessage ? <p role="status" className={`mt-4 rounded-control p-4 text-sm ${failed ? "bg-danger/10 text-danger" : "bg-surface-raised text-ink"}`}>{resultMessage}</p> : null}
 
         <div className="mt-6 border-t border-brand/20 pt-5">
@@ -194,7 +202,7 @@ function SettlementForm({mode,outstandingCents,currency,settlements,stripePaymen
   const [source,setSource]=useState(sources[0]?.value??"");
   const selected=sources.find((item)=>item.value===source);
   const [amountValue,setAmountValue]=useState(((mode==="refund"?selected?.max:outstandingCents)??0)/100+"");
-  const [method,setMethod]=useState("cash");const[reference,setReference]=useState("");const[note,setNote]=useState("");const[date,setDate]=useState(new Date().toISOString().slice(0,10));
+  const [method,setMethod]=useState("cash");const[reference,setReference]=useState("");const[note,setNote]=useState("");const[date,setDate]=useState(localDateInputValue);
   const title=mode==="payment"?"Record payment received elsewhere":mode==="writeoff"?"Write off an unpaid balance":"Record a refund";
   return <form className="mt-4 rounded-card bg-surface-raised p-4" onSubmit={(event)=>{event.preventDefault();const amountCents=Math.round(Number(amountValue)*100);const [sourceKind,sourceId]=source.split(":");void onSubmit({type:mode==="payment"?"external_payment":mode==="writeoff"?"write_off":"external_refund",method:mode==="payment"?method:undefined,amountCents,occurredAt:`${date}T12:00:00`,reference,note,sourceEntryId:sourceKind==="external"?sourceId:undefined,stripeAttemptId:sourceKind==="stripe"?sourceId:undefined});}}><h4 className="font-medium">{title}</h4>{mode==="refund"?<><p className="mt-2 text-xs leading-5 text-muted">A refund returns money from the selected payment without increasing the remaining invoice balance. To correct a payment recorded by mistake, cancel and use Reverse on that payment instead.</p><label className="mt-3 block text-xs text-muted">Payment to refund<select value={source} onChange={(event)=>{setSource(event.target.value);const next=sources.find((item)=>item.value===event.target.value);if(next)setAmountValue((next.max/100).toFixed(2));}} className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink">{sources.map((item)=><option key={item.value} value={item.value}>{item.label}</option>)}</select></label></>:null}<div className="mt-3 grid gap-3 sm:grid-cols-2"><label className="text-xs text-muted">Amount<input required inputMode="decimal" value={amountValue} onChange={(event)=>setAmountValue(event.target.value)} className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"/></label><label className="text-xs text-muted">Date<input required type="date" value={date} onChange={(event)=>setDate(event.target.value)} className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"/></label>{mode==="payment"?<label className="text-xs text-muted">Method<select value={method} onChange={(event)=>setMethod(event.target.value)} className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"><option value="cash">Cash</option><option value="check">Check</option><option value="venmo">Venmo</option><option value="zelle">Zelle</option><option value="bank_transfer">Bank transfer</option><option value="card_external">Card outside Common Time</option><option value="other">Other</option></select></label>:null}{mode==="payment"?<label className="text-xs text-muted">Reference · optional<input value={reference} onChange={(event)=>setReference(event.target.value)} placeholder="Check number or transaction ID" className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"/></label>:null}</div><label className="mt-3 block text-xs text-muted">{mode==="writeoff"||mode==="refund"?"Reason":"Note · optional"}<textarea required={mode!=="payment"} value={note} onChange={(event)=>setNote(event.target.value)} className="mt-1 min-h-20 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"/></label><div className="mt-3 flex gap-2"><button disabled={pending} className="rounded-control bg-ink px-4 py-2 text-sm text-canvas disabled:opacity-50">{pending?"Recording…":"Record with audit trail"}</button><button type="button" onClick={onCancel} className="px-3 py-2 text-sm text-muted">Cancel</button></div></form>;
 }
