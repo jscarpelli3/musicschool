@@ -1,0 +1,26 @@
+.viewport {
+  mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+}
+
+.track {
+  transition: transform 360ms ease-out;
+  will-change: transform;
+}
+
+.active {
+  filter: drop-shadow(0 0 0.45rem color-mix(in srgb, var(--ui-brand) 55%, transparent));
+}
+
+.pulse {
+  animation: common-time-beat 650ms ease-out infinite;
+}
+
+@keyframes common-time-beat {
+  0% { opacity: 1; transform: scale(1); }
+  70%, 100% { opacity: 0.58; transform: scale(0.94); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track { transition: none; }
+  .pulse { animation: none; }
+}
