@@ -1,12 +1,8 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function LoadingPreviewPage({ searchParams }: { searchParams: Promise<{ replay?: string }> }) {
-  const previewAllowed = process.env.NODE_ENV === "development" || process.env.VERCEL_ENV === "preview";
-  if (!previewAllowed) notFound();
-
   const { replay } = await searchParams;
   await new Promise((resolve) => setTimeout(resolve, 8_000));
 
