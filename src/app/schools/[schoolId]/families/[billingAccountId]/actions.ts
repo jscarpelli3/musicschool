@@ -129,6 +129,21 @@ async function readPreparedInvoice(schoolId: string, billingAccountId: string, p
   };
 }
 
+async function readEditableInvoiceForMonth(schoolId: string, billingAccountId: string, month: string) {
+  const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("billing_periods")
+    .select("id")
+    .eq("school_id", schoolId)
+    .eq("billing_account_id", billingAccountId)
+    .eq("period_start", `${month}-01`)
+    .in("status", ["draft", "review"])
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return existing ? readPreparedInvoice(schoolId, billingAccountId, existing.id) : null;
+}
+
 export async function loadPreparedInvoice(schoolId: string, billingAccountId: string, periodId: string) {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
@@ -306,6 +321,9 @@ export async function prepareFamilyBillingDraft(schoolId: string, billingAccount
   const { data: auth } = await supabase.auth.getClaims();
   if (!auth?.claims?.sub) return { ok: false, message: "Sign in again before preparing an invoice.", periodId: null, invoice: null };
 
+  const existingInvoice = await readEditableInvoiceForMonth(schoolId, billingAccountId, month);
+  if (existingInvoice) return { ok: true, message: "An unfinished invoice already exists for this payer and month, so it has been opened without changing it.", periodId: existingInvoice.id, invoice: existingInvoice };
+
   const { data: periodId, error } = await supabase.rpc("prepare_family_billing_draft", {
     p_school_id: schoolId,
     p_billing_account_id: billingAccountId,
@@ -340,6 +358,9 @@ export async function prepareEmptyFamilyBillingDraft(schoolId: string, billingAc
   const { data: auth } = await supabase.auth.getClaims();
   if (!auth?.claims?.sub) return { ok: false, message: "Sign in again before preparing an invoice.", periodId: null, invoice: null };
 
+  const existingInvoice = await readEditableInvoiceForMonth(schoolId, billingAccountId, month);
+  if (existingInvoice) return { ok: true, message: "An unfinished invoice already exists for this payer and month, so it has been opened without changing it.", periodId: existingInvoice.id, invoice: existingInvoice };
+
   const { data: periodId, error } = await supabase.rpc("create_empty_family_billing_draft", {
     p_school_id: schoolId,
     p_billing_account_id: billingAccountId,
@@ -348,17 +369,7 @@ export async function prepareEmptyFamilyBillingDraft(schoolId: string, billingAc
 
   if (error || !periodId) {
     if (error?.message.includes("editable_invoice_already_exists")) {
-      const { data: existing } = await supabase
-        .from("billing_periods")
-        .select("id")
-        .eq("school_id", schoolId)
-        .eq("billing_account_id", billingAccountId)
-        .eq("period_start", `${month}-01`)
-        .in("status", ["draft", "review"])
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const invoice = existing ? await readPreparedInvoice(schoolId, billingAccountId, existing.id) : null;
+      const invoice = await readEditableInvoiceForMonth(schoolId, billingAccountId, month);
       if (invoice) return { ok: true, message: "This month already had an editable invoice, so it has been opened for you.", periodId: invoice.id, invoice };
     }
     const message = "The empty invoice could not be prepared. Nothing was changed.";
