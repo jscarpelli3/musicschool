@@ -341,9 +341,21 @@ export async function prepareEmptyFamilyBillingDraft(schoolId: string, billingAc
   });
 
   if (error || !periodId) {
-    const message = error?.message.includes("editable_invoice_already_exists")
-      ? "An editable invoice already exists for that month. Open it before starting another."
-      : "The empty invoice could not be prepared. Nothing was changed.";
+    if (error?.message.includes("editable_invoice_already_exists")) {
+      const { data: existing } = await supabase
+        .from("billing_periods")
+        .select("id")
+        .eq("school_id", schoolId)
+        .eq("billing_account_id", billingAccountId)
+        .eq("period_start", `${month}-01`)
+        .in("status", ["draft", "review"])
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const invoice = existing ? await readPreparedInvoice(schoolId, billingAccountId, existing.id) : null;
+      if (invoice) return { ok: true, message: "This month already had an editable invoice, so it has been opened for you.", periodId: invoice.id, invoice };
+    }
+    const message = "The empty invoice could not be prepared. Nothing was changed.";
     return { ok: false, message, periodId: null, invoice: null };
   }
 

@@ -24,6 +24,7 @@ export function PrepareInvoiceLauncher({ schoolId, payers, variant }: { schoolId
   const [checkingDraft, setCheckingDraft] = useState(false);
   const [adjustmentEditing, setAdjustmentEditing] = useState(false);
   const storageKey = `invoice-workspace:${schoolId}`;
+  const dismissedStorageKey = `invoice-workspace-dismissed:${schoolId}`;
   const filtered = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
     if (!query) return payers;
@@ -36,9 +37,10 @@ export function PrepareInvoiceLauncher({ schoolId, payers, variant }: { schoolId
   function openWorkspace(next: boolean) {
     setOpen(next);
     if (next) {
+      const dismissedInvoiceId = window.localStorage.getItem(dismissedStorageKey);
       let editableIndex = -1;
       for (let index = queue.length - 1; index >= 0; index -= 1) {
-        if (queue[index].status === "draft" || queue[index].status === "review") {
+        if ((queue[index].status === "draft" || queue[index].status === "review") && queue[index].id !== dismissedInvoiceId) {
           editableIndex = index;
           break;
         }
@@ -50,7 +52,7 @@ export function PrepareInvoiceLauncher({ schoolId, payers, variant }: { schoolId
         startTransition(async () => {
           const restored = await loadLatestEditableInvoice(schoolId);
           setCheckingDraft(false);
-          if (!restored) return;
+          if (!restored || restored.id === window.localStorage.getItem(dismissedStorageKey)) return;
           window.localStorage.setItem(storageKey, JSON.stringify({ billingAccountId: restored.billingAccountId, periodId: restored.id }));
           setQueue((current) => {
             const nextQueue = [...current.filter((item) => item.id !== restored.id), restored];
@@ -75,6 +77,7 @@ export function PrepareInvoiceLauncher({ schoolId, payers, variant }: { schoolId
       const result = await prepareFamilyBillingDraft(schoolId, payer.id, initialDraft, formData);
       setMessage(result.message);
       if (!result.invoice) return;
+      window.localStorage.removeItem(dismissedStorageKey);
       window.localStorage.setItem(storageKey, JSON.stringify({ billingAccountId: result.invoice.billingAccountId, periodId: result.invoice.id }));
       setQueue((current) => {
         const next = [...current.filter((item) => item.id !== result.invoice!.id), result.invoice!];
@@ -93,6 +96,7 @@ export function PrepareInvoiceLauncher({ schoolId, payers, variant }: { schoolId
       const result = await prepareEmptyFamilyBillingDraft(schoolId, payer.id, formData);
       setMessage(result.message);
       if (!result.invoice) return;
+      window.localStorage.removeItem(dismissedStorageKey);
       window.localStorage.setItem(storageKey, JSON.stringify({ billingAccountId: result.invoice.billingAccountId, periodId: result.invoice.id }));
       setQueue((current) => {
         const next = [...current.filter((item) => item.id !== result.invoice!.id), result.invoice!];
@@ -118,7 +122,7 @@ export function PrepareInvoiceLauncher({ schoolId, payers, variant }: { schoolId
       </div>
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <button type="button" onClick={() => { setQueueIndex(resumeInvoiceIndex!); setResumeInvoiceIndex(null); }} className="rounded-control bg-brand px-5 py-3 text-sm text-canvas">Continue this invoice</button>
-        <button type="button" onClick={() => { setQueueIndex(queue.length); setResumeInvoiceIndex(null); setPayer(null); setSearch(""); setMessage(""); }} className="rounded-control border border-line px-5 py-3 text-sm text-ink transition hover:border-brand hover:text-brand">Start another invoice</button>
+        <button type="button" onClick={() => { window.localStorage.setItem(dismissedStorageKey, resumeInvoice.id); setQueueIndex(queue.length); setResumeInvoiceIndex(null); setPayer(null); setSearch(""); setMessage(""); }} className="rounded-control border border-line px-5 py-3 text-sm text-ink transition hover:border-brand hover:text-brand">Start another invoice</button>
       </div>
       <p className="mt-3 text-xs leading-5 text-muted">Starting another invoice keeps this draft saved. You can reopen it from the family’s invoice history.</p>
     </div> : invoice ? <div>
