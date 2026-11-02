@@ -146,6 +146,24 @@ export async function loadPreparedInvoice(schoolId: string, billingAccountId: st
   return readPreparedInvoice(schoolId, billingAccountId, periodId);
 }
 
+export async function loadLatestEditableInvoice(schoolId: string) {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub || !await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) return null;
+
+  const { data: period } = await supabase
+    .from("billing_periods")
+    .select("id,billing_account_id")
+    .eq("school_id", schoolId)
+    .in("status", ["draft", "review"])
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!period) return null;
+
+  return readPreparedInvoice(schoolId, period.billing_account_id, period.id);
+}
+
 export async function collectFamilyInvoice(schoolId: string, billingAccountId: string, billingPeriodId: string) {
   const path = `/schools/${schoolId}/families/${billingAccountId}`;
   const supabase = await createClient();
