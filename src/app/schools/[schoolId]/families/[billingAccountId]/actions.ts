@@ -307,6 +307,35 @@ export async function prepareFamilyBillingDraft(schoolId: string, billingAccount
   return { ok: true, message: "Invoice prepared. Review each included item before locking it.", periodId, invoice };
 }
 
+export async function prepareEmptyFamilyBillingDraft(schoolId: string, billingAccountId: string, formData: FormData): Promise<BillingDraftState> {
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const month = String(formData.get("month") ?? "");
+  if (!/^\d{4}-\d{2}$/.test(month)) return { ok: false, message: "Choose a valid invoice month.", periodId: null, invoice: null };
+
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) return { ok: false, message: "Sign in again before preparing an invoice.", periodId: null, invoice: null };
+
+  const { data: periodId, error } = await supabase.rpc("create_empty_family_billing_draft", {
+    p_school_id: schoolId,
+    p_billing_account_id: billingAccountId,
+    p_month: `${month}-01`,
+  });
+
+  if (error || !periodId) {
+    const message = error?.message.includes("editable_invoice_already_exists")
+      ? "An editable invoice already exists for that month. Open it before starting another."
+      : "The empty invoice could not be prepared. Nothing was changed.";
+    return { ok: false, message, periodId: null, invoice: null };
+  }
+
+  const invoice = await readPreparedInvoice(schoolId, billingAccountId, periodId);
+  if (!invoice) return { ok: false, message: "The empty invoice was created, but its review details could not be loaded.", periodId, invoice: null };
+
+  revalidatePath(path);
+  return { ok: true, message: "Empty invoice created. Add only the lessons or adjustments you want, then lock the exact amount.", periodId, invoice };
+}
+
 export async function removeLineFromInvoice(schoolId: string, billingAccountId: string, billingPeriodId: string, lineItemId: string, _state: BillingLineDeferState, formData: FormData): Promise<BillingLineDeferState> {
   const path = `/schools/${schoolId}/families/${billingAccountId}`;
   const supabase = await createClient();
