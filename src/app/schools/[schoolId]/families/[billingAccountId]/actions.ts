@@ -146,22 +146,28 @@ export async function loadPreparedInvoice(schoolId: string, billingAccountId: st
   return readPreparedInvoice(schoolId, billingAccountId, periodId);
 }
 
-export async function loadLatestEditableInvoice(schoolId: string) {
+export async function discardEditableInvoice(schoolId: string, billingAccountId: string, billingPeriodId: string) {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
-  if (!auth?.claims?.sub || !await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) return null;
+  if (!auth?.claims?.sub || !await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) {
+    return { ok: false, message: "You do not have permission to discard this invoice draft." };
+  }
 
-  const { data: period } = await supabase
-    .from("billing_periods")
-    .select("id,billing_account_id")
-    .eq("school_id", schoolId)
-    .in("status", ["draft", "review"])
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (!period) return null;
+  const { error } = await supabase.rpc("discard_editable_billing_period", {
+    p_school_id: schoolId,
+    p_billing_account_id: billingAccountId,
+    p_billing_period_id: billingPeriodId,
+  });
+  if (error) {
+    const message = error.message.includes("invoice_is_not_editable")
+      ? "This invoice has already moved beyond the editable draft stage."
+      : "The draft could not be discarded. Nothing was changed.";
+    return { ok: false, message };
+  }
 
-  return readPreparedInvoice(schoolId, period.billing_account_id, period.id);
+  revalidatePath(`/schools/${schoolId}/invoices`);
+  revalidatePath(`/schools/${schoolId}/families/${billingAccountId}`);
+  return { ok: true, message: "Draft discarded. Its lessons are available for another invoice." };
 }
 
 export async function collectFamilyInvoice(schoolId: string, billingAccountId: string, billingPeriodId: string) {

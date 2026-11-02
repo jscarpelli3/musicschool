@@ -5605,6 +5605,14 @@ export type Database = {
         }
         Returns: string
       }
+      discard_editable_billing_period: {
+        Args: {
+          p_billing_account_id: string
+          p_billing_period_id: string
+          p_school_id: string
+        }
+        Returns: undefined
+      }
       create_orthogonal_revision_for_legacy_decision: {
         Args: { p_decision_id: string }
         Returns: string
