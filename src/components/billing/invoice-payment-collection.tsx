@@ -161,6 +161,9 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
               const result = paymentUrl ? { ok: true as const, url: paymentUrl, message: "" } : await createOneTimeInvoicePaymentLink(schoolId, billingAccountId, billingPeriodId);
               if (result.ok && result.url) {
                 setPaymentUrl(result.url);
+                setLedgerMode(null);
+                setLedgerMessage("");
+                await checkPayment();
                 if (await copyPaymentLink(result.url)) {
                   setLinkCopied(true);
                   setLinkMessage("Copied. Send this link directly to the payer.");
@@ -181,9 +184,10 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
 
         <div className="mt-6 border-t border-brand/20 pt-5">
           <div className="flex items-start gap-3"><MdOutlineAccountBalanceWallet aria-hidden className="mt-0.5 text-xl text-brand"/><div><p className="text-sm font-medium">Other ways this invoice can be resolved</p><p className="mt-1 text-xs leading-5 text-muted">Record money received elsewhere, write off a balance, or refund a prior payment. Every action stays separate from Stripe and leaves an audit entry.</p></div></div>
+          {hostedLinkOpen?<p role="status" className="mt-4 rounded-control bg-surface-raised p-3 text-xs font-medium leading-5 text-muted">A one-time Stripe payment link is active. Cancel it above before resolving this invoice another way.</p>:null}
           <div className="mt-4 flex flex-wrap gap-2">
-            {outstandingCents>0?<><button type="button" onClick={()=>setLedgerMode("payment")} className="rounded-control bg-ink px-3 py-2 text-xs text-canvas">Record payment received elsewhere</button><button type="button" onClick={()=>setLedgerMode("writeoff")} className="rounded-control border border-line px-3 py-2 text-xs">Write off balance</button></>:null}
-            {(settlements.some((entry)=>entry.entryType==="external_payment")||stripePayments.length)?<button type="button" onClick={()=>setLedgerMode("refund")} className="rounded-control border border-line px-3 py-2 text-xs">Record a refund</button>:null}
+            {outstandingCents>0?<><button type="button" disabled={hostedLinkOpen} onClick={()=>setLedgerMode("payment")} className="rounded-control bg-ink px-3 py-2 text-xs text-canvas disabled:cursor-not-allowed disabled:opacity-40">Record payment received elsewhere</button><button type="button" disabled={hostedLinkOpen} onClick={()=>setLedgerMode("writeoff")} className="rounded-control border border-line px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40">Write off balance</button></>:null}
+            {(settlements.some((entry)=>entry.entryType==="external_payment")||stripePayments.length)?<button type="button" disabled={hostedLinkOpen} onClick={()=>setLedgerMode("refund")} className="rounded-control border border-line px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40">Record a refund</button>:null}
           </div>
           <p className="mt-3 text-sm"><span className="text-muted">Remaining balance:</span> <strong>{new Intl.NumberFormat("en-US",{style:"currency",currency}).format(outstandingCents/100)}</strong></p>
           {hasRefund?<p className="mt-1 max-w-2xl text-xs leading-5 text-muted">Refunds return part of a prior payment without reopening the invoice balance. If a payment was recorded by mistake, reverse that payment instead; a reversal restores the amount owed.</p>:null}
