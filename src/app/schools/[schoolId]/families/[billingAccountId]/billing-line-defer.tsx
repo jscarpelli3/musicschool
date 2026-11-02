@@ -1,25 +1,28 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FocusedModal } from "@/components/ui/focused-modal";
 import { removeLineFromInvoice, type BillingLineDeferState } from "./actions";
 
 const initialState: BillingLineDeferState = { ok: false, message: "" };
 
-export function BillingLineDefer({ schoolId, billingAccountId, billingPeriodId, lineItemId, description }: {
+export function BillingLineDefer({ schoolId, billingAccountId, billingPeriodId, lineItemId, description, onRemoved }: {
   schoolId: string;
   billingAccountId: string;
   billingPeriodId: string;
   lineItemId: string;
   description: string;
+  onRemoved?: () => void | Promise<void>;
 }) {
   const router = useRouter();
+  const onRemovedRef = useRef(onRemoved);
+  useEffect(() => { onRemovedRef.current = onRemoved; }, [onRemoved]);
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState(removeLineFromInvoice.bind(null, schoolId, billingAccountId, billingPeriodId, lineItemId), initialState);
   useEffect(() => {
     if (!state.ok) return;
-    const timer = window.setTimeout(() => { setOpen(false); router.refresh(); }, 0);
+    const timer = window.setTimeout(() => { setOpen(false); router.refresh(); void onRemovedRef.current?.(); }, 0);
     return () => window.clearTimeout(timer);
   }, [router, state]);
   return <FocusedModal open={open} onOpenChange={setOpen} triggerLabel="Remove from this invoice" eyebrow="Leave for later" title="Remove this lesson from this invoice?" description={`${description} will remain unpaid and available for a later invoice. This does not waive the charge or create a credit.`} variant="secondary" triggerClassName="mt-2 text-xs text-muted underline decoration-line underline-offset-4 transition hover:text-brand">
