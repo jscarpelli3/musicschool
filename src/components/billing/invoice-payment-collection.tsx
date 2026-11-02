@@ -63,7 +63,13 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
       router.refresh();
       return;
     }
-    if (["failed", "requires_action", "cancelled"].includes(next.latestPaymentAttempt?.status ?? "")) {
+    if (next.latestPaymentAttempt?.status === "cancelled") {
+      setResultMessage("");
+      setWatching(false);
+      router.refresh();
+      return;
+    }
+    if (["failed", "requires_action"].includes(next.latestPaymentAttempt?.status ?? "")) {
       setResultMessage(next.latestPaymentAttempt?.failureMessage ? `Payment failed: ${next.latestPaymentAttempt.failureMessage}` : "Payment did not complete. No successful charge was recorded; review the payment method before trying again.");
       setWatching(false);
       router.refresh();
@@ -120,7 +126,7 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
   const hasWriteOff=settlements.some((entry)=>entry.entryType==="write_off"&&!settlements.some((other)=>other.entryType==="reversal"&&other.sourceEntryId===entry.id));
   const hasRefund=settlements.some((entry)=>entry.entryType==="external_refund")||stripeRefunds.some((entry)=>["created","submitted","succeeded"].includes(entry.status));
   const active = !hostedLinkOpen && (["submitted", "processing"].includes(attempt?.status ?? "") || (attempt?.status === "created" && attempt.usesSavedMethod));
-  const failed = status === "payment_failed" || ["failed", "requires_action", "cancelled"].includes(attempt?.status ?? "");
+  const failed = status === "payment_failed" || ["failed", "requires_action"].includes(attempt?.status ?? "");
   const canCheckStripeStatus=hostedLinkOpen||active||["failed","requires_action"].includes(attempt?.status??"");
   const title = status === "paid" ? hasWriteOff ? "Balance resolved with a write-off" : hasOutsidePayment ? "Payment recorded outside Stripe" : "Paid"
     : hasOutsideResolution ? "Partially resolved — balance remains"
