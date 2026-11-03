@@ -10,7 +10,7 @@ const countSequence = Array.from({ length: 128 }, (_, index) => ({
   value: index % 4 === 0 ? Math.floor(index / 4) + 1 : index % 4 + 1,
 }));
 
-export function CommonTimeLoader({ label = "Counting common time…", compact = false }: { label?: string; compact?: boolean }) {
+export function CommonTimeLoader({ label = "Counting common time…", compact = false, showBrand = true }: { label?: string; compact?: boolean; showBrand?: boolean }) {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -25,9 +25,8 @@ export function CommonTimeLoader({ label = "Counting common time…", compact = 
   const activeOffset = (measure - firstMeasure) * measureWidth;
 
   return <div role="status" aria-live="polite" aria-label={label} className={`mx-auto w-full ${compact ? "max-w-2xl py-6" : "max-w-4xl py-10"}`}>
-    <CommonTimeLogo priority className="mx-auto w-56 sm:w-72" />
-    <p className="-mt-4 text-center text-sm tracking-[0.18em] text-muted">Loading…</p>
-    <div className={`${styles.viewport} relative mt-3 h-44 overflow-hidden`}>
+    {showBrand ? <><CommonTimeLogo priority className="mx-auto w-56 sm:w-72" /><p className="-mt-4 text-center text-sm tracking-[0.18em] text-muted">Loading…</p></> : null}
+    <div className={`${styles.viewport} relative ${showBrand ? "mt-3" : ""} h-32 overflow-hidden`}>
       <div className={`${styles.track} absolute left-1/2 top-0 flex h-40`} style={{ transform: `translateX(-${activeOffset + measureWidth / 2}px)` }}>
         {measures.map((measureNumber) => <Measure key={measureNumber} active={measureNumber === measure} />)}
       </div>
