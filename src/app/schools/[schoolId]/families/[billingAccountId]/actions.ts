@@ -282,20 +282,28 @@ export async function refundStripeInvoicePayment(schoolId:string,billingAccountI
   if(!profileId||!await checkSchoolCapability(supabase,schoolId,"school.billing.manage"))return{ok:false as const,message:"You do not have permission to refund this payment."};
   if(!Number.isSafeInteger(amountCents)||amountCents<=0||!reason.trim())return{ok:false as const,message:"Enter a refund amount and a reason."};
   const admin=createAdminClient();
+  let stage="load_payment";
   try{
     await protectServerAction({scope:"billing.invoice.refund",subject:`actor:${profileId}|school:${schoolId}|attempt:${paymentAttemptId}`,limit:5,windowSeconds:3600});
     const{data:attempt,error:attemptError}=await admin.from("payment_attempts").select("id,amount_cents,currency,status,provider_charge_id,payment_connection_id").eq("id",paymentAttemptId).eq("school_id",schoolId).eq("billing_account_id",billingAccountId).eq("billing_period_id",billingPeriodId).single();
     if(attemptError||!attempt||attempt.status!=="succeeded"||!attempt.provider_charge_id)throw new Error("refundable_payment_not_found");
+    stage="load_connection";
     const{data:connection,error:connectionError}=await admin.from("school_payment_connections").select("provider_account_id").eq("id",attempt.payment_connection_id).single();
     if(connectionError||!connection.provider_account_id)throw new Error("stripe_connection_not_found");
     const idempotencyKey=randomUUID();
+    stage="create_refund_record";
     const{data:refund,error:refundError}=await admin.from("payment_refunds").insert({school_id:schoolId,payment_attempt_id:attempt.id,amount_cents:amountCents,currency:attempt.currency,status:"created",reason:reason.trim(),idempotency_key:idempotencyKey,created_by:profileId}).select("id").single();
     if(refundError)throw refundError;
-    await admin.from("payment_refunds").update({status:"submitted"}).eq("id",refund.id).eq("status","created");
+    stage="reserve_refund";
+    const{error:reserveError}=await admin.from("payment_refunds").update({status:"submitted"}).eq("id",refund.id).eq("status","created");
+    if(reserveError)throw reserveError;
     try{
+      stage="submit_to_stripe";
       const stripeRefund=await getStripe().refunds.create({charge:attempt.provider_charge_id,amount:amountCents,metadata:{school_id:schoolId,billing_period_id:billingPeriodId,payment_refund_id:refund.id}},{stripeAccount:connection.provider_account_id,idempotencyKey:`invoice-refund-${refund.id}`});
       const refundStatus=String(stripeRefund.status);
-      await admin.from("payment_refunds").update({status:refundStatus==="succeeded"?"succeeded":["failed","canceled"].includes(refundStatus)?"failed":"submitted",provider_refund_id:stripeRefund.id,failure_message:["failed","canceled"].includes(refundStatus)?"Stripe could not complete this refund.":null}).eq("id",refund.id);
+      stage="record_stripe_result";
+      const{error:resultError}=await admin.from("payment_refunds").update({status:refundStatus==="succeeded"?"succeeded":["failed","canceled"].includes(refundStatus)?"failed":"submitted",provider_refund_id:stripeRefund.id,failure_message:["failed","canceled"].includes(refundStatus)?"Stripe could not complete this refund.":null}).eq("id",refund.id);
+      if(resultError)throw resultError;
       if(["failed","canceled"].includes(refundStatus))return{ok:false as const,message:"Stripe did not complete the refund. The original payment remains recorded."};
     }catch(error){
       await admin.from("payment_refunds").update({status:"failed",failure_message:error instanceof Error?error.message:"Stripe rejected the refund."}).eq("id",refund.id);
@@ -303,7 +311,21 @@ export async function refundStripeInvoicePayment(schoolId:string,billingAccountI
     }
     revalidatePath(`/schools/${schoolId}/families/${billingAccountId}`);
     return{ok:true as const,message:"The refund was submitted to Stripe. It remains separate from the original invoice balance."};
-  }catch(caught){return{ok:false as const,message:caught instanceof Error&&caught.message.includes("Refund total")?"That refund would exceed the original Stripe payment.":"The refund was not completed. Review the original payment and try again."};}
+  }catch(caught){
+    const detail=caught instanceof Error?caught.message:"unknown";
+    const code=typeof caught==="object"&&caught&&"code" in caught?String(caught.code):"none";
+    console.error("Invoice refund failed",{stage,code,name:caught instanceof Error?caught.name:"unknown"});
+    const message=detail.includes("Refund total")
+      ?"That refund would exceed the original Stripe payment."
+      :stage==="create_refund_record"||stage==="reserve_refund"
+        ?`The refund could not be recorded before contacting Stripe (${stage.replaceAll("_"," ")}${code!=="none"?` · ${code}`:""}). No money was returned.`
+        :stage==="submit_to_stripe"
+          ?"Stripe did not accept the refund request. The original payment remains unchanged."
+          :stage==="record_stripe_result"
+            ?"Stripe received the refund, but Common Time could not finish recording it. Do not retry until the Stripe result is reconciled."
+            :"The refund could not be prepared from the original payment record.";
+    return{ok:false as const,message};
+  }
 }
 
 function appOrigin() {
