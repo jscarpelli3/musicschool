@@ -282,9 +282,10 @@ export async function refundStripeInvoicePayment(schoolId:string,billingAccountI
   if(!profileId||!await checkSchoolCapability(supabase,schoolId,"school.billing.manage"))return{ok:false as const,message:"You do not have permission to refund this payment."};
   if(!Number.isSafeInteger(amountCents)||amountCents<=0||!reason.trim())return{ok:false as const,message:"Enter a refund amount and a reason."};
   const admin=createAdminClient();
-  let stage="load_payment";
+  let stage="rate_limit";
   try{
-    await protectServerAction({scope:"billing.invoice.refund",subject:`actor:${profileId}|school:${schoolId}|attempt:${paymentAttemptId}`,limit:5,windowSeconds:3600});
+    await protectServerAction({scope:"billing.invoice.refund",subject:`actor:${profileId}|school:${schoolId}|attempt:${paymentAttemptId}`,limit:10,windowSeconds:3600});
+    stage="load_payment";
     const{data:attempt,error:attemptError}=await admin.from("payment_attempts").select("id,amount_cents,currency,status,provider_charge_id,payment_connection_id").eq("id",paymentAttemptId).eq("school_id",schoolId).eq("billing_account_id",billingAccountId).eq("billing_period_id",billingPeriodId).single();
     if(attemptError||!attempt||attempt.status!=="succeeded"||!attempt.provider_charge_id)throw new Error("refundable_payment_not_found");
     stage="load_connection";
@@ -315,7 +316,9 @@ export async function refundStripeInvoicePayment(schoolId:string,billingAccountI
     const detail=caught instanceof Error?caught.message:typeof caught==="object"&&caught&&"message" in caught?String(caught.message):"unknown";
     const code=typeof caught==="object"&&caught&&"code" in caught?String(caught.code):"none";
     console.error("Invoice refund failed",{stage,code,name:caught instanceof Error?caught.name:"unknown"});
-    const message=detail.includes("Refund total")
+    const message=caught instanceof RequestBoundaryError&&caught.code==="rate_limited"
+      ?`Too many refund attempts were made for this payment. Wait about ${Math.max(1,Math.ceil(caught.retryAfter/60))} minutes and try again. No money was returned.`
+      :detail.includes("Refund total")
       ?"That refund is greater than the amount still refundable from the original Stripe payment. No money was returned."
       :stage==="create_refund_record"||stage==="reserve_refund"
         ?`The refund could not be recorded before contacting Stripe (${stage.replaceAll("_"," ")}${code!=="none"?` · ${code}`:""}). No money was returned.`
