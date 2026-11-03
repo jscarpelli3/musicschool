@@ -118,7 +118,7 @@ export function InvoiceWorkspaceList({ schoolId, invoices, compact, autoOpenId =
                     </span>
                   ) : null}
                 </button>
-                {editable&&!compact?<div className="flex justify-end px-4 pb-2"><button type="button" onClick={()=>setDraftToCancel(invoice)} className="text-xs text-danger underline-offset-4 hover:underline">Cancel draft</button></div>:null}
+                {editable?<div className={`flex justify-end ${compact?"px-1":"px-4"} pb-2`}><button type="button" onClick={()=>setDraftToCancel(invoice)} className="text-xs text-danger underline-offset-4 hover:underline">Cancel draft</button></div>:null}
                 </article>
               );
             })}
