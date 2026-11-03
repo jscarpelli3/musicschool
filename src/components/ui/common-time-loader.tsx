@@ -10,8 +10,7 @@ export function CommonTimeLoader({ label = "Counting common time…", compact = 
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const timer = window.setInterval(() => setTick((value) => value + 1), 650);
+    const timer = window.setInterval(() => setTick((value) => value + 1), 600);
     return () => window.clearInterval(timer);
   }, []);
 

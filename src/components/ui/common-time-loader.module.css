@@ -12,7 +12,7 @@
 }
 
 .countFlash {
-  animation: count-flash 650ms ease-in-out both;
+  animation: count-flash 600ms ease-in-out both;
   color: var(--ui-brand);
   text-shadow: 0 0 0.75rem color-mix(in srgb, var(--ui-brand) 42%, transparent);
 }
