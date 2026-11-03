@@ -12,18 +12,18 @@
 }
 
 .countFlash {
-  animation: count-flash 600ms ease-in-out both;
+  opacity: 0;
+  animation: count-cycle 76.8s linear infinite both;
   color: var(--ui-brand);
   text-shadow: 0 0 0.75rem color-mix(in srgb, var(--ui-brand) 42%, transparent);
 }
 
-@keyframes count-flash {
-  0% { opacity: 0; transform: translateX(-50%) scale(0.82); }
-  18%, 66% { opacity: 1; transform: translateX(-50%) scale(1); }
-  100% { opacity: 0; transform: translateX(-50%) scale(0.92); }
+@keyframes count-cycle {
+  0% { opacity: 0; transform: translateX(-50%); }
+  0.02%, 0.65% { opacity: 1; transform: translateX(-50%); }
+  0.78%, 100% { opacity: 0; transform: translateX(-50%); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .track { transition: none; }
-  .countFlash { animation: none; opacity: 1; transform: translateX(-50%); }
 }

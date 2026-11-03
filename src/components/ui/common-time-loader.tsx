@@ -5,6 +5,10 @@ import { CommonTimeLogo } from "@/components/brand/common-time-logo";
 import styles from "./common-time-loader.module.css";
 
 const measureWidth = 240;
+const countSequence = Array.from({ length: 128 }, (_, index) => ({
+  beat: index % 4 + 1,
+  value: index % 4 === 0 ? Math.floor(index / 4) + 1 : index % 4 + 1,
+}));
 
 export function CommonTimeLoader({ label = "Counting common time…", compact = false }: { label?: string; compact?: boolean }) {
   const [tick, setTick] = useState(0);
@@ -20,9 +24,6 @@ export function CommonTimeLoader({ label = "Counting common time…", compact = 
   const measures = Array.from({ length: measure - firstMeasure + 1 }, (_, index) => firstMeasure + index);
   const activeOffset = (measure - firstMeasure) * measureWidth;
 
-  const visibleCount = beat === 1 ? measure : beat;
-  const beatOffset = (beat - 0.5) * (measureWidth / 4);
-
   return <div role="status" aria-live="polite" aria-label={label} className={`mx-auto w-full ${compact ? "max-w-2xl py-6" : "max-w-4xl py-10"}`}>
     <CommonTimeLogo priority className="mx-auto w-56 sm:w-72" />
     <p className="-mt-4 text-center text-sm tracking-[0.18em] text-muted">Loading…</p>
@@ -32,7 +33,7 @@ export function CommonTimeLoader({ label = "Counting common time…", compact = 
       </div>
     </div>
     <div className="relative mx-auto h-14 w-full max-w-[45rem] font-monospace text-4xl tabular-nums" aria-label={`Measure ${measure}, beat ${beat}`}>
-      <span key={tick} className={`${styles.countFlash} absolute top-0`} style={{ left: `calc(50% - ${measureWidth / 2}px + ${beatOffset}px)` }}>{visibleCount}</span>
+      {countSequence.map((count, index) => <span key={index} aria-hidden="true" className={`${styles.countFlash} absolute top-0`} style={{ animationDelay: `${index * 0.6}s`, left: `calc(50% - ${measureWidth / 2}px + ${(count.beat - 0.5) * (measureWidth / 4)}px)` }}>{count.value}</span>)}
     </div>
     <span className="sr-only">{`Counting measure ${measure}: ${measure} 2 3 4. Current beat ${beat}.`}</span>
   </div>;
