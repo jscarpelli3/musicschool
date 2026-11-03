@@ -42,7 +42,7 @@ export type PreparedInvoice = {
   latestPaymentAttempt: { id: string; status: string; failureMessage: string | null; usesSavedMethod: boolean; hostedLinkOpen: boolean } | null;
   settlements: Array<{ id: string; entryType: string; method: string | null; amountCents: number; occurredAt: string; reference: string | null; note: string | null; sourceEntryId: string | null }>;
   stripePayments: Array<{ id: string; amountCents: number; succeededAt: string | null }>;
-  stripeRefunds: Array<{ id: string; paymentAttemptId: string; amountCents: number; status: string; reason: string | null }>;
+  stripeRefunds: Array<{ id: string; paymentAttemptId: string; amountCents: number; status: string; reason: string | null; createdAt: string }>;
   outstandingCents: number;
 };
 export type BillingDraftState = { ok: boolean; message: string; periodId: string | null; invoice: PreparedInvoice | null; existing?: boolean };
@@ -109,7 +109,7 @@ async function readPreparedInvoice(schoolId: string, billingAccountId: string, p
     : { data: null, error: null };
   if (activeCheckout.error) return null;
   const succeededAttempts = (attempts ?? []).filter((item) => item.status === "succeeded");
-  const refundResult = succeededAttempts.length ? await supabase.from("payment_refunds").select("id,payment_attempt_id,amount_cents,status,reason").eq("school_id",schoolId).in("payment_attempt_id",succeededAttempts.map((item)=>item.id)) : { data: [], error: null };
+  const refundResult = succeededAttempts.length ? await supabase.from("payment_refunds").select("id,payment_attempt_id,amount_cents,status,reason,created_at").eq("school_id",schoolId).in("payment_attempt_id",succeededAttempts.map((item)=>item.id)) : { data: [], error: null };
   const reversedIds = new Set((settlements ?? []).filter((entry)=>entry.entry_type==="reversal"&&entry.source_entry_id).map((entry)=>entry.source_entry_id));
   const resolvedOutside = (settlements ?? []).filter((entry)=>!reversedIds.has(entry.id)&&["external_payment","write_off"].includes(entry.entry_type)).reduce((sum,entry)=>sum+entry.amount_cents,0);
   const stripePaid = succeededAttempts.reduce((sum,item)=>sum+item.amount_cents,0);
@@ -124,7 +124,7 @@ async function readPreparedInvoice(schoolId: string, billingAccountId: string, p
     latestPaymentAttempt: latestAttempt ? { id: latestAttempt.id, status: latestAttempt.status, failureMessage: latestAttempt.failure_message, usesSavedMethod: Boolean(latestAttempt.payment_method_id), hostedLinkOpen: Boolean(activeCheckout.data) } : null,
     settlements: (settlements ?? []).map((entry)=>({ id:entry.id,entryType:entry.entry_type,method:entry.method,amountCents:entry.amount_cents,occurredAt:entry.occurred_at,reference:entry.reference,note:entry.note,sourceEntryId:entry.source_entry_id })),
     stripePayments: succeededAttempts.map((item)=>({ id:item.id,amountCents:item.amount_cents,succeededAt:item.succeeded_at })),
-    stripeRefunds: (refundResult.data ?? []).map((item)=>({ id:item.id,paymentAttemptId:item.payment_attempt_id,amountCents:item.amount_cents,status:item.status,reason:item.reason })),
+    stripeRefunds: (refundResult.data ?? []).map((item)=>({ id:item.id,paymentAttemptId:item.payment_attempt_id,amountCents:item.amount_cents,status:item.status,reason:item.reason,createdAt:item.created_at })),
     outstandingCents: Math.max(period.amount_due_cents-stripePaid-resolvedOutside,0),
   };
 }
@@ -312,11 +312,11 @@ export async function refundStripeInvoicePayment(schoolId:string,billingAccountI
     revalidatePath(`/schools/${schoolId}/families/${billingAccountId}`);
     return{ok:true as const,message:"The refund was submitted to Stripe. It remains separate from the original invoice balance."};
   }catch(caught){
-    const detail=caught instanceof Error?caught.message:"unknown";
+    const detail=caught instanceof Error?caught.message:typeof caught==="object"&&caught&&"message" in caught?String(caught.message):"unknown";
     const code=typeof caught==="object"&&caught&&"code" in caught?String(caught.code):"none";
     console.error("Invoice refund failed",{stage,code,name:caught instanceof Error?caught.name:"unknown"});
     const message=detail.includes("Refund total")
-      ?"That refund would exceed the original Stripe payment."
+      ?"That refund is greater than the amount still refundable from the original Stripe payment. No money was returned."
       :stage==="create_refund_record"||stage==="reserve_refund"
         ?`The refund could not be recorded before contacting Stripe (${stage.replaceAll("_"," ")}${code!=="none"?` · ${code}`:""}). No money was returned.`
         :stage==="submit_to_stripe"
