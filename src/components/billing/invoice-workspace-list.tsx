@@ -34,6 +34,7 @@ export function InvoiceWorkspaceList({ schoolId, invoices, compact, autoOpenId =
   const [loading, setLoading] = useState(Boolean(autoOpenId));
   const [adjustmentEditing, setAdjustmentEditing] = useState(false);
   const [draftToCancel,setDraftToCancel]=useState<SchoolInvoice|null>(null);
+  const [draftCancellationPending,setDraftCancellationPending]=useState(false);
   const sorted = useMemo(() => [...invoices].sort((a, b) => (sort === "recent" ? b.updatedAt.localeCompare(a.updatedAt) : sort === "payer" ? a.familyName.localeCompare(b.familyName) || b.updatedAt.localeCompare(a.updatedAt) : sort === "student" ? a.studentNames.join(", ").localeCompare(b.studentNames.join(", ")) || a.familyName.localeCompare(b.familyName) : a.statusLabel.localeCompare(b.statusLabel) || b.updatedAt.localeCompare(a.updatedAt))), [invoices, sort]);
 
   async function open(invoice: SchoolInvoice) {
@@ -118,14 +119,14 @@ export function InvoiceWorkspaceList({ schoolId, invoices, compact, autoOpenId =
                     </span>
                   ) : null}
                 </button>
-                {editable?<div className={`flex justify-end ${compact?"px-1":"px-4"} pb-2`}><button type="button" onClick={()=>setDraftToCancel(invoice)} className="text-xs text-danger underline-offset-4 hover:underline">Cancel draft</button></div>:null}
+                {editable?<div className={`flex justify-end ${compact?"px-1":"px-4"} pb-2`}><button type="button" onClick={()=>{setDraftCancellationPending(false);setDraftToCancel(invoice);}} className="text-xs text-danger underline-offset-4 hover:underline">Cancel draft</button></div>:null}
                 </article>
               );
             })}
           </div>
         </>
       ) : null}
-      {draftToCancel?<div className="fixed inset-0 z-[140] grid place-items-center px-5" role="dialog" aria-modal="true" aria-labelledby="cancel-draft-title"><button type="button" aria-label="Close cancellation confirmation" onClick={()=>setDraftToCancel(null)} className="absolute inset-0 bg-[var(--ui-overlay)]"/><section className="relative w-full max-w-md rounded-card border border-danger/40 bg-canvas p-6 shadow-2xl"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-danger">Unfinished invoice</p><h2 id="cancel-draft-title" className="mt-2 font-display text-3xl">Cancel this draft?</h2><p className="mt-3 text-sm leading-6 text-muted">This removes the unfinished {draftToCancel.label} invoice for {draftToCancel.familyName} and releases its lessons. Approved, paid, void, and other historical invoices can never be removed here.</p><div className="mt-5"><HoldToConfirm compact action={()=>discardEditableInvoice(schoolId,draftToCancel.billingAccountId,draftToCancel.id)} idleLabel="Hold to cancel draft" holdingLabel="Keep holding to remove the draft…" submittingLabel="Cancelling draft…" successLabel="Draft cancelled" onSuccess={()=>{setDraftToCancel(null);router.refresh();}}/></div><button type="button" onClick={()=>setDraftToCancel(null)} className="mt-1 text-sm text-muted">Keep draft</button></section></div>:null}
+      {draftToCancel?<div className="fixed inset-0 z-[140] grid place-items-center px-5" role="dialog" aria-modal="true" aria-labelledby="cancel-draft-title"><button type="button" aria-label="Close cancellation confirmation" disabled={draftCancellationPending} onClick={()=>setDraftToCancel(null)} className="absolute inset-0 bg-[var(--ui-overlay)]"/><section className="relative w-full max-w-md rounded-card border border-danger/40 bg-canvas p-6 shadow-2xl">{draftCancellationPending?<CommonTimeLoader label="Cancelling invoice draft…" compact showBrand={false}/>:null}<div className={draftCancellationPending?"hidden":undefined}><p className="text-xs font-semibold uppercase tracking-[0.12em] text-danger">Unfinished invoice</p><h2 id="cancel-draft-title" className="mt-2 font-display text-3xl">Cancel this draft?</h2><p className="mt-3 text-sm leading-6 text-muted">This removes the unfinished {draftToCancel.label} invoice for {draftToCancel.familyName} and releases its lessons. Approved, paid, void, and other historical invoices can never be removed here.</p><div className="mt-5"><HoldToConfirm compact action={()=>discardEditableInvoice(schoolId,draftToCancel.billingAccountId,draftToCancel.id)} idleLabel="Hold to cancel draft" holdingLabel="Keep holding to remove the draft…" submittingLabel="Cancelling draft…" successLabel="Draft cancelled" onBusyChange={setDraftCancellationPending} onSuccess={()=>{setDraftToCancel(null);router.refresh();}}/></div><button type="button" onClick={()=>setDraftToCancel(null)} className="mt-1 text-sm text-muted">Keep draft</button></div></section></div>:null}
       {selected ? (
         <div className="fixed inset-0 z-[120]" role="dialog" aria-modal="true" aria-labelledby="invoice-workspace-title">
           <button type="button" aria-label="Close invoice" onClick={close} className="absolute inset-0 bg-[var(--ui-overlay)]" />
