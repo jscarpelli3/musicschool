@@ -21,6 +21,7 @@ export function PrepareInvoiceLauncher({ schoolId, payers, variant }: { schoolId
   const [queue, setQueue] = useState<PreparedInvoice[]>([]);
   const [queueIndex, setQueueIndex] = useState(0);
   const [pending, startTransition] = useTransition();
+  const [preparing, setPreparing] = useState(false);
   const [adjustmentEditing, setAdjustmentEditing] = useState(false);
   const [emptyConflictInvoice, setEmptyConflictInvoice] = useState<PreparedInvoice | null>(null);
   const filtered = useMemo(() => {
@@ -46,15 +47,20 @@ export function PrepareInvoiceLauncher({ schoolId, payers, variant }: { schoolId
   function prepare(formData: FormData) {
     if (!payer) return;
     setMessage("");
+    setPreparing(true);
     startTransition(async () => {
-      const result = await prepareFamilyBillingDraft(schoolId, payer.id, initialDraft, formData);
-      setMessage(result.message);
-      if (!result.invoice) return;
-      setQueue((current) => {
-        const next = [...current.filter((item) => item.id !== result.invoice!.id), result.invoice!];
-        setQueueIndex(next.length - 1);
-        return next;
-      });
+      try {
+        const result = await prepareFamilyBillingDraft(schoolId, payer.id, initialDraft, formData);
+        setMessage(result.message);
+        if (!result.invoice) return;
+        setQueue((current) => {
+          const next = [...current.filter((item) => item.id !== result.invoice!.id), result.invoice!];
+          setQueueIndex(next.length - 1);
+          return next;
+        });
+      } finally {
+        setPreparing(false);
+      }
     });
   }
 
@@ -63,19 +69,24 @@ export function PrepareInvoiceLauncher({ schoolId, payers, variant }: { schoolId
     setMessage("");
     const formData = new FormData();
     formData.set("month", month);
+    setPreparing(true);
     startTransition(async () => {
-      const result = await prepareEmptyFamilyBillingDraft(schoolId, payer.id, formData);
-      setMessage(result.message);
-      if (!result.invoice) return;
-      if (result.existing) {
-        setEmptyConflictInvoice(result.invoice);
-        return;
+      try {
+        const result = await prepareEmptyFamilyBillingDraft(schoolId, payer.id, formData);
+        setMessage(result.message);
+        if (!result.invoice) return;
+        if (result.existing) {
+          setEmptyConflictInvoice(result.invoice);
+          return;
+        }
+        setQueue((current) => {
+          const next = [...current.filter((item) => item.id !== result.invoice!.id), result.invoice!];
+          setQueueIndex(next.length - 1);
+          return next;
+        });
+      } finally {
+        setPreparing(false);
       }
-      setQueue((current) => {
-        const next = [...current.filter((item) => item.id !== result.invoice!.id), result.invoice!];
-        setQueueIndex(next.length - 1);
-        return next;
-      });
     });
   }
 
@@ -115,7 +126,7 @@ export function PrepareInvoiceLauncher({ schoolId, payers, variant }: { schoolId
   return <FocusedModal open={open} onOpenChange={openWorkspace} triggerLabel="Prepare an invoice" eyebrow="Invoice workspace" title={emptyConflictInvoice ? "This month already has a draft." : invoice ? "Review prepared invoices." : payer ? `Prepare ${payer.name}’s invoice.` : "Who are you billing?"} description={emptyConflictInvoice ? "Starting empty would replace the unfinished invoice below. Choose whether to inspect it or discard it first." : invoice ? "Review and lock each exact amount before sending its payer approval request." : "Search by payer, family, or student, then choose the service month."} disabled={!payers.length}
     triggerContent={dashboard ? <><MdReceiptLong aria-hidden="true" className="mb-2 text-3xl text-brand" /><span className="font-display text-3xl font-normal tracking-[-0.03em]">Prepare an invoice</span><span className="mt-2 max-w-xs text-xs leading-5 text-muted">Choose a payer, then review their unpaid lessons for a month.</span></> : <><MdReceiptLong aria-hidden="true" className="text-lg" />Prepare invoice</>}
     triggerClassName={dashboard ? "flex h-full min-h-40 w-full flex-col items-center justify-center rounded-card border border-transparent bg-surface-raised/55 px-6 py-7 text-center shadow-[var(--ui-shadow-soft)] transition duration-200 hover:-translate-y-1 hover:scale-[1.025] hover:border-brand/50 hover:bg-surface-raised hover:text-brand hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50" : "inline-flex items-center gap-1.5 text-sm text-brand transition hover:text-brand-hover disabled:cursor-not-allowed disabled:text-muted"}>
-    {pending ? <CommonTimeLoader label="Preparing invoice…" compact showBrand={false} /> : emptyConflictInvoice ? <div><div className="rounded-control border border-line bg-canvas p-4"><div className="flex items-start justify-between gap-5"><div><p className="font-display text-2xl">{emptyConflictInvoice.familyName}</p><p className="mt-1 text-sm text-muted">{emptyConflictInvoice.label} · {emptyConflictInvoice.lines.length} {emptyConflictInvoice.lines.length === 1 ? "line" : "lines"}</p></div><p className="text-lg">{money(emptyConflictInvoice.amountDueCents, emptyConflictInvoice.currency)}</p></div></div><div className="mt-5 grid items-start gap-3 sm:grid-cols-2"><button type="button" onClick={openConflictingInvoice} className="rounded-control border border-line px-5 py-4 text-left text-sm text-ink transition hover:border-brand hover:text-brand">Open existing draft</button><HoldToConfirm medium action={replaceConflictWithEmptyInvoice} idleLabel="Hold to discard and start empty" holdingLabel="Keep holding to replace the draft…" successLabel="Empty invoice created" /></div><button type="button" onClick={() => { setEmptyConflictInvoice(null); setMessage(""); }} className="mt-4 text-sm text-muted">← Keep the draft and go back</button></div> : invoice ? <div>
+    {preparing || pending ? <CommonTimeLoader label="Preparing invoice…" compact showBrand={false} /> : emptyConflictInvoice ? <div><div className="rounded-control border border-line bg-canvas p-4"><div className="flex items-start justify-between gap-5"><div><p className="font-display text-2xl">{emptyConflictInvoice.familyName}</p><p className="mt-1 text-sm text-muted">{emptyConflictInvoice.label} · {emptyConflictInvoice.lines.length} {emptyConflictInvoice.lines.length === 1 ? "line" : "lines"}</p></div><p className="text-lg">{money(emptyConflictInvoice.amountDueCents, emptyConflictInvoice.currency)}</p></div></div><div className="mt-5 grid items-start gap-3 sm:grid-cols-2"><button type="button" onClick={openConflictingInvoice} className="rounded-control border border-line px-5 py-4 text-left text-sm text-ink transition hover:border-brand hover:text-brand">Open existing draft</button><HoldToConfirm medium action={replaceConflictWithEmptyInvoice} idleLabel="Hold to discard and start empty" holdingLabel="Keep holding to replace the draft…" successLabel="Empty invoice created" /></div><button type="button" onClick={() => { setEmptyConflictInvoice(null); setMessage(""); }} className="mt-4 text-sm text-muted">← Keep the draft and go back</button></div> : invoice ? <div>
       <div className="flex items-center justify-between gap-4 border-b border-line pb-4"><button type="button" aria-label="Previous prepared invoice" disabled={queueIndex === 0} onClick={() => { setAdjustmentEditing(false); setQueueIndex((value) => value - 1); }} className="grid size-9 place-items-center rounded-full border border-line disabled:opacity-30"><MdChevronLeft /></button><p className="text-xs text-muted">Prepared invoice {queueIndex + 1} of {queue.length}</p><button type="button" aria-label="Next prepared invoice" disabled={queueIndex === queue.length - 1} onClick={() => { setAdjustmentEditing(false); setQueueIndex((value) => value + 1); }} className="grid size-9 place-items-center rounded-full border border-line disabled:opacity-30"><MdChevronRight /></button></div>
       <div className="py-5"><div className="flex items-start justify-between gap-5"><div><p className="font-display text-2xl">{invoice.familyName}</p><p className="mt-1 text-sm text-muted">{invoice.label} · <span className="capitalize">{invoice.status.replaceAll("_", " ")}</span></p></div><p className="text-xl">{money(invoice.amountDueCents, invoice.currency)}</p></div><div className="mt-5 divide-y divide-line border-y border-line">{invoice.lines.map((line) => <div key={line.id} className="grid grid-cols-[1fr_auto] gap-4 py-3 text-sm"><div><p>{line.description}</p>{line.serviceDate ? <p className="mt-1 text-xs text-muted">{line.serviceDate}</p> : null}{["lesson","lesson_series"].includes(line.sourceType)&&(invoice.status==="draft"||invoice.status==="review")?<BillingLineDefer schoolId={schoolId} billingAccountId={invoice.billingAccountId} billingPeriodId={invoice.id} lineItemId={line.id} description={line.description} onRemoved={()=>loadPreparedInvoice(schoolId,invoice.billingAccountId,invoice.id).then((refreshed)=>{if(refreshed)updateInvoice(invoice.id,refreshed);})}/>:null}</div><p>{money(line.amountCents, invoice.currency)}</p></div>)}</div></div>
       {message ? <p role="status" className="mb-4 border-l-2 border-brand pl-3 text-sm">{message}</p> : null}
