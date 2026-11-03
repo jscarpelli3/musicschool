@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MdCreditCard, MdOutlineAccountBalanceWallet } from "react-icons/md";
 import { cancelOneTimeInvoicePaymentLink, collectFamilyInvoice, createOneTimeInvoicePaymentLink, loadPreparedInvoice, recordInvoiceSettlement, refundStripeInvoicePayment } from "@/app/schools/[schoolId]/families/[billingAccountId]/actions";
+import { CommonTimeLoader } from "@/components/ui/common-time-loader";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
 
 const POLL_INTERVAL_MS = 3_000;
@@ -162,7 +163,7 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
           <div className="rounded-control bg-surface-raised p-4">
             <p className="text-sm font-medium">Send a one-time payment link</p>
             <p className="mt-2 text-xs leading-5 text-muted">The payer enters a card securely in Stripe. It is not saved for future charges.</p>
-            {hostedLinkOpen ? <button type="button" disabled={linkPending} onClick={async()=>{setLinkPending(true);const result=await cancelOneTimeInvoicePaymentLink(schoolId,billingAccountId,billingPeriodId);setLinkMessage(result.message);if(result.ok){setPaymentUrl("");setLinkCopied(false);await checkPayment();}setLinkPending(false);}} className="mt-4 rounded-control border border-danger/50 px-4 py-3 text-sm text-danger hover:bg-danger/10 disabled:opacity-50">{linkPending?"Cancelling…":"Cancel this payment link"}</button> : <button type="button" disabled={linkPending||hasOutsideResolution} onClick={async () => {
+            {linkPending ? <CommonTimeLoader label={hostedLinkOpen ? "Cancelling payment link…" : "Preparing and copying payment link…"} compact showBrand={false} /> : hostedLinkOpen ? <button type="button" onClick={async()=>{setLinkPending(true);const result=await cancelOneTimeInvoicePaymentLink(schoolId,billingAccountId,billingPeriodId);setLinkMessage(result.message);if(result.ok){setPaymentUrl("");setLinkCopied(false);await checkPayment();}setLinkPending(false);}} className="mt-4 rounded-control border border-danger/50 px-4 py-3 text-sm text-danger hover:bg-danger/10">Cancel this payment link</button> : <button type="button" disabled={hasOutsideResolution} onClick={async () => {
               setLinkPending(true);
               setLinkMessage("");
               const result = paymentUrl ? { ok: true as const, url: paymentUrl, message: "" } : await createOneTimeInvoicePaymentLink(schoolId, billingAccountId, billingPeriodId);
@@ -180,7 +181,7 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
                 }
               } else setLinkMessage(result.message);
               setLinkPending(false);
-            }} className="mt-4 rounded-control border border-brand px-4 py-3 text-sm text-brand transition hover:bg-brand hover:text-canvas disabled:cursor-wait disabled:opacity-50">{linkPending ? "Preparing link…" : linkCopied ? "Copy link again" : "Copy one-time payment link"}</button>}
+            }} className="mt-4 rounded-control border border-brand px-4 py-3 text-sm text-brand transition hover:bg-brand hover:text-canvas disabled:opacity-50">{linkCopied ? "Copy link again" : "Copy one-time payment link"}</button>}
             {linkMessage ? <p role="status" className="mt-3 break-words text-sm font-medium leading-5 text-brand">{linkMessage}</p> : null}
             {paymentUrl ? <label className="mt-3 block"><span className="text-[11px] text-muted">One-time payment link</span><input aria-label="One-time payment link" readOnly value={paymentUrl} onFocus={(event) => event.currentTarget.select()} className="mt-1.5 w-full rounded-control border border-line bg-canvas px-3 py-2 text-xs text-ink outline-none focus:border-brand" /></label> : null}
           </div>
