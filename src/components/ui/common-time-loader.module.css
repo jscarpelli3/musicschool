@@ -11,16 +11,28 @@
   filter: drop-shadow(0 0 0.45rem color-mix(in srgb, var(--ui-brand) 55%, transparent));
 }
 
-.pulse {
-  animation: common-time-beat 650ms ease-out infinite;
+.countBeat {
+  display: inline-grid;
+  min-width: 2.25rem;
+  place-items: center;
+  color: var(--ui-muted);
+  opacity: 0.48;
+  transform: scale(0.9);
+  transition: color 120ms ease-out, opacity 120ms ease-out, transform 120ms ease-out;
 }
 
-@keyframes common-time-beat {
-  0% { opacity: 1; transform: scale(1); }
-  70%, 100% { opacity: 0.58; transform: scale(0.94); }
+.countBeatActive {
+  color: var(--ui-brand);
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+.commonTime {
+  font-family: Georgia, "Times New Roman", serif;
+  text-shadow: 0 0 0.65rem color-mix(in srgb, var(--ui-brand) 28%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .track { transition: none; }
-  .pulse { animation: none; }
+  .countBeat { transition: none; }
 }
