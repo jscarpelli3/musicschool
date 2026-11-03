@@ -17,7 +17,10 @@ export type SchoolInvoice = {
   statusLabel: string;
   periodStart: string;
   periodEnd: string;
+  createdAt: string;
   updatedAt: string;
+  approvalSentAt: string | null;
+  approvedAt: string | null;
   lineCount: number;
   payerReviewReason: string | null;
   payerReviewNote: string | null;
@@ -26,7 +29,7 @@ export type SchoolInvoice = {
 
 export async function loadSchoolInvoices(client: Client, schoolId: string, limit?: number): Promise<SchoolInvoice[]> {
   let periodQuery = client.from("billing_periods")
-    .select("id,billing_account_id,label,amount_due_cents,currency,status,period_start,period_end,updated_at")
+    .select("id,billing_account_id,label,amount_due_cents,currency,status,period_start,period_end,created_at,updated_at")
     .eq("school_id", schoolId)
     .order("updated_at", { ascending: false });
   if (limit) periodQuery = periodQuery.limit(limit);
@@ -48,7 +51,7 @@ export async function loadSchoolInvoices(client: Client, schoolId: string, limit
   const [{ data: lines, error: lineError }, { data: approvals, error: approvalError }, { data: failedEvents, error: failedEventError }] = periodIds.length
     ? await Promise.all([
       client.from("billing_line_items").select("billing_period_id").eq("school_id", schoolId).in("billing_period_id", periodIds),
-      client.from("billing_approval_requests").select("id,billing_period_id,approval_status,rejection_reason_code,rejection_note,created_at").eq("school_id", schoolId).in("billing_period_id", periodIds).order("created_at", { ascending: false }),
+      client.from("billing_approval_requests").select("id,billing_period_id,approval_status,rejection_reason_code,rejection_note,created_at,approved_at").eq("school_id", schoolId).in("billing_period_id", periodIds).order("created_at", { ascending: false }),
       client.from("billing_approval_events").select("approval_request_id").eq("school_id", schoolId).eq("event_type", "payment_failed"),
     ])
     : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }];
@@ -73,7 +76,10 @@ export async function loadSchoolInvoices(client: Client, schoolId: string, limit
     statusLabel: billingPeriodDescriptor(period.status).label,
     periodStart: period.period_start,
     periodEnd: period.period_end,
+    createdAt: period.created_at,
     updatedAt: period.updated_at,
+    approvalSentAt: latestApproval.get(period.id)?.created_at ?? null,
+    approvedAt: latestApproval.get(period.id)?.approved_at ?? null,
     lineCount: lineCounts[period.id] ?? 0,
     payerReviewReason: latestApproval.get(period.id)?.approval_status === "rejected" ? latestApproval.get(period.id)?.rejection_reason_code ?? null : null,
     payerReviewNote: latestApproval.get(period.id)?.approval_status === "rejected" ? latestApproval.get(period.id)?.rejection_note ?? null : null,

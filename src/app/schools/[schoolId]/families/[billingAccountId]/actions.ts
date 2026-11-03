@@ -34,7 +34,7 @@ export type PreparedInvoice = {
   amountDueCents: number;
   currency: string;
   status: string;
-  lines: Array<{ id: string; description: string; serviceDate: string | null; amountCents: number; sourceType: string }>;
+  lines: Array<{ id: string; description: string; serviceDate: string | null; startsAt: string | null; durationMinutes: number | null; amountCents: number; sourceType: string }>;
   outstandingLessons: Array<{ lessonEventId: string; studentName: string; offeringName: string; serviceDate: string; startsAt: string; amountCents: number; currency: string }>;
   payerReviewReason: string | null;
   payerReviewNote: string | null;
@@ -95,7 +95,7 @@ async function readPreparedInvoice(schoolId: string, billingAccountId: string, p
   const [{ data: period }, { data: account }, { data: lines }, { data: outstandingLessons }, { data: approvals }, { data: attempts }, { data: methods }, { data: settlements }] = await Promise.all([
     supabase.from("billing_periods").select("id,label,amount_due_cents,currency,status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", periodId).single(),
     supabase.from("billing_accounts").select("name").eq("school_id", schoolId).eq("id", billingAccountId).single(),
-    supabase.from("billing_line_items").select("id,description,service_date,amount_cents,source_type").eq("school_id", schoolId).eq("billing_period_id", periodId).order("service_date", { ascending: true, nullsFirst: false }).order("created_at"),
+    supabase.from("billing_line_items").select("id,description,service_date,amount_cents,source_type,source_id,metadata").eq("school_id", schoolId).eq("billing_period_id", periodId).order("service_date", { ascending: true, nullsFirst: false }).order("created_at"),
     supabase.rpc("get_outstanding_lessons_for_billing_account", { p_school_id: schoolId, p_billing_account_id: billingAccountId }),
     supabase.from("billing_approval_requests").select("approval_status,rejection_reason_code,rejection_note").eq("school_id", schoolId).eq("billing_period_id", periodId).order("created_at", { ascending: false }).limit(1),
     supabase.from("payment_attempts").select("id,status,failure_message,payment_method_id,amount_cents,succeeded_at").eq("school_id", schoolId).eq("billing_period_id", periodId).order("created_at", { ascending: false }),
@@ -103,6 +103,12 @@ async function readPreparedInvoice(schoolId: string, billingAccountId: string, p
     supabase.from("invoice_settlement_entries").select("id,entry_type,method,amount_cents,occurred_at,reference,note,source_entry_id").eq("school_id",schoolId).eq("billing_period_id",periodId).order("created_at"),
   ]);
   if (!period || !account || !lines) return null;
+  const lessonSourceIds=lines.filter((line)=>line.source_type==="lesson"&&line.source_id).map((line)=>line.source_id as string);
+  const {data:lessonEvents,error:lessonEventsError}=lessonSourceIds.length
+    ?await supabase.from("lesson_events").select("id,starts_at,ends_at").eq("school_id",schoolId).in("id",lessonSourceIds)
+    :{data:[],error:null};
+  if(lessonEventsError)return null;
+  const lessonEventById=new Map((lessonEvents??[]).map((event)=>[event.id,event]));
   const latestAttempt = attempts?.[0] ?? null;
   const activeCheckout = latestAttempt && !latestAttempt.payment_method_id
     ? await createAdminClient().from("invoice_checkout_requests").select("id").eq("payment_attempt_id", latestAttempt.id).eq("status", "open").maybeSingle()
@@ -116,7 +122,14 @@ async function readPreparedInvoice(schoolId: string, billingAccountId: string, p
   return {
     id: period.id, billingAccountId, familyName: account.name, label: period.label, amountDueCents: period.amount_due_cents,
     currency: period.currency, status: period.status,
-    lines: lines.map((line) => ({ id: line.id, description: line.description, serviceDate: line.service_date, amountCents: line.amount_cents ?? 0, sourceType: line.source_type })),
+    lines: lines.map((line) => {
+      const event=line.source_id?lessonEventById.get(line.source_id):null;
+      const metadata=line.metadata&&typeof line.metadata==="object"&&!Array.isArray(line.metadata)?line.metadata:null;
+      const metadataStart=metadata&&"operational_starts_at" in metadata&&typeof metadata.operational_starts_at==="string"?metadata.operational_starts_at:null;
+      const startsAt=event?.starts_at??metadataStart;
+      const durationMinutes=event?Math.max(1,Math.round((new Date(event.ends_at).getTime()-new Date(event.starts_at).getTime())/60_000)):null;
+      return { id: line.id, description: line.description, serviceDate: line.service_date, startsAt, durationMinutes, amountCents: line.amount_cents ?? 0, sourceType: line.source_type };
+    }),
     outstandingLessons: (outstandingLessons ?? []).map((lesson) => ({ lessonEventId: lesson.lesson_event_id, studentName: lesson.student_name, offeringName: lesson.offering_name, serviceDate: lesson.service_date, startsAt: lesson.starts_at, amountCents: lesson.amount_cents, currency: lesson.currency })),
     payerReviewReason: approvals?.[0]?.approval_status === "rejected" ? approvals[0].rejection_reason_code : null,
     payerReviewNote: approvals?.[0]?.approval_status === "rejected" ? approvals[0].rejection_note : null,
@@ -127,6 +140,22 @@ async function readPreparedInvoice(schoolId: string, billingAccountId: string, p
     stripeRefunds: (refundResult.data ?? []).map((item)=>({ id:item.id,paymentAttemptId:item.payment_attempt_id,amountCents:item.amount_cents,status:item.status,reason:item.reason,createdAt:item.created_at })),
     outstandingCents: Math.max(period.amount_due_cents-stripePaid-resolvedOutside,0),
   };
+}
+
+async function addLessonTimingToApprovalSnapshot(schoolId:string,billingPeriodId:string,approvalRequestId:string,timeZone:string){
+  const admin=createAdminClient();
+  const{data:lines,error:lineError}=await admin.from("billing_line_items").select("description,service_date,amount_cents,source_type,source_id,created_at").eq("school_id",schoolId).eq("billing_period_id",billingPeriodId).order("service_date",{ascending:true,nullsFirst:false}).order("created_at");
+  if(lineError||!lines)return;
+  const lessonIds=lines.filter((line)=>line.source_type==="lesson"&&line.source_id).map((line)=>line.source_id as string);
+  const{data:events,error:eventError}=lessonIds.length?await admin.from("lesson_events").select("id,starts_at,ends_at").eq("school_id",schoolId).in("id",lessonIds):{data:[],error:null};
+  if(eventError)return;
+  const eventById=new Map((events??[]).map((event)=>[event.id,event]));
+  const snapshot=lines.map((line)=>{
+    const event=line.source_id?eventById.get(line.source_id):null;
+    return{label:line.description,detail:line.service_date??"Period adjustment",amount_cents:line.amount_cents,...(event?{starts_at:event.starts_at,starts_label:new Intl.DateTimeFormat("en-US",{timeZone,weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}).format(new Date(event.starts_at)),duration_minutes:Math.max(1,Math.round((new Date(event.ends_at).getTime()-new Date(event.starts_at).getTime())/60_000))}:{})};
+  });
+  const{error:updateError}=await admin.from("billing_approval_requests").update({line_items:snapshot}).eq("school_id",schoolId).eq("id",approvalRequestId);
+  if(updateError)console.error("Approval snapshot timing enrichment failed",{approvalRequestId,code:updateError.code});
 }
 
 async function readEditableInvoiceForMonth(schoolId: string, billingAccountId: string, month: string) {
@@ -575,7 +604,7 @@ export async function sendBillingApprovalSms(
   if (!profileId) redirect(`/login?next=${path}`);
 
   const [{ data: school }, { data: account }, { data: period }, canManage] = await Promise.all([
-    supabase.from("schools").select("name").eq("id", schoolId).maybeSingle(),
+    supabase.from("schools").select("name,timezone").eq("id", schoolId).maybeSingle(),
     supabase.from("billing_accounts").select("billing_contact_person_id").eq("school_id", schoolId).eq("id", billingAccountId).maybeSingle(),
     supabase.from("billing_periods").select("label, amount_due_cents, currency, status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", billingPeriodId).maybeSingle(),
     checkSchoolCapability(supabase, schoolId, "school.billing.manage"),
@@ -624,6 +653,7 @@ export async function sendBillingApprovalSms(
   if (prepareError || !prepared) {
     return { ok: false, message: "The approval request could not be prepared. No text was sent." };
   }
+  await addLessonTimingToApprovalSnapshot(schoolId,billingPeriodId,prepared.approval_request_id,school.timezone);
 
   try {
     const message = await sendTwilioMessage({ to: phone, body });
@@ -666,7 +696,7 @@ export async function sendBillingApprovalEmail(
   if (!profileId) redirect(`/login?next=${path}`);
 
   const [{ data: school }, { data: account }, { data: period }, canManage] = await Promise.all([
-    supabase.from("schools").select("name,reply_to_email").eq("id", schoolId).maybeSingle(),
+    supabase.from("schools").select("name,reply_to_email,timezone").eq("id", schoolId).maybeSingle(),
     supabase.from("billing_accounts").select("billing_contact_person_id").eq("school_id", schoolId).eq("id", billingAccountId).maybeSingle(),
     supabase.from("billing_periods").select("label, amount_due_cents, currency, status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", billingPeriodId).maybeSingle(),
     checkSchoolCapability(supabase, schoolId, "school.billing.manage"),
@@ -711,6 +741,8 @@ export async function sendBillingApprovalEmail(
       ? "Email is paused for this payer after a permanent delivery problem or complaint. Confirm a different address before sending."
       : "The approval request could not be prepared. No email was sent." };
   }
+
+  await addLessonTimingToApprovalSnapshot(schoolId,billingPeriodId,prepared.approval_request_id,school.timezone);
 
   const admin = createAdminClient();
   try {

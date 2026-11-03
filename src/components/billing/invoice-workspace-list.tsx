@@ -12,17 +12,19 @@ import { BillingAdjustmentForm } from "@/app/schools/[schoolId]/families/[billin
 import { BillingLineDefer } from "@/app/schools/[schoolId]/families/[billingAccountId]/billing-line-defer";
 import { discardEditableInvoice, loadPreparedInvoice, lockFamilyBillingPeriod, sendBillingApprovalEmail, type PreparedInvoice } from "@/app/schools/[schoolId]/families/[billingAccountId]/actions";
 import { payerReviewReasonLabel } from "@/lib/billing/approval-review";
+import { invoiceLinePrimary, invoiceLineSecondary } from "@/lib/billing/invoice-line-presentation";
 
-type SortKey = "status" | "payer" | "student";
+type SortKey = "recent" | "status" | "payer" | "student";
 const money = (amount: number, currency: string) => new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount / 100);
+const timestamp = (value: string) => new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 
 export function InvoiceWorkspaceList({ schoolId, invoices, compact, autoOpenId = null, hideList = false, onClose }: { schoolId: string; invoices: SchoolInvoice[]; compact: boolean; autoOpenId?: string | null; hideList?: boolean; onClose?: () => void }) {
-  const [sort, setSort] = useState<SortKey>("status");
+  const [sort, setSort] = useState<SortKey>("recent");
   const [selected, setSelected] = useState<SchoolInvoice | null>(() => (autoOpenId ? (invoices.find((item) => item.id === autoOpenId) ?? null) : null));
   const [detail, setDetail] = useState<PreparedInvoice | null>(null);
   const [loading, setLoading] = useState(Boolean(autoOpenId));
   const [adjustmentEditing, setAdjustmentEditing] = useState(false);
-  const sorted = useMemo(() => [...invoices].sort((a, b) => (sort === "payer" ? a.familyName.localeCompare(b.familyName) || b.updatedAt.localeCompare(a.updatedAt) : sort === "student" ? a.studentNames.join(", ").localeCompare(b.studentNames.join(", ")) || a.familyName.localeCompare(b.familyName) : a.statusLabel.localeCompare(b.statusLabel) || b.updatedAt.localeCompare(a.updatedAt))), [invoices, sort]);
+  const sorted = useMemo(() => [...invoices].sort((a, b) => (sort === "recent" ? b.updatedAt.localeCompare(a.updatedAt) : sort === "payer" ? a.familyName.localeCompare(b.familyName) || b.updatedAt.localeCompare(a.updatedAt) : sort === "student" ? a.studentNames.join(", ").localeCompare(b.studentNames.join(", ")) || a.familyName.localeCompare(b.familyName) : a.statusLabel.localeCompare(b.statusLabel) || b.updatedAt.localeCompare(a.updatedAt))), [invoices, sort]);
 
   async function open(invoice: SchoolInvoice) {
     setAdjustmentEditing(false);
@@ -67,36 +69,37 @@ export function InvoiceWorkspaceList({ schoolId, invoices, compact, autoOpenId =
             <label className="flex items-center gap-2 text-xs text-muted">
               <span>Sort by</span>
               <AppSelect value={sort} onChange={(event) => setSort(event.target.value as SortKey)} className="min-w-36 rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink">
+                <option value="recent">Most recent</option>
                 <option value="status">Status</option>
                 <option value="payer">Payer name</option>
                 <option value="student">Student name</option>
               </AppSelect>
             </label>
           </div>
-          <div className={compact ? "divide-y divide-line" : "grid gap-3"}>
+          <div className="divide-y divide-line border-y border-line">
             {sorted.map((invoice) => {
               const sentBack = Boolean(invoice.payerReviewReason || invoice.payerReviewNote);
               const statusClass = sentBack ? "border-danger/60 bg-danger/10 text-danger" : invoice.status === "paid" ? "border-brand/50 bg-brand text-canvas" : invoice.status === "draft" || invoice.status === "review" ? "border-ink/25 bg-ink/10 text-ink" : "border-brand/30 bg-brand/10 text-brand";
               return (
-                <button type="button" key={invoice.id} onClick={() => void open(invoice)} className={`${compact ? "py-4" : "ui-card p-5 sm:p-6"} w-full text-left transition hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand`}>
-                  <span className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
-                    <span>
+                <button type="button" key={invoice.id} onClick={() => void open(invoice)} className={`${compact ? "px-1 py-3" : "px-3 py-3 sm:px-4"} w-full text-left transition hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand`}>
+                  <span className={`grid gap-3 ${compact ? "sm:grid-cols-[1fr_auto]" : "sm:grid-cols-[minmax(11rem,1.15fr)_minmax(12rem,1fr)_minmax(13rem,1.1fr)_auto]"} sm:items-center`}>
+                    <span className="min-w-0">
                       <span className="font-medium">{invoice.familyName}</span>
                       {invoice.studentNames.length ? <span className="mt-1 block text-xs text-muted">{invoice.studentNames.join(" · ")}</span> : null}
-                      <span className="mt-1 block text-xs text-muted">
-                        {invoice.label} · {invoice.periodStart}–{invoice.periodEnd}
-                      </span>
+                      {compact ? <span className="mt-1 block text-xs text-muted">{invoice.label} · {invoice.lineCount} {invoice.lineCount===1?"line":"lines"}</span> : null}
                     </span>
+                    {!compact ? <span className="text-xs leading-5 text-muted"><span className="block font-medium text-ink">{invoice.label}</span><span className="block">{invoice.periodStart}–{invoice.periodEnd} · {invoice.lineCount} {invoice.lineCount===1?"line":"lines"}</span></span> : null}
+                    {!compact ? <span className="text-xs leading-5 text-muted"><span className="block">Created {timestamp(invoice.createdAt)}</span>{invoice.approvedAt?<span className="block">Approved {timestamp(invoice.approvedAt)}</span>:invoice.approvalSentAt?<span className="block">Sent for approval {timestamp(invoice.approvalSentAt)}</span>:<span className="block">Updated {timestamp(invoice.updatedAt)}</span>}</span> : null}
                     <span className="sm:text-right">
                       <span className="block text-sm">{money(invoice.amountDueCents, invoice.currency)}</span>
-                      <span className="mt-2 flex flex-wrap gap-2 sm:justify-end">
-                        <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] ${statusClass}`}>{sentBack ? "Sent back for review" : invoice.status === "draft" || invoice.status === "review" ? "Resume draft" : invoice.statusLabel}</span>
-                        {invoice.hasFailedPayment && invoice.status !== "paid" ? <span className="inline-flex rounded-full border border-danger/60 bg-danger/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-danger">Payment failed</span> : null}
+                      <span className="mt-1 flex flex-wrap gap-1.5 sm:justify-end">
+                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.07em] ${statusClass}`}>{sentBack ? "Sent back for review" : invoice.status === "draft" || invoice.status === "review" ? "Resume draft" : invoice.statusLabel}</span>
+                        {invoice.hasFailedPayment && invoice.status !== "paid" ? <span className="inline-flex rounded-full border border-danger/60 bg-danger/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-danger">Payment failed</span> : null}
                       </span>
                     </span>
                   </span>
                   {sentBack ? (
-                    <span className="mt-4 block rounded-control border border-danger/30 bg-danger/10 p-3 text-sm text-ink">
+                    <span className="mt-3 block border-l-2 border-danger pl-3 text-sm text-ink">
                       <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-danger">Payer’s review request</span>
                       <span className="mt-1 block">{payerReviewReasonLabel(invoice.payerReviewReason)}</span>
                       {invoice.payerReviewNote ? <span className="mt-1 block text-xs leading-5 text-muted">“{invoice.payerReviewNote}”</span> : null}
@@ -149,8 +152,8 @@ export function InvoiceWorkspaceList({ schoolId, invoices, compact, autoOpenId =
                   {detail.lines.map((line) => (
                     <div key={line.id} className="grid grid-cols-[1fr_auto] gap-4 py-3 text-sm">
                       <div>
-                        <p>{line.description}</p>
-                        {line.serviceDate ? <p className="mt-1 text-xs text-muted">{line.serviceDate}</p> : null}
+                        <p className="font-medium">{invoiceLinePrimary(line)}</p>
+                        <p className="mt-1 text-xs text-muted">{invoiceLineSecondary(line)}</p>
                         {["lesson", "lesson_series"].includes(line.sourceType) && (detail.status === "draft" || detail.status === "review") ? <BillingLineDefer schoolId={schoolId} billingAccountId={detail.billingAccountId} billingPeriodId={detail.id} lineItemId={line.id} description={line.description} onRemoved={refresh} /> : null}
                       </div>
                       <p>{money(line.amountCents, detail.currency)}</p>

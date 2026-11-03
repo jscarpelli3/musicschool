@@ -22,6 +22,9 @@ export const metadata: Metadata = {
 type LineItem = {
   label: string;
   detail?: string;
+  starts_at?: string;
+  starts_label?: string;
+  duration_minutes?: number;
   amount_cents: number;
 };
 
@@ -50,6 +53,13 @@ function money(cents: number, currency: string) {
   }).format(cents / 100);
 }
 
+function approvalLineTime(item: LineItem) {
+  if (item.starts_label) return item.starts_label;
+  if (item.starts_at) return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(item.starts_at));
+  if (item.detail && /^\d{4}-\d{2}-\d{2}$/.test(item.detail)) return formatCompactDate(item.detail);
+  return item.detail ?? "Invoice adjustment";
+}
+
 function StatementDetails({ approval, sentBack = false }: { approval: Approval; sentBack?: boolean }) {
   return (
     <section className="relative py-8 sm:py-10" aria-labelledby="charge-breakdown">
@@ -65,7 +75,7 @@ function StatementDetails({ approval, sentBack = false }: { approval: Approval; 
             <span className="grid size-10 place-items-center rounded-full bg-brand/10 text-xl text-brand"><MdReceiptLong aria-hidden="true" /></span>
             <div><h2 id="charge-breakdown" className="font-display text-2xl">Charge breakdown</h2><p className="mt-1 text-sm text-muted">{sentBack ? "The invoice returned to the school." : "Review each lesson included in this amount."}</p></div>
           </div>
-          <ul>{approval.line_items.map((item, index) => <li key={`${item.label}-${index}`} className="grid grid-cols-[1fr_auto] gap-5 border-b border-line py-5"><div><p>{item.label}</p>{item.detail ? <p className="mt-1 text-sm text-muted">{formatCompactDate(item.detail)}</p> : null}</div><p>{money(item.amount_cents, approval.currency)}</p></li>)}</ul>
+          <ul>{approval.line_items.map((item, index) => <li key={`${item.label}-${index}`} className="grid grid-cols-[1fr_auto] gap-5 border-b border-line py-4"><div><p className="font-medium">{approvalLineTime(item)}</p><p className="mt-1 text-sm text-muted">{item.label.replace(/\s·\s[A-Z][a-z]{2}\s\d{1,2}$/, "")}{item.duration_minutes ? ` · ${item.duration_minutes} min` : ""}</p></div><p>{money(item.amount_cents, approval.currency)}</p></li>)}</ul>
         </div>
       </div>
       {sentBack ? <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center px-3" aria-hidden="true"><div className="-rotate-6 border-4 border-brand bg-canvas/95 px-5 py-4 text-center font-display text-3xl uppercase leading-none tracking-[0.05em] text-brand shadow-xl sm:px-9 sm:py-5 sm:text-5xl">Sent back<br />for review</div></div> : null}
@@ -138,7 +148,7 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
               <div className="flex items-start gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand/10 text-xl text-brand"><MdCheckCircleOutline aria-hidden="true" /></span><div><p className="text-xs uppercase tracking-[0.14em] text-brand">Everything looks right</p><h2 className="mt-1 font-display text-2xl">Approve {money(approval.amount_cents, approval.currency)}</h2></div></div>
               <p className="mt-4 max-w-xl text-sm leading-6 text-muted">Hold below to approve this exact amount. Approval itself does not charge your card; it allows the school to collect it separately.</p>
               <div className="mt-6"><HoldToConfirm action={approve} idleLabel={`Hold to approve ${money(approval.amount_cents, approval.currency)}`} refreshOnSuccess /></div>
-              <p className="mt-4 text-xs leading-5 text-muted">Want to pay now without leaving a card on file? Approve the amount first, then choose the one-time payment option.</p>
+              <p className="mt-4 text-xs leading-5 text-muted">If you already set up a card, the school will charge it after approval. If you have not—or want to use a different card—you can use the optional one-time payment link below.</p>
             </div>
             <RejectChargesForm token={token} />
           </>
@@ -147,7 +157,7 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
             <p className="font-display text-3xl">{approval.approval_status === "approved" ? "Approved!" : approval.approval_status}</p>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
               {approval.approval_status === "approved"
-                ? `You approved ${approval.school_name} to charge ${money(approval.amount_cents, approval.currency)} to your card on file. The school can now collect this amount. Your card has not been charged yet.`
+                ? `You approved ${approval.school_name} to collect ${money(approval.amount_cents, approval.currency)}. If you have a saved card, the school will normally charge it. Your card has not been charged yet.`
                 : "Contact the school if you need a new approval request."}
             </p>
           </div>
