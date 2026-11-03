@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { MdClose, MdOpenInNew } from "react-icons/md";
 import type { SchoolInvoice } from "@/lib/billing/school-invoices";
 import { AppSelect } from "@/components/ui/app-select";
@@ -17,13 +18,22 @@ import { invoiceLinePrimary, invoiceLineSecondary } from "@/lib/billing/invoice-
 type SortKey = "recent" | "status" | "payer" | "student";
 const money = (amount: number, currency: string) => new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount / 100);
 const timestamp = (value: string) => new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+function periodRange(start:string,end:string){
+  const startDate=new Date(`${start}T12:00:00Z`),endDate=new Date(`${end}T12:00:00Z`);
+  const startYear=startDate.getUTCFullYear(),endYear=endDate.getUTCFullYear(),startMonth=startDate.getUTCMonth(),endMonth=endDate.getUTCMonth();
+  if(startYear===endYear&&startMonth===endMonth)return `${new Intl.DateTimeFormat("en-US",{month:"short",timeZone:"UTC"}).format(startDate)} ${startDate.getUTCDate()}–${endDate.getUTCDate()}, ${endYear}`;
+  if(startYear===endYear)return `${new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",timeZone:"UTC"}).format(startDate)}–${new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"}).format(endDate)}`;
+  return `${new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"}).format(startDate)}–${new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"}).format(endDate)}`;
+}
 
 export function InvoiceWorkspaceList({ schoolId, invoices, compact, autoOpenId = null, hideList = false, onClose }: { schoolId: string; invoices: SchoolInvoice[]; compact: boolean; autoOpenId?: string | null; hideList?: boolean; onClose?: () => void }) {
+  const router=useRouter();
   const [sort, setSort] = useState<SortKey>("recent");
   const [selected, setSelected] = useState<SchoolInvoice | null>(() => (autoOpenId ? (invoices.find((item) => item.id === autoOpenId) ?? null) : null));
   const [detail, setDetail] = useState<PreparedInvoice | null>(null);
   const [loading, setLoading] = useState(Boolean(autoOpenId));
   const [adjustmentEditing, setAdjustmentEditing] = useState(false);
+  const [draftToCancel,setDraftToCancel]=useState<SchoolInvoice|null>(null);
   const sorted = useMemo(() => [...invoices].sort((a, b) => (sort === "recent" ? b.updatedAt.localeCompare(a.updatedAt) : sort === "payer" ? a.familyName.localeCompare(b.familyName) || b.updatedAt.localeCompare(a.updatedAt) : sort === "student" ? a.studentNames.join(", ").localeCompare(b.studentNames.join(", ")) || a.familyName.localeCompare(b.familyName) : a.statusLabel.localeCompare(b.statusLabel) || b.updatedAt.localeCompare(a.updatedAt))), [invoices, sort]);
 
   async function open(invoice: SchoolInvoice) {
@@ -80,15 +90,17 @@ export function InvoiceWorkspaceList({ schoolId, invoices, compact, autoOpenId =
             {sorted.map((invoice) => {
               const sentBack = Boolean(invoice.payerReviewReason || invoice.payerReviewNote);
               const statusClass = sentBack ? "border-danger/60 bg-danger/10 text-danger" : invoice.status === "paid" ? "border-brand/50 bg-brand text-canvas" : invoice.status === "draft" || invoice.status === "review" ? "border-ink/25 bg-ink/10 text-ink" : "border-brand/30 bg-brand/10 text-brand";
+              const editable=invoice.status==="draft"||invoice.status==="review";
               return (
-                <button type="button" key={invoice.id} onClick={() => void open(invoice)} className={`${compact ? "px-1 py-3" : "px-3 py-3 sm:px-4"} w-full text-left transition hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand`}>
-                  <span className={`grid gap-3 ${compact ? "sm:grid-cols-[1fr_auto]" : "sm:grid-cols-[minmax(11rem,1.15fr)_minmax(12rem,1fr)_minmax(13rem,1.1fr)_auto]"} sm:items-center`}>
+                <article key={invoice.id}>
+                <button type="button" onClick={() => void open(invoice)} className={`${compact ? "px-1 py-3" : "px-3 py-3 sm:px-4"} w-full text-left transition hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand`}>
+                  <span className={`grid gap-3 ${compact ? "sm:grid-cols-[minmax(0,1fr)_9rem]" : "sm:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1.2fr)_9rem]"} sm:items-center`}>
                     <span className="min-w-0">
                       <span className="font-medium">{invoice.familyName}</span>
                       {invoice.studentNames.length ? <span className="mt-1 block text-xs text-muted">{invoice.studentNames.join(" · ")}</span> : null}
                       {compact ? <span className="mt-1 block text-xs text-muted">{invoice.label} · {invoice.lineCount} {invoice.lineCount===1?"line":"lines"}</span> : null}
                     </span>
-                    {!compact ? <span className="text-xs leading-5 text-muted"><span className="block font-medium text-ink">{invoice.label}</span><span className="block">{invoice.periodStart}–{invoice.periodEnd} · {invoice.lineCount} {invoice.lineCount===1?"line":"lines"}</span></span> : null}
+                    {!compact ? <span className="text-xs leading-5 text-muted"><span className="block font-medium text-ink">{invoice.label}</span><span className="block">{periodRange(invoice.periodStart,invoice.periodEnd)} · {invoice.lineCount} {invoice.lineCount===1?"line":"lines"}</span></span> : null}
                     {!compact ? <span className="text-xs leading-5 text-muted"><span className="block">Created {timestamp(invoice.createdAt)}</span>{invoice.approvedAt?<span className="block">Approved {timestamp(invoice.approvedAt)}</span>:invoice.approvalSentAt?<span className="block">Sent for approval {timestamp(invoice.approvalSentAt)}</span>:<span className="block">Updated {timestamp(invoice.updatedAt)}</span>}</span> : null}
                     <span className="sm:text-right">
                       <span className="block text-sm">{money(invoice.amountDueCents, invoice.currency)}</span>
@@ -106,11 +118,14 @@ export function InvoiceWorkspaceList({ schoolId, invoices, compact, autoOpenId =
                     </span>
                   ) : null}
                 </button>
+                {editable&&!compact?<div className="flex justify-end px-4 pb-2"><button type="button" onClick={()=>setDraftToCancel(invoice)} className="text-xs text-danger underline-offset-4 hover:underline">Cancel draft</button></div>:null}
+                </article>
               );
             })}
           </div>
         </>
       ) : null}
+      {draftToCancel?<div className="fixed inset-0 z-[140] grid place-items-center px-5" role="dialog" aria-modal="true" aria-labelledby="cancel-draft-title"><button type="button" aria-label="Close cancellation confirmation" onClick={()=>setDraftToCancel(null)} className="absolute inset-0 bg-[var(--ui-overlay)]"/><section className="relative w-full max-w-md rounded-card border border-danger/40 bg-canvas p-6 shadow-2xl"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-danger">Unfinished invoice</p><h2 id="cancel-draft-title" className="mt-2 font-display text-3xl">Cancel this draft?</h2><p className="mt-3 text-sm leading-6 text-muted">This removes the unfinished {draftToCancel.label} invoice for {draftToCancel.familyName} and releases its lessons. Approved, paid, void, and other historical invoices can never be removed here.</p><div className="mt-5"><HoldToConfirm compact action={()=>discardEditableInvoice(schoolId,draftToCancel.billingAccountId,draftToCancel.id)} idleLabel="Hold to cancel draft" holdingLabel="Keep holding to remove the draft…" submittingLabel="Cancelling draft…" successLabel="Draft cancelled" onSuccess={()=>{setDraftToCancel(null);router.refresh();}}/></div><button type="button" onClick={()=>setDraftToCancel(null)} className="mt-1 text-sm text-muted">Keep draft</button></section></div>:null}
       {selected ? (
         <div className="fixed inset-0 z-[120]" role="dialog" aria-modal="true" aria-labelledby="invoice-workspace-title">
           <button type="button" aria-label="Close invoice" onClick={close} className="absolute inset-0 bg-[var(--ui-overlay)]" />
