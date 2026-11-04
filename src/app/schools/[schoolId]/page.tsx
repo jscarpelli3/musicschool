@@ -317,13 +317,18 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
 
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-6 py-section">
-      {view === "dashboard" ? <header className="mb-10"><PageHeading kind="dashboard" title="Dashboard." description="Your school’s schedule, outstanding work, invoices, and student activity in one place." /></header> : null}
       {view === "students" ? <StudentDirectory
         rows={studentRowsForTable}
         monthLabel={monthLabel}
         addFamilyAction={capabilities.has("school.billing.manage") ? addStudentAndPayer.bind(null, schoolId) : undefined}
       /> : null}
-      {view==="dashboard"?<DashboardLayout schoolId={schoolId} sections={dashboardSections} initialSettings={dashboardLayoutPreference?.settings} save={saveDashboardLayout}/>:null}
+      {view==="dashboard"?<DashboardLayout
+        schoolId={schoolId}
+        sections={dashboardSections}
+        initialSettings={dashboardLayoutPreference?.settings}
+        save={saveDashboardLayout}
+        heading={<PageHeading kind="dashboard" title="Dashboard." description="Your school’s schedule, outstanding work, invoices, and student activity in one place." />}
+      />:null}
     </main>
   );
 }
