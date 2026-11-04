@@ -163,7 +163,7 @@ export function StudentRosterTable({
   }
 
   return (
-    <section aria-labelledby="student-roster-heading" className={dashboard ? "mt-16" : ""}>
+    <section aria-labelledby="student-roster-heading">
       <header className="flex flex-wrap items-end justify-between gap-6 pb-4">
         <div>
           {dashboard ? <SectionHeading id="student-roster-heading" kind="students" eyebrow="School roster" title="School matrix" description="Review student schedules, family connections, teachers, and recent lesson activity." /> : <><h1 id="student-roster-heading" className="font-display text-5xl tracking-[-0.04em] sm:text-6xl">Students.</h1><p className="mt-4 max-w-2xl text-sm leading-6 text-muted">Review student schedules, family connections, teachers, and recent lesson activity.</p></>}

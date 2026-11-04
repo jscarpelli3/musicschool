@@ -6,7 +6,7 @@ import { StudentRosterTable, type LessonOutcome, type RosterViewSettings, type S
 import { createClient } from "@/lib/supabase/server";
 import { loadServiceEntitlements } from "@/lib/scheduling/service-entitlements";
 import { loadCurrentSchoolAccess } from "@/lib/auth/school-access";
-import { saveStudentRosterView } from "./dashboard-actions";
+import { saveDashboardLayout, saveStudentRosterView } from "./dashboard-actions";
 import { addStudentAndPayer } from "./families/actions";
 import { InvoiceList } from "@/components/billing/invoice-list";
 import { loadSchoolInvoiceSummary } from "@/lib/billing/school-invoices";
@@ -14,6 +14,7 @@ import { StudentDirectory } from "@/components/students/student-directory";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { PageHeading } from "@/components/ui/page-heading";
 import { lessonPlaceLabel } from "@/lib/scheduling/lesson-place-label";
+import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +75,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
     supabase.from("lesson_schedule_proposals").select("id,teacher_id,student_id,proposed_starts_at,proposed_ends_at,status,proposal_kind,schedule_type").eq("school_id",schoolId).in("status",["pending_teacher","pending_owner"]),
     supabase.from("school_instruments").select("id,name,is_active").eq("school_id",schoolId).order("name"),
     supabase.from("teacher_instruments").select("teacher_id,instrument_id").eq("school_id",schoolId),
+    supabase.from("user_view_preferences").select("settings").eq("school_id",schoolId).eq("profile_id",profileId).eq("view_key","dashboard_layout").maybeSingle(),
   ]), entitlementPromise, invoiceSummaryPromise, paidLessonsPromise]);
 
   if (paidLessonsResult.error) throw new Error(`Paid lesson status could not load: ${paidLessonsResult.error.message}`);
@@ -97,6 +99,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
     { data: pendingProposalRows },
     { data: instrumentRows },
     { data: teacherInstrumentRows },
+    { data: dashboardLayoutPreference },
   ] = dashboardQueries;
 
   const people = new Map((peopleRows ?? []).map((person) => [person.id, person]));
@@ -267,14 +270,50 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
 
   const invoices = invoiceSummary.invoices;
   const invoiceSection = view === "dashboard" && capabilities.has("school.billing.manage") ? (
-    <section className={`ui-card p-6 sm:p-8 ${invoiceSummary.attentionCount ? "mb-10" : "mt-16"}`}>
-      <div className="flex flex-wrap items-start justify-between gap-5">
+    <section className="ui-card p-6 sm:p-8">
+      <div className="mr-10 flex flex-wrap items-start justify-between gap-5">
         <SectionHeading kind="billing" eyebrow="Invoices" title={invoiceSummary.attentionCount ? `${invoiceSummary.attentionCount} still in progress` : "Everything is settled"} description="Recent family invoices and their current approval or payment status." />
         <Link href={`/schools/${schoolId}/invoices`} className="rounded-control border border-line px-3 py-2 text-sm text-brand transition hover:border-brand hover:bg-brand/10 hover:text-brand-hover">View all invoices →</Link>
       </div>
       <div className="mt-6 border-t border-line pt-6"><InvoiceList schoolId={schoolId} invoices={invoices} /></div>
     </section>
   ) : null;
+
+  const schedulingSection=view==="dashboard"&&canManageSchool?<section className="needs-scheduling-card ui-card p-6 sm:p-8" data-empty={entitlements.length===0}><div className="mr-10"><SectionHeading kind="scheduling" eyebrow="Needs scheduling" title={entitlements.length?"Replacement lessons waiting for a time":"Nothing is waiting for a time"} description="Lesson time the school has retained for a student appears here until it is scheduled." /></div>{entitlements.length?<div className="mt-6 border-t border-line pt-6"><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} lessonCreationOptions={lessonCreationOptions}/></div>:null}</section>:null;
+
+  const calendarSection=view==="dashboard"?<OwnerPlanner
+    key={initialLessonId??"school-calendar"}
+    schoolId={schoolId}
+    initialLessonId={initialLessonId}
+    currentTimeMs={now}
+    canReschedule={canManageSchool}
+    canCollectPayment={capabilities.has("school.billing.manage")}
+    paidLessonIds={(paidLessonsResult.data??[]).map((request)=>request.lesson_event_id)}
+    initialDate={initialDate}
+    timezone={school.timezone}
+    teachers={teachers}
+    studentNames={studentNames}
+    studentDetails={studentDetails}
+    productNames={productNames}
+    instrumentNames={instrumentNames}
+    placeDetails={placeDetails}
+    availability={availabilityRows??[]}
+    lessons={(lessonRows??[]).map((lesson)=>({...lesson,billing_service_date:billingDates.get(lesson.id)??lesson.starts_at.slice(0,10),can_reschedule:lesson.reschedule_allowed&&lesson.status==="scheduled"&&new Date(lesson.starts_at).getTime()>now,can_mark_reschedule:canManageSchool}))}
+    pendingProposals={(pendingProposalRows??[]).map((item)=>({...item,status:item.status==="pending_owner"?"pending_owner" as const:"pending_teacher" as const,href:item.status==="pending_owner"?`/schools/${schoolId}/approvals?proposal=${item.id}`:`/schools/${schoolId}/staff/${item.teacher_id}`}))}
+    lessonCreationOptions={lessonCreationOptions}
+    addFamilyAction={capabilities.has("school.billing.manage")?addStudentAndPayer.bind(null,schoolId):undefined}
+    existingPayers={(billingAccountRows??[]).flatMap((account)=>{const payer=people.get(account.billing_contact_person_id);return payer?.email?[{id:account.id,label:`${account.name} · ${payer.preferred_name||payer.first_name} ${payer.last_name}`,firstName:payer.first_name,lastName:payer.last_name,email:payer.email}]:[];})}
+    unconnectedStudents={(studentRows??[]).flatMap((student)=>{if((billingLinkRows??[]).some((link)=>link.student_id===student.person_id))return[];const person=people.get(student.person_id);return person?[{id:student.person_id,label:`${person.preferred_name||person.first_name} ${person.last_name}`}]:[];})}
+    invoicePayers={invoicePayers}
+  />:null;
+
+  const rosterSection=view==="dashboard"?<StudentRosterTable rows={studentRowsForTable} monthLabel={monthLabel} initialView={rosterPreference?.settings as Partial<RosterViewSettings>|null} saveView={saveStudentRosterView.bind(null,schoolId)} dashboard/>:null;
+  const dashboardSections=[
+    ...(schedulingSection?[{id:"scheduling" as const,title:"Needs scheduling",description:"Replacement lesson time owed to students appears here until you choose a new date, time, teacher, and place. Open an item to schedule it or review why the time is still owed.",content:schedulingSection}]:[]),
+    ...(invoiceSection?[{id:"invoices" as const,title:"Invoices",description:"Review recent invoice drafts, approvals, payment status, refunds, and balances. Open an invoice to continue its workflow or use the full invoice history when you need older records.",content:invoiceSection}]:[]),
+    ...(calendarSection?[{id:"calendar" as const,title:"Calendar and quick actions",description:"Create lessons, students, payers, and invoices from the quick actions, then use the calendar to review and manage the school schedule by day, week, or month.",content:calendarSection}]:[]),
+    ...(rosterSection?[{id:"students" as const,title:"School roster",description:"Compare students, families, teachers, places, recurring times, and lesson activity. Reorder and sort its columns to match the way you run the school.",content:rosterSection}]:[]),
+  ];
 
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-6 py-section">
@@ -284,51 +323,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
         monthLabel={monthLabel}
         addFamilyAction={capabilities.has("school.billing.manage") ? addStudentAndPayer.bind(null, schoolId) : undefined}
       /> : null}
-      {view === "dashboard" && canManageSchool ? <section className={`needs-scheduling-card ui-card p-6 sm:p-8 ${invoiceSummary.attentionCount ? "mb-6" : "mb-10"}`} data-empty={entitlements.length === 0}><SectionHeading kind="scheduling" eyebrow="Needs scheduling" title={entitlements.length ? "Replacement lessons waiting for a time" : "Nothing is waiting for a time"} description="Lesson time the school has retained for a student appears here until it is scheduled." />{entitlements.length ? <div className="mt-6 border-t border-line pt-6"><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} lessonCreationOptions={lessonCreationOptions} /></div> : null}</section> : null}
-      {invoiceSummary.attentionCount ? invoiceSection : null}
-      {view === "dashboard" ? <OwnerPlanner
-        key={initialLessonId ?? "school-calendar"}
-        schoolId={schoolId}
-        initialLessonId={initialLessonId}
-        currentTimeMs={now}
-        canReschedule={canManageSchool}
-        canCollectPayment={capabilities.has("school.billing.manage")}
-        paidLessonIds={(paidLessonsResult.data ?? []).map((request) => request.lesson_event_id)}
-        initialDate={initialDate}
-        timezone={school.timezone}
-        teachers={teachers}
-        studentNames={studentNames}
-        studentDetails={studentDetails}
-        productNames={productNames}
-        instrumentNames={instrumentNames}
-        placeDetails={placeDetails}
-        availability={availabilityRows ?? []}
-        lessons={(lessonRows ?? []).map((lesson) => ({
-          ...lesson,
-          billing_service_date: billingDates.get(lesson.id) ?? lesson.starts_at.slice(0, 10),
-          can_reschedule: lesson.reschedule_allowed && lesson.status === "scheduled" && new Date(lesson.starts_at).getTime() > now,
-          can_mark_reschedule: canManageSchool,
-        }))}
-        pendingProposals={(pendingProposalRows ?? []).map((item) => ({
-          ...item,
-          status: item.status === "pending_owner" ? "pending_owner" as const : "pending_teacher" as const,
-          href: item.status === "pending_owner" ? `/schools/${schoolId}/approvals?proposal=${item.id}` : `/schools/${schoolId}/staff/${item.teacher_id}`,
-        }))}
-        lessonCreationOptions={lessonCreationOptions}
-        addFamilyAction={capabilities.has("school.billing.manage") ? addStudentAndPayer.bind(null, schoolId) : undefined}
-        existingPayers={(billingAccountRows ?? []).flatMap((account) => {
-          const payer = people.get(account.billing_contact_person_id);
-          return payer?.email ? [{ id: account.id, label: `${account.name} · ${payer.preferred_name || payer.first_name} ${payer.last_name}`, firstName: payer.first_name, lastName: payer.last_name, email: payer.email }] : [];
-        })}
-        unconnectedStudents={(studentRows ?? []).flatMap((student) => {
-          if ((billingLinkRows ?? []).some((link) => link.student_id === student.person_id)) return [];
-          const person = people.get(student.person_id);
-          return person ? [{ id: student.person_id, label: `${person.preferred_name || person.first_name} ${person.last_name}` }] : [];
-        })}
-        invoicePayers={invoicePayers}
-      /> : null}
-      {!invoiceSummary.attentionCount ? invoiceSection : null}
-      {view === "dashboard" ? <StudentRosterTable rows={studentRowsForTable} monthLabel={monthLabel} initialView={rosterPreference?.settings as Partial<RosterViewSettings> | null} saveView={saveStudentRosterView.bind(null, schoolId)} dashboard /> : null}
+      {view==="dashboard"?<DashboardLayout schoolId={schoolId} sections={dashboardSections} initialSettings={dashboardLayoutPreference?.settings} save={saveDashboardLayout}/>:null}
     </main>
   );
 }
