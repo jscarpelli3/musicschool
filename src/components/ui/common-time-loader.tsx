@@ -32,8 +32,8 @@ export function CommonTimeLoader({ label = "Counting common time…", compact = 
         {measures.map((measureNumber) => <Measure key={measureNumber} active={measureNumber === measure} width={measureWidth} height={measureHeight} />)}
       </div>
     </div>
-    <div className={`relative mx-auto w-full font-monospace tabular-nums ${compact ? "h-9 text-2xl" : "h-12 text-4xl"}`} aria-label={`Measure ${measure}, beat ${beat}`}>
-      {countSequence.map((count, index) => <span key={index} aria-hidden="true" className={`${styles.countFlash} absolute top-0 ${count.beat === 1 ? "font-semibold" : compact ? "text-base" : "text-2xl"}`} style={{ animationDelay: `${index * 0.6}s`, left: `calc(50% - ${measureWidth / 2}px + ${(count.beat - 0.5) * (measureWidth / 4)}px)` }}>{count.value}</span>)}
+    <div className={`${styles.countRow} relative mx-auto w-full tabular-nums ${compact ? "-mt-2 h-14 text-2xl" : "-mt-3 h-20 text-4xl"}`} aria-label={`Measure ${measure}, beat ${beat}`}>
+      {countSequence.map((count, index) => <span key={index} aria-hidden="true" className={`${styles.countFlash} absolute top-0 leading-none ${count.beat === 1 ? compact ? "text-5xl font-semibold" : "text-7xl font-semibold" : compact ? "text-base" : "text-2xl"}`} style={{ animationDelay: `${index * 0.6}s`, left: `calc(50% - ${measureWidth / 2}px + ${(count.beat - 0.5) * (measureWidth / 4)}px)` }}>{count.value}</span>)}
     </div>
     <span className="sr-only">{`Counting measure ${measure}: ${measure} 2 3 4. Current beat ${beat}.`}</span>
   </div>;

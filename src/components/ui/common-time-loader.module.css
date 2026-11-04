@@ -11,6 +11,10 @@
   filter: drop-shadow(0 0 0.45rem color-mix(in srgb, var(--ui-brand) 55%, transparent));
 }
 
+.countRow {
+  font-family: "Times New Roman", var(--font-literary), Georgia, serif;
+}
+
 .countFlash {
   opacity: 0;
   animation: count-cycle 76.8s linear infinite both;
