@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { createPortal } from "react-dom";
 import { QuickView } from "@/components/ui/quick-view";
 import { LessonCreationDialog, type LessonCreationOptions } from "@/components/scheduling/lesson-creation-dialog";
 import { MdHistory } from "react-icons/md";
@@ -118,6 +119,7 @@ type Props = {
   existingPayers?: Array<{ id: string; label: string; firstName: string; lastName: string; email: string }>;
   unconnectedStudents?: Array<{ id: string; label: string }>;
   invoicePayers?: InvoicePayerChoice[];
+  quickActionsTargetId?: string;
 };
 
 type LessonWithParts = Lesson & { start: ReturnType<typeof zonedParts>; end: ReturnType<typeof zonedParts> };
@@ -226,6 +228,7 @@ export function OwnerPlanner({
   existingPayers = [],
   unconnectedStudents = [],
   invoicePayers = [],
+  quickActionsTargetId,
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<View>("week");
@@ -244,9 +247,16 @@ export function OwnerPlanner({
   const [creatingLesson, setCreatingLesson] = useState(false);
   const [expandedWeek, setExpandedWeek] = useState(false);
   const [layoutSwitchAnimating, setLayoutSwitchAnimating] = useState(false);
+  const [quickActionsTarget, setQuickActionsTarget] = useState<HTMLElement | null>(null);
   const layoutSwitchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const compactInitialized = useRef(false);
   const anchor = fromKey(anchorKey);
+
+  useEffect(() => {
+    if (!quickActionsTargetId) return;
+    const frame=window.requestAnimationFrame(()=>setQuickActionsTarget(document.getElementById(quickActionsTargetId)));
+    return()=>window.cancelAnimationFrame(frame);
+  }, [quickActionsTargetId]);
 
   useEffect(() => () => {
     if (layoutSwitchTimer.current) clearTimeout(layoutSwitchTimer.current);
@@ -437,15 +447,17 @@ export function OwnerPlanner({
       ? key(weekDates(anchor)[0]) === key(weekDates(todayAnchor)[0])
       : anchor.getFullYear() === todayAnchor.getFullYear() && anchor.getMonth() === todayAnchor.getMonth();
 
-  return (
-    <>
-    {lessonCreationOptions && showLessonFinder ? <div className={`mb-10 items-stretch gap-4 ${addFamilyAction ? "grid md:grid-cols-4" : "flex justify-center"}`}>
+  const quickActions=lessonCreationOptions&&showLessonFinder?<div className={`items-stretch gap-4 ${quickActionsTargetId?"grid md:grid-cols-4":addFamilyAction?"mb-10 grid md:grid-cols-4":"mb-10 flex justify-center"}`}>
       <div className={addFamilyAction ? "" : finderSize === "detail" ? "w-[min(22rem,100%)]" : "w-[min(34rem,100%)]"}><LessonOpeningFinder size={finderSize} options={lessonCreationOptions} timeZone={timezone} onChoose={(opening) => { setCreatingLesson(false); setCreationSlot({ ...opening, minutes: timeMinutes(opening.time) }); }} onManualAdd={() => { setCreatingLesson(false); setCreationSlot({ dateKey: lessonCreationOptions.today, time: "", teacherId: "", minutes: 0 }); }} onBrowseSchedule={() => { setCreatingLesson(true); if (view === "month") setView(window.matchMedia("(max-width: 639px)").matches ? "day" : "week"); requestAnimationFrame(() => document.getElementById("school-calendar")?.scrollIntoView({ behavior: "smooth", block: "start" })); }} /></div>
       {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add student" largeKind="student" existingPayers={existingPayers} unconnectedStudents={unconnectedStudents} /> : null}
       {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add payer" largeKind="payer" existingPayers={existingPayers} unconnectedStudents={unconnectedStudents} /> : null}
       {addFamilyAction ? <PrepareInvoiceLauncher schoolId={schoolId} payers={invoicePayers} variant="dashboard" /> : null}
-    </div> : null}
-    <section id="school-calendar" className="ui-card scroll-mt-6 overflow-hidden">
+    </div>:null;
+
+  return (
+    <>
+    {quickActionsTargetId?quickActionsTarget&&quickActions?createPortal(quickActions,quickActionsTarget):null:quickActions}
+    <section id="school-calendar" className="ui-card relative scroll-mt-6 overflow-hidden">
       <div className="planner-calendar-chrome pt-2">
       <div className="grid gap-4 px-5 pt-6 pb-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end sm:px-7">
         <div className="flex flex-wrap items-end gap-x-5 gap-y-3">

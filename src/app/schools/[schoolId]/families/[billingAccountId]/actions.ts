@@ -34,7 +34,7 @@ export type PreparedInvoice = {
   amountDueCents: number;
   currency: string;
   status: string;
-  lines: Array<{ id: string; description: string; serviceDate: string | null; amountCents: number; sourceType: string }>;
+  lines: Array<{ id: string; description: string; serviceDate: string | null; startsAt: string | null; durationMinutes: number | null; amountCents: number; sourceType: string }>;
   outstandingLessons: Array<{ lessonEventId: string; studentName: string; offeringName: string; serviceDate: string; startsAt: string; amountCents: number; currency: string }>;
   payerReviewReason: string | null;
   payerReviewNote: string | null;
@@ -42,10 +42,10 @@ export type PreparedInvoice = {
   latestPaymentAttempt: { id: string; status: string; failureMessage: string | null; usesSavedMethod: boolean; hostedLinkOpen: boolean } | null;
   settlements: Array<{ id: string; entryType: string; method: string | null; amountCents: number; occurredAt: string; reference: string | null; note: string | null; sourceEntryId: string | null }>;
   stripePayments: Array<{ id: string; amountCents: number; succeededAt: string | null }>;
-  stripeRefunds: Array<{ id: string; paymentAttemptId: string; amountCents: number; status: string; reason: string | null }>;
+  stripeRefunds: Array<{ id: string; paymentAttemptId: string; amountCents: number; status: string; reason: string | null; createdAt: string }>;
   outstandingCents: number;
 };
-export type BillingDraftState = { ok: boolean; message: string; periodId: string | null; invoice: PreparedInvoice | null };
+export type BillingDraftState = { ok: boolean; message: string; periodId: string | null; invoice: PreparedInvoice | null; existing?: boolean };
 export type BillingLineDeferState = { ok: boolean; message: string };
 export type BillingLessonAddState = { ok: boolean; message: string };
 
@@ -95,7 +95,7 @@ async function readPreparedInvoice(schoolId: string, billingAccountId: string, p
   const [{ data: period }, { data: account }, { data: lines }, { data: outstandingLessons }, { data: approvals }, { data: attempts }, { data: methods }, { data: settlements }] = await Promise.all([
     supabase.from("billing_periods").select("id,label,amount_due_cents,currency,status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", periodId).single(),
     supabase.from("billing_accounts").select("name").eq("school_id", schoolId).eq("id", billingAccountId).single(),
-    supabase.from("billing_line_items").select("id,description,service_date,amount_cents,source_type").eq("school_id", schoolId).eq("billing_period_id", periodId).order("service_date", { ascending: true, nullsFirst: false }).order("created_at"),
+    supabase.from("billing_line_items").select("id,description,service_date,amount_cents,source_type,source_id,metadata").eq("school_id", schoolId).eq("billing_period_id", periodId).order("service_date", { ascending: true, nullsFirst: false }).order("created_at"),
     supabase.rpc("get_outstanding_lessons_for_billing_account", { p_school_id: schoolId, p_billing_account_id: billingAccountId }),
     supabase.from("billing_approval_requests").select("approval_status,rejection_reason_code,rejection_note").eq("school_id", schoolId).eq("billing_period_id", periodId).order("created_at", { ascending: false }).limit(1),
     supabase.from("payment_attempts").select("id,status,failure_message,payment_method_id,amount_cents,succeeded_at").eq("school_id", schoolId).eq("billing_period_id", periodId).order("created_at", { ascending: false }),
@@ -103,20 +103,33 @@ async function readPreparedInvoice(schoolId: string, billingAccountId: string, p
     supabase.from("invoice_settlement_entries").select("id,entry_type,method,amount_cents,occurred_at,reference,note,source_entry_id").eq("school_id",schoolId).eq("billing_period_id",periodId).order("created_at"),
   ]);
   if (!period || !account || !lines) return null;
+  const lessonSourceIds=lines.filter((line)=>line.source_type==="lesson"&&line.source_id).map((line)=>line.source_id as string);
+  const {data:lessonEvents,error:lessonEventsError}=lessonSourceIds.length
+    ?await supabase.from("lesson_events").select("id,starts_at,ends_at").eq("school_id",schoolId).in("id",lessonSourceIds)
+    :{data:[],error:null};
+  if(lessonEventsError)return null;
+  const lessonEventById=new Map((lessonEvents??[]).map((event)=>[event.id,event]));
   const latestAttempt = attempts?.[0] ?? null;
   const activeCheckout = latestAttempt && !latestAttempt.payment_method_id
     ? await createAdminClient().from("invoice_checkout_requests").select("id").eq("payment_attempt_id", latestAttempt.id).eq("status", "open").maybeSingle()
     : { data: null, error: null };
   if (activeCheckout.error) return null;
   const succeededAttempts = (attempts ?? []).filter((item) => item.status === "succeeded");
-  const refundResult = succeededAttempts.length ? await supabase.from("payment_refunds").select("id,payment_attempt_id,amount_cents,status,reason").eq("school_id",schoolId).in("payment_attempt_id",succeededAttempts.map((item)=>item.id)) : { data: [], error: null };
+  const refundResult = succeededAttempts.length ? await supabase.from("payment_refunds").select("id,payment_attempt_id,amount_cents,status,reason,created_at").eq("school_id",schoolId).in("payment_attempt_id",succeededAttempts.map((item)=>item.id)) : { data: [], error: null };
   const reversedIds = new Set((settlements ?? []).filter((entry)=>entry.entry_type==="reversal"&&entry.source_entry_id).map((entry)=>entry.source_entry_id));
   const resolvedOutside = (settlements ?? []).filter((entry)=>!reversedIds.has(entry.id)&&["external_payment","write_off"].includes(entry.entry_type)).reduce((sum,entry)=>sum+entry.amount_cents,0);
   const stripePaid = succeededAttempts.reduce((sum,item)=>sum+item.amount_cents,0);
   return {
     id: period.id, billingAccountId, familyName: account.name, label: period.label, amountDueCents: period.amount_due_cents,
     currency: period.currency, status: period.status,
-    lines: lines.map((line) => ({ id: line.id, description: line.description, serviceDate: line.service_date, amountCents: line.amount_cents ?? 0, sourceType: line.source_type })),
+    lines: lines.map((line) => {
+      const event=line.source_id?lessonEventById.get(line.source_id):null;
+      const metadata=line.metadata&&typeof line.metadata==="object"&&!Array.isArray(line.metadata)?line.metadata:null;
+      const metadataStart=metadata&&"operational_starts_at" in metadata&&typeof metadata.operational_starts_at==="string"?metadata.operational_starts_at:null;
+      const startsAt=event?.starts_at??metadataStart;
+      const durationMinutes=event?Math.max(1,Math.round((new Date(event.ends_at).getTime()-new Date(event.starts_at).getTime())/60_000)):null;
+      return { id: line.id, description: line.description, serviceDate: line.service_date, startsAt, durationMinutes, amountCents: line.amount_cents ?? 0, sourceType: line.source_type };
+    }),
     outstandingLessons: (outstandingLessons ?? []).map((lesson) => ({ lessonEventId: lesson.lesson_event_id, studentName: lesson.student_name, offeringName: lesson.offering_name, serviceDate: lesson.service_date, startsAt: lesson.starts_at, amountCents: lesson.amount_cents, currency: lesson.currency })),
     payerReviewReason: approvals?.[0]?.approval_status === "rejected" ? approvals[0].rejection_reason_code : null,
     payerReviewNote: approvals?.[0]?.approval_status === "rejected" ? approvals[0].rejection_note : null,
@@ -124,9 +137,40 @@ async function readPreparedInvoice(schoolId: string, billingAccountId: string, p
     latestPaymentAttempt: latestAttempt ? { id: latestAttempt.id, status: latestAttempt.status, failureMessage: latestAttempt.failure_message, usesSavedMethod: Boolean(latestAttempt.payment_method_id), hostedLinkOpen: Boolean(activeCheckout.data) } : null,
     settlements: (settlements ?? []).map((entry)=>({ id:entry.id,entryType:entry.entry_type,method:entry.method,amountCents:entry.amount_cents,occurredAt:entry.occurred_at,reference:entry.reference,note:entry.note,sourceEntryId:entry.source_entry_id })),
     stripePayments: succeededAttempts.map((item)=>({ id:item.id,amountCents:item.amount_cents,succeededAt:item.succeeded_at })),
-    stripeRefunds: (refundResult.data ?? []).map((item)=>({ id:item.id,paymentAttemptId:item.payment_attempt_id,amountCents:item.amount_cents,status:item.status,reason:item.reason })),
+    stripeRefunds: (refundResult.data ?? []).map((item)=>({ id:item.id,paymentAttemptId:item.payment_attempt_id,amountCents:item.amount_cents,status:item.status,reason:item.reason,createdAt:item.created_at })),
     outstandingCents: Math.max(period.amount_due_cents-stripePaid-resolvedOutside,0),
   };
+}
+
+async function addLessonTimingToApprovalSnapshot(schoolId:string,billingPeriodId:string,approvalRequestId:string,timeZone:string){
+  const admin=createAdminClient();
+  const{data:lines,error:lineError}=await admin.from("billing_line_items").select("description,service_date,amount_cents,source_type,source_id,created_at").eq("school_id",schoolId).eq("billing_period_id",billingPeriodId).order("service_date",{ascending:true,nullsFirst:false}).order("created_at");
+  if(lineError||!lines)return;
+  const lessonIds=lines.filter((line)=>line.source_type==="lesson"&&line.source_id).map((line)=>line.source_id as string);
+  const{data:events,error:eventError}=lessonIds.length?await admin.from("lesson_events").select("id,starts_at,ends_at").eq("school_id",schoolId).in("id",lessonIds):{data:[],error:null};
+  if(eventError)return;
+  const eventById=new Map((events??[]).map((event)=>[event.id,event]));
+  const snapshot=lines.map((line)=>{
+    const event=line.source_id?eventById.get(line.source_id):null;
+    return{label:line.description,detail:line.service_date??"Period adjustment",amount_cents:line.amount_cents,...(event?{starts_at:event.starts_at,starts_label:new Intl.DateTimeFormat("en-US",{timeZone,weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}).format(new Date(event.starts_at)),duration_minutes:Math.max(1,Math.round((new Date(event.ends_at).getTime()-new Date(event.starts_at).getTime())/60_000))}:{})};
+  });
+  const{error:updateError}=await admin.from("billing_approval_requests").update({line_items:snapshot}).eq("school_id",schoolId).eq("id",approvalRequestId);
+  if(updateError)console.error("Approval snapshot timing enrichment failed",{approvalRequestId,code:updateError.code});
+}
+
+async function readEditableInvoiceForMonth(schoolId: string, billingAccountId: string, month: string) {
+  const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("billing_periods")
+    .select("id")
+    .eq("school_id", schoolId)
+    .eq("billing_account_id", billingAccountId)
+    .eq("period_start", `${month}-01`)
+    .in("status", ["draft", "review"])
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return existing ? readPreparedInvoice(schoolId, billingAccountId, existing.id) : null;
 }
 
 export async function loadPreparedInvoice(schoolId: string, billingAccountId: string, periodId: string) {
@@ -144,6 +188,30 @@ export async function loadPreparedInvoice(schoolId: string, billingAccountId: st
     });
   }
   return readPreparedInvoice(schoolId, billingAccountId, periodId);
+}
+
+export async function discardEditableInvoice(schoolId: string, billingAccountId: string, billingPeriodId: string) {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub || !await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) {
+    return { ok: false, message: "You do not have permission to discard this invoice draft." };
+  }
+
+  const { error } = await supabase.rpc("discard_editable_billing_period", {
+    p_school_id: schoolId,
+    p_billing_account_id: billingAccountId,
+    p_billing_period_id: billingPeriodId,
+  });
+  if (error) {
+    const message = error.message.includes("invoice_is_not_editable")
+      ? "This invoice has already moved beyond the editable draft stage."
+      : "The draft could not be discarded. Nothing was changed.";
+    return { ok: false, message };
+  }
+
+  revalidatePath(`/schools/${schoolId}/invoices`);
+  revalidatePath(`/schools/${schoolId}/families/${billingAccountId}`);
+  return { ok: true, message: "Draft discarded. Its lessons are available for another invoice." };
 }
 
 export async function collectFamilyInvoice(schoolId: string, billingAccountId: string, billingPeriodId: string) {
@@ -243,20 +311,29 @@ export async function refundStripeInvoicePayment(schoolId:string,billingAccountI
   if(!profileId||!await checkSchoolCapability(supabase,schoolId,"school.billing.manage"))return{ok:false as const,message:"You do not have permission to refund this payment."};
   if(!Number.isSafeInteger(amountCents)||amountCents<=0||!reason.trim())return{ok:false as const,message:"Enter a refund amount and a reason."};
   const admin=createAdminClient();
+  let stage="rate_limit";
   try{
-    await protectServerAction({scope:"billing.invoice.refund",subject:`actor:${profileId}|school:${schoolId}|attempt:${paymentAttemptId}`,limit:5,windowSeconds:3600});
+    await protectServerAction({scope:"billing.invoice.refund",subject:`actor:${profileId}|school:${schoolId}|attempt:${paymentAttemptId}`,limit:10,windowSeconds:3600});
+    stage="load_payment";
     const{data:attempt,error:attemptError}=await admin.from("payment_attempts").select("id,amount_cents,currency,status,provider_charge_id,payment_connection_id").eq("id",paymentAttemptId).eq("school_id",schoolId).eq("billing_account_id",billingAccountId).eq("billing_period_id",billingPeriodId).single();
     if(attemptError||!attempt||attempt.status!=="succeeded"||!attempt.provider_charge_id)throw new Error("refundable_payment_not_found");
+    stage="load_connection";
     const{data:connection,error:connectionError}=await admin.from("school_payment_connections").select("provider_account_id").eq("id",attempt.payment_connection_id).single();
     if(connectionError||!connection.provider_account_id)throw new Error("stripe_connection_not_found");
     const idempotencyKey=randomUUID();
+    stage="create_refund_record";
     const{data:refund,error:refundError}=await admin.from("payment_refunds").insert({school_id:schoolId,payment_attempt_id:attempt.id,amount_cents:amountCents,currency:attempt.currency,status:"created",reason:reason.trim(),idempotency_key:idempotencyKey,created_by:profileId}).select("id").single();
     if(refundError)throw refundError;
-    await admin.from("payment_refunds").update({status:"submitted"}).eq("id",refund.id).eq("status","created");
+    stage="reserve_refund";
+    const{error:reserveError}=await admin.from("payment_refunds").update({status:"submitted"}).eq("id",refund.id).eq("status","created");
+    if(reserveError)throw reserveError;
     try{
+      stage="submit_to_stripe";
       const stripeRefund=await getStripe().refunds.create({charge:attempt.provider_charge_id,amount:amountCents,metadata:{school_id:schoolId,billing_period_id:billingPeriodId,payment_refund_id:refund.id}},{stripeAccount:connection.provider_account_id,idempotencyKey:`invoice-refund-${refund.id}`});
       const refundStatus=String(stripeRefund.status);
-      await admin.from("payment_refunds").update({status:refundStatus==="succeeded"?"succeeded":["failed","canceled"].includes(refundStatus)?"failed":"submitted",provider_refund_id:stripeRefund.id,failure_message:["failed","canceled"].includes(refundStatus)?"Stripe could not complete this refund.":null}).eq("id",refund.id);
+      stage="record_stripe_result";
+      const{error:resultError}=await admin.from("payment_refunds").update({status:refundStatus==="succeeded"?"succeeded":["failed","canceled"].includes(refundStatus)?"failed":"submitted",provider_refund_id:stripeRefund.id,failure_message:["failed","canceled"].includes(refundStatus)?"Stripe could not complete this refund.":null}).eq("id",refund.id);
+      if(resultError)throw resultError;
       if(["failed","canceled"].includes(refundStatus))return{ok:false as const,message:"Stripe did not complete the refund. The original payment remains recorded."};
     }catch(error){
       await admin.from("payment_refunds").update({status:"failed",failure_message:error instanceof Error?error.message:"Stripe rejected the refund."}).eq("id",refund.id);
@@ -264,7 +341,23 @@ export async function refundStripeInvoicePayment(schoolId:string,billingAccountI
     }
     revalidatePath(`/schools/${schoolId}/families/${billingAccountId}`);
     return{ok:true as const,message:"The refund was submitted to Stripe. It remains separate from the original invoice balance."};
-  }catch(caught){return{ok:false as const,message:caught instanceof Error&&caught.message.includes("Refund total")?"That refund would exceed the original Stripe payment.":"The refund was not completed. Review the original payment and try again."};}
+  }catch(caught){
+    const detail=caught instanceof Error?caught.message:typeof caught==="object"&&caught&&"message" in caught?String(caught.message):"unknown";
+    const code=typeof caught==="object"&&caught&&"code" in caught?String(caught.code):"none";
+    console.error("Invoice refund failed",{stage,code,name:caught instanceof Error?caught.name:"unknown"});
+    const message=caught instanceof RequestBoundaryError&&caught.code==="rate_limited"
+      ?`Too many refund attempts were made for this payment. Wait about ${Math.max(1,Math.ceil(caught.retryAfter/60))} minutes and try again. No money was returned.`
+      :detail.includes("Refund total")
+      ?"That refund is greater than the amount still refundable from the original Stripe payment. No money was returned."
+      :stage==="create_refund_record"||stage==="reserve_refund"
+        ?`The refund could not be recorded before contacting Stripe (${stage.replaceAll("_"," ")}${code!=="none"?` · ${code}`:""}). No money was returned.`
+        :stage==="submit_to_stripe"
+          ?"Stripe did not accept the refund request. The original payment remains unchanged."
+          :stage==="record_stripe_result"
+            ?"Stripe received the refund, but Common Time could not finish recording it. Do not retry until the Stripe result is reconciled."
+            :"The refund could not be prepared from the original payment record.";
+    return{ok:false as const,message};
+  }
 }
 
 function appOrigin() {
@@ -281,6 +374,9 @@ export async function prepareFamilyBillingDraft(schoolId: string, billingAccount
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
   if (!auth?.claims?.sub) return { ok: false, message: "Sign in again before preparing an invoice.", periodId: null, invoice: null };
+
+  const existingInvoice = await readEditableInvoiceForMonth(schoolId, billingAccountId, month);
+  if (existingInvoice) return { ok: true, message: "An unfinished invoice already exists for this payer and month, so it has been opened without changing it.", periodId: existingInvoice.id, invoice: existingInvoice, existing: true };
 
   const { data: periodId, error } = await supabase.rpc("prepare_family_billing_draft", {
     p_school_id: schoolId,
@@ -305,6 +401,40 @@ export async function prepareFamilyBillingDraft(schoolId: string, billingAccount
 
   revalidatePath(path);
   return { ok: true, message: "Invoice prepared. Review each included item before locking it.", periodId, invoice };
+}
+
+export async function prepareEmptyFamilyBillingDraft(schoolId: string, billingAccountId: string, formData: FormData): Promise<BillingDraftState> {
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const month = String(formData.get("month") ?? "");
+  if (!/^\d{4}-\d{2}$/.test(month)) return { ok: false, message: "Choose a valid invoice month.", periodId: null, invoice: null };
+
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) return { ok: false, message: "Sign in again before preparing an invoice.", periodId: null, invoice: null };
+
+  const existingInvoice = await readEditableInvoiceForMonth(schoolId, billingAccountId, month);
+  if (existingInvoice) return { ok: true, message: "An unfinished invoice already exists for this payer and month.", periodId: existingInvoice.id, invoice: existingInvoice, existing: true };
+
+  const { data: periodId, error } = await supabase.rpc("create_empty_family_billing_draft", {
+    p_school_id: schoolId,
+    p_billing_account_id: billingAccountId,
+    p_month: `${month}-01`,
+  });
+
+  if (error || !periodId) {
+    if (error?.message.includes("editable_invoice_already_exists")) {
+      const invoice = await readEditableInvoiceForMonth(schoolId, billingAccountId, month);
+      if (invoice) return { ok: true, message: "An unfinished invoice already exists for this payer and month.", periodId: invoice.id, invoice, existing: true };
+    }
+    const message = "The empty invoice could not be prepared. Nothing was changed.";
+    return { ok: false, message, periodId: null, invoice: null };
+  }
+
+  const invoice = await readPreparedInvoice(schoolId, billingAccountId, periodId);
+  if (!invoice) return { ok: false, message: "The empty invoice was created, but its review details could not be loaded.", periodId, invoice: null };
+
+  revalidatePath(path);
+  return { ok: true, message: "Empty invoice created. Add only the lessons or adjustments you want, then lock the exact amount.", periodId, invoice };
 }
 
 export async function removeLineFromInvoice(schoolId: string, billingAccountId: string, billingPeriodId: string, lineItemId: string, _state: BillingLineDeferState, formData: FormData): Promise<BillingLineDeferState> {
@@ -474,7 +604,7 @@ export async function sendBillingApprovalSms(
   if (!profileId) redirect(`/login?next=${path}`);
 
   const [{ data: school }, { data: account }, { data: period }, canManage] = await Promise.all([
-    supabase.from("schools").select("name").eq("id", schoolId).maybeSingle(),
+    supabase.from("schools").select("name,timezone").eq("id", schoolId).maybeSingle(),
     supabase.from("billing_accounts").select("billing_contact_person_id").eq("school_id", schoolId).eq("id", billingAccountId).maybeSingle(),
     supabase.from("billing_periods").select("label, amount_due_cents, currency, status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", billingPeriodId).maybeSingle(),
     checkSchoolCapability(supabase, schoolId, "school.billing.manage"),
@@ -523,6 +653,7 @@ export async function sendBillingApprovalSms(
   if (prepareError || !prepared) {
     return { ok: false, message: "The approval request could not be prepared. No text was sent." };
   }
+  await addLessonTimingToApprovalSnapshot(schoolId,billingPeriodId,prepared.approval_request_id,school.timezone);
 
   try {
     const message = await sendTwilioMessage({ to: phone, body });
@@ -565,7 +696,7 @@ export async function sendBillingApprovalEmail(
   if (!profileId) redirect(`/login?next=${path}`);
 
   const [{ data: school }, { data: account }, { data: period }, canManage] = await Promise.all([
-    supabase.from("schools").select("name,reply_to_email").eq("id", schoolId).maybeSingle(),
+    supabase.from("schools").select("name,reply_to_email,timezone").eq("id", schoolId).maybeSingle(),
     supabase.from("billing_accounts").select("billing_contact_person_id").eq("school_id", schoolId).eq("id", billingAccountId).maybeSingle(),
     supabase.from("billing_periods").select("label, amount_due_cents, currency, status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", billingPeriodId).maybeSingle(),
     checkSchoolCapability(supabase, schoolId, "school.billing.manage"),
@@ -610,6 +741,8 @@ export async function sendBillingApprovalEmail(
       ? "Email is paused for this payer after a permanent delivery problem or complaint. Confirm a different address before sending."
       : "The approval request could not be prepared. No email was sent." };
   }
+
+  await addLessonTimingToApprovalSnapshot(schoolId,billingPeriodId,prepared.approval_request_id,school.timezone);
 
   const admin = createAdminClient();
   try {

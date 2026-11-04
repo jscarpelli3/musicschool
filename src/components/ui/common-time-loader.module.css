@@ -1,0 +1,33 @@
+.viewport {
+  mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+}
+
+.track {
+  transition: transform 360ms ease-out;
+  will-change: transform;
+}
+
+.active {
+  filter: drop-shadow(0 0 0.45rem color-mix(in srgb, var(--ui-brand) 55%, transparent));
+}
+
+.countRow {
+  font-family: "Times New Roman", var(--font-literary), Georgia, serif;
+}
+
+.countFlash {
+  opacity: 0;
+  animation: count-cycle 76.8s linear infinite both;
+  color: var(--ui-brand);
+  text-shadow: 0 0 0.75rem color-mix(in srgb, var(--ui-brand) 42%, transparent);
+}
+
+@keyframes count-cycle {
+  0% { opacity: 0; transform: translateX(-50%); }
+  0.02%, 0.65% { opacity: 1; transform: translateX(-50%); }
+  0.78%, 100% { opacity: 0; transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track { transition: none; }
+}

@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { FocusedModal } from "@/components/ui/focused-modal";
 import { AppSelect } from "@/components/ui/app-select";
+import { CommonTimeLoader } from "@/components/ui/common-time-loader";
 import { MdGroupAdd, MdPersonAdd } from "react-icons/md";
 import type { AddFamilyState } from "@/app/schools/[schoolId]/families/actions";
 
@@ -38,7 +39,7 @@ export function AddFamilyDialog({ action, triggerLabel, largeKind, existingPayer
   const usesExistingPayer = largeKind === "student" && connectionMode === "existing" && Boolean(existingPayer);
   const usesExistingStudent = largeKind === "payer" && connectionMode === "existing" && Boolean(existingStudentId);
   return <FocusedModal triggerLabel={triggerLabel} title={title} description={description} open={open} onOpenChange={setOpen} triggerContent={triggerContent} triggerClassName={largeKind ? "flex h-full min-h-40 w-full flex-col items-center justify-center rounded-card border border-transparent bg-surface-raised/55 px-6 py-7 text-center shadow-[var(--ui-shadow-soft)] transition duration-200 hover:-translate-y-1 hover:scale-[1.025] hover:border-brand/50 hover:bg-surface-raised hover:text-brand hover:shadow-xl" : undefined}>
-    <form action={submit} className="grid gap-5 sm:grid-cols-2">
+    {pending ? <CommonTimeLoader label="Adding family…" compact showBrand={false} /> : <form action={submit} className="grid gap-5 sm:grid-cols-2">
       {largeKind ? <div className="sm:col-span-2 grid grid-cols-2 rounded-control bg-canvas/70 p-1">
         <button type="button" onClick={() => setConnectionMode("existing")} disabled={largeKind === "student" ? !existingPayers.length : !unconnectedStudents.length} className={`rounded-control px-3 py-2 text-sm ${connectionMode === "existing" ? "bg-surface-raised text-ink shadow-sm" : "text-muted"}`}>{largeKind === "student" ? "Existing payer" : "Existing student"}</button>
         <button type="button" onClick={() => setConnectionMode("new")} className={`rounded-control px-3 py-2 text-sm ${connectionMode === "new" ? "bg-surface-raised text-ink shadow-sm" : "text-muted"}`}>{largeKind === "student" ? "New payer" : "New student"}</button>
@@ -55,6 +56,6 @@ export function AddFamilyDialog({ action, triggerLabel, largeKind, existingPayer
       <label><span className="text-xs text-muted">Relationship to student</span><AppSelect name="relationship" className={field}><option value="parent">Parent</option><option value="guardian">Guardian</option><option value="self">Self</option><option value="other">Other</option></AppSelect></label>
       <div className="flex items-end"><button disabled={pending} className="w-full rounded-control bg-ink px-5 py-3 text-sm text-canvas disabled:opacity-50">{pending ? "Adding…" : "Add student and payer"}</button></div>
       {state.message && !state.ok ? <p role="alert" className="text-sm text-danger sm:col-span-2">{state.message}</p> : null}
-    </form>
+    </form>}
   </FocusedModal>;
 }

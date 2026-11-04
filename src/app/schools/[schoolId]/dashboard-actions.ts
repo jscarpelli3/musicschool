@@ -6,6 +6,7 @@ import { parseRescheduleReason } from "@/lib/scheduling/lesson-domain-contracts"
 import type { Column, RosterViewSettings } from "@/components/students/student-roster-table";
 import { dispatchLessonRequestEmails } from "@/lib/notifications/dispatch-lesson-request-emails";
 import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
+import { dashboardSectionIds,type DashboardLayoutSettings } from "@/lib/dashboard-layout";
 
 const columns: Column[] = ["family", "student", "parent", "day", "time", "teacher", "place", "month"];
 const modeCounts: Record<Column, number> = {
@@ -41,6 +42,16 @@ export async function saveStudentRosterView(schoolId: string, settings: RosterVi
     settings,
   }, { onConflict: "school_id,profile_id,view_key" });
   if (error) throw new Error("View preferences could not be saved.");
+}
+
+export async function saveDashboardLayout(schoolId:string,settings:DashboardLayoutSettings){
+  const validOrder=Array.isArray(settings.order)&&settings.order.length>0&&new Set(settings.order).size===settings.order.length&&settings.order.every((id)=>dashboardSectionIds.includes(id));
+  const validMinimized=Array.isArray(settings.minimized)&&settings.minimized.every((id)=>settings.order.includes(id));
+  if(!validOrder||!validMinimized)throw new Error("Dashboard layout is invalid.");
+  const supabase=await createClient();const{data}=await supabase.auth.getClaims();const profileId=data?.claims?.sub;
+  if(!profileId)throw new Error("Authentication required.");
+  const{error}=await supabase.from("user_view_preferences").upsert({school_id:schoolId,profile_id:profileId,view_key:"dashboard_layout",settings},{onConflict:"school_id,profile_id,view_key"});
+  if(error)throw new Error("Dashboard layout could not be saved.");
 }
 
 export type OwnerRescheduleInput = {
