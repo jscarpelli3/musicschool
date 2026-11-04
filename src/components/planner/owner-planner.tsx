@@ -445,7 +445,7 @@ export function OwnerPlanner({
       {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add payer" largeKind="payer" existingPayers={existingPayers} unconnectedStudents={unconnectedStudents} /> : null}
       {addFamilyAction ? <PrepareInvoiceLauncher schoolId={schoolId} payers={invoicePayers} variant="dashboard" /> : null}
     </div> : null}
-    <section id="school-calendar" className="ui-card scroll-mt-6 overflow-hidden">
+    <section id="school-calendar" className="ui-card relative scroll-mt-6 overflow-hidden">
       <div className="planner-calendar-chrome pt-2">
       <div className="grid gap-4 px-5 pt-6 pb-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end sm:px-7">
         <div className="flex flex-wrap items-end gap-x-5 gap-y-3">
