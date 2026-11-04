@@ -272,7 +272,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
         <SectionHeading kind="billing" eyebrow="Invoices" title={invoiceSummary.attentionCount ? `${invoiceSummary.attentionCount} still in progress` : "Everything is settled"} description="Recent family invoices and their current approval or payment status." />
         <Link href={`/schools/${schoolId}/invoices`} className="rounded-control border border-line px-3 py-2 text-sm text-brand transition hover:border-brand hover:bg-brand/10 hover:text-brand-hover">View all invoices →</Link>
       </div>
-      <div className="mt-6 border-t border-line pt-6"><InvoiceList schoolId={schoolId} invoices={invoices} compact /></div>
+      <div className="mt-6 border-t border-line pt-6"><InvoiceList schoolId={schoolId} invoices={invoices} /></div>
     </section>
   ) : null;
 
