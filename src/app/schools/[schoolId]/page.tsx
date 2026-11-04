@@ -281,6 +281,8 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
 
   const schedulingSection=view==="dashboard"&&canManageSchool?<section className="needs-scheduling-card ui-card p-6 sm:p-8" data-empty={entitlements.length===0}><div className="mr-10"><SectionHeading kind="scheduling" eyebrow="Needs scheduling" title={entitlements.length?"Replacement lessons waiting for a time":"Nothing is waiting for a time"} description="Lesson time the school has retained for a student appears here until it is scheduled." /></div>{entitlements.length?<div className="mt-6 border-t border-line pt-6"><LessonsToSchedule schoolId={schoolId} items={entitlements} timezone={school.timezone} lessonCreationOptions={lessonCreationOptions}/></div>:null}</section>:null;
 
+  const quickActionsSection=view==="dashboard"?<div id="dashboard-quick-actions"/>:null;
+
   const calendarSection=view==="dashboard"?<OwnerPlanner
     key={initialLessonId??"school-calendar"}
     schoolId={schoolId}
@@ -305,13 +307,15 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
     existingPayers={(billingAccountRows??[]).flatMap((account)=>{const payer=people.get(account.billing_contact_person_id);return payer?.email?[{id:account.id,label:`${account.name} · ${payer.preferred_name||payer.first_name} ${payer.last_name}`,firstName:payer.first_name,lastName:payer.last_name,email:payer.email}]:[];})}
     unconnectedStudents={(studentRows??[]).flatMap((student)=>{if((billingLinkRows??[]).some((link)=>link.student_id===student.person_id))return[];const person=people.get(student.person_id);return person?[{id:student.person_id,label:`${person.preferred_name||person.first_name} ${person.last_name}`}]:[];})}
     invoicePayers={invoicePayers}
+    quickActionsTargetId="dashboard-quick-actions"
   />:null;
 
   const rosterSection=view==="dashboard"?<StudentRosterTable rows={studentRowsForTable} monthLabel={monthLabel} initialView={rosterPreference?.settings as Partial<RosterViewSettings>|null} saveView={saveStudentRosterView.bind(null,schoolId)} dashboard/>:null;
   const dashboardSections=[
     ...(schedulingSection?[{id:"scheduling" as const,title:"Needs scheduling",description:"Replacement lesson time owed to students appears here until you choose a new date, time, teacher, and place. Open an item to schedule it or review why the time is still owed.",content:schedulingSection}]:[]),
     ...(invoiceSection?[{id:"invoices" as const,title:"Invoices",description:"Review recent invoice drafts, approvals, payment status, refunds, and balances. Open an invoice to continue its workflow or use the full invoice history when you need older records.",content:invoiceSection}]:[]),
-    ...(calendarSection?[{id:"calendar" as const,title:"Calendar and quick actions",description:"Create lessons, students, payers, and invoices from the quick actions, then use the calendar to review and manage the school schedule by day, week, or month.",content:calendarSection}]:[]),
+    ...(quickActionsSection?[{id:"quick_actions" as const,title:"Quick actions",description:"Large shortcuts for finding an opening, adding students or payers, and preparing invoices.",content:quickActionsSection,hasMenu:false}]:[]),
+    ...(calendarSection?[{id:"calendar" as const,title:"Calendar",description:"Review and manage the school schedule by day, week, or month.",content:calendarSection}]:[]),
     ...(rosterSection?[{id:"students" as const,title:"School roster",description:"Compare students, families, teachers, places, recurring times, and lesson activity. Reorder and sort its columns to match the way you run the school.",content:rosterSection}]:[]),
   ];
 
