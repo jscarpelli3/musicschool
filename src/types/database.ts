@@ -4132,15 +4132,20 @@ export type Database = {
       }
       school_onboarding_invitations: {
         Row: {
+          accepted_at: string | null
           claimed_at: string | null
           claimed_by: string | null
           claimed_school_id: string | null
           created_at: string
+          delivery_status: string
           expires_at: string
+          failed_at: string | null
           id: string
           intended_school_name: string | null
           issued_by: string | null
           normalized_email: string
+          provider_email_id: string | null
+          provider_error_code: string | null
           status: string
           token_hash: string | null
           updated_at: string
@@ -4150,11 +4155,16 @@ export type Database = {
           claimed_by?: string | null
           claimed_school_id?: string | null
           created_at?: string
+          delivery_status?: string
           expires_at: string
+          accepted_at?: string | null
+          failed_at?: string | null
           id?: string
           intended_school_name?: string | null
           issued_by?: string | null
           normalized_email: string
+          provider_email_id?: string | null
+          provider_error_code?: string | null
           status?: string
           token_hash?: string | null
           updated_at?: string
@@ -4164,11 +4174,16 @@ export type Database = {
           claimed_by?: string | null
           claimed_school_id?: string | null
           created_at?: string
+          delivery_status?: string
           expires_at?: string
+          accepted_at?: string | null
+          failed_at?: string | null
           id?: string
           intended_school_name?: string | null
           issued_by?: string | null
           normalized_email?: string
+          provider_email_id?: string | null
+          provider_error_code?: string | null
           status?: string
           token_hash?: string | null
           updated_at?: string
@@ -6168,6 +6183,15 @@ export type Database = {
       }
       record_early_access_signup: {
         Args: { p_email: string; p_name?: string; p_school_name?: string }
+        Returns: undefined
+      }
+      record_school_onboarding_invitation_delivery: {
+        Args: {
+          p_invitation_id: string
+          p_provider_email_id?: string | null
+          p_provider_error_code?: string | null
+          p_status: string
+        }
         Returns: undefined
       }
       record_invoice_settlement_entry: {
