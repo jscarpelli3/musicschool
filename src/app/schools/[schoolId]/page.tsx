@@ -19,7 +19,7 @@ import { loadSchoolWeather } from "@/lib/weather/school-weather";
 
 export const dynamic = "force-dynamic";
 
-export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { schoolId: string; view: "dashboard" | "students"; initialLessonId?: string }) {
+export async function SchoolWorkspace({ schoolId, view, initialLessonId,previewDailyBriefing=false }: { schoolId: string; view: "dashboard" | "students"; initialLessonId?: string;previewDailyBriefing?:boolean }) {
   const supabase = await createClient();
   const { profileId, school, membership, capabilities } = await loadCurrentSchoolAccess(schoolId);
   if (!profileId) redirect(`/login?next=/schools/${schoolId}`);
@@ -337,14 +337,14 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
         initialSettings={dashboardLayoutPreference?.settings}
         save={saveDashboardLayout}
         heading={<PageHeading kind="dashboard" title="Dashboard." description="Your school’s schedule, outstanding work, invoices, and student activity in one place." />}
-        dailyBriefing={membership.role==="owner"?{profileId,dateKey:initialDate,dateLabel:todayLabel,lessonNames:todayLessonNames,invoiceCount:invoiceSummary.attentionCount,rescheduleCount:entitlements.length,weather}:undefined}
+        dailyBriefing={membership.role==="owner"?{profileId,dateKey:initialDate,dateLabel:todayLabel,lessonNames:todayLessonNames,invoiceCount:invoiceSummary.attentionCount,rescheduleCount:entitlements.length,weather,forceOpen:previewDailyBriefing}:undefined}
       />:null}
     </main>
   );
 }
 
-export default async function SchoolDashboard({ params, searchParams }: { params: Promise<{ schoolId: string }>; searchParams: Promise<{ lesson?: string }> }) {
+export default async function SchoolDashboard({ params, searchParams }: { params: Promise<{ schoolId: string }>; searchParams: Promise<{ lesson?: string;welcome?:string }> }) {
   const { schoolId } = await params;
-  const { lesson } = await searchParams;
-  return <SchoolWorkspace schoolId={schoolId} view="dashboard" initialLessonId={lesson} />;
+  const { lesson,welcome } = await searchParams;
+  return <SchoolWorkspace schoolId={schoolId} view="dashboard" initialLessonId={lesson} previewDailyBriefing={welcome==="1"} />;
 }
