@@ -18,7 +18,7 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 
 export const dynamic = "force-dynamic";
 
-export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { schoolId: string; view: "dashboard" | "students"; initialLessonId?: string }) {
+export async function SchoolWorkspace({ schoolId, view, initialLessonId,previewDailyBriefing=false }: { schoolId: string; view: "dashboard" | "students"; initialLessonId?: string;previewDailyBriefing?:boolean }) {
   const supabase = await createClient();
   const { profileId, school, membership, capabilities } = await loadCurrentSchoolAccess(schoolId);
   if (!profileId) redirect(`/login?next=/schools/${schoolId}`);
@@ -172,6 +172,11 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
   }).formatToParts(new Date());
   const todayPart = (type: string) => todayParts.find((part) => part.type === type)?.value;
   const initialDate = `${todayPart("year")}-${todayPart("month")}-${todayPart("day")}`;
+  const localDateKey=(iso:string)=>{const parts=new Intl.DateTimeFormat("en-US",{timeZone:school.timezone,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date(iso));const get=(type:string)=>parts.find((part)=>part.type===type)?.value??"";return`${get("year")}-${get("month")}-${get("day")}`;};
+  const todayLessons=(lessonRows??[]).filter((lesson)=>lesson.status!=="cancelled"&&localDateKey(lesson.starts_at)===initialDate).sort((a,b)=>a.starts_at.localeCompare(b.starts_at));
+  const todayLessonNames=[...new Set(todayLessons.flatMap((lesson)=>{const student=people.get(lesson.student_id);return student?[student.preferred_name||student.first_name]:[];}))];
+  const todayTeacherLessons=[...new Set(todayLessons.map((lesson)=>lesson.teacher_id))].map((teacherId)=>{const teacher=people.get(teacherId);return{name:teacher?.preferred_name||teacher?.first_name||"Teacher",count:todayLessons.filter((lesson)=>lesson.teacher_id===teacherId).length};});
+  const todayLabel=new Intl.DateTimeFormat("en-US",{timeZone:school.timezone,weekday:"long",month:"long",day:"numeric"}).format(new Date());
   const minimumTimeToday = new Intl.DateTimeFormat("en-GB", { timeZone: school.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
   const monthKey = initialDate.slice(0, 7);
   const monthLabel = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: school.timezone }).format(new Date());
@@ -332,13 +337,14 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
         initialSettings={dashboardLayoutPreference?.settings}
         save={saveDashboardLayout}
         heading={<PageHeading kind="dashboard" title="Dashboard." description="Your school’s schedule, outstanding work, invoices, and student activity in one place." />}
+        dailyBriefing={membership.role==="owner"?{profileId,dateKey:initialDate,dateLabel:todayLabel,lessonNames:todayLessonNames,teacherLessons:todayTeacherLessons,invoiceCount:invoiceSummary.attentionCount,rescheduleCount:entitlements.length,forceOpen:previewDailyBriefing}:undefined}
       />:null}
     </main>
   );
 }
 
-export default async function SchoolDashboard({ params, searchParams }: { params: Promise<{ schoolId: string }>; searchParams: Promise<{ lesson?: string }> }) {
+export default async function SchoolDashboard({ params, searchParams }: { params: Promise<{ schoolId: string }>; searchParams: Promise<{ lesson?: string;welcome?:string }> }) {
   const { schoolId } = await params;
-  const { lesson } = await searchParams;
-  return <SchoolWorkspace schoolId={schoolId} view="dashboard" initialLessonId={lesson} />;
+  const { lesson,welcome } = await searchParams;
+  return <SchoolWorkspace schoolId={schoolId} view="dashboard" initialLessonId={lesson} previewDailyBriefing={welcome==="1"} />;
 }
