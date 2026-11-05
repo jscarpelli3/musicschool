@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MdCalendarMonth, MdEventAvailable, MdReceiptLong } from "react-icons/md";
+import { MdCalendarMonth, MdCloud, MdCloudySnowing, MdEventAvailable, MdFoggy, MdReceiptLong, MdThunderstorm, MdWaterDrop, MdWbSunny } from "react-icons/md";
 import type { DashboardSectionId } from "@/lib/dashboard-layout";
+import type { SchoolWeather } from "@/lib/weather/school-weather";
 
 type BriefingItem={section:DashboardSectionId;label:string;detail:string;icon:typeof MdCalendarMonth};
 
-export function DailyBriefing({schoolId,profileId,dateKey,dateLabel,lessonCount,invoiceCount,rescheduleCount}:{schoolId:string;profileId:string;dateKey:string;dateLabel:string;lessonCount:number;invoiceCount:number;rescheduleCount:number}){
+export function DailyBriefing({schoolId,profileId,dateKey,dateLabel,lessonNames,invoiceCount,rescheduleCount,weather}:{schoolId:string;profileId:string;dateKey:string;dateLabel:string;lessonNames:string[];invoiceCount:number;rescheduleCount:number;weather:SchoolWeather|null}){
   const[open,setOpen]=useState(false);
   useEffect(()=>{
-    const key=`common-time:daily-briefing:${profileId}:${schoolId}:${dateKey}`;
+    const key=`common-time:daily-briefing-v2:${profileId}:${schoolId}:${dateKey}`;
     try{
       if(window.localStorage.getItem(key))return;
       window.localStorage.setItem(key,"seen");
@@ -19,8 +20,11 @@ export function DailyBriefing({schoolId,profileId,dateKey,dateLabel,lessonCount,
   },[dateKey,profileId,schoolId]);
 
   if(!open)return null;
+  const lessonCount=lessonNames.length;
+  const shownNames=lessonNames.slice(0,5);
+  const names=shownNames.length?`${new Intl.ListFormat("en-US",{style:"long",type:"conjunction"}).format(shownNames)}${lessonNames.length>shownNames.length?` and ${lessonNames.length-shownNames.length} more`:""}`:"";
   const items:BriefingItem[]=[
-    {section:"calendar",label:`${lessonCount} ${lessonCount===1?"lesson":"lessons"} today`,detail:lessonCount?"Your teaching day is on the calendar.":"The calendar is clear today.",icon:MdCalendarMonth},
+    {section:"calendar",label:lessonCount?`Today you have ${names}`:"No lessons today",detail:lessonCount===1?"One student is on today’s calendar.":lessonCount?`${lessonCount} students are on today’s calendar.`:"The calendar is clear today.",icon:MdCalendarMonth},
     {section:"invoices",label:`${invoiceCount} ${invoiceCount===1?"invoice needs":"invoices need"} attention`,detail:invoiceCount?"Drafts, approvals, or balances are still in progress.":"Nothing in billing needs attention.",icon:MdReceiptLong},
     {section:"scheduling",label:`${rescheduleCount} ${rescheduleCount===1?"lesson needs":"lessons need"} a time`,detail:rescheduleCount?"Replacement lesson time is waiting to be scheduled.":"No replacement lessons are waiting.",icon:MdEventAvailable},
   ];
@@ -29,10 +33,11 @@ export function DailyBriefing({schoolId,profileId,dateKey,dateLabel,lessonCount,
     window.requestAnimationFrame(()=>document.getElementById(`dashboard-section-${section}`)?.scrollIntoView({behavior:"smooth",block:"start"}));
   }
   return <div className="fixed inset-0 z-[170] grid place-items-center bg-[var(--ui-overlay)] px-5" role="dialog" aria-modal="true" aria-labelledby="daily-briefing-title">
-    <section className="w-full max-w-2xl rounded-card border border-brand/30 bg-canvas p-6 shadow-2xl sm:p-9">
-      <p className="text-xs font-medium uppercase tracking-[0.16em] text-brand">{dateLabel}</p>
+    <section className="relative w-full max-w-2xl overflow-hidden rounded-card border border-brand/30 bg-canvas p-6 shadow-2xl sm:p-9">
+      {weather?<WeatherCorner weather={weather}/>:null}
+      <div className={weather?"relative z-10 max-w-[65%] sm:max-w-[68%]":"relative z-10"}><p className="text-xs font-medium uppercase tracking-[0.16em] text-brand">{dateLabel}</p>
       <h2 id="daily-briefing-title" className="mt-2 font-display text-4xl tracking-[-0.035em] sm:text-5xl">Welcome to today.</h2>
-      <p className="mt-3 text-sm leading-6 text-muted">Here is the shape of the day. Choose an area to begin.</p>
+      <p className="mt-3 text-sm leading-6 text-muted">Here is the shape of the day. Choose an area to begin.</p></div>
       <div className="mt-7 grid gap-3 sm:grid-cols-3">
         {items.map((item)=>{const Icon=item.icon;return <button key={item.section} type="button" onClick={()=>visit(item.section)} className="rounded-card border border-line p-5 text-left transition hover:-translate-y-0.5 hover:border-brand hover:bg-brand/5">
           <Icon aria-hidden className="text-2xl text-brand"/>
@@ -42,5 +47,14 @@ export function DailyBriefing({schoolId,profileId,dateKey,dateLabel,lessonCount,
         </button>;})}
       </div>
     </section>
+  </div>;
+}
+
+function WeatherCorner({weather}:{weather:SchoolWeather}){
+  const presentation={clear:{icon:MdWbSunny,color:"#f3b34b"},cloudy:{icon:MdCloud,color:"#8aa2ae"},rain:{icon:MdWaterDrop,color:"#4f86a6"},snow:{icon:MdCloudySnowing,color:"#93b9c8"},storm:{icon:MdThunderstorm,color:"#776a9c"},fog:{icon:MdFoggy,color:"#9aa6a8"}}[weather.kind];
+  const Icon=presentation.icon;
+  return <div aria-label={`${weather.summary}${weather.temperature?`, ${weather.temperature}`:""}. National Weather Service forecast.`} className="absolute right-0 top-0 h-52 w-64 overflow-hidden" style={{background:`radial-gradient(circle at 100% 0%, color-mix(in srgb, ${presentation.color} 48%, var(--ui-canvas)) 0%, color-mix(in srgb, ${presentation.color} 18%, transparent) 48%, transparent 74%)`}}>
+    <Icon aria-hidden className="absolute -right-5 -top-7 text-[9rem] opacity-30" style={{color:presentation.color}}/>
+    <div className="absolute right-5 top-28 max-w-36 text-right"><p className="text-sm font-medium text-ink">{weather.summary}</p>{weather.temperature?<p className="mt-1 text-xs text-muted">{weather.temperature}</p>:null}<p className="mt-1 text-[9px] uppercase tracking-[0.1em] text-muted">National Weather Service</p></div>
   </div>;
 }
