@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MdCalendarMonth, MdEventAvailable, MdReceiptLong } from "react-icons/md";
+import { MdCalendarMonth, MdClose, MdEventAvailable, MdReceiptLong } from "react-icons/md";
 import type { DashboardSectionId } from "@/lib/dashboard-layout";
 import type { SchoolWeather } from "@/lib/weather/school-weather";
 
 type BriefingItem={section:DashboardSectionId;label:string;detail:string;icon:typeof MdCalendarMonth};
 
-export function DailyBriefing({schoolId,profileId,dateKey,dateLabel,lessonNames,invoiceCount,rescheduleCount,weather,forceOpen=false}:{schoolId:string;profileId:string;dateKey:string;dateLabel:string;lessonNames:string[];invoiceCount:number;rescheduleCount:number;weather:SchoolWeather|null;forceOpen?:boolean}){
+export function DailyBriefing({schoolId,profileId,dateKey,dateLabel,lessonNames,teacherLessons,invoiceCount,rescheduleCount,weather,forceOpen=false}:{schoolId:string;profileId:string;dateKey:string;dateLabel:string;lessonNames:string[];teacherLessons:Array<{name:string;count:number}>;invoiceCount:number;rescheduleCount:number;weather:SchoolWeather|null;forceOpen?:boolean}){
   const[open,setOpen]=useState(false);
   useEffect(()=>{
     if(forceOpen){const frame=window.requestAnimationFrame(()=>setOpen(true));return()=>window.cancelAnimationFrame(frame);}
@@ -24,8 +24,11 @@ export function DailyBriefing({schoolId,profileId,dateKey,dateLabel,lessonNames,
   const lessonCount=lessonNames.length;
   const shownNames=lessonNames.slice(0,5);
   const names=shownNames.length?`${new Intl.ListFormat("en-US",{style:"long",type:"conjunction"}).format(shownNames)}${lessonNames.length>shownNames.length?` and ${lessonNames.length-shownNames.length} more`:""}`:"";
+  const shownTeachers=teacherLessons.slice(0,4);
+  const teacherSummary=shownTeachers.map((teacher)=>`${teacher.name} has ${teacher.count} ${teacher.count===1?"lesson":"lessons"}`).join(" · ");
+  const lessonLabel=teacherLessons.length>1?`${teacherSummary}${teacherLessons.length>shownTeachers.length?` · ${teacherLessons.length-shownTeachers.length} more teachers`:""}`:lessonCount?`Today you have ${names}`:"No lessons today";
   const items:BriefingItem[]=[
-    {section:"calendar",label:lessonCount?`Today you have ${names}`:"No lessons today",detail:lessonCount===1?"One student is on today’s calendar.":lessonCount?`${lessonCount} students are on today’s calendar.`:"The calendar is clear today.",icon:MdCalendarMonth},
+    {section:"calendar",label:lessonLabel,detail:lessonCount===1?"One lesson is on today’s calendar.":lessonCount?`${lessonCount} lessons are on today’s calendar.`:"The calendar is clear today.",icon:MdCalendarMonth},
     {section:"invoices",label:`${invoiceCount} ${invoiceCount===1?"invoice needs":"invoices need"} attention`,detail:invoiceCount?"Drafts, approvals, or balances are still in progress.":"Nothing in billing needs attention.",icon:MdReceiptLong},
     {section:"scheduling",label:`${rescheduleCount} ${rescheduleCount===1?"lesson needs":"lessons need"} a time`,detail:rescheduleCount?"Replacement lesson time is waiting to be scheduled.":"No replacement lessons are waiting.",icon:MdEventAvailable},
   ];
@@ -36,6 +39,8 @@ export function DailyBriefing({schoolId,profileId,dateKey,dateLabel,lessonNames,
   return <div className="fixed inset-0 z-[170] grid place-items-center bg-[var(--ui-overlay)] px-5" role="dialog" aria-modal="true" aria-labelledby="daily-briefing-title">
     <section className="relative w-full max-w-2xl overflow-hidden rounded-card border border-brand/30 bg-canvas p-6 shadow-2xl sm:p-9">
       {weather?<WeatherCorner weather={weather}/>:null}
+      <button type="button" onClick={()=>setOpen(false)} aria-label="Close today’s welcome" className="absolute right-3 top-3 z-30 grid size-9 place-items-center rounded-full text-xl text-muted transition hover:bg-canvas/70 hover:text-ink"><MdClose/></button>
+      {!weather&&forceOpen?<p className="absolute right-6 top-14 z-20 max-w-40 text-right text-xs leading-5 text-muted">Local forecast unavailable. Check the school address in Setup.</p>:null}
       <div className={weather?"relative z-10 max-w-[65%] sm:max-w-[68%]":"relative z-10"}><p className="text-xs font-medium uppercase tracking-[0.16em] text-brand">{dateLabel}</p>
       <h2 id="daily-briefing-title" className="mt-2 font-display text-4xl tracking-[-0.035em] sm:text-5xl">Welcome to today.</h2>
       <p className="mt-3 text-sm leading-6 text-muted">Here is the shape of the day. Choose an area to begin.</p></div>

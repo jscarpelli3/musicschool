@@ -175,7 +175,9 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId,previewD
   const todayPart = (type: string) => todayParts.find((part) => part.type === type)?.value;
   const initialDate = `${todayPart("year")}-${todayPart("month")}-${todayPart("day")}`;
   const localDateKey=(iso:string)=>{const parts=new Intl.DateTimeFormat("en-US",{timeZone:school.timezone,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date(iso));const get=(type:string)=>parts.find((part)=>part.type===type)?.value??"";return`${get("year")}-${get("month")}-${get("day")}`;};
-  const todayLessonNames=[...new Set((lessonRows??[]).filter((lesson)=>lesson.status!=="cancelled"&&localDateKey(lesson.starts_at)===initialDate).sort((a,b)=>a.starts_at.localeCompare(b.starts_at)).flatMap((lesson)=>{const student=people.get(lesson.student_id);return student?[student.preferred_name||student.first_name]:[];}))];
+  const todayLessons=(lessonRows??[]).filter((lesson)=>lesson.status!=="cancelled"&&localDateKey(lesson.starts_at)===initialDate).sort((a,b)=>a.starts_at.localeCompare(b.starts_at));
+  const todayLessonNames=[...new Set(todayLessons.flatMap((lesson)=>{const student=people.get(lesson.student_id);return student?[student.preferred_name||student.first_name]:[];}))];
+  const todayTeacherLessons=[...new Set(todayLessons.map((lesson)=>lesson.teacher_id))].map((teacherId)=>{const teacher=people.get(teacherId);return{name:teacher?.preferred_name||teacher?.first_name||"Teacher",count:todayLessons.filter((lesson)=>lesson.teacher_id===teacherId).length};});
   const todayLabel=new Intl.DateTimeFormat("en-US",{timeZone:school.timezone,weekday:"long",month:"long",day:"numeric"}).format(new Date());
   const minimumTimeToday = new Intl.DateTimeFormat("en-GB", { timeZone: school.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
   const monthKey = initialDate.slice(0, 7);
@@ -337,7 +339,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId,previewD
         initialSettings={dashboardLayoutPreference?.settings}
         save={saveDashboardLayout}
         heading={<PageHeading kind="dashboard" title="Dashboard." description="Your school’s schedule, outstanding work, invoices, and student activity in one place." />}
-        dailyBriefing={membership.role==="owner"?{profileId,dateKey:initialDate,dateLabel:todayLabel,lessonNames:todayLessonNames,invoiceCount:invoiceSummary.attentionCount,rescheduleCount:entitlements.length,weather,forceOpen:previewDailyBriefing}:undefined}
+        dailyBriefing={membership.role==="owner"?{profileId,dateKey:initialDate,dateLabel:todayLabel,lessonNames:todayLessonNames,teacherLessons:todayTeacherLessons,invoiceCount:invoiceSummary.attentionCount,rescheduleCount:entitlements.length,weather,forceOpen:previewDailyBriefing}:undefined}
       />:null}
     </main>
   );

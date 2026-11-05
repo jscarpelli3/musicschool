@@ -8,7 +8,7 @@ import type { SchoolWeather } from "@/lib/weather/school-weather";
 
 type DashboardSection={id:DashboardSectionId;title:string;description:string;content:ReactNode;hasMenu?:boolean};
 
-export function DashboardLayout({schoolId,sections,initialSettings,save,heading,dailyBriefing}:{schoolId:string;sections:DashboardSection[];initialSettings:unknown;save:(schoolId:string,settings:DashboardLayoutSettings)=>Promise<void>;heading:ReactNode;dailyBriefing?:{profileId:string;dateKey:string;dateLabel:string;lessonNames:string[];invoiceCount:number;rescheduleCount:number;weather:SchoolWeather|null;forceOpen?:boolean}}){
+export function DashboardLayout({schoolId,sections,initialSettings,save,heading,dailyBriefing}:{schoolId:string;sections:DashboardSection[];initialSettings:unknown;save:(schoolId:string,settings:DashboardLayoutSettings)=>Promise<void>;heading:ReactNode;dailyBriefing?:{profileId:string;dateKey:string;dateLabel:string;lessonNames:string[];teacherLessons:Array<{name:string;count:number}>;invoiceCount:number;rescheduleCount:number;weather:SchoolWeather|null;forceOpen?:boolean}}){
   const available=sections.map((section)=>section.id);
   const initial=normalizeDashboardLayout(initialSettings,available);
   const[settings,setSettings]=useState(initial);
