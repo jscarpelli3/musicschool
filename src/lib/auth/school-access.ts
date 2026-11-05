@@ -11,7 +11,7 @@ export const loadCurrentSchoolAccess = cache(async function loadCurrentSchoolAcc
   if (!profileId) return { profileId: null, school: null, membership: null, capabilities: new Set() };
 
   const [{ data: school }, { data: membership }, capabilities] = await Promise.all([
-    supabase.from("schools").select("id,name,slug,timezone,family_billing_mode,logo_path,theme_key,font_key,address_line_1,city,region,postal_code").eq("id", schoolId).maybeSingle(),
+    supabase.from("schools").select("id,name,slug,timezone,family_billing_mode,logo_path,theme_key,font_key").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
     loadMySchoolCapabilities(schoolId),
   ]);

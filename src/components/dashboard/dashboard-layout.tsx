@@ -4,11 +4,10 @@ import { useLayoutEffect,useRef,useState,useTransition,type ReactNode } from "re
 import { MdClose,MdDragIndicator,MdExpandMore,MdExpandLess,MdInfoOutline,MdKeyboardArrowDown,MdKeyboardArrowUp,MdMoreHoriz } from "react-icons/md";
 import { defaultDashboardLayout,normalizeDashboardLayout,type DashboardLayoutSettings,type DashboardSectionId } from "@/lib/dashboard-layout";
 import { DailyBriefing } from "@/components/dashboard/daily-briefing";
-import type { SchoolWeather } from "@/lib/weather/school-weather";
 
 type DashboardSection={id:DashboardSectionId;title:string;description:string;content:ReactNode;hasMenu?:boolean};
 
-export function DashboardLayout({schoolId,sections,initialSettings,save,heading,dailyBriefing}:{schoolId:string;sections:DashboardSection[];initialSettings:unknown;save:(schoolId:string,settings:DashboardLayoutSettings)=>Promise<void>;heading:ReactNode;dailyBriefing?:{profileId:string;dateKey:string;dateLabel:string;lessonNames:string[];teacherLessons:Array<{name:string;count:number}>;invoiceCount:number;rescheduleCount:number;weather:SchoolWeather|null;forceOpen?:boolean}}){
+export function DashboardLayout({schoolId,sections,initialSettings,save,heading,dailyBriefing}:{schoolId:string;sections:DashboardSection[];initialSettings:unknown;save:(schoolId:string,settings:DashboardLayoutSettings)=>Promise<void>;heading:ReactNode;dailyBriefing?:{profileId:string;dateKey:string;dateLabel:string;lessonNames:string[];teacherLessons:Array<{name:string;count:number}>;invoiceCount:number;rescheduleCount:number;forceOpen?:boolean}}){
   const available=sections.map((section)=>section.id);
   const initial=normalizeDashboardLayout(initialSettings,available);
   const[settings,setSettings]=useState(initial);

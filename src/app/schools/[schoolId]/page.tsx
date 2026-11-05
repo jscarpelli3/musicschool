@@ -15,7 +15,6 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { PageHeading } from "@/components/ui/page-heading";
 import { lessonPlaceLabel } from "@/lib/scheduling/lesson-place-label";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import { loadSchoolWeather } from "@/lib/weather/school-weather";
 
 export const dynamic = "force-dynamic";
 
@@ -41,9 +40,8 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId,previewD
   const paidLessonsPromise = view === "dashboard" && capabilities.has("school.billing.manage")
     ? supabase.from("lesson_payment_requests").select("lesson_event_id").eq("school_id", schoolId).eq("status", "succeeded")
     : Promise.resolve({ data: [], error: null });
-  const weatherPromise=view==="dashboard"&&membership.role==="owner"?loadSchoolWeather(school):Promise.resolve(null);
 
-  const [dashboardQueries, entitlements, invoiceSummary, paidLessonsResult,weather] = await Promise.all([Promise.all([
+  const [dashboardQueries, entitlements, invoiceSummary, paidLessonsResult] = await Promise.all([Promise.all([
     supabase.from("teachers").select("person_id, outside_availability_policy").eq("school_id", schoolId),
     supabase.from("students").select("person_id,primary_teacher_id").eq("school_id", schoolId),
     supabase.from("people").select("id, first_name, last_name, preferred_name, profile_id, email, phone").eq("school_id", schoolId),
@@ -78,7 +76,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId,previewD
     supabase.from("school_instruments").select("id,name,is_active").eq("school_id",schoolId).order("name"),
     supabase.from("teacher_instruments").select("teacher_id,instrument_id").eq("school_id",schoolId),
     supabase.from("user_view_preferences").select("settings").eq("school_id",schoolId).eq("profile_id",profileId).eq("view_key","dashboard_layout").maybeSingle(),
-  ]), entitlementPromise, invoiceSummaryPromise, paidLessonsPromise,weatherPromise]);
+  ]), entitlementPromise, invoiceSummaryPromise, paidLessonsPromise]);
 
   if (paidLessonsResult.error) throw new Error(`Paid lesson status could not load: ${paidLessonsResult.error.message}`);
 
@@ -339,7 +337,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId,previewD
         initialSettings={dashboardLayoutPreference?.settings}
         save={saveDashboardLayout}
         heading={<PageHeading kind="dashboard" title="Dashboard." description="Your school’s schedule, outstanding work, invoices, and student activity in one place." />}
-        dailyBriefing={membership.role==="owner"?{profileId,dateKey:initialDate,dateLabel:todayLabel,lessonNames:todayLessonNames,teacherLessons:todayTeacherLessons,invoiceCount:invoiceSummary.attentionCount,rescheduleCount:entitlements.length,weather,forceOpen:previewDailyBriefing}:undefined}
+        dailyBriefing={membership.role==="owner"?{profileId,dateKey:initialDate,dateLabel:todayLabel,lessonNames:todayLessonNames,teacherLessons:todayTeacherLessons,invoiceCount:invoiceSummary.attentionCount,rescheduleCount:entitlements.length,forceOpen:previewDailyBriefing}:undefined}
       />:null}
     </main>
   );
