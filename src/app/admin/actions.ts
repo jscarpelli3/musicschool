@@ -18,8 +18,12 @@ export async function issueSchoolInvitation(_state:InviteSchoolState,formData:Fo
  try{await protectServerAction({scope:"platform.school_invitation.issue",subject:`actor:${profileId}|email:${email}`,limit:10,windowSeconds:3600});}
  catch(error){return{ok:false,message:error instanceof RequestBoundaryError&&error.code==="rate_limited"?"Invitation limit reached. Wait before issuing another.":"The request could not be validated."};}
  const admin=createAdminClient(),rawToken=crypto.randomBytes(32).toString("base64url"),tokenHash=crypto.createHash("sha256").update(rawToken).digest("hex");
- const inserted=await admin.rpc("issue_school_onboarding_invitation",{p_email:email,p_token_hash:tokenHash,p_expires_at:new Date(Date.now()+14*86400000).toISOString(),p_school_name:schoolName,p_issued_by:profileId});
- if(inserted.error||!inserted.data)return{ok:false,message:"The invitation could not be issued."};
+ const invitationRpc=admin.rpc.bind(admin) as unknown as(name:string,args:Record<string,unknown>)=>Promise<{data:unknown;error:{code?:string;message:string}|null}>;
+ const inserted=await invitationRpc("issue_school_onboarding_invitation",{p_email:email,p_token_hash:tokenHash,p_expires_at:new Date(Date.now()+14*86400000).toISOString(),p_school_name:schoolName||null,p_issued_by:profileId});
+ if(inserted.error||!inserted.data){
+  console.error("School onboarding invitation issuance failed",{code:inserted.error?.code??"no_result",message:inserted.error?.message??"Invitation RPC returned no identifier."});
+  return{ok:false,message:"The secure invitation link could not be created. No email was sent."};
+ }
  const invitationId=String(inserted.data),origin=(process.env.APP_URL??"https://app.commontime.studio").replace(/\/$/,""),inviteUrl=`${origin}/join/${rawToken}`;
  const message=schoolOnboardingInvitationEmail({schoolName:schoolName||undefined,inviteUrl});
  try{
