@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerE
 import { createPortal } from "react-dom";
 import { QuickView } from "@/components/ui/quick-view";
 import { LessonCreationDialog, type LessonCreationOptions } from "@/components/scheduling/lesson-creation-dialog";
+import { teachingModeFor } from "@/lib/schools/teaching-mode";
 import { MdHistory } from "react-icons/md";
 import { reportSchoolCancellation, rescheduleOwnerLesson, setLessonReschedulePermission } from "@/app/schools/[schoolId]/dashboard-actions";
 import { LessonChangeReport } from "@/components/lessons/lesson-change-report";
@@ -233,7 +234,9 @@ export function OwnerPlanner({
   const router = useRouter();
   const [view, setView] = useState<View>("week");
   const [anchorKey, setAnchorKey] = useState(initialDate);
-  const [teacherId, setTeacherId] = useState(initialTeacherId);
+  const soloTeaching = teachingModeFor(teachers) === "solo";
+  const [selectedTeacherId, setTeacherId] = useState(initialTeacherId);
+  const teacherId = soloTeaching ? teachers[0].id : selectedTeacherId;
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(initialLessonId ?? null);
   const [rescheduleLessonId, setRescheduleLessonId] = useState<string | null>(null);
   const [dragCandidate, setDragCandidate] = useState<RescheduleProposal | null>(null);
@@ -487,7 +490,7 @@ export function OwnerPlanner({
       </div>
 
       <div className="mx-5 grid min-h-11 grid-cols-[1fr_auto_1fr] items-center gap-3 pb-2 sm:mx-7">
-        <div className="min-w-0">{showTeacherFilter ? <div className="flex max-w-96 items-center gap-2">
+        <div className="min-w-0">{showTeacherFilter && !soloTeaching ? <div className="flex max-w-96 items-center gap-2">
           <label className="min-w-0 flex-1">
             <span className="sr-only">Calendar teacher display</span>
             <AppSelect aria-label="Calendar teacher display" value={teacherId} onChange={(event) => setTeacherId(event.target.value)} className="planner-teacher-select h-9 w-full rounded-control px-3 text-sm font-medium text-ink outline-none ring-1 ring-line/60 transition focus:ring-brand">
@@ -668,7 +671,7 @@ export function OwnerPlanner({
           }}
         />
       ) : null}
-      {creationSlot && lessonCreationOptions ? <LessonCreationDialog schoolId={schoolId} slot={creationSlot} options={lessonCreationOptions} lockTeacher={!showTeacherFilter && teachers.length === 1} timeZone={timezone} onClose={() => setCreationSlot(null)} /> : null}
+      {creationSlot && lessonCreationOptions ? <LessonCreationDialog schoolId={schoolId} slot={creationSlot} options={lessonCreationOptions} lockTeacher={soloTeaching || (!showTeacherFilter && teachers.length === 1)} timeZone={timezone} onClose={() => setCreationSlot(null)} /> : null}
     </section>
     </>
   );

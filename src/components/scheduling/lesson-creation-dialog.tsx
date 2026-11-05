@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createLessonInstrument, createLessonPlace, createSingleLesson, getStudentHomeLocationState, type CreateLessonState } from "@/app/schools/[schoolId]/lessons/new/actions";
 import { NewLessonForm, type LessonFormAvailability, type LessonFormOption, type LessonFormPlace, type LessonFormProduct, type LessonFormTeacher } from "./new-lesson-form";
+import { soleTeacherId } from "@/lib/schools/teaching-mode";
 import styles from "./lesson-creation-dialog.module.css";
 
 export type LessonCreationOptions = {
@@ -33,6 +34,8 @@ export function LessonCreationDialog({ schoolId, slot, options, lockTeacher, tim
   onClose: () => void;
 }) {
   const router = useRouter();
+  const soloTeacherId = soleTeacherId(options.teachers);
+  const resolvedTeacherId = soloTeacherId ?? slot.teacherId;
   useEffect(() => {
     const close = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
     window.addEventListener("keydown", close);
@@ -48,18 +51,18 @@ export function LessonCreationDialog({ schoolId, slot, options, lockTeacher, tim
       </div>
       <div className="pt-6">
         <NewLessonForm
-          key={`${slot.dateKey}-${slot.time}-${slot.teacherId}`}
+          key={`${slot.dateKey}-${slot.time}-${resolvedTeacherId}`}
           action={createSingleLesson.bind(null, schoolId)}
           createPlaceAction={createLessonPlace.bind(null, schoolId)}
           createInstrumentAction={createLessonInstrument.bind(null, schoolId)}
           checkHomeLocationAction={getStudentHomeLocationState.bind(null, schoolId)}
           initialState={initialState}
           {...options}
-          defaultTeacherId={slot.teacherId}
+          defaultTeacherId={resolvedTeacherId}
           defaultStudentId={options.defaultStudentId}
           primaryTeacherByStudent={options.primaryTeacherByStudent}
           defaultProductId={slot.productId}
-          lockedTeacherId={lockTeacher ? slot.teacherId : undefined}
+          lockedTeacherId={lockTeacher || soloTeacherId ? resolvedTeacherId : undefined}
           initialDate={slot.dateKey}
           initialTime={slot.time}
           entitlement={options.entitlement}
@@ -72,7 +75,7 @@ export function LessonCreationDialog({ schoolId, slot, options, lockTeacher, tim
             window.dispatchEvent(new CustomEvent("common-time:toast", { detail: {
               title: result.outcome === "pending_teacher" ? "Teacher approval requested" : options.entitlement ? "Replacement lesson scheduled" : "Lesson created",
               message: result.outcome === "pending_teacher" ? (result.scheduledForToday ? "This proposal is for later today. Nothing was added yet; the teacher must accept it." : "Nothing was added to the calendar yet. The teacher must accept the outside-hours proposal.") : options.entitlement ? (result.scheduledForToday ? "The replacement lesson was scheduled for later today. Confirm everyone expects it; notifications were queued." : "The replacement lesson was scheduled without creating another charge. Family and teacher notifications were queued.") : result.scheduledForToday ? "This lesson is later today. Confirm the teacher and family expect it; notifications were queued." : "The calendar was updated and the teacher notification was queued for delivery.",
-              ...(slot.teacherId ? { href: `/schools/${schoolId}/staff/${slot.teacherId}` } : {}),
+              ...(resolvedTeacherId ? { href: `/schools/${schoolId}/staff/${resolvedTeacherId}` } : {}),
             } }));
             router.refresh();
           }}
