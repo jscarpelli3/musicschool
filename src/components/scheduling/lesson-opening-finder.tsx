@@ -6,6 +6,7 @@ import { clockTime, minutesFromTime } from "@/lib/scheduling/time-options";
 import { teacherIdsWithAvailabilityOnDates } from "@/lib/scheduling/availability-windows";
 import { MdSearch } from "react-icons/md";
 import { AppSelect } from "@/components/ui/app-select";
+import { soleTeacherId } from "@/lib/schools/teaching-mode";
 
 type Opening = { dateKey: string; time: string; teacherId: string; productId?: string; label: string; detail: string };
 type DisplayOpening = Opening & { end: number; fitsLesson: boolean; availableMinutes: number };
@@ -43,7 +44,9 @@ function startingMinute(windowStart: number, preference: string, requested: numb
 
 export function LessonOpeningFinder({ options, timeZone, onChoose, onManualAdd, onBrowseSchedule, size = "dashboard", triggerVariant = "card" }: { options: LessonCreationOptions; timeZone: string; onChoose: (opening: Opening) => void; onManualAdd?: () => void; onBrowseSchedule: () => void; size?: "dashboard" | "directory" | "detail"; triggerVariant?: "card" | "nav" | "inline" | "button" }) {
   const [open, setOpen] = useState(false);
-  const [teacherId, setTeacherId] = useState(options.teachers.length === 1 ? options.teachers[0].id : "");
+  const soloTeacherId = soleTeacherId(options.teachers);
+  const [selectedTeacherId, setTeacherId] = useState("");
+  const teacherId = soloTeacherId ?? selectedTeacherId;
   const [productId, setProductId] = useState(options.entitlement?.productId ?? "");
   const [dateMode, setDateMode] = useState<"any" | "weekday" | "date">("any");
   const [weekday, setWeekday] = useState("1");
@@ -163,8 +166,8 @@ export function LessonOpeningFinder({ options, timeZone, onChoose, onManualAdd, 
         <button type="button" aria-label="Next week" onClick={() => setSelectedWeek((value) => addDays(value, 7))} className="inline-flex h-10 min-w-10 items-center justify-center rounded-control border border-line bg-surface px-3 text-lg text-muted shadow-[var(--ui-shadow-soft)] transition hover:border-brand/50 hover:text-ink">→</button>
       </nav>
     </div>
-    <div className="mt-5 grid gap-3 rounded-card bg-canvas/80 p-3 sm:grid-cols-2 lg:grid-cols-4">
-      <label><span className="mb-1.5 block text-xs text-muted">Teacher</span><AppSelect value={teacherId} onChange={(event) => setTeacherId(event.target.value)} className={control}><option value="">Any teacher</option>{options.teachers.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</AppSelect></label>
+    <div className={`mt-5 grid gap-3 rounded-card bg-canvas/80 p-3 sm:grid-cols-2 ${soloTeacherId ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>
+      {soloTeacherId ? null : <label><span className="mb-1.5 block text-xs text-muted">Teacher</span><AppSelect value={teacherId} onChange={(event) => setTeacherId(event.target.value)} className={control}><option value="">Any teacher</option>{options.teachers.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</AppSelect></label>}
       <label><span className="mb-1.5 block text-xs text-muted">Lesson</span><AppSelect value={productId} onChange={(event) => setProductId(event.target.value)} className={control}><option value="">Any duration</option>{options.products.map((item) => <option key={item.id} value={item.id}>{item.label} · {item.durationMinutes} min</option>)}</AppSelect></label>
       <label><span className="mb-1.5 block text-xs text-muted">Day</span><AppSelect value={dateMode} onChange={(event) => setDateMode(event.target.value as typeof dateMode)} className={control}><option value="any">Any day this week</option><option value="weekday">Day of week</option><option value="date">Specific date</option></AppSelect>{dateMode === "weekday" ? <AppSelect aria-label="Day of week" value={weekday} onChange={(event) => setWeekday(event.target.value)} className={`${control} mt-2`}>{["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"].map((label,index)=><option key={label} value={index}>{label}</option>)}</AppSelect> : null}{dateMode === "date" ? <input aria-label="Specific date" type="date" min={options.today} value={specificDate} onChange={(event) => { setSpecificDate(event.target.value); setSelectedWeek(weekStart(event.target.value)); }} className={`${control} mt-2`} /> : null}</label>
       <label><span className="mb-1.5 block text-xs text-muted">Time</span><AppSelect value={timePreference} onChange={(event) => setTimePreference(event.target.value as typeof timePreference)} className={control}><option value="any">Any time</option><option value="morning">Morning</option><option value="afternoon">Afternoon</option><option value="evening">Evening</option><option value="specific">Specific time</option></AppSelect>{timePreference === "specific" ? <input aria-label="Specific time" type="time" step={900} value={specificTime} onChange={(event) => setSpecificTime(event.target.value)} className={`${control} mt-2`} /> : null}</label>
@@ -180,7 +183,7 @@ export function LessonOpeningFinder({ options, timeZone, onChoose, onManualAdd, 
     {triggerVariant === "nav" ? <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 text-sm text-brand transition hover:text-brand-hover"><MdSearch aria-hidden="true" className="text-lg" />Find an opening</button> : triggerVariant === "inline" ? <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 text-sm text-brand transition hover:text-brand-hover"><MdSearch aria-hidden="true" />Find a time →</button> : triggerVariant === "button" ? <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-2 rounded-control border border-brand px-4 py-2.5 text-sm text-brand transition hover:bg-brand hover:text-canvas"><MdSearch aria-hidden="true" className="text-lg" />Find a time</button> : <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className={`flex h-full w-full flex-col items-center justify-center rounded-card border border-transparent bg-surface-raised/55 text-center shadow-[var(--ui-shadow-soft)] transition duration-200 hover:-translate-y-1 hover:scale-[1.025] hover:border-brand/50 hover:bg-surface-raised hover:text-brand hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${triggerSize}`}>
         <MdSearch aria-hidden="true" className={`${iconSize} text-brand`} />
         <span className={`font-display font-normal tracking-[-0.03em] ${titleSize}`}>Find an opening</span>
-        {size === "dashboard" ? <span className="mt-2 max-w-xl text-xs leading-5 text-muted">Filter a week by teacher, lesson, day, or time to see exactly what is available.</span> : null}
+        {size === "dashboard" ? <span className="mt-2 max-w-xl text-xs leading-5 text-muted">Filter a week by {soloTeacherId ? "lesson, day, or time" : "teacher, lesson, day, or time"} to see exactly what is available.</span> : null}
       </button>}
     {open ? <div className="fixed inset-0 z-[120]" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <button type="button" aria-label="Close opening finder" onClick={closeFinder} className="fixed inset-0 border-0 bg-[var(--ui-overlay)]" />
