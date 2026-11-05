@@ -3,10 +3,11 @@
 import { useLayoutEffect,useRef,useState,useTransition,type ReactNode } from "react";
 import { MdClose,MdDragIndicator,MdExpandMore,MdExpandLess,MdInfoOutline,MdKeyboardArrowDown,MdKeyboardArrowUp,MdMoreHoriz } from "react-icons/md";
 import { defaultDashboardLayout,normalizeDashboardLayout,type DashboardLayoutSettings,type DashboardSectionId } from "@/lib/dashboard-layout";
+import { DailyBriefing } from "@/components/dashboard/daily-briefing";
 
 type DashboardSection={id:DashboardSectionId;title:string;description:string;content:ReactNode;hasMenu?:boolean};
 
-export function DashboardLayout({schoolId,sections,initialSettings,save,heading}:{schoolId:string;sections:DashboardSection[];initialSettings:unknown;save:(schoolId:string,settings:DashboardLayoutSettings)=>Promise<void>;heading:ReactNode}){
+export function DashboardLayout({schoolId,sections,initialSettings,save,heading,dailyBriefing}:{schoolId:string;sections:DashboardSection[];initialSettings:unknown;save:(schoolId:string,settings:DashboardLayoutSettings)=>Promise<void>;heading:ReactNode;dailyBriefing?:{profileId:string;dateKey:string;dateLabel:string;lessonCount:number;invoiceCount:number;rescheduleCount:number}}){
   const available=sections.map((section)=>section.id);
   const initial=normalizeDashboardLayout(initialSettings,available);
   const[settings,setSettings]=useState(initial);
@@ -65,9 +66,10 @@ export function DashboardLayout({schoolId,sections,initialSettings,save,heading}
 
   const infoSection=info?byId.get(info):null;
   return <>
+    {dailyBriefing?<DailyBriefing schoolId={schoolId} {...dailyBriefing}/>:null}
     <header className="mb-10 flex flex-wrap items-start justify-between gap-5"><div>{heading}</div><div className="flex flex-col items-end gap-2 pt-1 sm:pt-2"><button type="button" onClick={()=>setCustomizing(true)} className="rounded-control px-2 py-1.5 text-xs text-muted transition hover:bg-brand/10 hover:text-brand">Reorder dashboard</button>{savePending?<span className="text-xs text-muted">Saving layout…</span>:null}{saveError?<span role="alert" className="max-w-sm text-right text-xs text-danger">{saveError}</span>:null}</div></header>
     <div className="space-y-7">
-      {settings.order.map((id,index)=>{const section=byId.get(id);if(!section)return null;const hasMenu=section.hasMenu!==false;const minimized=hasMenu&&settings.minimized.includes(id);return <div key={id} ref={(node)=>{if(node)sectionRefs.current.set(id,node);else sectionRefs.current.delete(id);}} className="relative">
+      {settings.order.map((id,index)=>{const section=byId.get(id);if(!section)return null;const hasMenu=section.hasMenu!==false;const minimized=hasMenu&&settings.minimized.includes(id);return <div id={`dashboard-section-${id}`} key={id} ref={(node)=>{if(node)sectionRefs.current.set(id,node);else sectionRefs.current.delete(id);}} className="relative scroll-mt-6">
         {minimized?<div className="ui-card flex items-center justify-between gap-5 px-5 py-4"><div><p className="text-xs uppercase tracking-[0.14em] text-brand">Minimized</p><h2 className="mt-1 font-display text-2xl">{section.title}</h2></div><SectionMenu id={id} index={index} count={settings.order.length} minimized menu={menu} setMenu={setMenu} move={move} toggle={toggle} showInfo={()=>{setInfo(id);setMenu(null);}}/></div>:<>{hasMenu?<div className="absolute right-4 top-4 z-40"><SectionMenu id={id} index={index} count={settings.order.length} minimized={false} menu={menu} setMenu={setMenu} move={move} toggle={toggle} showInfo={()=>{setInfo(id);setMenu(null);}}/></div>:null}{section.content}</>}
       </div>;})}
     </div>

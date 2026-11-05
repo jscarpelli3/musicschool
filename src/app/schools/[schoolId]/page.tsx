@@ -172,6 +172,9 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
   }).formatToParts(new Date());
   const todayPart = (type: string) => todayParts.find((part) => part.type === type)?.value;
   const initialDate = `${todayPart("year")}-${todayPart("month")}-${todayPart("day")}`;
+  const localDateKey=(iso:string)=>{const parts=new Intl.DateTimeFormat("en-US",{timeZone:school.timezone,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date(iso));const get=(type:string)=>parts.find((part)=>part.type===type)?.value??"";return`${get("year")}-${get("month")}-${get("day")}`;};
+  const todayLessonCount=(lessonRows??[]).filter((lesson)=>lesson.status!=="cancelled"&&localDateKey(lesson.starts_at)===initialDate).length;
+  const todayLabel=new Intl.DateTimeFormat("en-US",{timeZone:school.timezone,weekday:"long",month:"long",day:"numeric"}).format(new Date());
   const minimumTimeToday = new Intl.DateTimeFormat("en-GB", { timeZone: school.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
   const monthKey = initialDate.slice(0, 7);
   const monthLabel = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: school.timezone }).format(new Date());
@@ -332,6 +335,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId }: { sch
         initialSettings={dashboardLayoutPreference?.settings}
         save={saveDashboardLayout}
         heading={<PageHeading kind="dashboard" title="Dashboard." description="Your school’s schedule, outstanding work, invoices, and student activity in one place." />}
+        dailyBriefing={membership.role==="owner"?{profileId,dateKey:initialDate,dateLabel:todayLabel,lessonCount:todayLessonCount,invoiceCount:invoiceSummary.attentionCount,rescheduleCount:entitlements.length}:undefined}
       />:null}
     </main>
   );
