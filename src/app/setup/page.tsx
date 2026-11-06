@@ -5,7 +5,8 @@ import { SchoolForm } from "./school-form";
 
 export const dynamic = "force-dynamic";
 
-export default async function SetupPage() {
+export default async function SetupPage({searchParams}:{searchParams:Promise<{trial?:string}>}) {
+  const trial=(await searchParams).trial==="1";
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const profileId = data?.claims?.sub;
@@ -21,7 +22,7 @@ export default async function SetupPage() {
 
   if (memberships?.length) redirect("/");
 
-  const { data: invitation, error: invitationError } = email ? await createAdminClient()
+  const { data: invitation, error: invitationError } = !trial&&email ? await createAdminClient()
     .from("school_onboarding_invitations")
     .select("intended_school_name")
     .eq("normalized_email", email)
@@ -34,12 +35,12 @@ export default async function SetupPage() {
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-20">
       <section className="w-full max-w-md border-t border-line pt-8">
-        <p className="text-sm text-muted">First step</p>
+        <p className="text-sm text-muted">{trial?"Start your free trial":"First step"}</p>
         <h1 className="mt-10 font-display text-5xl font-normal tracking-[-0.035em]">Create your school.</h1>
         <p className="mt-4 text-sm leading-6 text-muted">
-          You will be the school owner. Next, we will guide you through your logo, first student and payer, and teacher invitations.
+          {trial?"You will be the school owner. Next, add your card securely in Stripe and begin seven days free.":"You will be the school owner. Next, we will guide you through your logo, first student and payer, and teacher invitations."}
         </p>
-        <SchoolForm initialName={invitation?.intended_school_name ?? ""} />
+        <SchoolForm initialName={invitation?.intended_school_name ?? ""} trialSignup={trial}/>
       </section>
     </main>
   );

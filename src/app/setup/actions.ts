@@ -39,3 +39,12 @@ export async function createSchool(
 
   redirect(`/schools/${schoolId}/onboarding`);
 }
+
+export async function createTrialSchool(_state:CreateSchoolState,formData:FormData):Promise<CreateSchoolState>{
+ const name=String(formData.get("name")??"").trim(),timezone=String(formData.get("timezone")??"America/Chicago");if(!name)return{error:"Enter a school name."};
+ const supabase=await createClient(),{data:claims}=await supabase.auth.getClaims();if(!claims?.claims?.sub)redirect("/login?next=%2Fsetup%3Ftrial%3D1");
+ try{await protectServerAction({scope:"school.public_trial.create",subject:`actor:${claims.claims.sub}`,limit:3,windowSeconds:86400,blockSeconds:3600});}catch{return{error:"This request could not be completed yet. Wait a moment and try again."};}
+ const rpc=supabase.rpc.bind(supabase) as unknown as(name:string,args:Record<string,unknown>)=>Promise<{data:string|null;error:{message:string}|null}>;
+ const{data:schoolId,error}=await rpc("create_trial_school",{school_name:name,school_timezone:timezone});if(error||!schoolId)return{error:"The school could not be created. Nothing was charged; try again."};
+ redirect(`/schools/${schoolId}/subscription`);
+}
