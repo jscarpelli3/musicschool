@@ -22,7 +22,7 @@ export default function StartPage(){return <main className="min-h-screen bg-canv
  </section>
  <section className="mx-auto max-w-6xl px-5 pb-14 sm:px-8 sm:pb-24">
   <figure className="group relative aspect-[16/7] min-h-64 overflow-hidden rounded-card bg-ink">
-   <Image src="/images/unsplash/music-ensemble.jpg" alt="Musicians holding an assortment of instruments together" fill sizes="(min-width: 1152px) 72rem, 100vw" className="object-cover object-center transition duration-700 group-hover:scale-[1.015]"/>
+   <Image src="/images/unsplash/music-ensemble.webp" alt="Musicians holding an assortment of instruments together" fill sizes="(min-width: 1152px) 72rem, 100vw" className="object-cover object-center transition duration-700 group-hover:scale-[1.015]"/>
    <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-ink/60 via-transparent to-transparent"/>
    <figcaption className="absolute bottom-3 right-3 rounded-full bg-ink/70 px-3 py-1 text-[0.65rem] text-white backdrop-blur-sm">
     Photo by <a className="underline decoration-white/40 underline-offset-2 hover:decoration-white" href="https://unsplash.com/@seemoris?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">Caleb George</a> on <a className="underline decoration-white/40 underline-offset-2 hover:decoration-white" href="https://unsplash.com/photos/grayscale-photo-of-people-holding-assorted-music-instruments-pH88tHG-1yw?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">Unsplash</a>
