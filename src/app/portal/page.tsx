@@ -7,13 +7,23 @@ import { AutomaticPaymentSettings } from "./automatic-payment-settings";
 import { billingPeriodDescriptor } from "@/lib/domain/state-descriptors";
 import type { Json } from "@/types/database";
 import { InvoiceDecisionControls } from "./invoice-decision-controls";
+import { AuthPhotoShell } from "@/components/auth/auth-photo-shell";
 
 export const dynamic = "force-dynamic";
 
 export default async function ClientPortalPage() {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
-  if (!auth?.claims?.sub) return <main className="flex min-h-screen items-center px-5 py-16 sm:px-8"><PortalAuth /></main>;
+  if (!auth?.claims?.sub) return <AuthPhotoShell
+    imageSrc="/images/unsplash/young-vocalist.webp"
+    imageAlt="A young singer practicing at a studio microphone"
+    imagePosition="58% center"
+    photographer="Jason Rosewell"
+    photographerUrl="https://unsplash.com/@jasonrosewell?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText"
+    photoUrl="https://unsplash.com/photos/boy-singing-on-microphone-with-pop-filter-ASKeuOZqhYU?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText"
+    kicker="Common Time for families"
+    title="Lessons, statements, and schedule details in one familiar place."
+  ><PortalAuth /></AuthPhotoShell>;
 
   const email = typeof auth.claims.email === "string" ? auth.claims.email : "your verified email";
   const { data: accessState, error: accessError } = await supabase.rpc("current_client_portal_access_state");
