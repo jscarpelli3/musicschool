@@ -22,7 +22,7 @@ export default function ComingSoonPage() {
         </nav>
       </header>
 
-      <section className="relative z-10 grid flex-1 content-center gap-12 py-16 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-end lg:gap-16">
+      <section className="relative z-10 grid flex-1 content-start gap-12 pb-16 pt-12 sm:pt-16 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-16 lg:pt-20">
         <div>
           <p className="mb-6 text-sm text-brand">Coming soon</p>
           <h1 className="max-w-5xl font-display text-[clamp(4.5rem,13vw,12rem)] font-normal leading-[0.76] tracking-[-0.065em]">
