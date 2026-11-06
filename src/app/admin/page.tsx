@@ -29,7 +29,7 @@ export default async function PlatformAdminPage(){
   admin.from("billing_periods").select("school_id,id,status"),
   admin.from("school_payment_connections").select("school_id,status,charges_enabled,details_submitted,livemode"),
   admin.from("school_platform_subscriptions").select("school_id,plan_key,billing_terms,access_status,custom_monthly_price_cents,complimentary_reason,complimentary_started_at,complimentary_ends_at,stripe_status,trial_ends_at,current_period_ends_at"),
-  admin.from("platform_plans").select("key,name,monthly_price_cents,currency,trial_days"),
+  admin.from("platform_plans").select("key,name,monthly_price_cents,currency,trial_days,stripe_test_price_id,stripe_live_price_id"),
  ]);
  if(error||statusError||invitationError||schoolError||profileError||teacherError||studentError||productError||lessonError||accountError||periodError||connectionError||platformSubscriptionError||platformPlanError)throw new Error("Platform administration could not be loaded.");
  const signups=(data??[]) as Signup[],statusCounts=(statusRows??[]).reduce<Record<string,number>>((counts,row)=>{const status=String(row.status);counts[status]=(counts[status]??0)+1;return counts;},{});
