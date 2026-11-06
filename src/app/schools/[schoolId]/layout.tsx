@@ -61,6 +61,7 @@ export default async function SchoolLayout({ children, params }: { children: Rea
             <span className="mt-1 block text-xs text-muted">{school.timezone} · {school.family_billing_mode.replaceAll("_"," ")}</span>
             {capabilities.has("school.setup.manage") ? <span className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs">
               <Link href={`/schools/${schoolId}/setup`} className="inline-flex items-center gap-1.5 text-muted transition hover:text-brand"><MdSettings aria-hidden="true" className="text-base" />School settings</Link>
+              <Link href={`/schools/${schoolId}/subscription`} className="text-muted transition hover:text-brand">Common Time plan</Link>
             </span> : null}
           </span>
         </div>

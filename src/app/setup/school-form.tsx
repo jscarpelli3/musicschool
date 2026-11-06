@@ -1,13 +1,13 @@
 "use client";
 
 import { useActionState } from "react";
-import { createSchool, type CreateSchoolState } from "./actions";
+import { createSchool,createTrialSchool,type CreateSchoolState } from "./actions";
 import { AppSelect } from "@/components/ui/app-select";
 
 const initialState: CreateSchoolState = { error: null };
 
-export function SchoolForm({ initialName = "" }: { initialName?: string }) {
-  const [state, action, pending] = useActionState(createSchool, initialState);
+export function SchoolForm({ initialName = "",trialSignup=false }: { initialName?: string;trialSignup?:boolean }) {
+  const [state, action, pending] = useActionState(trialSignup?createTrialSchool:createSchool, initialState);
 
   return (
     <form action={action} className="mt-8 space-y-5">
@@ -45,7 +45,7 @@ export function SchoolForm({ initialName = "" }: { initialName?: string }) {
         disabled={pending}
         className="w-full rounded-control bg-ink px-4 py-3 text-sm font-medium text-canvas transition hover:bg-brand-hover disabled:cursor-wait disabled:opacity-60"
       >
-        {pending ? "Creating…" : "Create school"}
+        {pending ? "Creating…" : trialSignup?"Continue to free trial":"Create school"}
       </button>
     </form>
   );

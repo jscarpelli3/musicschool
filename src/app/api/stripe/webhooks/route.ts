@@ -9,6 +9,7 @@ import { reconcileInvoicePaymentIntent } from "@/lib/stripe/invoice-collection";
 import { reconcileInvoiceRefund } from "@/lib/stripe/invoice-refunds";
 import { expireInvoiceCheckout, reconcileCompletedInvoiceCheckout } from "@/lib/stripe/invoice-checkout";
 import { getStripe, getStripeMode, getStripeWebhookSecrets } from "@/lib/stripe/server";
+import { reconcilePlatformCheckout,reconcilePlatformSubscription } from "@/lib/stripe/platform-subscriptions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/types/database";
 
@@ -178,6 +179,12 @@ export async function POST(request: Request) {
     let invoiceCheckoutEvent = false;
     let invoicePaymentEvent = false;
     let invoiceRefundEvent = false;
+    let platformSubscriptionEvent = false;
+    if(!accountId&&event.objectId&&(event.type==="checkout.session.completed"||event.type==="checkout.session.async_payment_succeeded")){
+      platformSubscriptionEvent=await reconcilePlatformCheckout(event.objectId);
+    }else if(!accountId&&event.objectId&&["customer.subscription.created","customer.subscription.updated","customer.subscription.deleted","customer.subscription.paused","customer.subscription.resumed","customer.subscription.trial_will_end"].includes(event.type)){
+      platformSubscriptionEvent=await reconcilePlatformSubscription(event.objectId);
+    }
     if (event.checkoutSetupEvent === "completed" && accountId && event.objectId) {
       lessonPaymentEvent = await reconcileCompletedLessonPayment(event.objectId, accountId, event.id, event.createdAt);
       invoiceCheckoutEvent = !lessonPaymentEvent && await reconcileCompletedInvoiceCheckout(event.objectId, accountId, event.id);
@@ -195,7 +202,7 @@ export async function POST(request: Request) {
       invoiceRefundEvent=await reconcileInvoiceRefund(event.objectId,accountId,event.id);
     }
 
-    const supported = event.accountEvent || lessonPaymentEvent || invoiceCheckoutEvent || invoicePaymentEvent || invoiceRefundEvent || Boolean(event.checkoutSetupEvent);
+    const supported = platformSubscriptionEvent || event.accountEvent || lessonPaymentEvent || invoiceCheckoutEvent || invoicePaymentEvent || invoiceRefundEvent || Boolean(event.checkoutSetupEvent);
     const { error: completeError } = await admin.from("payment_provider_events").update({
       processing_status: supported ? "processed" : "ignored",
       processed_at: new Date().toISOString(),

@@ -10,8 +10,9 @@ export function SiteFooter() {
       </div>
       <nav aria-label="Legal and support" className="flex flex-wrap gap-x-5 gap-y-3 text-sm text-canvas/70">
         <HelpModal />
+        <Link href="/support" className="transition hover:text-canvas focus-visible:text-canvas">Support</Link>
         <Link href="/privacy" className="transition hover:text-canvas focus-visible:text-canvas">Privacy</Link>
-        <Link href="/terms" className="transition hover:text-canvas focus-visible:text-canvas">SMS terms</Link>
+        <Link href="/terms" className="transition hover:text-canvas focus-visible:text-canvas">Terms</Link>
         <Link href="/portal" className="transition hover:text-canvas focus-visible:text-canvas">Family portal</Link>
       </nav>
       <p className="text-xs text-canvas/45 md:col-span-2">© 2026 Common Time. All rights reserved.</p>
