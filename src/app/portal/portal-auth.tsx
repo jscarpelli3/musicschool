@@ -48,7 +48,7 @@ export function PortalAuth() {
   }
 
   return <section className="ui-card mx-auto w-full max-w-md p-7 sm:p-9">
-    <CommonTimeLogo priority className="w-56 max-w-full" />
+    <CommonTimeLogo priority light className="w-56 max-w-full" />
     <p className="mt-5 text-sm text-brand">Family scheduling</p>
     <h1 className="mt-6 font-display text-5xl leading-none">Your lessons.</h1>
     <p className="mt-5 text-sm leading-6 text-muted">Use the email address your school has on file. We will send a one-time code—no password required.</p>
