@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { HelpModal } from "@/components/layout/help-modal";
+import { AuthenticatedSupportLink } from "@/components/layout/authenticated-support-link";
 
 export function SiteFooter() {
   return <footer className="bg-ink text-canvas">
@@ -10,7 +11,7 @@ export function SiteFooter() {
       </div>
       <nav aria-label="Legal and support" className="flex flex-wrap gap-x-5 gap-y-3 text-sm text-canvas/70">
         <HelpModal />
-        <Link href="/support" className="transition hover:text-canvas focus-visible:text-canvas">Support</Link>
+        <AuthenticatedSupportLink />
         <Link href="/privacy" className="transition hover:text-canvas focus-visible:text-canvas">Privacy</Link>
         <Link href="/terms" className="transition hover:text-canvas focus-visible:text-canvas">Terms</Link>
         <Link href="/portal" className="transition hover:text-canvas focus-visible:text-canvas">Family portal</Link>
