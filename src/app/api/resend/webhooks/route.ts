@@ -3,6 +3,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { Webhook } from "svix";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { recordPlatformIncident } from "@/lib/monitoring/platform-incidents";
 
 export const runtime = "nodejs";
 
@@ -14,7 +15,10 @@ type ResendEvent = {
 
 export async function POST(request: Request) {
   const secret = process.env.RESEND_WEBHOOK_SECRET?.trim();
-  if (!secret) return NextResponse.json({ error: "Webhook is not configured." }, { status: 503 });
+  if (!secret) {
+    await recordPlatformIncident({fingerprint:"resend-webhook-config:missing-secret",provider:"resend",severity:"urgent",title:"Resend webhook is not configured",summary:"Common Time cannot receive email delivery outcomes because the Resend webhook secret is missing.",sourceKind:"resend_webhook_configuration"});
+    return NextResponse.json({ error: "Webhook is not configured." }, { status: 503 });
+  }
   const contentLength = Number(request.headers.get("content-length") ?? 0);
   if (contentLength > 262_144) return NextResponse.json({ error: "Payload too large." }, { status: 413 });
   const rawBody = await request.text();
@@ -51,6 +55,7 @@ export async function POST(request: Request) {
   });
   if (error) {
     console.error("Resend webhook reconciliation failed", { code: error.code, eventId });
+    await recordPlatformIncident({fingerprint:`resend-webhook-intake:${eventId}`,provider:"resend",severity:"urgent",title:"Resend delivery event was not recorded",summary:"A verified Resend delivery event could not be reconciled into Common Time.",sourceKind:"resend_webhook_event",sourceId:eventId,metadata:{eventType:event.type,errorCode:error.code}});
     return NextResponse.json({ error: "Event intake failed." }, { status: 500 });
   }
   return NextResponse.json({ received: true, duplicate: data === "duplicate" });

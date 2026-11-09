@@ -3,6 +3,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTwilioStatusCallbackUrl, validateTwilioFormRequest } from "@/lib/twilio/server";
+import { recordPlatformIncident } from "@/lib/monitoring/platform-incidents";
 
 export const runtime = "nodejs";
 
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
   });
   if (error) {
     console.error("Twilio delivery callback could not be recorded", { code: error.code });
+    await recordPlatformIncident({fingerprint:`twilio-status-intake:${fingerprint}`,provider:"twilio",severity:"urgent",title:"Twilio delivery event was not recorded",summary:"A verified Twilio delivery callback could not be reconciled into Common Time.",sourceKind:"twilio_delivery_callback",sourceId:fingerprint,metadata:{providerStatus:messageStatus,errorCode:error.code}});
     return Response.json({ error: "Delivery event intake failed." }, { status: 500 });
   }
 

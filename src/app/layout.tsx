@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bricolage_Grotesque, Cormorant_Garamond, DM_Sans, Fraunces, Manrope, Newsreader, Space_Mono } from "next/font/google";
 import type { ReactNode } from "react";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
 import "./globals.css";
 
 const sans = DM_Sans({
@@ -33,12 +34,14 @@ const monospace = Space_Mono({ subsets: ["latin"], display: "swap", variable: "-
 export const metadata: Metadata = {
   title: "Common Time",
   description: "Scheduling, billing, and communication for independent music schools.",
+  applicationName: "Common Time",
+  appleWebApp: {capable:true,title:"Common Time",statusBarStyle:"black-translucent"},
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en" className={`${sans.variable} ${display.variable} ${grotesk.variable} ${contemporary.variable} ${expressive.variable} ${literary.variable} ${monospace.variable}`}>
-      <body className="flex min-h-screen flex-col"><div className="flex-1">{children}</div><SiteFooter /></body>
+      <body className="flex min-h-screen flex-col"><ServiceWorkerRegistration/><div className="flex-1">{children}</div><SiteFooter /></body>
     </html>
   );
 }

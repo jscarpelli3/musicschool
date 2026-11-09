@@ -11,6 +11,7 @@ import { expireInvoiceCheckout, reconcileCompletedInvoiceCheckout } from "@/lib/
 import { getStripe, getStripeMode, getStripeWebhookSecrets } from "@/lib/stripe/server";
 import { reconcilePlatformCheckout,reconcilePlatformSubscription } from "@/lib/stripe/platform-subscriptions";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { recordPlatformIncident } from "@/lib/monitoring/platform-incidents";
 import type { Json } from "@/types/database";
 
 export const runtime = "nodejs";
@@ -117,6 +118,7 @@ export async function POST(request: Request) {
           : message === "Stripe webhook secrets must begin with whsec_." ? "invalid_signing_secret"
             : "unknown";
     console.error("Stripe webhook configuration failed", { reason, variable: variable ?? "none" });
+    await recordPlatformIncident({fingerprint:`stripe-webhook-config:${reason}:${variable??"none"}`,provider:"stripe",severity:"urgent",title:"Stripe webhook configuration failed",summary:"Common Time could not initialize Stripe webhook processing. Payments and subscription updates may not reconcile until the configuration is corrected.",sourceKind:"stripe_webhook_configuration",metadata:{reason,variable:variable??null}});
     return NextResponse.json({ error: "Webhook configuration unavailable." }, { status: 500 });
   }
   let event: VerifiedEvent;
