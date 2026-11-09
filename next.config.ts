@@ -19,7 +19,15 @@ const nextConfig: NextConfig = {
     // of overhead to the raw file size before the Server Action receives it.
     serverActions: { bodySizeLimit: "6mb" },
   },
-  async headers() { return [{ source: "/(.*)", headers: securityHeaders }]; },
+  async headers() { return [
+    { source: "/(.*)", headers: securityHeaders },
+    { source: "/sw.js", headers: [
+      {key:"Content-Type",value:"application/javascript; charset=utf-8"},
+      {key:"Cache-Control",value:"no-cache, no-store, must-revalidate"},
+      {key:"Content-Security-Policy",value:"default-src 'self'; script-src 'self'"},
+      {key:"Service-Worker-Allowed",value:"/"},
+    ]},
+  ]; },
 };
 
 export default nextConfig;

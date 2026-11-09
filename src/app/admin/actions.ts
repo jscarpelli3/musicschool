@@ -8,9 +8,22 @@ import { ResendRequestError, ResendUnknownOutcomeError, sendResendEmail } from "
 import { schoolEmailSender } from "@/lib/resend/email-security";
 import { protectServerAction, RequestBoundaryError } from "@/lib/security/request-boundary";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 export type InviteSchoolState={ok:boolean;message:string;inviteUrl?:string;recipient?:string;delivery?:"accepted"|"failed"|"reconciliation_required"};
 export type PlatformBillingState={ok:boolean;message:string};
+export type PlatformIncidentState={ok:boolean;message:string};
+
+export async function changePlatformIncidentStatus(incidentId:string,nextStatus:string,state:PlatformIncidentState):Promise<PlatformIncidentState>{
+ void state;
+ if(!/^[0-9a-f-]{36}$/i.test(incidentId)||!new Set(["open","acknowledged","resolved"]).has(nextStatus))return{ok:false,message:"That incident could not be updated."};
+ await requirePlatformAdmin();
+ const client=await createClient(),rpc=client.rpc.bind(client) as unknown as(name:string,args:Record<string,unknown>)=>Promise<{error:{code?:string;message:string}|null}>;
+ const{error}=await rpc("change_platform_incident_status",{p_incident_id:incidentId,p_status:nextStatus});
+ if(error){console.error("Platform incident status update failed",{incidentId,nextStatus,code:error.code??"unknown"});return{ok:false,message:"The incident status was not changed."};}
+ revalidatePath("/admin");
+ return{ok:true,message:nextStatus==="resolved"?"Incident resolved.":nextStatus==="acknowledged"?"Incident acknowledged.":"Incident reopened."};
+}
 
 export async function setSchoolPlatformBillingTerms(schoolId:string,_state:PlatformBillingState,formData:FormData):Promise<PlatformBillingState>{
  if(!/^[0-9a-f-]{36}$/i.test(schoolId))return{ok:false,message:"That school could not be identified."};
