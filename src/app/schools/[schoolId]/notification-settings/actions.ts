@@ -32,10 +32,10 @@ export async function revokePushSubscription(endpoint:string):Promise<PushAction
  return error?{ok:false,message:"The browser subscription could not be removed."}:{ok:true,message:"Browser notifications are off on this device."};
 }
 
-export async function saveNotificationPreferences(schoolId:string,preferences:{browserPushEnabled:boolean;billingActivity:boolean;scheduleRequests:boolean;lessonUpdates:boolean}):Promise<PushActionState>{
+export async function saveNotificationPreferences(schoolId:string,preferences:{browserPushEnabled:boolean;billingActivity:boolean;scheduleRequests:boolean;lessonUpdates:boolean;dailyHello:boolean}):Promise<PushActionState>{
  const actor=await actorForSchool(schoolId);if(!actor)return{ok:false,message:"Sign in to change notification settings."};
  const rpc=actor.supabase.rpc.bind(actor.supabase) as unknown as(name:string,args:Record<string,unknown>)=>Promise<{error:{code?:string}|null}>;
- const{error}=await rpc("set_my_school_notification_preferences",{p_school_id:schoolId,p_browser_push_enabled:preferences.browserPushEnabled,p_billing_activity:preferences.billingActivity,p_schedule_requests:preferences.scheduleRequests,p_lesson_updates:preferences.lessonUpdates});
+ const{error}=await rpc("set_my_school_notification_preferences",{p_school_id:schoolId,p_browser_push_enabled:preferences.browserPushEnabled,p_billing_activity:preferences.billingActivity,p_schedule_requests:preferences.scheduleRequests,p_lesson_updates:preferences.lessonUpdates,p_daily_hello:preferences.dailyHello});
  if(error)return{ok:false,message:"Notification choices could not be saved."};
  revalidatePath(`/schools/${schoolId}/notification-settings`);
  return{ok:true,message:"Notification choices saved."};
