@@ -10,6 +10,7 @@ import { loadSchoolInvoiceSummary } from "@/lib/billing/school-invoices";
 import { MdSettings } from "react-icons/md";
 import { loadLessonCreationOptions } from "@/lib/scheduling/lesson-creation-options";
 import { SchoolSectionFrame } from "@/components/schools/school-section-frame";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,7 @@ export default async function SchoolLayout({ children, params }: { children: Rea
     }).sort((a, b) => a.localeCompare(b)),
   }));
   return <div data-school-theme={school.theme_key} data-school-font={school.font_key} className="min-h-screen bg-canvas text-ink">
+    <InstallPrompt />
     <SchoolSectionFrame schoolId={schoolId}>
     <div className="mx-auto max-w-7xl px-5 pt-8 sm:px-8 sm:pt-10">
       <header className="flex items-start justify-between gap-6 border-b border-line pb-7">
