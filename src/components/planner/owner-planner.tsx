@@ -450,7 +450,7 @@ export function OwnerPlanner({
       ? key(weekDates(anchor)[0]) === key(weekDates(todayAnchor)[0])
       : anchor.getFullYear() === todayAnchor.getFullYear() && anchor.getMonth() === todayAnchor.getMonth();
 
-  const quickActions=lessonCreationOptions&&showLessonFinder?<div className={`items-stretch gap-4 ${quickActionsTargetId?"grid md:grid-cols-4":addFamilyAction?"mb-10 grid md:grid-cols-4":"mb-10 flex justify-center"}`}>
+  const quickActions=lessonCreationOptions&&showLessonFinder?<div className={`items-stretch gap-2 sm:gap-4 ${quickActionsTargetId?"grid grid-cols-2 md:grid-cols-4":addFamilyAction?"mb-10 grid grid-cols-2 md:grid-cols-4":"mb-10 flex justify-center"}`}>
       <div className={addFamilyAction ? "" : finderSize === "detail" ? "w-[min(22rem,100%)]" : "w-[min(34rem,100%)]"}><LessonOpeningFinder size={finderSize} options={lessonCreationOptions} timeZone={timezone} onChoose={(opening) => { setCreatingLesson(false); setCreationSlot({ ...opening, minutes: timeMinutes(opening.time) }); }} onManualAdd={() => { setCreatingLesson(false); setCreationSlot({ dateKey: lessonCreationOptions.today, time: "", teacherId: "", minutes: 0 }); }} onBrowseSchedule={() => { setCreatingLesson(true); if (view === "month") setView(window.matchMedia("(max-width: 639px)").matches ? "day" : "week"); requestAnimationFrame(() => document.getElementById("school-calendar")?.scrollIntoView({ behavior: "smooth", block: "start" })); }} /></div>
       {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add student" largeKind="student" existingPayers={existingPayers} unconnectedStudents={unconnectedStudents} /> : null}
       {addFamilyAction ? <AddFamilyDialog action={addFamilyAction} triggerLabel="Add payer" largeKind="payer" existingPayers={existingPayers} unconnectedStudents={unconnectedStudents} /> : null}
@@ -489,7 +489,7 @@ export function OwnerPlanner({
         ) : null}
       </div>
 
-      <div className="mx-5 grid min-h-11 grid-cols-[1fr_auto_1fr] items-center gap-3 pb-2 sm:mx-7">
+      <div className="mx-4 grid min-h-11 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 pb-3 sm:mx-7 sm:grid-cols-[1fr_auto_1fr] sm:pb-2">
         <div className="min-w-0">{showTeacherFilter && !soloTeaching ? <div className="flex max-w-96 items-center gap-2">
           <label className="min-w-0 flex-1">
             <span className="sr-only">Calendar teacher display</span>

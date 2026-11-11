@@ -275,7 +275,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId,previewD
 
   const invoices = invoiceSummary.invoices;
   const invoiceSection = view === "dashboard" && capabilities.has("school.billing.manage") ? (
-    <section className="ui-card p-6 sm:p-8">
+    <section className="ui-card p-4 sm:p-8">
       <div className="mr-10 flex flex-wrap items-start justify-between gap-5">
         <SectionHeading kind="billing" eyebrow="Invoices" title={invoiceSummary.attentionCount ? `${invoiceSummary.attentionCount} still in progress` : "Everything is settled"} description="Recent family invoices and their current approval or payment status." />
         <Link href={`/schools/${schoolId}/invoices`} className="rounded-control border border-line px-3 py-2 text-sm text-brand transition hover:border-brand hover:bg-brand/10 hover:text-brand-hover">View all invoices →</Link>
@@ -325,7 +325,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId,previewD
   ];
 
   return (
-    <main className="mx-auto min-h-screen max-w-7xl px-6 py-section">
+    <main className="mx-auto min-h-screen max-w-7xl px-4 py-8 sm:px-6 sm:py-section">
       {view === "students" ? <StudentDirectory
         rows={studentRowsForTable}
         monthLabel={monthLabel}

@@ -130,7 +130,7 @@ export function InvoiceWorkspaceList({ schoolId, invoices, compact, autoOpenId =
       {selected ? (
         <div className="fixed inset-0 z-[120]" role="dialog" aria-modal="true" aria-labelledby="invoice-workspace-title">
           <button type="button" aria-label="Close invoice" onClick={close} className="absolute inset-0 bg-[var(--ui-overlay)]" />
-          <section className="absolute left-1/2 top-1/2 max-h-[calc(100dvh-2rem)] w-[min(46rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-card border border-brand/30 bg-canvas p-6 shadow-2xl sm:p-8">
+          <section className="absolute inset-x-0 bottom-0 max-h-[calc(100dvh-0.5rem)] w-full overflow-y-auto rounded-t-card border border-brand/30 bg-canvas p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:w-[min(46rem,calc(100%-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-card sm:p-8">
             <header className="flex items-start justify-between gap-5">
               <div>
                 <p className="text-xs uppercase tracking-[0.14em] text-brand">Invoice workspace</p>

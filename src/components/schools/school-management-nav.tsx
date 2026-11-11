@@ -129,13 +129,13 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
       ];
 
   return (
-    <nav className="border-b border-line py-5" aria-label="School management">
-      <div className="flex flex-wrap items-center justify-end gap-3 pr-1">
+    <nav className="border-b border-line py-3 sm:py-5" aria-label="School management">
+      <div className="flex items-center justify-end gap-4 overflow-x-auto pb-1 pr-1">
         {can("school.lessons.manage") && lessonCreationOptions ? <HeaderLessonFinder schoolId={schoolId} timeZone={timeZone} options={lessonCreationOptions} studentIdsByFamily={studentIdsByFamily} /> : null}
         {can("school.billing.manage") ? <PrepareInvoiceLauncher schoolId={schoolId} payers={invoicePayers} variant="nav" /> : null}
       </div>
-      <div className="mt-3 flex flex-wrap items-start gap-x-6 gap-y-4">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-3">
+      <div className="mt-2 flex items-start gap-4 overflow-x-auto pb-2 sm:mt-3 sm:gap-x-6">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-3">
       {items.map((item) => {
         const Icon = item.icon;
         const directory = "directory" in item ? item.directory : null;
@@ -154,7 +154,7 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
         </div>;
       })}
       </div>
-      <div className="ml-auto flex flex-wrap items-start justify-end gap-3 sm:gap-4">
+      <div className="ml-auto flex shrink-0 items-start justify-end gap-3 sm:gap-4">
         {can("school.billing.manage") ? <div ref={invoicesRef} className="relative z-30">
           <div className={`flex items-stretch rounded-control border border-brand/40 bg-brand/10 text-brand transition hover:border-brand hover:bg-brand/15 ${invoiceCount ? "attention-cue" : ""}`}><Link href={`${base}/invoices`} aria-current={pathname.startsWith(`${base}/invoices`) ? "page" : undefined} className="inline-flex items-center px-3 py-1.5 text-sm"><MdReceiptLong aria-hidden="true" className="mr-1.5 text-base" />Invoices{invoiceCount ? <span className="ml-2 inline-grid min-w-5 place-items-center rounded-full bg-brand px-1 text-xs text-canvas" aria-label={`${invoiceCount} open invoices`}>{invoiceCount}</span> : null}</Link><button type="button" aria-label="Open invoice queue" aria-expanded={invoicesOpen} title="Open invoice queue" onClick={() => setInvoicesOpen((value) => { if (!value) window.dispatchEvent(new Event("common-time:open-invoices")); return !value; })} className="grid min-w-10 place-items-center border-l border-brand/30"><MdExpandMore aria-hidden="true" className={`text-xl transition ${invoicesOpen ? "rotate-180" : ""}`} /></button></div>
           {invoicesOpen ? <div className="ui-card absolute top-full right-0 mt-2 w-[min(32rem,calc(100vw-2.5rem))] p-4">
