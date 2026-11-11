@@ -15,7 +15,7 @@ export default function ComingSoonPage() {
     <main className="coming-soon relative mx-auto flex min-h-screen w-full max-w-[90rem] flex-col overflow-hidden px-5 py-6 sm:px-8 sm:py-8 lg:px-14 lg:py-10">
       <ParallaxPhoto src="/images/unsplash/andrey-k-piano-lesson.jpg" alt="" sizes="(min-width: 1440px) 90rem, 100vw" objectPosition="center 44%" tintClassName="bg-canvas/80 mix-blend-normal" />
       <header className="relative z-10 flex flex-wrap items-center justify-between gap-4 border-b border-ink/20 pb-5 text-xs tracking-[0.08em] text-muted sm:text-sm">
-        <CommonTimeLogo priority light className="w-44" />
+        <CommonTimeLogo priority light className="-ml-2 w-44 sm:ml-0" />
         <nav aria-label="Account access" className="flex items-center gap-5 sm:gap-7">
           <a className="transition hover:text-ink" href="https://app.commontime.studio/login">School sign in</a>
           <a className="text-brand transition hover:text-brand-hover" href="https://app.commontime.studio/portal">Family portal</a>

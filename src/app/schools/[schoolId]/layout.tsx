@@ -10,6 +10,7 @@ import { loadSchoolInvoiceSummary } from "@/lib/billing/school-invoices";
 import { MdSettings } from "react-icons/md";
 import { loadLessonCreationOptions } from "@/lib/scheduling/lesson-creation-options";
 import { SchoolSectionFrame } from "@/components/schools/school-section-frame";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 
 export const dynamic = "force-dynamic";
 
@@ -51,15 +52,16 @@ export default async function SchoolLayout({ children, params }: { children: Rea
     }).sort((a, b) => a.localeCompare(b)),
   }));
   return <div data-school-theme={school.theme_key} data-school-font={school.font_key} className="min-h-screen bg-canvas text-ink">
+    <InstallPrompt />
     <SchoolSectionFrame schoolId={schoolId}>
-    <div className="mx-auto max-w-7xl px-5 pt-8 sm:px-8 sm:pt-10">
-      <header className="flex items-start justify-between gap-6 border-b border-line pb-7">
-        <div className="flex min-w-0 items-center gap-4">
-          {logo?.signedUrl ? <img /* eslint-disable-line @next/next/no-img-element */ src={logo.signedUrl} alt={`${school.name} logo`} className="h-24 w-auto max-w-48 shrink-0 rounded-card border border-line bg-surface object-contain p-2" /> : <span className="grid h-24 w-24 shrink-0 place-items-center rounded-card border border-line bg-surface text-3xl font-semibold text-brand">{school.name.slice(0,1).toUpperCase()}</span>}
+    <div className="mx-auto max-w-7xl px-4 pt-5 sm:px-8 sm:pt-10">
+      <header className="flex items-start justify-between gap-3 border-b border-line pb-5 sm:gap-6 sm:pb-7">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+          {logo?.signedUrl ? <img /* eslint-disable-line @next/next/no-img-element */ src={logo.signedUrl} alt={`${school.name} logo`} className="h-16 w-auto max-w-28 shrink-0 rounded-card border border-line bg-surface object-contain p-1.5 sm:h-24 sm:max-w-48 sm:p-2" /> : <span className="grid h-16 w-16 shrink-0 place-items-center rounded-card border border-line bg-surface text-2xl font-semibold text-brand sm:h-24 sm:w-24 sm:text-3xl">{school.name.slice(0,1).toUpperCase()}</span>}
           <span className="min-w-0">
-            <Link href={`/schools/${schoolId}`} className="block truncate font-display text-3xl hover:text-brand sm:text-4xl">{school.name}</Link>
+            <Link href={`/schools/${schoolId}`} className="block truncate font-display text-2xl hover:text-brand sm:text-4xl">{school.name}</Link>
             <span className="mt-1 block text-xs text-muted">{school.timezone} · {school.family_billing_mode.replaceAll("_"," ")}</span>
-            {capabilities.has("school.setup.manage") ? <span className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs">
+            {capabilities.has("school.setup.manage") ? <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] sm:mt-3 sm:gap-x-4 sm:gap-y-2 sm:text-xs">
               <Link href={`/schools/${schoolId}/setup`} className="inline-flex items-center gap-1.5 text-muted transition hover:text-brand"><MdSettings aria-hidden="true" className="text-base" />School settings</Link>
               <Link href={`/schools/${schoolId}/subscription`} className="text-muted transition hover:text-brand">Common Time plan</Link>
             </span> : null}

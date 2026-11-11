@@ -32,8 +32,8 @@ export function SectionHeading({ kind, eyebrow, title, description, id }: {
   const { icon: Icon, badge } = sectionStyles[kind];
 
   return (
-    <div className="flex items-start gap-4">
-      <span aria-hidden="true" className={`mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-full text-xl ${badge}`}>
+    <div className="flex flex-col items-start gap-3 text-left sm:flex-row sm:gap-4">
+      <span aria-hidden="true" className={`grid h-11 w-11 shrink-0 place-items-center rounded-full text-xl sm:mt-0.5 ${badge}`}>
         <Icon />
       </span>
       <div className="min-w-0">

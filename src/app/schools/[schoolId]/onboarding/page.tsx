@@ -33,7 +33,7 @@ function personName(person: { first_name: string; last_name: string; preferred_n
 }
 
 function StepHeading({ icon: Icon, title, children }: { icon: IconType; title: string; children: ReactNode }) {
-  return <header className="mb-7 flex items-start gap-4"><span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand/12 text-brand"><Icon aria-hidden="true" className="h-6 w-6" /></span><div><h2 className="font-display text-3xl text-ink">{title}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{children}</p></div></header>;
+  return <header className="mb-7 flex flex-col items-start gap-3 text-left sm:flex-row sm:gap-4"><span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand/12 text-brand"><Icon aria-hidden="true" className="h-6 w-6" /></span><div><h2 className="font-display text-3xl text-ink">{title}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{children}</p></div></header>;
 }
 
 export default async function OnboardingPage({ params, searchParams }: {

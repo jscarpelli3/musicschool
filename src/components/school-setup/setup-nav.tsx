@@ -1,12 +1,13 @@
 import Link from "next/link";
 import type { IconType } from "react-icons";
-import { MdCreditCard, MdPalette, MdPolicy, MdSchool, MdTune } from "react-icons/md";
+import { MdCreditCard, MdNotifications, MdPalette, MdPolicy, MdSchool, MdTune } from "react-icons/md";
 
 const tabs = [
   { key: "info", label: "School info", path: "setup", icon: MdSchool },
   { key: "offerings", label: "Lessons & classes", path: "products", icon: MdTune },
   { key: "policies", label: "Policies & documents", path: "policies", icon: MdPolicy },
   { key: "payments", label: "Payments", path: "payments", icon: MdCreditCard },
+  { key: "notifications", label: "Notifications", path: "notification-settings", icon: MdNotifications },
   { key: "appearance", label: "Appearance", path: "appearance", icon: MdPalette },
 ] as const;
 

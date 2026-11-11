@@ -143,7 +143,7 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
         : hostedLinkOpen ? `A secure payment page is ready for ${amount}. No payment has been submitted yet.`
         : `The payer approved this exact ${amount} invoice. Choose the saved card or send a one-time Stripe payment link.`;
 
-  return <section className="mt-6 rounded-card border border-brand/30 bg-brand/5 p-5 sm:p-6">
+  return <section className="mt-6 rounded-card border border-brand/30 bg-brand/5 p-4 sm:p-6">
     <div className="flex items-start gap-4">
       <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-full bg-brand/10 text-2xl text-brand"><MdCreditCard /></span>
       <div className="min-w-0 flex-1">

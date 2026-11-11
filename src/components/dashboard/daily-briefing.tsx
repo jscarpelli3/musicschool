@@ -35,19 +35,19 @@ export function DailyBriefing({schoolId,profileId,dateKey,dateLabel,lessonNames,
     setOpen(false);
     window.requestAnimationFrame(()=>document.getElementById(`dashboard-section-${section}`)?.scrollIntoView({behavior:"smooth",block:"start"}));
   }
-  return <div className="fixed inset-0 z-[170] grid place-items-center bg-[var(--ui-overlay)] px-5" role="dialog" aria-modal="true" aria-labelledby="daily-briefing-title">
-    <section className="relative w-full max-w-4xl overflow-hidden rounded-card border border-brand/25 bg-canvas px-6 py-8 shadow-2xl sm:px-12 sm:py-12">
+  return <div className="fixed inset-0 z-[170] grid place-items-end bg-[var(--ui-overlay)] sm:place-items-center sm:px-5" role="dialog" aria-modal="true" aria-labelledby="daily-briefing-title">
+    <section className="relative max-h-[calc(100dvh-0.5rem)] w-full max-w-4xl overflow-y-auto rounded-t-card border border-brand/25 bg-canvas px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-card sm:px-12 sm:py-12">
       <div aria-hidden className="pointer-events-none absolute inset-0 opacity-75" style={{background:"radial-gradient(circle at 92% 8%, color-mix(in srgb, #e5a38e 30%, transparent) 0%, transparent 31%), radial-gradient(circle at 7% 95%, color-mix(in srgb, #84abc9 24%, transparent) 0%, transparent 34%), radial-gradient(circle at 62% 110%, color-mix(in srgb, #8fba99 20%, transparent) 0%, transparent 32%)"}}/>
       <button type="button" onClick={()=>setOpen(false)} aria-label="Close today’s welcome" className="absolute right-3 top-3 z-30 grid size-9 place-items-center rounded-full text-xl text-muted transition hover:bg-canvas/70 hover:text-ink"><MdClose/></button>
       <div className="relative z-10 max-w-2xl"><p className="text-xs font-medium uppercase tracking-[0.16em] text-brand">{dateLabel}</p>
-      <h2 id="daily-briefing-title" className="mt-3 font-display text-5xl tracking-[-0.04em] sm:text-6xl">Welcome to today.</h2>
+      <h2 id="daily-briefing-title" className="mt-2 font-display text-4xl tracking-[-0.04em] sm:mt-3 sm:text-6xl">Welcome to today.</h2>
       <p className="mt-4 text-sm leading-7 text-muted">A quick look at the day ahead. Choose an area whenever you’re ready.</p></div>
-      <div className="relative z-10 mt-10 grid gap-4 sm:grid-cols-3">
-        {items.map((item)=>{const Icon=item.icon;return <button key={item.section} type="button" onClick={()=>visit(item.section)} className="min-h-56 rounded-card border p-6 text-left transition duration-200 hover:-translate-y-1 hover:shadow-[var(--ui-shadow-soft)]" style={{background:`color-mix(in srgb, ${item.color} 17%, var(--ui-canvas))`,borderColor:`color-mix(in srgb, ${item.color} 38%, var(--ui-line))`}}>
+      <div className="relative z-10 mt-6 grid gap-3 sm:mt-10 sm:grid-cols-3 sm:gap-4">
+        {items.map((item)=>{const Icon=item.icon;return <button key={item.section} type="button" onClick={()=>visit(item.section)} className="grid grid-cols-[auto_1fr] gap-x-3 rounded-card border p-4 text-left transition duration-200 hover:-translate-y-1 hover:shadow-[var(--ui-shadow-soft)] sm:block sm:min-h-56 sm:p-6" style={{background:`color-mix(in srgb, ${item.color} 17%, var(--ui-canvas))`,borderColor:`color-mix(in srgb, ${item.color} 38%, var(--ui-line))`}}>
           <span className="grid size-11 place-items-center rounded-full" style={{background:`color-mix(in srgb, ${item.color} 24%, var(--ui-canvas))`,color:item.color}}><Icon aria-hidden className="text-2xl"/></span>
-          <span className="mt-5 block text-base font-medium leading-6 text-ink">{item.label}</span>
-          <span className="mt-3 block text-sm leading-6 text-muted">{item.detail}</span>
-          <span className="mt-6 block text-xs font-medium" style={{color:item.color}}>Go there →</span>
+          <span className="block self-center text-sm font-medium leading-5 text-ink sm:mt-5 sm:text-base sm:leading-6">{item.label}</span>
+          <span className="col-start-2 mt-1 block text-xs leading-5 text-muted sm:mt-3 sm:text-sm sm:leading-6">{item.detail}</span>
+          <span className="col-start-2 mt-2 block text-xs font-medium sm:mt-6" style={{color:item.color}}>Go there →</span>
         </button>;})}
       </div>
     </section>
