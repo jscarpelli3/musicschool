@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(7);
+select plan(8);
 select ok(not has_table_privilege('authenticated','public.daily_hello_push_deliveries','select'),'school users cannot read the daily hello work queue');
 select ok(not has_function_privilege('anon','public.set_my_school_notification_preferences(uuid,boolean,boolean,boolean,boolean,boolean)','execute'),'anonymous users cannot change daily hello settings');
 select ok(has_function_privilege('authenticated','public.set_my_school_notification_preferences(uuid,boolean,boolean,boolean,boolean,boolean)','execute'),'authenticated members may reach the protected preference boundary');
@@ -8,5 +8,11 @@ select ok(not has_function_privilege('authenticated','public.claim_daily_hello_p
 select ok(has_function_privilege('service_role','public.claim_daily_hello_push_deliveries(integer)','execute'),'service role can claim daily hello work');
 select ok(not has_function_privilege('authenticated','public.complete_daily_hello_push_delivery(uuid,boolean,text)','execute'),'school users cannot complete daily hello work');
 select ok(has_function_privilege('service_role','public.complete_daily_hello_push_delivery(uuid,boolean,text)','execute'),'service role can complete daily hello work');
+select set_config('request.jwt.claim.role','service_role',true);
+set local role service_role;
+select lives_ok(
+  $$select * from public.claim_daily_hello_push_deliveries(1)$$,
+  'the daily hello queue can be claimed without ambiguous output-column references'
+);
 select * from finish();
 rollback;

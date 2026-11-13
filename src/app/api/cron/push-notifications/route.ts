@@ -27,8 +27,11 @@ async function dailyHelloBody(admin:SupabaseClient,item:DailyHello){
 export async function GET(request:Request){
  const secret=process.env.PUSH_WORKER_SECRET?.trim();
  if(!secret||request.headers.get("authorization")!==`Bearer ${secret}`)return new Response("Unauthorized",{status:401});
- const admin=createAdminClient() as unknown as SupabaseClient,[queue,daily]=await Promise.all([admin.rpc("claim_push_notification_deliveries",{p_limit:50}),admin.rpc("claim_daily_hello_push_deliveries",{p_limit:25})]);
- if(queue.error||daily.error){console.error("Push queue claim failed",{queueCode:queue.error?.code,dailyCode:daily.error?.code});return Response.json({ok:false,error:"claim_failed"},{status:500});}
+ const admin=createAdminClient() as unknown as SupabaseClient;
+ const daily=await admin.rpc("claim_daily_hello_push_deliveries",{p_limit:25});
+ if(daily.error){console.error("Daily hello queue claim failed",{code:daily.error.code,message:daily.error.message});return Response.json({ok:false,error:"daily_claim_failed"},{status:500});}
+ const queue=await admin.rpc("claim_push_notification_deliveries",{p_limit:50});
+ if(queue.error){console.error("Push notification queue claim failed",{code:queue.error.code,message:queue.error.message});return Response.json({ok:false,error:"queue_claim_failed"},{status:500});}
  let delivered=0,failed=0;
  for(const item of (daily.data??[]) as DailyHello[]){
   try{
