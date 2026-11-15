@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
+import { personDisplayName } from "@/lib/people/display-name";
 
 export type ServiceEntitlementItem = {
   id: string;
@@ -42,7 +43,7 @@ export async function loadServiceEntitlements(
   const productIds = [...new Set((eventsResult.data ?? []).map((event) => event.product_id))];
   const { data: products, error: productError } = await supabase.from("service_products").select("id,name").eq("school_id", schoolId).in("id", productIds);
   if (productError) throw new Error("Lesson offering names could not be loaded.");
-  const people = new Map((peopleResult.data ?? []).map((person) => [person.id, `${person.preferred_name || person.first_name} ${person.last_name}`]));
+  const people = new Map((peopleResult.data ?? []).map((person) => [person.id, personDisplayName(person)]));
   const events = new Map((eventsResult.data ?? []).map((event) => [event.id, event]));
   const productNames = new Map((products ?? []).map((product) => [product.id, product.name]));
   return rows.flatMap<ServiceEntitlementItem>((row) => {

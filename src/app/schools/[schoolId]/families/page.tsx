@@ -6,12 +6,11 @@ import { addStudentAndPayer } from "./actions";
 import { invoiceNeedsAttention, loadSchoolInvoices } from "@/lib/billing/school-invoices";
 import { FamilyDirectory, type FamilyDirectoryRow } from "@/components/families/family-directory";
 import { PageHeading } from "@/components/ui/page-heading";
+import { personDisplayName } from "@/lib/people/display-name";
 
 export const dynamic = "force-dynamic";
 
-function displayName(person: { first_name: string; last_name: string; preferred_name: string | null }) {
-  return `${person.preferred_name || person.first_name} ${person.last_name}`;
-}
+const displayName = personDisplayName;
 
 export default async function FamiliesPage({ params }: { params: Promise<{ schoolId: string }> }) {
   const { schoolId } = await params;

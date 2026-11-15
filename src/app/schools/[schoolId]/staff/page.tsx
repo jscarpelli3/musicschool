@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { personDisplayName } from "@/lib/people/display-name";
 import { notFound, redirect } from "next/navigation";
 import { AddTeacherDialog } from "@/components/staff/add-teacher-dialog";
 import { TeacherSchedulingSettingsForm } from "@/components/staff/teacher-scheduling-settings-form";
@@ -74,7 +75,7 @@ export default async function StaffPage({ params, searchParams }: { params: Prom
           {roster.map((person) => (
             <article key={person.id} className="ui-card p-5 sm:p-7">
               <header className="flex flex-wrap items-start justify-between gap-5 pb-5">
-                <div><div className="flex flex-wrap items-center gap-3"><h3 className="font-display text-3xl"><Link href={`/schools/${schoolId}/staff/${person.id}`} className="hover:text-brand">{person.preferred_name || person.first_name} {person.last_name}</Link></h3><span className={`border px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${person.membershipStatus === "active" ? "border-brand/40 bg-brand/10 text-brand" : "border-line text-muted"}`}>{person.membershipStatus}</span></div><p className="mt-2 text-sm text-muted">{person.email || "No email address"}{person.phone ? ` · ${person.phone}` : ""}</p></div>
+                <div><div className="flex flex-wrap items-center gap-3"><h3 className="font-display text-3xl"><Link href={`/schools/${schoolId}/staff/${person.id}`} className="hover:text-brand">{personDisplayName(person)}</Link></h3><span className={`border px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${person.membershipStatus === "active" ? "border-brand/40 bg-brand/10 text-brand" : "border-line text-muted"}`}>{person.membershipStatus}</span></div><p className="mt-2 text-sm text-muted">{person.email || "No email address"}{person.phone ? ` · ${person.phone}` : ""}</p></div>
                 <Link href={`/schools/${schoolId}/staff/${person.id}`} className="border-b border-brand pb-1 text-sm text-brand hover:text-brand-hover">View details →</Link>
               </header>
               <dl className="grid gap-3 sm:grid-cols-3"><div className="rounded-control bg-surface p-4"><dt className="text-xs text-muted">School role</dt><dd className="mt-2 text-sm capitalize">{person.role}</dd></div><div className="rounded-control bg-surface p-4"><dt className="text-xs text-muted">Schedule changes</dt><dd className="mt-2 text-sm">{person.schedulingAuthority === "manage_assigned_lessons" ? "Can move assigned lessons" : "Owner approval required"}</dd></div><div className="rounded-control bg-surface p-4"><dt className="text-xs text-muted">Outside availability</dt><dd className="mt-2 text-sm">{person.outsideAvailabilityPolicy === "require_approval" ? "Teacher approval required" : "Notify teacher"}</dd></div></dl>

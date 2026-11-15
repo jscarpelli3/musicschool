@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { checkSchoolCapability } from "@/lib/auth/school-capabilities";
 import { createClient } from "@/lib/supabase/server";
+import { personDisplayName } from "@/lib/people/display-name";
 import { beginLessonQuickPayment } from "./actions";
 import { PaymentCodeSubmit } from "./payment-code-submit";
 import { PaymentStatusRefresh } from "./payment-status-refresh";
@@ -36,7 +37,7 @@ export default async function LessonPaymentPage({ params, searchParams }: {
   if (!school || !lesson || !snapshot) notFound();
   const { data: student } = await supabase.from("people").select("first_name,last_name,preferred_name").eq("school_id", schoolId).eq("id", lesson.student_id).maybeSingle();
   if (!student) notFound();
-  const studentName = `${student.preferred_name || student.first_name} ${student.last_name}`;
+  const studentName = personDisplayName(student);
   const amount = new Intl.NumberFormat("en-US", { style: "currency", currency: snapshot.currency }).format(snapshot.amount_cents / 100);
   const lessonDate = new Intl.DateTimeFormat("en-US", { timeZone: school.timezone, weekday: "long", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(lesson.starts_at));
   const requestId = query.request && /^[0-9a-f-]{36}$/i.test(query.request) ? query.request : null;

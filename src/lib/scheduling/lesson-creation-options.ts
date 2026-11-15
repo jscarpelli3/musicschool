@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { LessonCreationOptions } from "@/components/scheduling/lesson-creation-dialog";
 import { lessonPlaceLabel } from "@/lib/scheduling/lesson-place-label";
+import { personDisplayName } from "@/lib/people/display-name";
 
 export async function loadLessonCreationOptions(client: SupabaseClient<Database>, schoolId: string, timeZone: string): Promise<LessonCreationOptions> {
   const now = new Date();
@@ -21,7 +22,7 @@ export async function loadLessonCreationOptions(client: SupabaseClient<Database>
   const failed = [teachersResult, studentsResult, peopleResult, productsResult, placesResult, availabilityResult, lessonsResult, instrumentsResult, teacherInstrumentsResult].find((result) => result.error);
   if (failed?.error) throw new Error(`Lesson finder could not load: ${failed.error.message}`);
   const people = new Map((peopleResult.data ?? []).map((person) => [person.id, person]));
-  const displayName = (person: NonNullable<typeof peopleResult.data>[number]) => `${person.preferred_name || person.first_name} ${person.last_name}`;
+  const displayName = personDisplayName;
   const today = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
   const minimumTimeToday = new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(now);
   return {

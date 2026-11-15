@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { reconcileInvoicePaymentIntent } from "@/lib/stripe/invoice-collection";
+import { personDisplayName } from "@/lib/people/display-name";
 import { getStripe, getStripeMode } from "@/lib/stripe/server";
 
 function applicationUrl() {
@@ -64,7 +65,7 @@ export async function createApprovedInvoiceCheckout(rawToken: string | null, own
   }
   if (!providerCustomerId) {
     const customer = await stripe.customers.create({
-      name: `${contact.preferred_name || contact.first_name} ${contact.last_name}`,
+      name: personDisplayName(contact),
       email: contact.email ?? undefined,
       phone: contact.phone ?? undefined,
       metadata: { school_id: approval.school_id, billing_account_id: approval.billing_account_id },

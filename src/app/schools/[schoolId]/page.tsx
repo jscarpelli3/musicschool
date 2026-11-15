@@ -15,6 +15,7 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { PageHeading } from "@/components/ui/page-heading";
 import { lessonPlaceLabel } from "@/lib/scheduling/lesson-place-label";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
+import { personDisplayName } from "@/lib/people/display-name";
 
 export const dynamic = "force-dynamic";
 
@@ -108,7 +109,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId,previewD
     return person
       ? [{
           id: person.id,
-          name: `${person.preferred_name || person.first_name} ${person.last_name}`,
+          name: personDisplayName(person),
           isOwner: person.profile_id === profileId,
           outsideAvailabilityPolicy: outside_availability_policy === "require_approval" ? "require_approval" as const : "notify_only" as const,
         }]
@@ -116,7 +117,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId,previewD
   }).sort((a, b) => Number(b.isOwner) - Number(a.isOwner) || a.name.localeCompare(b.name));
   const studentNames = Object.fromEntries((studentRows ?? []).flatMap(({ person_id }) => {
     const person = people.get(person_id);
-    return person ? [[person.id, `${person.preferred_name || person.first_name} ${person.last_name}`]] : [];
+    return person ? [[person.id, personDisplayName(person)]] : [];
   }));
   const productNames = Object.fromEntries((productRows ?? []).map((product) => [product.id, product.name]));
   const instrumentNames = Object.fromEntries((instrumentRows ?? []).map((instrument) => [instrument.id, instrument.name]));
@@ -131,13 +132,13 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId,previewD
   const studentDetails = Object.fromEntries((studentRows ?? []).flatMap(({ person_id }) => {
     const student = people.get(person_id);
     if (!student) return [];
-    const displayName = `${student.preferred_name || student.first_name} ${student.last_name}`;
+    const displayName = personDisplayName(student);
     const contacts = (contactRows ?? [])
       .filter((contact) => contact.student_id === person_id)
       .flatMap((contact) => {
         const person = people.get(contact.contact_person_id);
         return person ? [{
-          name: `${person.preferred_name || person.first_name} ${person.last_name}`,
+          name: personDisplayName(person),
           relationship: contact.relationship,
           isPrimary: contact.is_primary,
           isBillingContact: contact.is_billing_contact,
@@ -153,7 +154,7 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId,previewD
         return account && payer ? [{
           accountId: account.id,
           accountName: account.name,
-          name: `${payer.preferred_name || payer.first_name} ${payer.last_name}`,
+          name: personDisplayName(payer),
           email: payer.email,
           phone: payer.phone,
           selfPaying: payer.id === person_id,
@@ -309,8 +310,8 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId,previewD
     pendingProposals={(pendingProposalRows??[]).map((item)=>({...item,status:item.status==="pending_owner"?"pending_owner" as const:"pending_teacher" as const,href:item.status==="pending_owner"?`/schools/${schoolId}/approvals?proposal=${item.id}`:`/schools/${schoolId}/staff/${item.teacher_id}`}))}
     lessonCreationOptions={lessonCreationOptions}
     addFamilyAction={capabilities.has("school.billing.manage")?addStudentAndPayer.bind(null,schoolId):undefined}
-    existingPayers={(billingAccountRows??[]).flatMap((account)=>{const payer=people.get(account.billing_contact_person_id);return payer?.email?[{id:account.id,label:`${account.name} · ${payer.preferred_name||payer.first_name} ${payer.last_name}`,firstName:payer.first_name,lastName:payer.last_name,email:payer.email}]:[];})}
-    unconnectedStudents={(studentRows??[]).flatMap((student)=>{if((billingLinkRows??[]).some((link)=>link.student_id===student.person_id))return[];const person=people.get(student.person_id);return person?[{id:student.person_id,label:`${person.preferred_name||person.first_name} ${person.last_name}`}]:[];})}
+    existingPayers={(billingAccountRows??[]).flatMap((account)=>{const payer=people.get(account.billing_contact_person_id);return payer?.email?[{id:account.id,label:`${account.name} · ${personDisplayName(payer)}`,firstName:payer.first_name,lastName:payer.last_name,email:payer.email}]:[];})}
+    unconnectedStudents={(studentRows??[]).flatMap((student)=>{if((billingLinkRows??[]).some((link)=>link.student_id===student.person_id))return[];const person=people.get(student.person_id);return person?[{id:student.person_id,label:personDisplayName(person)}]:[];})}
     invoicePayers={invoicePayers}
     quickActionsTargetId="dashboard-quick-actions"
   />:null;
