@@ -31,9 +31,9 @@ export function getStripe() {
 
   const mode = getStripeMode();
   const secretKey = requiredServerEnvironment("STRIPE_SECRET_KEY");
-  const expectedPrefix = mode === "test" ? "sk_test_" : "sk_live_";
+  const expectedPrefixes = mode === "test" ? ["sk_test_", "rk_test_"] : ["sk_live_", "rk_live_"];
 
-  if (!secretKey.startsWith(expectedPrefix)) {
+  if (!expectedPrefixes.some((prefix) => secretKey.startsWith(prefix))) {
     throw new Error(`STRIPE_SECRET_KEY does not match STRIPE_MODE=${mode}.`);
   }
 
