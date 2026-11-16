@@ -24,13 +24,12 @@ import { FamilyForm, type OnboardingFamily } from "./family-form";
 import { OnboardingStepper } from "./onboarding-stepper";
 import { updateSchoolBillingTiming } from "../products/actions";
 import { ProductForm } from "../products/product-form";
+import { personDisplayName } from "@/lib/people/display-name";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Set up your school · Common Time", robots: { index: false, follow: false } };
 
-function personName(person: { first_name: string; last_name: string; preferred_name: string | null }) {
-  return `${person.preferred_name || person.first_name} ${person.last_name}`;
-}
+const personName = personDisplayName;
 
 function StepHeading({ icon: Icon, title, children }: { icon: IconType; title: string; children: ReactNode }) {
   return <header className="mb-7 flex flex-col items-start gap-3 text-left sm:flex-row sm:gap-4"><span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand/12 text-brand"><Icon aria-hidden="true" className="h-6 w-6" /></span><div><h2 className="font-display text-3xl text-ink">{title}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{children}</p></div></header>;

@@ -3,6 +3,7 @@ import "server-only";
 import crypto from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe, getStripeMode } from "@/lib/stripe/server";
+import { personDisplayName } from "@/lib/people/display-name";
 
 export const PAYMENT_METHOD_TERMS_VERSION = "off-session-approved-amounts-v1";
 
@@ -25,7 +26,7 @@ function applicationUrl() {
 }
 
 function personName(person: { first_name: string; last_name: string; preferred_name: string | null }) {
-  return `${person.preferred_name || person.first_name} ${person.last_name}`;
+  return personDisplayName(person);
 }
 
 export async function createFamilyCardSetup(schoolId: string, billingAccountId: string, actorProfileId: string) {

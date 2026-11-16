@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { cache } from "react";
 import type { Database } from "@/types/database";
 import { billingPeriodDescriptor, billingPeriodStates } from "@/lib/domain/state-descriptors";
+import { personDisplayName } from "@/lib/people/display-name";
 
 type Client = SupabaseClient<Database>;
 
@@ -41,7 +42,7 @@ export async function loadSchoolInvoices(client: Client, schoolId: string, limit
   ]);
   if (periodError || accountError || studentLinkError || peopleError) throw new Error("Invoices could not be loaded.");
   const accountNames = new Map((accounts ?? []).map((account) => [account.id, account.name]));
-  const personNames = new Map((people ?? []).map((person) => [person.id, `${person.preferred_name || person.first_name} ${person.last_name}`]));
+  const personNames = new Map((people ?? []).map((person) => [person.id, personDisplayName(person)]));
   const studentsByAccount = (studentLinks ?? []).reduce<Record<string, string[]>>((grouped, link) => {
     const studentName = personNames.get(link.student_id);
     if (studentName) (grouped[link.billing_account_id] ??= []).push(studentName);

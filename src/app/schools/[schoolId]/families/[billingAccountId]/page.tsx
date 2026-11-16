@@ -34,12 +34,12 @@ import { calendarMonthCutoff, formatCompactDate } from "@/lib/date-format";
 import { getStripeMode } from "@/lib/stripe/server";
 import { ServiceLocationForm } from "./service-location-form";
 import { lessonPlaceLabel } from "@/lib/scheduling/lesson-place-label";
+import { personDisplayName } from "@/lib/people/display-name";
+import { FamilyRecordEditor } from "./family-record-editor";
 
 export const dynamic = "force-dynamic";
 
-function name(person: { first_name: string; last_name: string; preferred_name: string | null }) {
-  return `${person.preferred_name || person.first_name} ${person.last_name}`;
-}
+const name = personDisplayName;
 
 export default async function FamilyDetailPage({ params, searchParams }: {
   params: Promise<{ schoolId: string; billingAccountId: string }>;
@@ -219,7 +219,7 @@ export default async function FamilyDetailPage({ params, searchParams }: {
       <RecordLessonCalendar title="Family lesson calendar" description="Lessons for every student on this account. Move between months without leaving the record." schoolId={schoolId} id={`family-${billingAccountId}-calendar`} lessons={(familyLessons ?? []).map((lesson) => { const studentPerson = people.get(lesson.student_id); const teacherPerson = people.get(lesson.teacher_id); return { id: lesson.id, studentId: lesson.student_id, studentName: studentPerson ? name(studentPerson) : "Student", teacherId: lesson.teacher_id, teacherName: teacherPerson ? name(teacherPerson) : "Unassigned teacher", productName: products.get(lesson.product_id) ?? "Lesson", instrumentName: lesson.instrument_id ? instrumentNames.get(lesson.instrument_id) ?? "Instrument not found" : "Not recorded", placeName: places.get(lesson.actual_place_id ?? lesson.place_id) ?? "Unassigned place", startsAt: lesson.actual_starts_at ?? lesson.starts_at, endsAt: lesson.actual_ends_at ?? lesson.ends_at, status: lesson.outcome ?? lesson.status, billingAccounts: [{ id: billingAccountId, name: account.name }] }; })} rangeStart={calendarStart} rangeEnd={calendarEnd} timeZone={school.timezone} lessonCreationOptions={lessonCreationOptions} />
 
       <DetailSection title="Primary payer" description="The person currently responsible for this billing account.">
-        {contact ? <div><p className="font-display text-3xl">{name(contact)}</p><p className="mt-3 text-xs uppercase tracking-[0.14em] text-brand">{contact.status}</p>{canManagePayments ? <><BillingContactEmail schoolId={schoolId} billingAccountId={billingAccountId} email={contact.email ?? ""} hasPendingApproval={(approvalRequestsResult.data ?? []).some((request) => request.approval_status === "pending")} /><BillingContactPhone schoolId={schoolId} schoolName={school.name} billingAccountId={billingAccountId} phone={contact.phone ?? ""} consentState={smsConsentState ?? "not_enrolled"} /></> : <><p className="mt-3 text-sm text-muted">{contact.email || "No email recorded"}</p><p className="mt-3 text-sm text-muted">{contact.phone || "No mobile number recorded"}</p></>}</div> : <EmptyDetail>The billing contact record is unavailable.</EmptyDetail>}
+        {contact ? <div><p className="font-display text-3xl">{name(contact)}</p><p className="mt-3 text-xs uppercase tracking-[0.14em] text-brand">{contact.status}</p>{canManagePayments ? <><div className="mt-5"><FamilyRecordEditor schoolId={schoolId} billingAccountId={billingAccountId} accountName={account.name} firstName={contact.first_name} lastName={contact.last_name} /></div><BillingContactEmail schoolId={schoolId} billingAccountId={billingAccountId} email={contact.email ?? ""} hasPendingApproval={(approvalRequestsResult.data ?? []).some((request) => request.approval_status === "pending")} /><BillingContactPhone schoolId={schoolId} schoolName={school.name} billingAccountId={billingAccountId} phone={contact.phone ?? ""} consentState={smsConsentState ?? "not_enrolled"} /></> : <><p className="mt-3 text-sm text-muted">{contact.email || "No email recorded"}</p><p className="mt-3 text-sm text-muted">{contact.phone || "No mobile number recorded"}</p></>}</div> : <EmptyDetail>The billing contact record is unavailable.</EmptyDetail>}
       </DetailSection>
 
       <DetailSection title="Students" description="Students whose charges roll into this family billing account.">

@@ -5728,6 +5728,40 @@ export type Database = {
         }
         Returns: Json
       }
+      update_family_record: {
+        Args: {
+          p_account_name: string
+          p_billing_account_id: string
+          p_first_name: string
+          p_last_name: string
+          p_school_id: string
+        }
+        Returns: undefined
+      }
+      update_student_contact_relationship: {
+        Args: {
+          p_contact_person_id: string
+          p_relationship: string
+          p_school_id: string
+          p_student_id: string
+        }
+        Returns: undefined
+      }
+      update_student_record: {
+        Args: {
+          p_birth_date: string | null
+          p_email: string | null
+          p_enrollment_status: string
+          p_first_name: string
+          p_last_name: string
+          p_notes: string | null
+          p_phone: string | null
+          p_preferred_name: string | null
+          p_school_id: string
+          p_student_id: string
+        }
+        Returns: undefined
+      }
       create_school: {
         Args: { school_name: string; school_timezone?: string }
         Returns: string

@@ -11,6 +11,7 @@ import { MdSettings } from "react-icons/md";
 import { loadLessonCreationOptions } from "@/lib/scheduling/lesson-creation-options";
 import { SchoolSectionFrame } from "@/components/schools/school-section-frame";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
+import { personDisplayName } from "@/lib/people/display-name";
 
 export const dynamic = "force-dynamic";
 
@@ -39,16 +40,16 @@ export default async function SchoolLayout({ children, params }: { children: Rea
   ]);
   const avatarUrl = avatar?.signedUrl ?? profile?.avatar_url;
   const people = new Map((peopleResult.data ?? []).map((person) => [person.id, person]));
-  const studentDirectory = (studentsResult.data ?? []).flatMap((student) => { const person = people.get(student.person_id); return person ? [{ id: person.id, label: `${person.preferred_name || person.first_name} ${person.last_name}` }] : []; }).sort((a, b) => a.label.localeCompare(b.label));
+  const studentDirectory = (studentsResult.data ?? []).flatMap((student) => { const person = people.get(student.person_id); return person ? [{ id: person.id, label: personDisplayName(person) }] : []; }).sort((a, b) => a.label.localeCompare(b.label));
   const familyDirectory = (familiesResult.data ?? []).map((family) => ({ id: family.id, label: family.name }));
-  const staffDirectory = (teachersResult.data ?? []).flatMap((teacher) => { const person = people.get(teacher.person_id); return person ? [{ id: person.id, label: `${person.preferred_name || person.first_name} ${person.last_name}` }] : []; }).sort((a, b) => a.label.localeCompare(b.label));
+  const staffDirectory = (teachersResult.data ?? []).flatMap((teacher) => { const person = people.get(teacher.person_id); return person ? [{ id: person.id, label: personDisplayName(person) }] : []; }).sort((a, b) => a.label.localeCompare(b.label));
   const studentIdsByFamily = (billingLinksResult.data ?? []).reduce<Record<string,string[]>>((groups, link) => { (groups[link.billing_account_id] ??= []).push(link.student_id); return groups; }, {});
   const invoicePayers = familyDirectory.map((family) => ({
     id: family.id,
     name: family.label,
     students: (studentIdsByFamily[family.id] ?? []).flatMap((studentId) => {
       const person = people.get(studentId);
-      return person ? [`${person.preferred_name || person.first_name} ${person.last_name}`] : [];
+      return person ? [personDisplayName(person)] : [];
     }).sort((a, b) => a.localeCompare(b)),
   }));
   return <div data-school-theme={school.theme_key} data-school-font={school.font_key} className="min-h-screen bg-canvas text-ink">

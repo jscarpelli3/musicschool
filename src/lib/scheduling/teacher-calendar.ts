@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { isLessonProposalState } from "@/lib/domain/state-descriptors";
 import { lessonPlaceLabel } from "@/lib/scheduling/lesson-place-label";
+import { personDisplayName as formatPersonDisplayName } from "@/lib/people/display-name";
 
 export type TeacherCalendarData = {
   availability: Array<{
@@ -57,7 +58,7 @@ type PersonName = {
 };
 
 export function personDisplayName(person: PersonName) {
-  return `${person.preferred_name || person.first_name} ${person.last_name}`;
+  return formatPersonDisplayName(person);
 }
 
 export async function loadTeacherCalendar(

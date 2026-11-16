@@ -46,12 +46,14 @@ export function AddFamilyDialog({ action, triggerLabel, largeKind, existingPayer
         <button type="button" onClick={() => setConnectionMode("new")} className={`rounded-control px-3 py-2 text-sm ${connectionMode === "new" ? "bg-surface-raised text-ink shadow-sm" : "text-muted"}`}>{largeKind === "student" ? "New payer" : "New student"}</button>
       </div> : null}
       {usesExistingStudent ? <label className="sm:col-span-2"><span className="text-xs text-muted">Student to connect</span><AppSelect required name="existing_student_id" value={existingStudentId} onChange={(event) => setExistingStudentId(event.target.value)} className={field}>{unconnectedStudents.map((student) => <option key={student.id} value={student.id}>{student.label}</option>)}</AppSelect></label> : <>
-        <label><span className="text-xs text-muted">Student first name</span><input required name="student_first" autoFocus className={field} /></label>
-        <label><span className="text-xs text-muted">Student last name</span><input required name="student_last" className={field} /></label>
+        <label><span className="text-xs text-muted">Student first name <span className="text-[0.68rem]">(optional)</span></span><input name="student_first" autoFocus className={field} /></label>
+        <label><span className="text-xs text-muted">Student last name <span className="text-[0.68rem]">(optional)</span></span><input name="student_last" className={field} /></label>
+        <p className="text-xs leading-5 text-muted sm:col-span-2">Enter whichever name fields the school uses. At least one is needed.</p>
       </>}
       {usesExistingPayer ? <label className="sm:col-span-2"><span className="text-xs text-muted">Payer to connect</span><AppSelect required value={existingPayerId} onChange={(event) => setExistingPayerId(event.target.value)} className={field}>{existingPayers.map((payer) => <option key={payer.id} value={payer.id}>{payer.label}</option>)}</AppSelect><input type="hidden" name="payer_first" value={existingPayer?.firstName ?? ""} /><input type="hidden" name="payer_last" value={existingPayer?.lastName ?? ""} /><input type="hidden" name="payer_email" value={existingPayer?.email ?? ""} /></label> : <>
-        <label><span className="text-xs text-muted">Payer first name</span><input required name="payer_first" autoComplete="given-name" className={field} /></label>
-        <label><span className="text-xs text-muted">Payer last name</span><input required name="payer_last" autoComplete="family-name" className={field} /></label>
+        <label><span className="text-xs text-muted">Payer first name <span className="text-[0.68rem]">(optional)</span></span><input name="payer_first" autoComplete="given-name" className={field} /></label>
+        <label><span className="text-xs text-muted">Payer last name <span className="text-[0.68rem]">(optional)</span></span><input name="payer_last" autoComplete="family-name" className={field} /></label>
+        <p className="text-xs leading-5 text-muted sm:col-span-2">Enter whichever name fields the school uses. At least one is needed.</p>
         <label className="sm:col-span-2"><span className="text-xs text-muted">Payer email</span><input required name="payer_email" type="email" autoComplete="email" className={field} /><span className="mt-2 block text-xs leading-5 text-muted">Billing summaries, approvals, and portal access go to this address.</span></label>
       </>}
       <label><span className="text-xs text-muted">Relationship to student</span><AppSelect name="relationship" className={field}><option value="parent">Parent</option><option value="guardian">Guardian</option><option value="self">Self</option><option value="other">Other</option></AppSelect></label>

@@ -25,6 +25,7 @@ export type BillingContactPhoneState = { ok: boolean; message: string };
 export type BillingApprovalEmailState = { ok: boolean; message: string };
 export type BillingStatementNoticeState = { ok: boolean; message: string };
 export type BillingContactEmailState = { ok: boolean; message: string };
+export type FamilyRecordState = { ok: boolean; message: string };
 export type BillingAdjustmentState = { ok: boolean; message: string };
 export type PreparedInvoice = {
   id: string;
@@ -48,6 +49,26 @@ export type PreparedInvoice = {
 export type BillingDraftState = { ok: boolean; message: string; periodId: string | null; invoice: PreparedInvoice | null; existing?: boolean };
 export type BillingLineDeferState = { ok: boolean; message: string };
 export type BillingLessonAddState = { ok: boolean; message: string };
+
+export async function updateFamilyRecord(schoolId: string, billingAccountId: string, _previous: FamilyRecordState, formData: FormData): Promise<FamilyRecordState> {
+  void _previous;
+  const path = `/schools/${schoolId}/families/${billingAccountId}`;
+  const firstName = String(formData.get("firstName") ?? "").trim();
+  const lastName = String(formData.get("lastName") ?? "").trim();
+  const accountName = String(formData.get("accountName") ?? "").trim();
+  if (!firstName && !lastName) return { ok: false, message: "Enter a first name, a last name, or both for the payer." };
+  if (firstName.length > 80 || lastName.length > 80 || !accountName || accountName.length > 120) return { ok: false, message: "Check the names and family account name." };
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) redirect(`/login?next=${path}`);
+  if (!await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) return { ok: false, message: "You do not have permission to edit this family." };
+  const { error } = await supabase.rpc("update_family_record", { p_account_name: accountName, p_billing_account_id: billingAccountId, p_first_name: firstName, p_last_name: lastName, p_school_id: schoolId });
+  if (error) return { ok: false, message: "The family record could not be saved. Nothing changed." };
+  revalidatePath(path);
+  revalidatePath(`/schools/${schoolId}`);
+  revalidatePath(`/schools/${schoolId}/families`);
+  return { ok: true, message: "Family record saved." };
+}
 
 async function readBillingApprovalEmailDetails(schoolId: string, billingPeriodId: string, currency: string) {
   const supabase = await createClient();

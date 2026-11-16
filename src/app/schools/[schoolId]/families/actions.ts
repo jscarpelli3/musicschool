@@ -20,8 +20,8 @@ export async function addStudentAndPayer(schoolId: string, _state: AddFamilyStat
     existingStudentId: String(formData.get("existing_student_id") ?? "").trim(),
   };
   const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  const payerComplete = values.payerFirst && values.payerLast && values.email && values.relationship;
-  const studentComplete = values.existingStudentId ? uuid.test(values.existingStudentId) : Boolean(values.studentFirst && values.studentLast);
+  const payerComplete = (values.payerFirst || values.payerLast) && values.email && values.relationship;
+  const studentComplete = values.existingStudentId ? uuid.test(values.existingStudentId) : Boolean(values.studentFirst || values.studentLast);
   if (!payerComplete || !studentComplete || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(values.email) || !uuid.test(values.operationId)) return { ok: false, message: "Complete the student and payer details, including a valid email address." };
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
