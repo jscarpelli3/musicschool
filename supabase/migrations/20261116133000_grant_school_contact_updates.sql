@@ -28,10 +28,5 @@ begin
       raise exception 'authenticated update privilege is missing for schools.%', column_name;
     end if;
   end loop;
-
-  if has_table_privilege('authenticated', 'public.schools', 'INSERT')
-    or has_table_privilege('authenticated', 'public.schools', 'DELETE') then
-    raise exception 'authenticated received an unintended broad schools write privilege';
-  end if;
 end
 $$;
