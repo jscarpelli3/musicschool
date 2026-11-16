@@ -3,12 +3,11 @@ import { SetupHeader } from "@/components/school-setup/setup-header";
 import { InstrumentCatalogForm } from "@/components/school-setup/instrument-catalog-form";
 import { SchoolLogoUploader } from "@/components/school-setup/school-logo-uploader";
 import { createClient } from "@/lib/supabase/server";
-import { updateSchoolInfo } from "./actions";
 import { updateSchoolInstrumentCatalog } from "./instrument-actions";
 import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
+import { SchoolInfoForm } from "@/components/school-setup/school-info-form";
 
 export const dynamic = "force-dynamic";
-const field = "w-full border-b border-line bg-transparent py-3 outline-none transition focus:border-brand";
 
 export default async function SchoolInfoPage({ params, searchParams }: {
   params: Promise<{ schoolId: string }>;
@@ -44,7 +43,6 @@ export default async function SchoolInfoPage({ params, searchParams }: {
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-10 sm:px-8 sm:py-section">
       <SetupHeader schoolId={schoolId} schoolName={school.name} active="info" />
-      {query.status ? <p className={`mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm ${query.status === "saved" ? "text-brand" : "text-danger"}`}>{query.status === "saved" ? "School information saved." : "School information could not be saved."}</p> : null}
       {logoMessage ? <p className={`mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm ${logoMessage.error ? "text-danger" : "text-brand"}`}>{logoMessage.text}</p> : null}
       <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
         <div>
@@ -61,23 +59,7 @@ export default async function SchoolInfoPage({ params, searchParams }: {
           </div>
         </div>
       </section>
-      <form action={updateSchoolInfo.bind(null, schoolId)} className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
-        <div>
-          <h2 className="font-display text-3xl">Contact</h2>
-          <p className="mt-3 text-sm text-muted">Timezone: {school.timezone}</p>
-        </div>
-        <div className="grid gap-7 md:grid-cols-2">
-          <label className="md:col-span-2"><span className="text-xs text-muted">School name</span><input required name="name" defaultValue={school.name} className={field} /></label>
-          <label className="md:col-span-2"><span className="text-xs text-muted">Phone number</span><input name="phone" type="tel" defaultValue={school.phone ?? ""} className={field} /></label>
-          <label className="md:col-span-2"><span className="text-xs text-muted">Email replies go to</span><input name="reply_to_email" type="email" autoComplete="email" defaultValue={school.reply_to_email ?? ""} className={field} /><span className="mt-2 block text-xs leading-5 text-muted">Families and teachers can reply here. Messages still come from Common Time’s authenticated notification address.</span></label>
-          <label className="md:col-span-2"><span className="text-xs text-muted">Address</span><input name="address_line_1" defaultValue={school.address_line_1 ?? ""} className={field} /></label>
-          <label className="md:col-span-2"><span className="text-xs text-muted">Suite or unit</span><input name="address_line_2" defaultValue={school.address_line_2 ?? ""} className={field} /></label>
-          <label><span className="text-xs text-muted">City</span><input name="city" defaultValue={school.city ?? ""} className={field} /></label>
-          <label><span className="text-xs text-muted">State / region</span><input name="region" defaultValue={school.region ?? ""} className={field} /></label>
-          <label><span className="text-xs text-muted">Postal code</span><input name="postal_code" defaultValue={school.postal_code ?? ""} className={field} /></label>
-          <div className="flex items-end"><button className="rounded-md bg-brand px-4 py-2.5 text-sm text-surface transition hover:opacity-90">Save school info</button></div>
-        </div>
-      </form>
+      <SchoolInfoForm schoolId={schoolId} school={school} />
       <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
         <div><h2 className="font-display text-3xl">Instruments</h2><p className="mt-3 text-sm leading-6 text-muted">Choose the instruments this school teaches. Staff profiles use this shared catalog.</p></div>
         <div><InstrumentCatalogForm instruments={(instruments ?? []).map((item) => item.name)} action={updateSchoolInstrumentCatalog.bind(null, schoolId)} /></div>
