@@ -6,6 +6,7 @@ import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 import { stripeConnectionPresentation } from "@/lib/stripe/connection-presentation";
 import { StripeActionButton } from "./stripe-action-button";
 import { StripeReturnToast } from "./stripe-return-toast";
+import { getStripeMode } from "@/lib/stripe/server";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +20,8 @@ const messages: Record<string, { title: string; text: string }> = {
   "sync-error": { title: "Stripe status was not confirmed", text: "The previous saved status is unchanged. Use Check status to try again." },
 };
 
-const requirementLabels: Array<[string, string, string]> = [
-  ["individual.id_number", "Identity number", "Stripe needs the account owner’s test identity number."],
+function requirementLabels(mode: "test" | "live"): Array<[string, string, string]> { return [
+  ["individual.id_number", "Identity number", mode === "test" ? "Stripe needs the account owner’s test identity number." : "Stripe needs the account owner’s identity information."],
   ["representative.", "Account representative", "Stripe needs more information about the person representing the school."],
   ["business_profile.", "Business profile", "Stripe needs public business details for payments and receipts."],
   ["business_type", "Business type", "Stripe needs the school’s legal business type."],
@@ -28,13 +29,13 @@ const requirementLabels: Array<[string, string, string]> = [
   ["settings.payments.statement_descriptor", "Statement descriptor", "Stripe needs the name families will recognize on card statements."],
   ["tos_acceptance.", "Stripe agreement", "The account owner must accept Stripe’s service agreement."],
   ["company.", "Business identity", "Stripe needs additional legal business information."],
-];
+]; }
 
-function requirementTasks(values: unknown) {
+function requirementTasks(values: unknown, mode: "test" | "live") {
   if (!Array.isArray(values)) return [];
   const tasks = values.map((value) => {
     const field = String(value);
-    const known = requirementLabels.find(([prefix]) => field === prefix || field.startsWith(prefix));
+    const known = requirementLabels(mode).find(([prefix]) => field === prefix || field.startsWith(prefix));
     return known ? { key: known[0], title: known[1], detail: known[2] } : {
       key: "additional",
       title: "Additional Stripe information",
@@ -54,11 +55,12 @@ export default async function SchoolPaymentsPage({ params, searchParams }: {
   const { data: auth } = await supabase.auth.getClaims();
   const profileId = auth?.claims?.sub;
   if (!profileId) redirect(`/login?next=/schools/${schoolId}/payments`);
+  const stripeMode = getStripeMode();
 
   const [{ data: school }, { data: membership }, { data: connection, error: connectionError },capabilities] = await Promise.all([
     supabase.from("schools").select("id, name").eq("id", schoolId).maybeSingle(),
     supabase.from("school_members").select("role").eq("school_id", schoolId).eq("profile_id", profileId).eq("status", "active").maybeSingle(),
-    supabase.from("school_payment_connections").select("status, details_submitted, charges_enabled, payouts_enabled, disabled_reason, currently_due, past_due, pending_verification, requirement_errors, requirements_deadline, last_synced_at").eq("school_id", schoolId).eq("provider", "stripe").eq("livemode", false).maybeSingle(),
+    supabase.from("school_payment_connections").select("status, details_submitted, charges_enabled, payouts_enabled, disabled_reason, currently_due, past_due, pending_verification, requirement_errors, requirements_deadline, last_synced_at").eq("school_id", schoolId).eq("provider", "stripe").eq("livemode", stripeMode === "live").maybeSingle(),
     loadMySchoolCapabilities(schoolId),
   ]);
   if (!school || !membership) notFound();
@@ -71,7 +73,7 @@ export default async function SchoolPaymentsPage({ params, searchParams }: {
     ...(Array.isArray(connection?.currently_due) ? connection.currently_due : []),
   ].map(String);
   const pendingFields = Array.isArray(connection?.pending_verification) ? connection.pending_verification.map(String) : [];
-  const requirements = requirementTasks(requirementFields);
+  const requirements = requirementTasks(requirementFields, stripeMode);
   const errors = Array.isArray(connection?.requirement_errors) ? connection.requirement_errors : [];
   const presentation = stripeConnectionPresentation({
     connected: Boolean(connection),
@@ -103,7 +105,7 @@ export default async function SchoolPaymentsPage({ params, searchParams }: {
 
       <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
         <div>
-          <p className="text-xs text-brand">Stripe Connect · Test mode</p>
+          <p className="text-xs text-brand">Stripe Connect · {stripeMode === "live" ? "Live payments" : "Test mode"}</p>
           <h2 className="mt-3 font-display text-3xl">Payments</h2>
           <p className="mt-3 text-sm leading-6 text-muted">The school receives family payments directly and manages its account in Stripe. Stripe remains responsible for fees, requirements, and unrecoverable account losses.</p>
         </div>
