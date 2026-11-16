@@ -15,7 +15,7 @@ import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 import { createClient } from "@/lib/supabase/server";
 import { getStripeMode } from "@/lib/stripe/server";
 import { updateSchoolInstrumentCatalog } from "../setup/instrument-actions";
-import { updateSchoolInfo } from "../setup/actions";
+import { SchoolInfoForm } from "@/components/school-setup/school-info-form";
 import { createAndInviteTeacher } from "../staff/actions";
 import { saveTeacherWeeklyAvailability } from "../availability-actions";
 import { finishOnboarding } from "./actions";
@@ -101,7 +101,6 @@ export default async function OnboardingPage({ params, searchParams }: {
   const money = (cents: number, currency: string) => new Intl.NumberFormat("en-US", { style: "currency", currency }).format(cents / 100);
   const ownerEmail = typeof auth?.claims?.email === "string" ? auth.claims.email : null;
   const billingTiming = school.billing_timing_default === "after_service" ? "after_service" : "before_service";
-  const schoolField = "mt-2 w-full rounded-control border border-line bg-canvas/60 px-3 py-2.5 text-sm outline-none transition focus:border-brand";
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
@@ -110,17 +109,7 @@ export default async function OnboardingPage({ params, searchParams }: {
         <div>
           <StepHeading icon={MdStorefront} title="Your school">Keep the details families and teachers use to recognize and contact your school in one place.</StepHeading>
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
-            <form action={updateSchoolInfo.bind(null, schoolId)} className="rounded-control bg-surface p-5 sm:p-6"><input type="hidden" name="return_path" value={`/schools/${schoolId}/onboarding?step=school`} /><div className="mb-5 flex flex-wrap gap-x-8 gap-y-2 rounded-control bg-canvas/60 px-4 py-3 text-sm"><span><span className="text-muted">Owner</span> · {profile.full_name || "Not added"}</span><span className="break-all"><span className="text-muted">Account email</span> · {ownerEmail || "Not available"}</span><span><span className="text-muted">Timezone</span> · {school.timezone}</span></div><div className="grid gap-4 sm:grid-cols-2">
-              <label className="sm:col-span-2"><span className="text-xs text-muted">School name</span><input required name="name" defaultValue={school.name} className={schoolField} /></label>
-              <label><span className="text-xs text-muted">Primary school email</span><input name="reply_to_email" type="email" defaultValue={school.reply_to_email ?? ""} placeholder={ownerEmail ?? "school@example.com"} className={schoolField} /></label>
-              <label><span className="text-xs text-muted">Phone</span><input name="phone" type="tel" defaultValue={school.phone ?? ""} className={schoolField} /></label>
-              <label className="sm:col-span-2"><span className="text-xs text-muted">Address</span><input name="address_line_1" defaultValue={school.address_line_1 ?? ""} className={schoolField} /></label>
-              <label className="sm:col-span-2"><span className="text-xs text-muted">Suite or unit</span><input name="address_line_2" defaultValue={school.address_line_2 ?? ""} className={schoolField} /></label>
-              <label><span className="text-xs text-muted">City</span><input name="city" defaultValue={school.city ?? ""} className={schoolField} /></label>
-              <label><span className="text-xs text-muted">State or region</span><input name="region" defaultValue={school.region ?? ""} className={schoolField} /></label>
-              <label><span className="text-xs text-muted">Postal code</span><input name="postal_code" defaultValue={school.postal_code ?? ""} className={schoolField} /></label>
-              <div className="flex items-end"><button className="rounded-control bg-brand px-4 py-2.5 text-sm font-medium text-canvas">Save school info</button></div>
-            </div>{query.school ? <p className={`mt-4 text-sm ${query.school === "saved" ? "text-brand" : "text-danger"}`}>{query.school === "saved" ? "School information saved." : "Check the school information and try again."}</p> : null}</form>
+            <SchoolInfoForm schoolId={schoolId} school={school} layout="onboarding" ownerName={profile.full_name} ownerEmail={ownerEmail} />
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
               <div className="rounded-control bg-surface p-4"><p className="text-sm font-medium">School logo</p>{logo?.data?.signedUrl ? <img src={logo.data.signedUrl} alt={`${school.name} logo`} className="mt-3 h-16 w-16 object-contain" /> : <div className="mt-3 grid h-16 w-16 place-items-center border border-line font-display text-2xl text-brand">{school.name[0]}</div>}<SchoolLogoUploader schoolId={schoolId} compact /></div>
               <div className="rounded-control bg-surface p-4"><p className="mb-3 text-sm font-medium">Your avatar</p><AvatarUploader compact currentUrl={avatar?.data?.signedUrl ?? profile.avatar_url ?? null} initial={profile.full_name?.[0] ?? "?"} /></div>
