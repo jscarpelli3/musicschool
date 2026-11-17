@@ -37,13 +37,13 @@ export function ProductForm({ schoolId, returnPath }: { schoolId: string; return
         </label>
         <input type="hidden" name="pricing_model" value="per_session" />
         <label className="md:col-span-2">
-          <span className="block text-xs text-muted">When this offering is billed</span>
+          <span className="block text-xs text-muted">When should this offering normally be invoiced?</span>
           <AppSelect name="billing_timing" defaultValue="school_default" className={fieldClass}>
             <option value="school_default">Use the school default</option>
             <option value="before_service">Before lessons happen</option>
             <option value="after_service">After lessons happen</option>
           </AppSelect>
-          <span className="mt-2 block text-xs leading-5 text-muted">This becomes an immutable term when a student is enrolled. Changing the default later does not rewrite existing agreements.</span>
+          <span className="mt-2 block text-xs leading-5 text-muted">This guides reminders and can override the school’s usual rhythm. It never prevents you from invoicing a scheduled lesson whenever you choose.</span>
         </label>
         <label className="md:col-span-2">
           <span className="block text-xs text-muted">Price per lesson or class meeting</span>
