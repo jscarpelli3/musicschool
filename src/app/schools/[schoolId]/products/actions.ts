@@ -59,10 +59,6 @@ export async function createProduct(
   if (!school || !canManage) {
     return { error: "School not found or you do not have access." };
   }
-  if (!connection?.provider_account_id || connection.status !== "enabled" || !connection.charges_enabled) {
-    return { error: "Finish connecting Stripe before creating a priced offering." };
-  }
-
   const admin = createAdminClient();
   const requestSnapshot = {
     name, description, format, duration_minutes: durationMinutes,
@@ -70,6 +66,18 @@ export async function createProduct(
     billing_timing_override: billingTiming === "school_default" ? null : billingTiming,
     requested_price_cents: priceCents, currency: school.currency, capacity,
   };
+  if (!connection?.provider_account_id || connection.status !== "enabled" || !connection.charges_enabled) {
+    const { error } = await admin.from("service_products").insert({
+      school_id: schoolId, name, description, format, duration_minutes: durationMinutes,
+      pricing_model: pricingModel, billing_timing_override: billingTiming === "school_default" ? null : billingTiming,
+      currency: school.currency, capacity, price_cents: priceCents, created_by: profileId,
+      stripe_sync_status: "local_only",
+    });
+    if (error) return { error: "The offering could not be saved. Nothing was sent to Stripe." };
+    revalidatePath(`/schools/${schoolId}/products`);
+    const onboardingPath = `/schools/${schoolId}/onboarding?step=payments`;
+    redirect(returnPath === onboardingPath ? `${onboardingPath}&created=1` : `/schools/${schoolId}/products?created=1`);
+  }
   const { data: operation, error: operationError } = await admin.from("stripe_catalog_operations").insert({
     school_id: schoolId,
     actor_profile_id: profileId,
@@ -143,6 +151,72 @@ export async function createProduct(
   revalidatePath(`/schools/${schoolId}/products`);
   const onboardingPath = `/schools/${schoolId}/onboarding?step=payments`;
   redirect(returnPath === onboardingPath ? `${onboardingPath}&created=1` : `/schools/${schoolId}/products?created=1`);
+}
+
+export async function setProductCatalogMode(schoolId: string, productId: string, mode: "local_only" | "synced") {
+  const destination = `/schools/${schoolId}/products`;
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const profileId = auth?.claims?.sub;
+  if (!profileId) redirect(`/login?next=${destination}`);
+  if (!await checkSchoolCapability(supabase, schoolId, "school.products.manage")) redirect(`/schools/${schoolId}`);
+
+  const livemode = getStripeMode() === "live";
+  const [{ data: product }, { data: connection }] = await Promise.all([
+    supabase.from("service_products").select("id,name,description,price_cents,currency,status,stripe_account_id,stripe_product_id,stripe_price_id,stripe_sync_status").eq("school_id", schoolId).eq("id", productId).maybeSingle(),
+    supabase.from("school_payment_connections").select("provider_account_id,status,charges_enabled").eq("school_id", schoolId).eq("provider", "stripe").eq("livemode", livemode).maybeSingle(),
+  ]);
+  if (!product || product.status !== "active") redirect(`${destination}?catalog=not-found`);
+  if (product.stripe_sync_status === mode) redirect(`${destination}?catalog=unchanged`);
+  const admin = createAdminClient();
+
+  if (mode === "local_only") {
+    if (product.stripe_sync_status !== "synced" || !product.stripe_account_id || !product.stripe_product_id || !product.stripe_price_id) {
+      const { error } = await admin.from("service_products").update({ stripe_sync_status: "local_only" }).eq("school_id", schoolId).eq("id", product.id);
+      if (error) redirect(`${destination}?catalog=error`);
+    } else {
+      const { data: operation, error: operationError } = await admin.from("stripe_catalog_operations").insert({
+        school_id: schoolId, actor_profile_id: profileId, operation: "unsync_offering", status: "prepared",
+        request_snapshot: { service_product_id: product.id, name: product.name }, provider_account_id: product.stripe_account_id,
+        provider_product_id: product.stripe_product_id, provider_price_id: product.stripe_price_id, service_product_id: product.id,
+      }).select("id").single();
+      if (operationError || !operation) redirect(`${destination}?catalog=error`);
+      try {
+        await admin.from("stripe_catalog_operations").update({ status: "submitting" }).eq("id", operation.id);
+        await getStripe().prices.update(product.stripe_price_id, { active: false }, { stripeAccount: product.stripe_account_id });
+        await getStripe().products.update(product.stripe_product_id, { active: false }, { stripeAccount: product.stripe_account_id });
+        const { error } = await admin.from("service_products").update({ stripe_sync_status: "local_only" }).eq("school_id", schoolId).eq("id", product.id);
+        if (error) throw error;
+        await admin.from("stripe_catalog_operations").update({ status: "succeeded", completed_at: new Date().toISOString() }).eq("id", operation.id);
+      } catch (error) {
+        await admin.from("stripe_catalog_operations").update({ status: "reconciliation_required", error_class: "provider_state_ambiguous", error_message: error instanceof Error ? error.message.slice(0, 500) : "Unknown catalog error", completed_at: new Date().toISOString() }).eq("id", operation.id);
+        redirect(`${destination}?catalog=reconcile&reference=${operation.id.slice(0, 8).toUpperCase()}`);
+      }
+    }
+    revalidatePath(destination);
+    redirect(`${destination}?catalog=local`);
+  }
+
+  if (!connection?.provider_account_id || connection.status !== "enabled" || !connection.charges_enabled) redirect(`${destination}?catalog=connect-stripe`);
+  const { data: operation, error: operationError } = await admin.from("stripe_catalog_operations").insert({
+    school_id: schoolId, actor_profile_id: profileId, operation: "sync_offering", status: "prepared",
+    request_snapshot: { service_product_id: product.id, name: product.name, price_cents: product.price_cents, currency: product.currency },
+    provider_account_id: connection.provider_account_id, service_product_id: product.id,
+  }).select("id").single();
+  if (operationError || !operation) redirect(`${destination}?catalog=error`);
+  try {
+    await admin.from("stripe_catalog_operations").update({ status: "submitting" }).eq("id", operation.id);
+    const providerProduct = await getStripe().products.create({ name: product.name, description: product.description ?? undefined, metadata: { commontime_school_id: schoolId, commontime_operation_id: operation.id } }, { stripeAccount: connection.provider_account_id, idempotencyKey: `catalog-resync-product-${operation.id}` });
+    const providerPrice = await getStripe().prices.create({ product: providerProduct.id, currency: product.currency.toLowerCase(), unit_amount: product.price_cents, metadata: { commontime_school_id: schoolId, commontime_operation_id: operation.id } }, { stripeAccount: connection.provider_account_id, idempotencyKey: `catalog-resync-price-${operation.id}` });
+    const { error } = await admin.from("service_products").update({ stripe_account_id: connection.provider_account_id, stripe_product_id: providerProduct.id, stripe_price_id: providerPrice.id, stripe_sync_status: "synced" }).eq("school_id", schoolId).eq("id", product.id);
+    if (error) throw error;
+    await admin.from("stripe_catalog_operations").update({ status: "succeeded", provider_product_id: providerProduct.id, provider_price_id: providerPrice.id, completed_at: new Date().toISOString() }).eq("id", operation.id);
+  } catch (error) {
+    await admin.from("stripe_catalog_operations").update({ status: "reconciliation_required", error_class: "provider_state_ambiguous", error_message: error instanceof Error ? error.message.slice(0, 500) : "Unknown catalog error", completed_at: new Date().toISOString() }).eq("id", operation.id);
+    redirect(`${destination}?catalog=reconcile&reference=${operation.id.slice(0, 8).toUpperCase()}`);
+  }
+  revalidatePath(destination);
+  redirect(`${destination}?catalog=synced`);
 }
 
 export async function updateSchoolBillingTiming(schoolId: string, formData: FormData) {

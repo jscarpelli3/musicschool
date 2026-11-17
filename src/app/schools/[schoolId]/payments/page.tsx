@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 const messages: Record<string, { title: string; text: string }> = {
   "returned-synced": { title: "Stripe setup received", text: "Your latest Stripe account status is shown below. Complete any remaining steps when you are ready." },
   refresh: { title: "A fresh Stripe link is needed", text: "That Stripe setup link expired or was interrupted. Continue setup to open a new secure link." },
-  ready: { title: "Stripe connected", text: "Payments and payouts are enabled. Your school is ready to create priced lesson offerings and collect approved invoices." },
+  ready: { title: "Stripe connected", text: "Payments and payouts are enabled. New offerings will synchronize automatically, and approved invoices can be collected through Stripe." },
   synced: { title: "Stripe status updated", text: "The latest account status is shown below. Additional requirements may still be due." },
   error: { title: "Stripe setup did not open", text: "Nothing was marked complete. Try opening Stripe setup again." },
   "platform-profile": { title: "Stripe needs a platform setting", text: "Confirm the platform loss-responsibility profile in Stripe Connect settings, then try again." },
@@ -138,11 +138,13 @@ export default async function SchoolPaymentsPage({ params, searchParams }: {
           {notApproved ? <div className="border-b border-line py-7"><p className="text-xs uppercase tracking-[0.15em] text-danger">Stripe could not approve this account</p><p className="mt-3 text-sm leading-6 text-muted">Integrated payments will stay unavailable, but you can keep using Common Time for scheduling, attendance, and billing records. If Stripe offers a correction or appeal, open Stripe to review it.</p></div> : null}
           {!actionRequired && !underReview && !notApproved && connection?.disabled_reason && !ready ? <p className="border-b border-line py-5 text-sm text-danger">Stripe has limited this account: {connection.disabled_reason.replaceAll("_", " ").replaceAll(".", " › ")}</p> : null}
 
+          {!connection ? <div className="border-b border-line py-7"><p className="font-medium">Before opening Stripe</p><p className="mt-2 text-sm leading-6 text-muted">Stripe asks for these items to protect real payments and payouts. Common Time does not receive or store the secure information you enter there.</p><ul className="mt-4 grid gap-3 text-sm"><li><strong>Authenticator app</strong><span className="block text-xs leading-5 text-muted">Google Authenticator, Microsoft Authenticator, or another compatible app. Stripe requires two-step verification.</span></li><li><strong>Public website</strong><span className="block text-xs leading-5 text-muted">Use your school website. If you do not have one yet, you can enter commontime.studio while establishing your school’s public presence.</span></li><li><strong>Bank account</strong><span className="block text-xs leading-5 text-muted">Online banking is usually the quickest way to connect the account that receives payouts.</span></li><li><strong>Legal identity and school details</strong><span className="block text-xs leading-5 text-muted">Stripe verifies who is responsible for the payment account.</span></li></ul></div> : null}
+
           <div className="flex flex-col gap-4 pt-8 sm:flex-row sm:items-center">
             {!ready && !underReview ? (
               <form action={startStripeOnboarding.bind(null, schoolId)}>
                 <StripeActionButton
-                  idleLabel={notApproved ? "Review options in Stripe →" : connection ? actionRequired ? "Provide details in Stripe →" : "Continue Stripe setup →" : "Connect with Stripe →"}
+                  idleLabel={notApproved ? "Review options in Stripe →" : connection ? actionRequired ? "Provide details in Stripe →" : "Continue Stripe setup →" : "I’m ready — continue to Stripe →"}
                   pendingLabel={connection ? "Opening Stripe…" : "Connecting to Stripe…"}
                 />
               </form>
