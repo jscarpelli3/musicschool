@@ -28,6 +28,8 @@ export async function GET(request:Request){
  const secret=process.env.PUSH_WORKER_SECRET?.trim();
  if(!secret||request.headers.get("authorization")!==`Bearer ${secret}`)return new Response("Unauthorized",{status:401});
  const admin=createAdminClient() as unknown as SupabaseClient;
+ const reminders=await admin.rpc("queue_billing_rhythm_reminders");
+ if(reminders.error){console.error("Billing reminder queue failed",{code:reminders.error.code,message:reminders.error.message});return Response.json({ok:false,error:"billing_reminder_queue_failed"},{status:500});}
  const daily=await admin.rpc("claim_daily_hello_push_deliveries",{p_limit:25});
  if(daily.error){console.error("Daily hello queue claim failed",{code:daily.error.code,message:daily.error.message});return Response.json({ok:false,error:"daily_claim_failed"},{status:500});}
  const queue=await admin.rpc("claim_push_notification_deliveries",{p_limit:50});
@@ -54,5 +56,5 @@ export async function GET(request:Request){
  }
  const claimed=(queue.data??[]).length+(daily.data??[]).length;
  if(failed)await recordPlatformIncident({fingerprint:`push-delivery-worker:${new Date().toISOString().slice(0,10)}`,provider:"application",severity:"warning",title:"Browser push delivery needs attention",summary:"One or more queued browser notifications could not be delivered and will be retried.",sourceKind:"push_notification_worker",metadata:{failed,claimed}});
- return Response.json({ok:failed===0,claimed,dailyHello:(daily.data??[]).length,delivered,failed},{status:failed?207:200});
+ return Response.json({ok:failed===0,reminders:reminders.data??0,claimed,dailyHello:(daily.data??[]).length,delivered,failed},{status:failed?207:200});
 }

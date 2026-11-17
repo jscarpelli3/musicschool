@@ -6214,6 +6214,7 @@ export type Database = {
         }
         Returns: string
       }
+      queue_billing_rhythm_reminders: { Args: never; Returns: number }
       queue_payer_response_notifications: {
         Args: {
           p_kind: string
