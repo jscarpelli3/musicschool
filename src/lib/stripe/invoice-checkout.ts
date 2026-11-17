@@ -31,7 +31,7 @@ export async function createApprovedInvoiceCheckout(rawToken: string | null, own
   if (approval.approval_status !== "approved" || !approval.billing_period_id || new Date(approval.expires_at).getTime() <= Date.now()) throw new Error("This approved invoice is no longer available for one-time payment.");
 
   const [periodResult, connectionResult, accountResult] = await Promise.all([
-    admin.from("billing_periods").select("id,status,amount_due_cents,currency,label").eq("school_id", approval.school_id).eq("billing_account_id", approval.billing_account_id).eq("id", approval.billing_period_id).single(),
+    admin.from("billing_periods").select("id,status,amount_due_cents,currency,label,collection_method").eq("school_id", approval.school_id).eq("billing_account_id", approval.billing_account_id).eq("id", approval.billing_period_id).single(),
     admin.from("school_payment_connections").select("id,provider_account_id,status,charges_enabled").eq("school_id", approval.school_id).eq("provider", "stripe").eq("livemode", livemode).single(),
     admin.from("billing_accounts").select("id,status,billing_contact_person_id").eq("school_id", approval.school_id).eq("id", approval.billing_account_id).single(),
   ]);
@@ -40,6 +40,7 @@ export async function createApprovedInvoiceCheckout(rawToken: string | null, own
   const connection = connectionResult.data;
   const account = accountResult.data;
   if (!['approved','payment_failed'].includes(period.status) || period.amount_due_cents !== approval.amount_cents || period.currency.toLowerCase() !== approval.currency.toLowerCase()) throw new Error("The approved amount no longer matches this invoice.");
+  if (period.collection_method === "outside_only") throw new Error("This invoice is set to outside payment only. Contact the school for payment instructions.");
   if (account.status !== "active") throw new Error("This family billing account is not active.");
   if (connection.status !== "enabled" || !connection.charges_enabled || !connection.provider_account_id) throw new Error("The school must finish connecting Stripe before accepting payment.");
 

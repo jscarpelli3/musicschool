@@ -764,6 +764,7 @@ export type Database = {
           amount_due_cents: number
           approved_at: string | null
           billing_account_id: string
+          collection_method: string
           created_at: string
           created_by: string
           currency: string
@@ -782,6 +783,7 @@ export type Database = {
           amount_due_cents?: number
           approved_at?: string | null
           billing_account_id: string
+          collection_method?: string
           created_at?: string
           created_by: string
           currency: string
@@ -800,6 +802,7 @@ export type Database = {
           amount_due_cents?: number
           approved_at?: string | null
           billing_account_id?: string
+          collection_method?: string
           created_at?: string
           created_by?: string
           currency?: string
@@ -5943,13 +5946,17 @@ export type Database = {
           approved_at: string
           billing_account_name: string
           collection_action: string
+          collection_method: string
           currency: string
           expires_at: string
           has_newer_request: boolean
           line_items: Json
           payment_status: string
+          period_end: string
           period_label: string
+          period_start: string
           school_name: string
+          student_names: string[]
         }[]
       }
       get_billing_collection_readiness: {
@@ -6515,6 +6522,14 @@ export type Database = {
           p_teacher_id: string
         }
         Returns: string
+      }
+      set_invoice_collection_method: {
+        Args: {
+          p_billing_period_id: string
+          p_collection_method: string
+          p_school_id: string
+        }
+        Returns: undefined
       }
       set_billing_account_cancellation_override: {
         Args: {

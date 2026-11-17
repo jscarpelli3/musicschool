@@ -9,6 +9,7 @@ import { AppSelect } from "@/components/ui/app-select";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
 import { CommonTimeLoader } from "@/components/ui/common-time-loader";
 import { InvoicePaymentCollection } from "@/components/billing/invoice-payment-collection";
+import { InvoiceCollectionMethodControl } from "@/components/billing/invoice-collection-method-control";
 import { BillingAdjustmentForm } from "@/app/schools/[schoolId]/families/[billingAccountId]/billing-adjustments";
 import { BillingLineDefer } from "@/app/schools/[schoolId]/families/[billingAccountId]/billing-line-defer";
 import { discardEditableInvoice, loadPreparedInvoice, lockFamilyBillingPeriod, sendBillingApprovalEmail, type PreparedInvoice } from "@/app/schools/[schoolId]/families/[billingAccountId]/actions";
@@ -178,6 +179,7 @@ export function InvoiceWorkspaceList({ schoolId, invoices, compact, autoOpenId =
                 </div>
                 {detail.status === "draft" || detail.status === "review" ? (
                   <>
+                    <InvoiceCollectionMethodControl schoolId={schoolId} billingAccountId={detail.billingAccountId} billingPeriodId={detail.id} value={detail.collectionMethod} onChanged={()=>void refresh()} />
                     <BillingAdjustmentForm schoolId={schoolId} billingAccountId={detail.billingAccountId} billingPeriodId={detail.id} outstandingLessons={detail.outstandingLessons} embedded onEditingChange={setAdjustmentEditing} onChanged={() => void refresh()} />
                     <div className="mt-5">
                       <HoldToConfirm action={() => lockFamilyBillingPeriod(schoolId, detail.billingAccountId, detail.id)} disabled={adjustmentEditing} disabledMessage="Finish or cancel the open adjustment before locking this amount." idleLabel="Hold to lock this exact amount" holdingLabel="Keep holding to freeze the invoice…" successLabel="Invoice locked" onSuccess={() => void refresh()} />
@@ -194,8 +196,8 @@ export function InvoiceWorkspaceList({ schoolId, invoices, compact, autoOpenId =
                     <HoldToConfirm prominent centered action={() => sendBillingApprovalEmail(schoolId, detail.billingAccountId, detail.id, { ok: false, message: "" })} idleLabel="Hold to email payer approval" holdingLabel="Keep holding to send the approval…" submittingLabel="Sending approval email…" successLabel="Approval email sent" onSuccess={() => void refresh()} />
                   </div>
                 ) : null}
-                {detail.status === "approval_pending" ? <p className="mt-6 rounded-control bg-brand/10 p-4 text-sm text-brand">Waiting for the payer to review this exact amount.</p> : null}
-                {["approved", "payment_failed", "collecting", "paid"].includes(detail.status) ? <InvoicePaymentCollection schoolId={schoolId} billingAccountId={detail.billingAccountId} billingPeriodId={detail.id} amount={money(detail.amountDueCents, detail.currency)} amountCents={detail.amountDueCents} currency={detail.currency} hasPaymentMethod={detail.hasActivePaymentMethod} initialStatus={detail.status} initialAttempt={detail.latestPaymentAttempt} initialSettlements={detail.settlements} initialOutstandingCents={detail.outstandingCents} stripePayments={detail.stripePayments} stripeRefunds={detail.stripeRefunds} /> : null}
+                {detail.status === "approval_pending" ? <p className="mt-6 rounded-control bg-brand/10 p-4 text-sm text-brand">Waiting for the payer to review this exact amount.{detail.collectionMethod==="outside_only"?" After approval, record its payment outside Stripe.":""}</p> : null}
+                {["approved", "payment_failed", "collecting", "paid"].includes(detail.status) ? <InvoicePaymentCollection schoolId={schoolId} billingAccountId={detail.billingAccountId} billingPeriodId={detail.id} amount={money(detail.amountDueCents, detail.currency)} amountCents={detail.amountDueCents} currency={detail.currency} hasPaymentMethod={detail.hasActivePaymentMethod} initialStatus={detail.status} initialAttempt={detail.latestPaymentAttempt} initialSettlements={detail.settlements} initialOutstandingCents={detail.outstandingCents} stripePayments={detail.stripePayments} stripeRefunds={detail.stripeRefunds} collectionMethod={detail.collectionMethod} hasLocalOfferingLines={detail.hasLocalOfferingLines} /> : null}
                 <div className="mt-6 flex justify-end">
                   <Link href={`/schools/${schoolId}/families/${detail.billingAccountId}?period=${detail.id}`} className="inline-flex items-center gap-1 text-xs text-muted hover:text-brand">
                     Open the full family record <MdOpenInNew />

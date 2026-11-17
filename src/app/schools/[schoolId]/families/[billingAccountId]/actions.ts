@@ -35,6 +35,8 @@ export type PreparedInvoice = {
   amountDueCents: number;
   currency: string;
   status: string;
+  collectionMethod: "stripe_or_outside" | "outside_only";
+  hasLocalOfferingLines: boolean;
   lines: Array<{ id: string; description: string; serviceDate: string | null; startsAt: string | null; durationMinutes: number | null; amountCents: number; sourceType: string }>;
   outstandingLessons: Array<{ lessonEventId: string; studentName: string; offeringName: string; serviceDate: string; startsAt: string; amountCents: number; currency: string }>;
   payerReviewReason: string | null;
@@ -114,7 +116,7 @@ async function readBillingApprovalEmailDetails(schoolId: string, billingPeriodId
 async function readPreparedInvoice(schoolId: string, billingAccountId: string, periodId: string): Promise<PreparedInvoice | null> {
   const supabase = await createClient();
   const [{ data: period }, { data: account }, { data: lines }, { data: outstandingLessons }, { data: approvals }, { data: attempts }, { data: methods }, { data: settlements }] = await Promise.all([
-    supabase.from("billing_periods").select("id,label,amount_due_cents,currency,status").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", periodId).single(),
+    supabase.from("billing_periods").select("id,label,amount_due_cents,currency,status,collection_method").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", periodId).single(),
     supabase.from("billing_accounts").select("name").eq("school_id", schoolId).eq("id", billingAccountId).single(),
     supabase.from("billing_line_items").select("id,description,service_date,amount_cents,source_type,source_id,metadata").eq("school_id", schoolId).eq("billing_period_id", periodId).order("service_date", { ascending: true, nullsFirst: false }).order("created_at"),
     supabase.rpc("get_outstanding_lessons_for_billing_account", { p_school_id: schoolId, p_billing_account_id: billingAccountId }),
@@ -143,6 +145,12 @@ async function readPreparedInvoice(schoolId: string, billingAccountId: string, p
   return {
     id: period.id, billingAccountId, familyName: account.name, label: period.label, amountDueCents: period.amount_due_cents,
     currency: period.currency, status: period.status,
+    collectionMethod: period.collection_method === "outside_only" ? "outside_only" : "stripe_or_outside",
+    hasLocalOfferingLines: lines.some((line) => {
+      const metadata=line.metadata&&typeof line.metadata==="object"&&!Array.isArray(line.metadata)?line.metadata:null;
+      const state=metadata&&"offering_catalog_state_at_lock" in metadata?metadata.offering_catalog_state_at_lock:null;
+      return state==="local_only"||state==="legacy_unsynced";
+    }),
     lines: lines.map((line) => {
       const event=line.source_id?lessonEventById.get(line.source_id):null;
       const metadata=line.metadata&&typeof line.metadata==="object"&&!Array.isArray(line.metadata)?line.metadata:null;
@@ -242,6 +250,8 @@ export async function collectFamilyInvoice(schoolId: string, billingAccountId: s
   const profileId = auth?.claims?.sub;
   if (!profileId) return { ok: false, message: "Sign in again before collecting this payment." };
   if (!await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) return { ok: false, message: "You do not have permission to collect this payment." };
+  const { data: collectionChoice } = await supabase.from("billing_periods").select("collection_method").eq("school_id", schoolId).eq("billing_account_id", billingAccountId).eq("id", billingPeriodId).maybeSingle();
+  if (collectionChoice?.collection_method === "outside_only") return { ok: false, message: "This invoice is marked for outside payment only. Record the payment received elsewhere instead." };
   try {
     await protectServerAction({ scope: "billing.invoice.collect", subject: `actor:${profileId}|school:${schoolId}|period:${billingPeriodId}`, limit: 3, windowSeconds: 3600 });
     const { data: readiness, error } = await supabase.rpc("get_billing_collection_readiness", {
@@ -493,6 +503,18 @@ export async function lockFamilyBillingPeriod(schoolId: string, billingAccountId
 
   revalidatePath(`/schools/${schoolId}/families/${billingAccountId}`);
   return { ok: true, message: "Amount locked. Lesson lines can no longer change." };
+}
+
+export async function setInvoiceCollectionMethod(schoolId: string, billingAccountId: string, billingPeriodId: string, method: "stripe_or_outside" | "outside_only") {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) return { ok: false, message: "Sign in again before changing collection." };
+  if (!await checkSchoolCapability(supabase, schoolId, "school.billing.manage")) return { ok: false, message: "You do not have permission to change this invoice." };
+  const { error } = await supabase.rpc("set_invoice_collection_method", { p_school_id: schoolId, p_billing_period_id: billingPeriodId, p_collection_method: method });
+  if (error) return { ok: false, message: error.message.includes("invoice_is_not_editable") ? "This invoice is already locked, so its collection method cannot change." : "The collection method could not be changed." };
+  revalidatePath(`/schools/${schoolId}/families/${billingAccountId}`);
+  revalidatePath(`/schools/${schoolId}/invoices`);
+  return { ok: true, message: method === "outside_only" ? "This invoice will be resolved outside Stripe." : "This invoice may be collected through Stripe or elsewhere." };
 }
 
 export async function unlockUnsubmittedBillingPeriod(schoolId: string, billingAccountId: string, billingPeriodId: string) {

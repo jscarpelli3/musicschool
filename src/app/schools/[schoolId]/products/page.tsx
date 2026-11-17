@@ -3,7 +3,7 @@ import { SetupHeader } from "@/components/school-setup/setup-header";
 import { FocusedModal } from "@/components/ui/focused-modal";
 import { loadMySchoolCapabilities } from "@/lib/auth/school-capabilities";
 import { createClient } from "@/lib/supabase/server";
-import { archiveProduct, updateSchoolBillingTiming } from "./actions";
+import { archiveProduct, setProductCatalogMode, updateSchoolBillingTiming } from "./actions";
 import { ProductForm } from "./product-form";
 import { AppSelect } from "@/components/ui/app-select";
 import { PlaceForm } from "../places/place-form";
@@ -16,10 +16,10 @@ export default async function ProductsPage({
   searchParams,
 }: {
   params: Promise<{ schoolId: string }>;
-  searchParams: Promise<{ created?: string; archived?: string; error?: string; billing?: string; roomCreated?: string; roomArchived?: string; roomError?: string }>;
+  searchParams: Promise<{ created?: string; archived?: string; error?: string; billing?: string; catalog?: string; reference?: string; roomCreated?: string; roomArchived?: string; roomError?: string }>;
 }) {
   const { schoolId } = await params;
-  const { created, archived, error, billing, roomCreated, roomArchived, roomError } = await searchParams;
+  const { created, archived, error, billing, catalog, reference, roomCreated, roomArchived, roomError } = await searchParams;
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getClaims();
   const profileId = authData?.claims?.sub;
@@ -45,6 +45,7 @@ export default async function ProductsPage({
       {created ? <p className="mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm text-brand">Offering created.</p> : null}
       {archived ? <p className="mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm text-brand">Offering archived.</p> : null}
       {error ? <p className="mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm text-danger">The offering could not be archived. Nothing changed.</p> : null}
+      {catalog ? <p className={`mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm ${["local","synced","unchanged"].includes(catalog) ? "text-brand" : "text-danger"}`}>{catalog === "local" ? "This offering now stays local to Common Time. Its prior Stripe catalog entry was deactivated; invoice history was preserved." : catalog === "synced" ? "Offering synchronized with Stripe for future use." : catalog === "unchanged" ? "The offering already uses that catalog setting." : catalog === "connect-stripe" ? "Connect Stripe before synchronizing this offering. It remains available locally." : catalog === "reconcile" ? `Stripe may have accepted part of the catalog change. Do not retry yet${reference ? ` · reference ${reference}` : ""}.` : "The catalog setting could not be changed. Nothing was intentionally changed."}</p> : null}
       {billing ? <p className={`mt-5 rounded-md bg-surface-raised px-4 py-3 text-sm ${billing === "saved" ? "text-brand" : "text-danger"}`}>{billing === "saved" ? "Billing schedule saved for future agreements." : billing === "invalid" ? "Check the billing schedule values." : "The billing schedule could not be saved."}</p> : null}
 
       {canManage ? <section className="ui-card mt-6 grid gap-8 p-6 md:grid-cols-[1fr_2fr] md:gap-12 md:p-8">
@@ -75,9 +76,10 @@ export default async function ProductsPage({
                   {money.format(product.price_cents / 100)} per lesson
                 </p>
                 <p className="mt-1 text-xs text-muted">{product.billing_timing_override === "before_service" ? "Billed before service" : product.billing_timing_override === "after_service" ? "Billed after service" : `Uses school default: ${school.billing_timing_default === "before_service" ? "before service" : "after service"}`}</p>
-                <p className={`mt-1 text-xs ${product.stripe_sync_status === "synced" ? "text-brand" : "text-danger"}`}>
-                  {product.stripe_sync_status === "synced" ? "Price verified in Stripe" : "Legacy price · must be synchronized before future live billing"}
+                <p className={`mt-1 text-xs ${product.stripe_sync_status === "reconciliation_required" ? "text-danger" : "text-brand"}`}>
+                  {product.stripe_sync_status === "synced" ? "Stripe catalog · synchronized" : product.stripe_sync_status === "local_only" ? "Common Time catalog · kept local" : product.stripe_sync_status === "reconciliation_required" ? "Catalog change needs review" : "Common Time catalog · not yet synchronized"}
                 </p>
+                {canManage && product.status === "active" ? <details className="mt-3 text-xs"><summary className="cursor-pointer text-muted hover:text-ink">Advanced payment settings</summary><div className="mt-3 rounded-control border border-line bg-surface-raised p-3"><p className="leading-5 text-muted">Catalog placement does not control how an invoice is collected. A local offering can still be part of a complete Stripe invoice payment.</p>{product.stripe_sync_status === "synced" ? <form action={setProductCatalogMode.bind(null, schoolId, product.id, "local_only")}><button className="mt-3 text-brand underline-offset-4 hover:underline">Keep this offering local</button></form> : product.stripe_sync_status !== "reconciliation_required" ? <form action={setProductCatalogMode.bind(null, schoolId, product.id, "synced")}><button className="mt-3 text-brand underline-offset-4 hover:underline">Synchronize with Stripe</button></form> : null}</div></details> : null}
               </div>
               {canManage && product.status === "active" ? (
                 <form action={archiveProduct.bind(null, schoolId, product.id)}>

@@ -35,7 +35,7 @@ async function prepareExactApprovedCharge(input: {
   const admin = createAdminClient();
   const livemode = getStripeMode() === "live";
   const [periodResult, approvalResult, connectionResult] = await Promise.all([
-    admin.from("billing_periods").select("id,status,amount_due_cents,currency")
+    admin.from("billing_periods").select("id,status,amount_due_cents,currency,collection_method")
       .eq("school_id", input.schoolId).eq("billing_account_id", input.billingAccountId).eq("id", input.billingPeriodId).single(),
     admin.from("billing_approval_requests").select("id,approval_status,amount_cents,currency,billing_period_id")
       .eq("school_id", input.schoolId).eq("billing_account_id", input.billingAccountId).eq("id", input.approvalRequestId).single(),
@@ -47,6 +47,7 @@ async function prepareExactApprovedCharge(input: {
   const approval = approvalResult.data;
   const connection = connectionResult.data;
   if (period.status !== "approved" || period.amount_due_cents !== input.amountCents || period.currency !== input.currency) throw new Error("This statement is no longer ready to collect.");
+  if (period.collection_method === "outside_only") throw new Error("This invoice is set to outside payment only.");
   if (approval.approval_status !== "approved" || approval.billing_period_id !== period.id || approval.amount_cents !== period.amount_due_cents || approval.currency.toUpperCase() !== period.currency) throw new Error("The payer approval no longer matches this statement.");
   if (connection.status !== "enabled" || !connection.charges_enabled || !connection.provider_account_id) throw new Error("Finish connecting Stripe before collecting this payment.");
 

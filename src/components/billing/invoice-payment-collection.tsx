@@ -17,7 +17,7 @@ function localDateInputValue(date=new Date()) {
   return offsetDate.toISOString().slice(0,10);
 }
 
-export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPeriodId, amount, amountCents, currency, hasPaymentMethod, initialStatus, initialAttempt, initialSettlements=[], initialOutstandingCents=amountCents, stripePayments=[], stripeRefunds=[] }: {
+export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPeriodId, amount, amountCents, currency, hasPaymentMethod, initialStatus, initialAttempt, initialSettlements=[], initialOutstandingCents=amountCents, stripePayments=[], stripeRefunds=[], collectionMethod="stripe_or_outside", hasLocalOfferingLines=false }: {
   schoolId: string;
   billingAccountId: string;
   billingPeriodId: string;
@@ -31,6 +31,8 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
   initialOutstandingCents?: number;
   stripePayments?: Array<{id:string;amountCents:number;succeededAt:string|null}>;
   stripeRefunds?: Array<{id:string;paymentAttemptId:string;amountCents:number;status:string;reason:string|null;createdAt:string}>;
+  collectionMethod?: "stripe_or_outside"|"outside_only";
+  hasLocalOfferingLines?: boolean;
 }) {
   const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
@@ -130,13 +132,16 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
   const active = !hostedLinkOpen && (["submitted", "processing"].includes(attempt?.status ?? "") || (attempt?.status === "created" && attempt.usesSavedMethod));
   const failed = status === "payment_failed" || ["failed", "requires_action"].includes(attempt?.status ?? "");
   const canCheckStripeStatus=hostedLinkOpen||active||["failed","requires_action"].includes(attempt?.status??"");
+  const outsideOnly=collectionMethod==="outside_only";
   const title = status === "paid" ? hasWriteOff ? "Balance resolved with a write-off" : hasOutsidePayment ? "Payment recorded outside Stripe" : "Paid"
+    : outsideOnly ? "Outside payment only"
     : hasOutsideResolution ? "Partially resolved — balance remains"
     : active ? "Payment submitted — awaiting confirmation"
       : failed ? "Payment failed — ready to retry"
         : hostedLinkOpen ? "One-time payment link ready"
         : "Approved — ready to collect";
   const detail = status === "paid" ? hasWriteOff ? "The invoice is closed, but the written-off amount is not recorded as money received." : hasOutsidePayment ? "The owner recorded money received outside Common Time. The audit history below shows how and when." : "Stripe confirmed this payment. No further collection action is needed."
+    : outsideOnly ? "This invoice was explicitly set to be resolved outside Stripe. Record the money when it is received, or write off the balance."
     : hasOutsideResolution ? "A partial payment or write-off is recorded below. Finish the remaining balance outside Stripe, write it off, or reverse the entry before starting a full Stripe collection."
     : active ? `Stripe is processing ${amount}. Do not submit another charge while confirmation is pending.`
       : failed ? `The prior attempt did not collect ${amount}. Confirm the payer’s card details, send a fresh one-time link, or record another payment method below. Never retry until the payer expects another attempt.`
@@ -150,8 +155,9 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
         <p className="text-xs uppercase tracking-[0.14em] text-brand">Payment collection</p>
         <h3 className="mt-1 font-display text-2xl">{title}</h3>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">{detail}</p>
+        {hasLocalOfferingLines ? <p className="mt-4 rounded-control border border-brand/30 bg-surface-raised p-3 text-xs leading-5 text-muted"><strong className="text-ink">Includes a locally managed offering.</strong> If Stripe collects this invoice, it processes the complete invoice total as one payment. Common Time retains the offering details and payment breakdown; the offering is not converted into a Stripe catalog product.</p> : null}
 
-        {status !== "paid" && !active ? <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        {status !== "paid" && !active && !outsideOnly ? <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <div className="rounded-control bg-surface-raised p-4">
             <p className="text-sm font-medium">Charge the saved card</p>
             <p className="mt-2 text-xs leading-5 text-muted">Uses the family’s authorized default payment method.</p>
@@ -187,7 +193,7 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
           </div>
         </div> : null}
 
-        {status !== "paid"&&canCheckStripeStatus ? <div className="mt-4 flex flex-wrap items-center gap-3"><button type="button" onClick={() => void checkPayment(true)} className="text-xs font-medium text-brand underline-offset-4 hover:underline">Check payment status</button><p className="text-xs leading-5 text-muted">Automatic checking runs for two visible minutes, then pauses.</p></div> : null}
+        {status !== "paid"&&!outsideOnly&&canCheckStripeStatus ? <div className="mt-4 flex flex-wrap items-center gap-3"><button type="button" onClick={() => void checkPayment(true)} className="text-xs font-medium text-brand underline-offset-4 hover:underline">Check payment status</button><p className="text-xs leading-5 text-muted">Automatic checking runs for two visible minutes, then pauses.</p></div> : null}
         {resultMessage ? <p role="status" className={`mt-4 rounded-control p-4 text-sm ${failed ? "bg-danger/10 text-danger" : "bg-surface-raised text-ink"}`}>{resultMessage}</p> : null}
 
         <div className="mt-6 border-t border-brand/20 pt-5">
@@ -201,7 +207,7 @@ export function InvoicePaymentCollection({ schoolId, billingAccountId, billingPe
           {hasRefund?<p className="mt-1 max-w-2xl text-xs leading-5 text-muted">Refunds return part of a prior payment without reopening the invoice balance. If a payment was recorded by mistake, reverse that payment instead; a reversal restores the amount owed.</p>:null}
           {ledgerMode?<SettlementForm mode={ledgerMode} outstandingCents={outstandingCents} currency={currency} settlements={settlements} stripePayments={stripePayments} stripeRefunds={stripeRefunds} pending={ledgerPending} onCancel={()=>{setLedgerMode(null);setLedgerMessage("");}} onSubmit={async(input)=>{setLedgerPending(true);setLedgerMessage("");const result=input.stripeAttemptId?await refundStripeInvoicePayment(schoolId,billingAccountId,billingPeriodId,input.stripeAttemptId,input.amountCents,input.note):await recordInvoiceSettlement(schoolId,billingAccountId,billingPeriodId,{type:input.type,method:input.method,amountCents:input.amountCents,occurredAt:input.occurredAt,reference:input.reference,note:input.note,sourceEntryId:input.sourceEntryId});setLedgerMessage(result.message);if(result.ok){setLedgerMode(null);await checkPayment();router.refresh();}setLedgerPending(false);}}/>:null}
           {ledgerMessage?<p role="status" className="mt-3 rounded-control bg-surface-raised p-3 text-sm">{ledgerMessage}</p>:null}
-          {settlements.length||stripeRefunds.length?<div className="mt-5"><p className="mb-2 text-xs font-medium uppercase tracking-[0.12em] text-muted">Invoice activity</p><div className="space-y-2">{settlements.map((entry)=>{const reversed=settlements.some((other)=>other.entryType==="reversal"&&other.sourceEntryId===entry.id);return <div key={entry.id} className="flex flex-wrap items-center justify-between gap-2 rounded-control bg-surface-raised px-3 py-2 text-xs"><span className={reversed?"line-through opacity-60":""}>{entry.entryType.replaceAll("_"," ")} · {new Date(entry.occurredAt).toLocaleDateString()}{entry.method?` · ${entry.method.replaceAll("_"," ")}`:""}</span><span className="flex items-center gap-3"><strong>{new Intl.NumberFormat("en-US",{style:"currency",currency}).format(entry.amountCents/100)}</strong>{!reversed&&["external_payment","write_off"].includes(entry.entryType)?<button type="button" disabled={ledgerPending} onClick={async()=>{setLedgerPending(true);const result=await recordInvoiceSettlement(schoolId,billingAccountId,billingPeriodId,{type:"reversal",amountCents:entry.amountCents,note:"Owner reversed the prior ledger entry.",sourceEntryId:entry.id});setLedgerMessage(result.message);if(result.ok){await checkPayment();router.refresh();}setLedgerPending(false);}} className="text-danger underline-offset-4 hover:underline">Reverse</button>:null}</span></div>;})}{stripeRefunds.map((entry)=><div key={entry.id} className="flex items-start justify-between gap-3 rounded-control bg-surface-raised px-3 py-2 text-xs"><span><span className="block">Stripe refund · {entry.status} · {new Date(entry.createdAt).toLocaleString()}</span>{entry.reason?<span className="mt-1 block text-muted">{entry.reason}</span>:null}</span><strong>{new Intl.NumberFormat("en-US",{style:"currency",currency}).format(entry.amountCents/100)}</strong></div>)}</div></div>:null}
+          {settlements.length||stripePayments.length||stripeRefunds.length?<div className="mt-5"><p className="mb-2 text-xs font-medium uppercase tracking-[0.12em] text-muted">Invoice activity</p><div className="space-y-2">{settlements.map((entry)=>{const reversed=settlements.some((other)=>other.entryType==="reversal"&&other.sourceEntryId===entry.id);return <div key={entry.id} className="flex flex-wrap items-center justify-between gap-2 rounded-control bg-surface-raised px-3 py-2 text-xs"><span className={reversed?"line-through opacity-60":""}>{entry.entryType.replaceAll("_"," ")} · {new Date(entry.occurredAt).toLocaleDateString()}{entry.method?` · ${entry.method.replaceAll("_"," ")}`:""}</span><span className="flex items-center gap-3"><strong>{new Intl.NumberFormat("en-US",{style:"currency",currency}).format(entry.amountCents/100)}</strong>{!reversed&&["external_payment","write_off"].includes(entry.entryType)?<button type="button" disabled={ledgerPending} onClick={async()=>{setLedgerPending(true);const result=await recordInvoiceSettlement(schoolId,billingAccountId,billingPeriodId,{type:"reversal",amountCents:entry.amountCents,note:"Owner reversed the prior ledger entry.",sourceEntryId:entry.id});setLedgerMessage(result.message);if(result.ok){await checkPayment();router.refresh();}setLedgerPending(false);}} className="text-danger underline-offset-4 hover:underline">Reverse</button>:null}</span></div>;})}{stripePayments.map((entry)=><div key={entry.id} className="flex items-start justify-between gap-3 rounded-control bg-surface-raised px-3 py-2 text-xs"><span><span className="block">Stripe payment{entry.succeededAt?` · ${new Date(entry.succeededAt).toLocaleString()}`:""}</span>{hasLocalOfferingLines?<span className="mt-1 block text-muted">Collected for the complete invoice, including a locally managed offering.</span>:null}</span><strong>{new Intl.NumberFormat("en-US",{style:"currency",currency}).format(entry.amountCents/100)}</strong></div>)}{stripeRefunds.map((entry)=><div key={entry.id} className="flex items-start justify-between gap-3 rounded-control bg-surface-raised px-3 py-2 text-xs"><span><span className="block">Stripe refund · {entry.status} · {new Date(entry.createdAt).toLocaleString()}</span>{entry.reason?<span className="mt-1 block text-muted">{entry.reason}</span>:null}</span><strong>{new Intl.NumberFormat("en-US",{style:"currency",currency}).format(entry.amountCents/100)}</strong></div>)}</div></div>:null}
         </div>
       </div>
     </div>
