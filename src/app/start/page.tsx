@@ -3,7 +3,7 @@ import {CommonTimeLogo} from "@/components/brand/common-time-logo";
 import {ParallaxPhoto} from "@/components/marketing/parallax-photo";
 
 export const metadata:Metadata={
- title:"Music Lesson Scheduling & Billing Software | Common Time",
+ title:{absolute:"Music Lesson Scheduling & Billing Software | Common Time"},
  description:"Music lesson scheduling, invoicing, payments, rescheduling, and student management software for independent music teachers and music schools. Start free for seven days.",
  alternates:{canonical:"https://www.commontime.studio"},
  robots:{index:true,follow:true},
