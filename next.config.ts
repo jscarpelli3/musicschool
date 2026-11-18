@@ -15,6 +15,7 @@ const nextConfig: NextConfig = {
   // corrupting the same build directory.
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
   experimental: {
+    agentUpgrade: "security",
     // Avatar uploads accept 5 MB images. Multipart encoding adds a small amount
     // of overhead to the raw file size before the Server Action receives it.
     serverActions: { bodySizeLimit: "6mb" },
