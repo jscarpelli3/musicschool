@@ -3,7 +3,13 @@ import { NextResponse } from "next/server";
 import { refreshSession } from "@/lib/supabase/proxy";
 
 const MARKETING_HOSTS = new Set(["commontime.studio", "www.commontime.studio"]);
-const PUBLIC_MARKETING_PATHS = new Set(["/privacy", "/terms"]);
+const SEO_MARKETING_PATHS = [
+  "/music-lesson-scheduling-software",
+  "/software-for-independent-music-teachers",
+  "/music-school-billing-software",
+  "/music-school-management-software",
+];
+const PUBLIC_MARKETING_PATHS = new Set(["/privacy", "/terms", ...SEO_MARKETING_PATHS]);
 const PROVIDER_WEBHOOK_PATHS = ["/api/stripe/webhooks", "/api/resend/webhooks", "/api/twilio/"];
 const VERCEL_HOST_ENV_KEYS = ["VERCEL_URL", "VERCEL_BRANCH_URL", "VERCEL_PROJECT_PRODUCTION_URL"] as const;
 
@@ -64,7 +70,10 @@ export async function proxy(request: NextRequest) {
     }
 
     if (request.nextUrl.pathname === "/sitemap.xml") {
-      return new NextResponse(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://www.commontime.studio/</loc></url></urlset>`, {
+      const urls = ["/", ...SEO_MARKETING_PATHS]
+        .map((path) => `<url><loc>https://www.commontime.studio${path}</loc><changefreq>monthly</changefreq></url>`)
+        .join("");
+      return new NextResponse(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`, {
         headers: { "Content-Type": "application/xml; charset=utf-8" },
       });
     }
