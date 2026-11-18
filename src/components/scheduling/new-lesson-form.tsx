@@ -5,6 +5,9 @@ import { useFormStatus } from "react-dom";
 import type { CreateLessonInstrumentState, CreateLessonPlaceState, CreateLessonState, StudentHomeLocationState } from "@/app/schools/[schoolId]/lessons/new/actions";
 import { clockTime, fiveMinuteTimeOptions, minutesFromTime } from "@/lib/scheduling/time-options";
 import { AppSelect } from "@/components/ui/app-select";
+import { FocusedModal } from "@/components/ui/focused-modal";
+import { ProductForm } from "@/app/schools/[schoolId]/products/product-form";
+import type { ProductState } from "@/app/schools/[schoolId]/products/actions";
 import { soleTeacherId } from "@/lib/schools/teaching-mode";
 
 export type LessonFormOption = { id: string; label: string };
@@ -80,9 +83,11 @@ function AvailabilityContext({
 }
 
 export function NewLessonForm({
+  schoolId,
   action,
   createPlaceAction,
   createInstrumentAction,
+  createOfferingAction,
   checkHomeLocationAction,
   initialState,
   students,
@@ -107,9 +112,11 @@ export function NewLessonForm({
   busyLessons = [],
   timeZone,
 }: {
+  schoolId: string;
   action: (state: CreateLessonState, formData: FormData) => Promise<CreateLessonState>;
   createPlaceAction: (formData: FormData) => Promise<CreateLessonPlaceState>;
   createInstrumentAction: (formData: FormData) => Promise<CreateLessonInstrumentState>;
+  createOfferingAction: (state: ProductState, formData: FormData) => Promise<ProductState>;
   checkHomeLocationAction: (studentId: string) => Promise<StudentHomeLocationState>;
   initialState: CreateLessonState;
   students: LessonFormOption[];
@@ -144,6 +151,8 @@ export function NewLessonForm({
   const [teacherId, setTeacherId] = useState(startingTeacherId);
   const startingProductId = entitlement?.productId ?? (products.some((product) => product.id === defaultProductId) ? defaultProductId! : "");
   const [productId, setProductId] = useState(startingProductId);
+  const [availableProducts, setAvailableProducts] = useState(products);
+  const [showNewOffering, setShowNewOffering] = useState(false);
   const startingTeacherInstruments = instrumentIdsByTeacher[startingTeacherId] ?? [];
   const [availableInstruments, setAvailableInstruments] = useState(instruments);
   const [instrumentId, setInstrumentId] = useState(entitlement?.instrumentId ?? (startingTeacherInstruments.length === 1 ? startingTeacherInstruments[0] : instruments.length === 1 ? instruments[0].id : ""));
@@ -169,7 +178,7 @@ export function NewLessonForm({
   const errorRef = useRef<HTMLParagraphElement>(null);
   const timeRef = useRef<HTMLSelectElement>(null);
   const teacher = useMemo(() => teachers.find((option) => option.id === teacherId), [teacherId, teachers]);
-  const product = useMemo(() => products.find((option) => option.id === productId), [productId, products]);
+  const product = useMemo(() => availableProducts.find((option) => option.id === productId), [availableProducts, productId]);
   const teacherInstrumentIds = instrumentIdsByTeacher[teacherId] ?? [];
   const selectedPlace = useMemo(() => availablePlaces.find((option) => option.id === placeId), [availablePlaces, placeId]);
   const checkHomeLocation = (candidatePlaceId: string, candidateStudentId: string) => {
@@ -231,7 +240,7 @@ export function NewLessonForm({
       {state.message ? <p ref={errorRef} role={state.status === "error" ? "alert" : "status"} className={`md:col-span-2 border p-4 text-sm ${state.status === "success" ? "border-brand/40 bg-brand/10 text-brand" : "border-danger/40 bg-danger/10 text-danger"}`}>{state.message}{state.status === "error" ? " Nothing was added; correct the highlighted field and try again." : ""}</p> : null}
       <label className="md:col-span-2"><span className="text-xs text-muted">Student</span><AppSelect required name="student_id" value={studentId} onChange={(event) => { const nextStudentId = event.target.value; const nextTeacherId = effectiveLockedTeacherId ?? primaryTeacherByStudent[nextStudentId] ?? ""; setStudentId(nextStudentId); if (!effectiveLockedTeacherId) setTeacherId(nextTeacherId); const qualified = instrumentIdsByTeacher[nextTeacherId] ?? []; if (!instrumentId && qualified.length === 1) setInstrumentId(qualified[0]); invalidateConflictingTime(nextTeacherId, date); checkHomeLocation(placeId, nextStudentId); }} disabled={Boolean(entitlement)} className={field}><option value="" disabled>Select a student</option>{students.map((student) => <option key={student.id} value={student.id}>{student.label}</option>)}</AppSelect>{entitlement ? <><input type="hidden" name="student_id" value={entitlement.studentId} /><span className="mt-2 block text-xs text-brand">Replacement lesson · this student is fixed</span></> : null}</label>
       {effectiveLockedTeacherId ? <>{soloTeacherId ? null : <div><span className="text-xs text-muted">Teacher</span><p className="border-b border-line py-3">{teacher?.label}</p></div>}<input type="hidden" name="teacher_id" value={effectiveLockedTeacherId} /></> : <label><span className="text-xs text-muted">Teacher</span><AppSelect required name="teacher_id" value={teacherId} onChange={(event) => { const nextTeacherId = event.target.value; setTeacherId(nextTeacherId); const qualified = instrumentIdsByTeacher[nextTeacherId] ?? []; if (!instrumentId && qualified.length === 1) setInstrumentId(qualified[0]); invalidateConflictingTime(nextTeacherId, date); }} className={field}><option value="" disabled>Select a teacher</option>{teachers.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</AppSelect></label>}
-      <label><span className="text-xs text-muted">Lesson offering</span><AppSelect required name="product_id" value={productId} disabled={Boolean(entitlement)} onChange={(event) => { const nextProduct = products.find((option) => option.id === event.target.value); setProductId(event.target.value); invalidateConflictingTime(teacherId, date, nextProduct); }} className={field}><option value="" disabled>Select an offering</option>{products.map((option) => <option key={option.id} value={option.id}>{option.label} · {option.durationMinutes} min · {entitlement?"no new charge":option.priceLabel}</option>)}</AppSelect>{entitlement ? <input type="hidden" name="product_id" value={entitlement.productId} /> : null}</label>
+      <div><label><span className="text-xs text-muted">Lesson offering</span><AppSelect required name="product_id" value={productId} disabled={Boolean(entitlement)} onChange={(event) => { const nextProduct = availableProducts.find((option) => option.id === event.target.value); setProductId(event.target.value); invalidateConflictingTime(teacherId, date, nextProduct); }} className={field}><option value="" disabled>{availableProducts.length ? "Select an offering" : "No offerings yet"}</option>{availableProducts.map((option) => <option key={option.id} value={option.id}>{option.label} · {option.durationMinutes} min · {entitlement?"no new charge":option.priceLabel}</option>)}</AppSelect>{entitlement ? <input type="hidden" name="product_id" value={entitlement.productId} /> : null}</label>{!entitlement ? <><button type="button" onClick={() => setShowNewOffering(true)} className="mt-2 text-xs text-brand hover:text-brand-hover">+ Add an offering</button><FocusedModal hideTrigger open={showNewOffering} onOpenChange={setShowNewOffering} triggerLabel="Add an offering" eyebrow="Lesson offering" title="Add an offering" description="Create the lesson type without losing the lesson you are setting up."><ProductForm schoolId={schoolId} action={createOfferingAction} onCreated={(created) => { const nextProduct = { id: created.id, label: created.label, durationMinutes: created.durationMinutes, priceLabel: created.priceLabel }; setAvailableProducts((current) => [...current.filter((item) => item.id !== created.id), nextProduct].sort((a, b) => a.label.localeCompare(b.label))); setProductId(created.id); invalidateConflictingTime(teacherId, date, nextProduct); setShowNewOffering(false); window.dispatchEvent(new CustomEvent("common-time:toast", { detail: { title: "Offering added", message: `${created.label} was added and selected.` } })); }} /></FocusedModal></> : null}</div>
       <div className="md:col-span-2">
         <label><span className="text-xs text-muted">Instrument</span><AppSelect required name="instrument_id" value={instrumentId} onChange={(event) => setInstrumentId(event.target.value)} className={field}><option value="" disabled>{availableInstruments.length ? "Select an instrument" : "No instruments yet"}</option>{availableInstruments.map((instrument) => <option key={instrument.id} value={instrument.id}>{instrument.label}{teacherId && teacherInstrumentIds.includes(instrument.id) ? " · taught by selected teacher" : ""}</option>)}</AppSelect></label>
         <button type="button" onClick={() => { setShowNewInstrument((current) => !current); setInstrumentMessage(""); }} className="mt-2 text-xs text-brand hover:text-brand-hover">{showNewInstrument ? "Cancel" : "+ Add an instrument"}</button>

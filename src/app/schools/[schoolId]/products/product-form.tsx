@@ -1,15 +1,27 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { createProduct, type ProductState } from "./actions";
 import { AppSelect } from "@/components/ui/app-select";
 
 const initialState: ProductState = { error: null };
 const fieldClass = "w-full border-b border-line bg-transparent py-3 outline-none transition focus:border-brand";
 
-export function ProductForm({ schoolId, returnPath }: { schoolId: string; returnPath?: string }) {
+export function ProductForm({ schoolId, returnPath, action: actionOverride, onCreated }: {
+  schoolId: string;
+  returnPath?: string;
+  action?: (state: ProductState, formData: FormData) => Promise<ProductState>;
+  onCreated?: (product: NonNullable<ProductState["product"]>) => void;
+}) {
   const [format, setFormat] = useState("private_lesson");
-  const [state, action, pending] = useActionState(createProduct.bind(null, schoolId, returnPath), initialState);
+  const [state, action, pending] = useActionState(actionOverride ?? createProduct.bind(null, schoolId, returnPath), initialState);
+  const handledProductId = useRef("");
+
+  useEffect(() => {
+    if (!state.product || handledProductId.current === state.product.id) return;
+    handledProductId.current = state.product.id;
+    onCreated?.(state.product);
+  }, [onCreated, state.product]);
 
   return (
     <form action={action} className="mt-10">

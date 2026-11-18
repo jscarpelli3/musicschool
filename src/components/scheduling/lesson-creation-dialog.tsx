@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createLessonInstrument, createLessonPlace, createSingleLesson, getStudentHomeLocationState, type CreateLessonState } from "@/app/schools/[schoolId]/lessons/new/actions";
+import { createProductForLesson } from "@/app/schools/[schoolId]/products/actions";
 import { NewLessonForm, type LessonFormAvailability, type LessonFormOption, type LessonFormPlace, type LessonFormProduct, type LessonFormTeacher } from "./new-lesson-form";
 import { soleTeacherId } from "@/lib/schools/teaching-mode";
 import styles from "./lesson-creation-dialog.module.css";
@@ -37,7 +38,9 @@ export function LessonCreationDialog({ schoolId, slot, options, lockTeacher, tim
   const soloTeacherId = soleTeacherId(options.teachers);
   const resolvedTeacherId = soloTeacherId ?? slot.teacherId;
   useEffect(() => {
-    const close = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !document.querySelector('[data-focused-modal-layer="true"]')) onClose();
+    };
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
   }, [onClose]);
@@ -52,9 +55,11 @@ export function LessonCreationDialog({ schoolId, slot, options, lockTeacher, tim
       <div className="pt-6">
         <NewLessonForm
           key={`${slot.dateKey}-${slot.time}-${resolvedTeacherId}`}
+          schoolId={schoolId}
           action={createSingleLesson.bind(null, schoolId)}
           createPlaceAction={createLessonPlace.bind(null, schoolId)}
           createInstrumentAction={createLessonInstrument.bind(null, schoolId)}
+          createOfferingAction={createProductForLesson.bind(null, schoolId)}
           checkHomeLocationAction={getStudentHomeLocationState.bind(null, schoolId)}
           initialState={initialState}
           {...options}

@@ -7,7 +7,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getStripe, getStripeMode } from "@/lib/stripe/server";
 
-export type ProductState = { error: string | null };
+export type ProductState = {
+  error: string | null;
+  product?: { id: string; label: string; durationMinutes: number; priceLabel: string };
+};
 
 function integer(formData: FormData, key: string) {
   const value = Number(formData.get(key));
@@ -20,12 +23,7 @@ function cents(value: FormDataEntryValue | null) {
   return Math.round(Number(input) * 100);
 }
 
-export async function createProduct(
-  schoolId: string,
-  returnPath: string | undefined,
-  _state: ProductState,
-  formData: FormData,
-): Promise<ProductState> {
+async function createProductRecord(schoolId: string, formData: FormData, redirectOnExpiredSession: boolean): Promise<ProductState> {
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim() || null;
   const format = String(formData.get("format"));
@@ -47,7 +45,10 @@ export async function createProduct(
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getClaims();
   const profileId = authData?.claims?.sub;
-  if (!profileId) redirect(`/login?next=/schools/${schoolId}/products`);
+  if (!profileId) {
+    if (redirectOnExpiredSession) redirect(`/login?next=/schools/${schoolId}/products`);
+    return { error: "Your session expired. Sign in again before creating an offering." };
+  }
 
   const livemode = getStripeMode() === "live";
   const [{ data: school }, { data: connection }, canManage] = await Promise.all([
@@ -67,16 +68,21 @@ export async function createProduct(
     requested_price_cents: priceCents, currency: school.currency, capacity,
   };
   if (!connection?.provider_account_id || connection.status !== "enabled" || !connection.charges_enabled) {
-    const { error } = await admin.from("service_products").insert({
+    const { data: localProduct, error } = await admin.from("service_products").insert({
       school_id: schoolId, name, description, format, duration_minutes: durationMinutes,
       pricing_model: pricingModel, billing_timing_override: billingTiming === "school_default" ? null : billingTiming,
       currency: school.currency, capacity, price_cents: priceCents, created_by: profileId,
       stripe_sync_status: "local_only",
-    });
-    if (error) return { error: "The offering could not be saved. Nothing was sent to Stripe." };
+    }).select("id,name,duration_minutes,price_cents,currency").single();
+    if (error || !localProduct) return { error: "The offering could not be saved. Nothing was sent to Stripe." };
     revalidatePath(`/schools/${schoolId}/products`);
-    const onboardingPath = `/schools/${schoolId}/onboarding?step=payments`;
-    redirect(returnPath === onboardingPath ? `${onboardingPath}&created=1` : `/schools/${schoolId}/products?created=1`);
+    revalidatePath(`/schools/${schoolId}`);
+    return { error: null, product: {
+      id: localProduct.id,
+      label: localProduct.name,
+      durationMinutes: localProduct.duration_minutes,
+      priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: localProduct.currency }).format(localProduct.price_cents / 100),
+    } };
   }
   const { data: operation, error: operationError } = await admin.from("stripe_catalog_operations").insert({
     school_id: schoolId,
@@ -126,7 +132,7 @@ export async function createProduct(
       stripe_product_id: providerProduct.id,
       stripe_price_id: providerPrice.id,
       stripe_sync_status: "synced",
-    }).select("id").single();
+    }).select("id,name,duration_minutes,price_cents,currency").single();
     if (localError || !localProduct) throw localError ?? new Error("The Stripe offering was not finalized locally.");
     const { error: finalizeError } = await admin.from("stripe_catalog_operations").update({
       status: "succeeded", provider_product_id: providerProduct.id, provider_price_id: providerPrice.id,
@@ -148,9 +154,39 @@ export async function createProduct(
       : "Stripe did not create the offering. Nothing was saved, so it is safe to try again." };
   }
 
+  const { data: completedOperation } = await admin.from("stripe_catalog_operations").select("service_product_id").eq("id", operation.id).maybeSingle();
+  const { data: createdProduct } = completedOperation?.service_product_id
+    ? await admin.from("service_products").select("id,name,duration_minutes,price_cents,currency").eq("school_id", schoolId).eq("id", completedOperation.service_product_id).maybeSingle()
+    : { data: null };
+  if (!createdProduct) return { error: "The offering was created, but it could not be selected. Close and reopen the lesson form." };
   revalidatePath(`/schools/${schoolId}/products`);
+  revalidatePath(`/schools/${schoolId}`);
+  return { error: null, product: {
+    id: createdProduct.id,
+    label: createdProduct.name,
+    durationMinutes: createdProduct.duration_minutes,
+    priceLabel: new Intl.NumberFormat("en-US", { style: "currency", currency: createdProduct.currency }).format(createdProduct.price_cents / 100),
+  } };
+}
+
+export async function createProduct(
+  schoolId: string,
+  returnPath: string | undefined,
+  _state: ProductState,
+  formData: FormData,
+): Promise<ProductState> {
+  const result = await createProductRecord(schoolId, formData, true);
+  if (result.error) return result;
   const onboardingPath = `/schools/${schoolId}/onboarding?step=payments`;
   redirect(returnPath === onboardingPath ? `${onboardingPath}&created=1` : `/schools/${schoolId}/products?created=1`);
+}
+
+export async function createProductForLesson(
+  schoolId: string,
+  _state: ProductState,
+  formData: FormData,
+): Promise<ProductState> {
+  return createProductRecord(schoolId, formData, false);
 }
 
 export async function setProductCatalogMode(schoolId: string, productId: string, mode: "local_only" | "synced") {
