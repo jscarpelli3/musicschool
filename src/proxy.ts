@@ -76,7 +76,7 @@ export async function proxy(request: NextRequest) {
     if (PUBLIC_MARKETING_PATHS.has(request.nextUrl.pathname)) return NextResponse.next();
 
     const destination = request.nextUrl.clone();
-    destination.pathname = "/coming-soon";
+    destination.pathname = "/start";
     return NextResponse.rewrite(destination);
   }
 

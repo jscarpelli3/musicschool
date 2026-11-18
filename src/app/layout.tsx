@@ -32,9 +32,11 @@ const literary = Cormorant_Garamond({ subsets: ["latin"], display: "swap", varia
 const monospace = Space_Mono({ subsets: ["latin"], display: "swap", variable: "--font-monospace", weight: ["400", "700"] });
 
 export const metadata: Metadata = {
-  title: "Common Time",
-  description: "Scheduling, billing, and communication for independent music schools.",
+  metadataBase: new URL("https://www.commontime.studio"),
+  title: { default: "Common Time", template: "%s · Common Time" },
+  description: "Music lesson scheduling, billing, payments, and student management for independent music teachers and music schools.",
   applicationName: "Common Time",
+  category: "business software",
   appleWebApp: {capable:true,title:"Common Time",statusBarStyle:"black-translucent"},
 };
 
