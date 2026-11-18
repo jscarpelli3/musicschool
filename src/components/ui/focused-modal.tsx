@@ -45,7 +45,10 @@ export function FocusedModal({
     if (!open) return;
     const previousOverflow = document.body.style.overflow;
     const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        event.stopImmediatePropagation();
+        setOpen(false);
+      }
     };
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", handleKey);
@@ -57,7 +60,7 @@ export function FocusedModal({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const dialog = open ? <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+  const dialog = open ? <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-labelledby={titleId} data-focused-modal-layer="true">
     <button type="button" aria-label={`Close ${title}`} onClick={() => setOpen(false)} className="fixed inset-0 border-0 bg-[var(--ui-overlay)]" />
     <section className="fixed inset-x-0 bottom-0 z-[101] max-h-[calc(100dvh-0.5rem)] w-full overflow-y-auto rounded-t-card border border-line bg-surface p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-xl sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:w-[min(42rem,calc(100%-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-card sm:p-9">
       <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-line bg-surface pb-4 sm:static sm:gap-5 sm:pb-6">
