@@ -5,6 +5,7 @@ import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { InviteSchoolForm } from "./invite-school-form";
 import { PlatformBillingForm } from "./platform-billing-form";
 import { IncidentStatusControls } from "./incident-status-controls";
+import { getStripeMode } from "@/lib/stripe/server";
 
 export const dynamic="force-dynamic";
 export const metadata={title:"Platform admin · Common Time",robots:{index:false,follow:false}};
@@ -18,6 +19,7 @@ type IncidentAlert={incident_id:string;status:string;recipient_email:string;last
 export default async function PlatformAdminPage(){
  await requirePlatformAdmin();
  const admin=createAdminClient() as unknown as SupabaseClient;
+ const stripeMode=getStripeMode();
  const [{data,error,count},{data:statusRows,error:statusError},{data:invitationRows,error:invitationError},{data:schoolRows,error:schoolError},{data:profiles,error:profileError},{data:teacherRows,error:teacherError},{data:studentRows,error:studentError},{data:productRows,error:productError},{data:lessonRows,error:lessonError},{data:accountRows,error:accountError},{data:periodRows,error:periodError},{data:connectionRows,error:connectionError},{data:platformSubscriptions,error:platformSubscriptionError},{data:platformPlans,error:platformPlanError},{data:incidentRows,error:incidentError},{data:incidentAlertRows,error:incidentAlertError}]=await Promise.all([
   admin.from("early_access_signups").select("id,email,name,school_name,status,source,consented_at,created_at,updated_at",{count:"exact"}).order("created_at",{ascending:false}).limit(100),
   admin.from("early_access_signups").select("status"),
@@ -30,7 +32,7 @@ export default async function PlatformAdminPage(){
   admin.from("lesson_events").select("school_id,id,created_at,status"),
   admin.from("billing_accounts").select("school_id,id,status"),
   admin.from("billing_periods").select("school_id,id,status"),
-  admin.from("school_payment_connections").select("school_id,status,charges_enabled,details_submitted,livemode"),
+  admin.from("school_payment_connections").select("school_id,status,charges_enabled,details_submitted,livemode").eq("livemode",stripeMode==="live"),
   admin.from("school_platform_subscriptions").select("school_id,plan_key,billing_terms,access_status,custom_monthly_price_cents,complimentary_reason,complimentary_started_at,complimentary_ends_at,stripe_status,trial_ends_at,current_period_ends_at"),
   admin.from("platform_plans").select("key,name,monthly_price_cents,currency,trial_days,stripe_test_price_id,stripe_live_price_id"),
   admin.from("platform_incidents").select("id,provider,severity,status,title,summary,source_kind,school_id,occurrence_count,first_seen_at,last_seen_at,alert_cycle").order("last_seen_at",{ascending:false}).limit(100),
