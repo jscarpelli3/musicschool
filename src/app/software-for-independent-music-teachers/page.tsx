@@ -8,7 +8,7 @@ export default function Page(){return <SeoLandingPage eyebrow="Software for inde
  {title:"Know each family’s whole story",body:"Open one family record to find the students, their lesson times, invoices, payments, and contact information."},
  {title:"Make getting paid routine",body:"Build invoices from the lessons you scheduled, collect a card payment through Stripe, or record cash, check, and bank payments."},
 ]} detailTitle="Enough organization to protect your time." details={[
- "Start at $10 per month after a seven-day trial; cancel whenever you need to.",
+ "Join during Opus One for the $10 monthly founding price after a seven-day trial; keep that rate while your subscription remains active.",
  "Set up weekly students once and change a single week without rebuilding the calendar.",
  "Choose the days you prefer to prepare invoices and charge families, while keeping the freedom to bill whenever you need to.",
  "Install Common Time on your phone for quick access to the same information you see on your computer.",
