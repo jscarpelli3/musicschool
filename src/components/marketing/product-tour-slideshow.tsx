@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import {useCallback,useEffect,useRef,useState} from "react";
+import type {WheelEvent} from "react";
 
 type Slide={src:string;title:string;text:string;alt:string};
 
@@ -26,6 +27,9 @@ export function ProductTourSlideshow(){
  const [active,setActive]=useState(0);
  const [paused,setPaused]=useState(false);
  const touchStart=useRef<{x:number;y:number}|null>(null);
+ const wheelDistance=useRef(0);
+ const wheelLocked=useRef(false);
+ const wheelResetTimer=useRef<number|null>(null);
  const slides=slideSets[view];
  const hasViewToggle=desktopSlides.length>0&&mobileSlides.length>0;
  const show=useCallback((index:number)=>setActive((index+slides.length)%slides.length),[slides.length]);
@@ -46,6 +50,19 @@ export function ProductTourSlideshow(){
   show(active+(horizontal<0?1:-1));
  };
 
+ const handleWheel=(event:WheelEvent<HTMLDivElement>)=>{
+  if(Math.abs(event.deltaX)<=Math.abs(event.deltaY)||wheelLocked.current)return;
+  event.preventDefault();
+  wheelDistance.current+=event.deltaX;
+  if(wheelResetTimer.current)window.clearTimeout(wheelResetTimer.current);
+  wheelResetTimer.current=window.setTimeout(()=>{wheelDistance.current=0},140);
+  if(Math.abs(wheelDistance.current)<55)return;
+  show(active+(wheelDistance.current>0?1:-1));
+  wheelDistance.current=0;
+  wheelLocked.current=true;
+  window.setTimeout(()=>{wheelLocked.current=false},650);
+ };
+
  useEffect(()=>{
   if(paused||window.matchMedia("(prefers-reduced-motion: reduce)").matches)return;
   const timer=window.setInterval(()=>setActive(current=>(current+1)%slides.length),8000);
@@ -56,7 +73,7 @@ export function ProductTourSlideshow(){
   {hasViewToggle?<div className="mb-5 flex justify-center" role="group" aria-label="Choose screenshot size"><div className="inline-flex rounded-full border border-line bg-canvas p-1">{(["desktop","mobile"] as const).map(option=><button key={option} type="button" onClick={()=>chooseView(option)} aria-pressed={view===option} className={`rounded-full px-4 py-2 text-xs uppercase tracking-[0.12em] transition ${view===option?"bg-ink text-canvas":"text-muted hover:text-ink"}`}>{option}</button>)}</div></div>:null}
   <button type="button" onClick={()=>show(active-1)} className="absolute left-0 top-1/2 z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface text-2xl text-ink shadow-lg transition hover:border-brand hover:text-brand sm:flex" aria-label="Show previous product screen">‹</button>
   <button type="button" onClick={()=>show(active+1)} className="absolute right-0 top-1/2 z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface text-2xl text-ink shadow-lg transition hover:border-brand hover:text-brand sm:flex" aria-label="Show next product screen">›</button>
-  <div className="touch-pan-y overflow-hidden rounded-card border border-line bg-ink shadow-2xl shadow-ink/15" onTouchStart={(event)=>{const touch=event.changedTouches[0];touchStart.current={x:touch.clientX,y:touch.clientY}}} onTouchEnd={(event)=>{const touch=event.changedTouches[0];finishSwipe(touch.clientX,touch.clientY)}} onTouchCancel={()=>{touchStart.current=null}}>
+  <div className="touch-pan-y overflow-hidden rounded-card border border-line bg-ink shadow-2xl shadow-ink/15" onWheel={handleWheel} onTouchStart={(event)=>{const touch=event.changedTouches[0];touchStart.current={x:touch.clientX,y:touch.clientY}}} onTouchEnd={(event)=>{const touch=event.changedTouches[0];finishSwipe(touch.clientX,touch.clientY)}} onTouchCancel={()=>{touchStart.current=null}}>
    <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3" aria-hidden="true"><span className="h-2.5 w-2.5 rounded-full bg-brand"/><span className="h-2.5 w-2.5 rounded-full bg-canvas/35"/><span className="h-2.5 w-2.5 rounded-full bg-canvas/20"/><span className="ml-3 text-[0.65rem] uppercase tracking-[0.14em] text-canvas/55">Common Time</span></div>
    <div className="flex transition-transform duration-700 ease-in-out" style={{transform:`translateX(-${active*100}%)`}}>
     {slides.map((slide,index)=><article key={slide.src} className="w-full shrink-0" aria-hidden={index!==active}><div className="relative aspect-[1440/941] bg-canvas/10"><Image src={slide.src} alt={slide.alt} fill sizes="(min-width: 1200px) 1056px, 100vw" priority={index===0} draggable={false} className="select-none object-contain"/></div><div className="grid gap-3 border-t border-white/10 px-5 py-5 text-canvas sm:grid-cols-[auto_1fr] sm:gap-6 sm:px-7"><p className="text-xs uppercase tracking-[0.14em] text-brand">{String(index+1).padStart(2,"0")} / {String(slides.length).padStart(2,"0")}</p><div><h3 className="font-display text-2xl sm:text-3xl">{slide.title}</h3><p className="mt-2 max-w-2xl text-sm leading-6 text-canvas/65">{slide.text}</p></div></div></article>)}
