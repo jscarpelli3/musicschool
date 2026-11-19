@@ -7,6 +7,7 @@ import { AppSignOut } from "@/components/auth/app-sign-out";
 
 export function AccountMenu({ avatarUrl, role }: { avatarUrl?: string | null; role: string }) {
   const [open, setOpen] = useState(false);
+  const [popoverTop, setPopoverTop] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -19,14 +20,14 @@ export function AccountMenu({ avatarUrl, role }: { avatarUrl?: string | null; ro
 
   return (
     <div ref={containerRef} className="relative" onMouseEnter={() => setOpen(true)}>
-      <p className="mb-1 text-right text-[10px] capitalize tracking-[0.12em] text-muted">{role}</p>
       <div className="flex items-center gap-1">
-        <button type="button" aria-label="Open account menu" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="grid h-12 w-12 place-items-center overflow-hidden rounded-full border border-line bg-surface text-muted transition hover:border-brand hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
+        <button type="button" aria-label="Open account menu" aria-expanded={open} onClick={(event) => { setPopoverTop(event.currentTarget.getBoundingClientRect().bottom + 6); setOpen((value) => !value); }} className="grid h-12 w-12 place-items-center overflow-hidden rounded-full border border-line bg-surface text-muted transition hover:border-brand hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
           {avatarUrl ? <img /* eslint-disable-line @next/next/no-img-element */ src={avatarUrl} alt="Your avatar" className="h-full w-full object-cover" /> : <MdPersonOutline aria-hidden="true" className="h-6 w-6" />}
         </button>
       </div>
       {open ? (
-        <div className="ui-card absolute top-full right-0 z-[100] w-48 overflow-hidden p-2" onFocusCapture={() => setOpen(true)}>
+        <div style={{top:popoverTop}} className="ui-card fixed left-2 right-2 z-[100] overflow-hidden p-2 sm:absolute sm:left-auto sm:right-0 sm:!top-full sm:w-48" onFocusCapture={() => setOpen(true)}>
+          <p className="px-3 pb-2 pt-1 text-[10px] uppercase tracking-[0.12em] text-muted">{role}</p>
           <Link href="/profile#avatar" onClick={() => setOpen(false)} className="block rounded-control px-3 py-2 text-sm text-ink transition hover:bg-brand/10">Avatar</Link>
           <Link href="/profile#profile-info" onClick={() => setOpen(false)} className="block rounded-control px-3 py-2 text-sm text-ink transition hover:bg-brand/10">Profile info</Link>
           <div className="mt-1 border-t border-line pt-1">
