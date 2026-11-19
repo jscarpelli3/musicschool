@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { OwnerNotifications } from "@/components/notifications/owner-notifications";
 import type { SchoolInvoice } from "@/lib/billing/school-invoices";
-import { MdApproval, MdDashboard, MdExpandMore, MdFamilyRestroom, MdGroups, MdReceiptLong, MdSchool, MdSearch } from "react-icons/md";
+import { MdApproval, MdDashboard, MdExpandMore, MdFamilyRestroom, MdGroups, MdMenu, MdReceiptLong, MdSchool, MdSearch, MdSettings } from "react-icons/md";
 import { HeaderLessonFinder } from "@/components/scheduling/header-lesson-finder";
 import type { LessonCreationOptions } from "@/components/scheduling/lesson-creation-dialog";
 import { PrepareInvoiceLauncher, type InvoicePayerChoice } from "@/components/billing/prepare-invoice-launcher";
@@ -23,6 +23,7 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
   const pathname = usePathname();
   const router = useRouter();
   const [approvalsOpen, setApprovalsOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [approvalView, setApprovalView] = useState<"pending" | "finished">("pending");
   const [invoicesOpen, setInvoicesOpen] = useState(false);
   const [directoryOpen, setDirectoryOpen] = useState<"students" | "families" | "staff" | null>(null);
@@ -130,15 +131,22 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
         { label: "Families", href: `${base}/families`, active: pathname.startsWith(`${base}/families`), directory: "families" as const, icon: MdFamilyRestroom },
         ...(can("school.staff.directory_manage") ? [{ label: "Staff", href: `${base}/staff`, active: pathname.startsWith(`${base}/staff`), directory: "staff" as const, icon: MdGroups }] : []),
       ];
+  const mobilePrimaryItems = items.filter((item) => ["Dashboard", "Students", "Families"].includes(item.label));
+  const mobileMoreItems = items.filter((item) => !["Dashboard", "Students", "Families"].includes(item.label));
 
   return (
     <nav className="flex flex-col py-3 sm:py-5" aria-label="School management">
-      <div className="order-3 mt-4 flex items-center justify-center gap-6 pb-1 sm:order-1 sm:mt-0 sm:justify-end sm:gap-4 sm:overflow-x-auto sm:pr-1">
+      {moreOpen ? <button type="button" aria-label="Close school menu" onClick={()=>setMoreOpen(false)} className="fixed inset-0 z-[60] bg-ink/35 sm:hidden" /> : null}
+      <div onClickCapture={()=>setMoreOpen(false)} className={`${moreOpen?"fixed":"hidden"} bottom-20 left-2 right-2 z-[70] rounded-card border border-line bg-surface-raised p-5 shadow-2xl sm:static sm:order-1 sm:mt-0 sm:flex sm:items-center sm:justify-end sm:gap-4 sm:overflow-x-auto sm:border-0 sm:bg-transparent sm:p-0 sm:pb-1 sm:pr-1 sm:shadow-none`}>
+        <div className="mb-4 flex items-center justify-between sm:hidden"><p className="font-display text-2xl">School menu</p><button type="button" onClick={()=>setMoreOpen(false)} className="text-sm text-muted">Close</button></div>
+        <div className="mb-5 grid gap-1 sm:hidden">{mobileMoreItems.map((item)=>{const Icon=item.icon;return <Link key={item.href} href={item.href} className="flex items-center gap-3 rounded-control px-3 py-3 text-sm text-ink hover:bg-brand/10"><Icon aria-hidden="true" className="text-xl text-brand"/>{item.label}</Link>})}{can("school.setup.manage")?<Link href={`${base}/setup`} className="flex items-center gap-3 rounded-control px-3 py-3 text-sm text-ink hover:bg-brand/10"><MdSettings aria-hidden="true" className="text-xl text-brand"/>School settings</Link>:null}</div>
+        <div className="grid grid-cols-2 gap-3 border-t border-line pt-4 [&>button]:min-h-11 [&>button]:justify-center [&>button]:rounded-control [&>button]:border [&>button]:border-line [&>button]:px-3 sm:contents sm:[&>button]:min-h-0 sm:[&>button]:justify-start sm:[&>button]:rounded-none sm:[&>button]:border-0 sm:[&>button]:px-0">
         {can("school.lessons.manage") && lessonCreationOptions ? <HeaderLessonFinder schoolId={schoolId} timeZone={timeZone} options={lessonCreationOptions} studentIdsByFamily={studentIdsByFamily} /> : null}
         {can("school.billing.manage") ? <PrepareInvoiceLauncher schoolId={schoolId} payers={invoicePayers} variant="nav" /> : null}
+        </div>
       </div>
       <div className="order-1 grid items-start gap-y-3 pb-1 sm:order-2 sm:mt-3 sm:flex sm:gap-x-6 sm:gap-y-4 sm:pb-2">
-      <div className="order-2 flex min-w-0 items-center justify-center gap-2 sm:order-1 sm:flex-wrap sm:justify-start sm:gap-3">
+      <div className="order-2 hidden min-w-0 items-center justify-center gap-2 sm:order-1 sm:flex sm:flex-wrap sm:justify-start sm:gap-3">
       {items.map((item) => {
         const Icon = item.icon;
         const directory = "directory" in item ? item.directory : null;
@@ -192,6 +200,11 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
         </div> : null}
         <OwnerNotifications schoolId={schoolId} embedded />
       </div>
+      </div>
+      <div className="h-16 sm:hidden" aria-hidden="true" />
+      <div className="fixed inset-x-0 bottom-0 z-[65] grid grid-cols-4 border-t border-line bg-surface-raised/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgba(0,0,0,0.08)] backdrop-blur sm:hidden">
+        {mobilePrimaryItems.map((item)=>{const Icon=item.icon;return <Link key={item.href} href={item.href} aria-current={item.active?"page":undefined} className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-control text-[10px] ${item.active?"text-brand":"text-muted"}`}><Icon aria-hidden="true" className="text-xl"/><span>{item.label}</span></Link>})}
+        <button type="button" aria-expanded={moreOpen} onClick={()=>setMoreOpen((value)=>!value)} className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-control text-[10px] ${moreOpen?"text-brand":"text-muted"}`}><MdMenu aria-hidden="true" className="text-xl"/><span>Menu</span></button>
       </div>
       {notificationInvoiceId ? <InvoiceWorkspaceList schoolId={schoolId} invoices={recentInvoices} compact autoOpenId={notificationInvoiceId} hideList onClose={() => setNotificationInvoiceId(null)} /> : null}
     </nav>
