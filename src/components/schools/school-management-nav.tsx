@@ -132,14 +132,15 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
         ...(can("school.staff.directory_manage") ? [{ label: "Staff", href: `${base}/staff`, active: pathname.startsWith(`${base}/staff`), directory: "staff" as const, icon: MdGroups }] : []),
       ];
   const currentMobileItem = items.find((item) => item.active) ?? items[0];
+  const CurrentMobileIcon = currentMobileItem?.icon ?? MdDashboard;
 
   return (
     <nav className="flex flex-col py-3 sm:py-5" aria-label="School management">
       {moreOpen ? <button type="button" aria-label="Close school menu" onClick={()=>setMoreOpen(false)} className="fixed inset-0 z-[60] bg-ink/35 sm:hidden" /> : null}
       <div onClickCapture={()=>setMoreOpen(false)} className={`${moreOpen?"fixed":"hidden"} bottom-0 left-0 right-0 z-[70] max-h-[85vh] overflow-y-auto rounded-t-card border border-b-0 border-line bg-surface-raised px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-2xl sm:static sm:order-1 sm:mt-0 sm:flex sm:items-center sm:justify-end sm:gap-4 sm:overflow-x-auto sm:border-0 sm:bg-transparent sm:p-0 sm:pb-1 sm:pr-1 sm:shadow-none`}>
-        <button type="button" onClick={()=>setMoreOpen(false)} className="mx-auto mb-4 flex items-center gap-2 rounded-full border border-line bg-canvas px-4 py-2 text-sm text-muted sm:hidden"><span>{currentMobileItem?.label??"School"}</span><MdExpandMore aria-hidden="true" className="text-xl"/></button>
+        <button type="button" aria-label="Close school menu" onClick={()=>setMoreOpen(false)} className="mx-auto mb-4 flex items-center gap-1 rounded-full border border-line bg-canvas px-4 py-2 text-muted sm:hidden"><CurrentMobileIcon aria-hidden="true" className="text-xl"/><MdExpandMore aria-hidden="true" className="text-lg"/></button>
         <div className="mb-5 grid grid-cols-2 gap-2 sm:hidden">{items.map((item)=>{const Icon=item.icon;return <Link key={item.href} href={item.href} aria-current={item.active?"page":undefined} className={`flex items-center gap-3 rounded-control border px-3 py-3 text-sm ${item.active?"border-brand bg-brand/10 text-brand":"border-line text-ink hover:bg-brand/10"}`}><Icon aria-hidden="true" className="text-xl"/>{item.label}</Link>})}{can("school.setup.manage")?<Link href={`${base}/setup`} className="flex items-center gap-3 rounded-control border border-line px-3 py-3 text-sm text-ink hover:bg-brand/10"><MdSettings aria-hidden="true" className="text-xl text-brand"/>School settings</Link>:null}</div>
-        <div className="grid grid-cols-2 gap-3 border-t border-line pt-4 [&>button]:min-h-11 [&>button]:justify-center [&>button]:rounded-control [&>button]:border [&>button]:border-line [&>button]:px-3 sm:contents sm:[&>button]:min-h-0 sm:[&>button]:justify-start sm:[&>button]:rounded-none sm:[&>button]:border-0 sm:[&>button]:px-0">
+        <div className="grid gap-3 border-t border-line pt-4 [&>button]:min-h-11 [&>button]:justify-center [&>button]:whitespace-nowrap [&>button]:rounded-control [&>button]:border [&>button]:border-line [&>button]:px-3 sm:contents sm:[&>button]:min-h-0 sm:[&>button]:justify-start sm:[&>button]:whitespace-normal sm:[&>button]:rounded-none sm:[&>button]:border-0 sm:[&>button]:px-0">
         {can("school.lessons.manage") && lessonCreationOptions ? <HeaderLessonFinder schoolId={schoolId} timeZone={timeZone} options={lessonCreationOptions} studentIdsByFamily={studentIdsByFamily} /> : null}
         {can("school.billing.manage") ? <PrepareInvoiceLauncher schoolId={schoolId} payers={invoicePayers} variant="nav" /> : null}
         </div>
@@ -200,7 +201,7 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
         <OwnerNotifications schoolId={schoolId} embedded />
       </div>
       </div>
-      {!moreOpen?<button type="button" aria-expanded="false" onClick={()=>setMoreOpen(true)} className="fixed bottom-0 left-1/2 z-[65] flex -translate-x-1/2 items-center gap-2 rounded-t-control border border-b-0 border-line bg-surface-raised/95 px-5 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 text-sm text-ink shadow-[0_-8px_24px_rgba(0,0,0,0.1)] backdrop-blur sm:hidden"><span>{currentMobileItem?.label??"School"}</span><MdExpandLess aria-hidden="true" className="text-xl text-brand"/></button>:null}
+      {!moreOpen?<button type="button" aria-label={`Open school menu. Current section: ${currentMobileItem?.label??"School"}`} aria-expanded="false" onClick={()=>setMoreOpen(true)} className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 z-[65] flex -translate-x-1/2 items-center gap-1 rounded-full border border-line bg-surface-raised/95 px-4 py-2 text-ink shadow-[0_8px_30px_rgba(0,0,0,0.18)] backdrop-blur sm:hidden"><CurrentMobileIcon aria-hidden="true" className="text-xl"/><MdExpandLess aria-hidden="true" className="text-lg text-brand"/></button>:null}
       {notificationInvoiceId ? <InvoiceWorkspaceList schoolId={schoolId} invoices={recentInvoices} compact autoOpenId={notificationInvoiceId} hideList onClose={() => setNotificationInvoiceId(null)} /> : null}
     </nav>
   );
