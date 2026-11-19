@@ -718,12 +718,6 @@ summary:focus-visible,
   }
 }
 
-.notification-control > div:not(.notification-trigger) {
-  position: absolute;
-  top: 100%;
-  right: 0;
-}
-
 @media (pointer: coarse) {
   button:not(.lesson-block, .availability-block, .lesson-sheet-backdrop),
   select,
