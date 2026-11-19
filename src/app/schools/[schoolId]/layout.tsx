@@ -64,7 +64,6 @@ export default async function SchoolLayout({ children, params }: { children: Rea
           </span>
           <span className="min-w-0">
             <Link href={`/schools/${schoolId}`} className="block truncate font-display text-2xl hover:text-brand sm:text-4xl">{school.name}</Link>
-            <span className="mt-1 block text-xs text-muted">{school.timezone} · {school.family_billing_mode.replaceAll("_"," ")}</span>
           </span>
         </div>
         <div className="flex shrink-0 items-start gap-3"><AccountMenu avatarUrl={avatarUrl} role={membership.role} /></div>
