@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { OwnerNotifications } from "@/components/notifications/owner-notifications";
 import type { SchoolInvoice } from "@/lib/billing/school-invoices";
-import { MdApproval, MdDashboard, MdExpandLess, MdExpandMore, MdFamilyRestroom, MdGroups, MdManageAccounts, MdReceiptLong, MdSchool, MdSearch, MdSettings } from "react-icons/md";
+import { MdApproval, MdDashboard, MdExpandLess, MdExpandMore, MdFamilyRestroom, MdGroups, MdManageAccounts, MdNotificationsNone, MdReceiptLong, MdSchool, MdSearch, MdSettings } from "react-icons/md";
 import { HeaderLessonFinder } from "@/components/scheduling/header-lesson-finder";
 import type { LessonCreationOptions } from "@/components/scheduling/lesson-creation-dialog";
 import { PrepareInvoiceLauncher, type InvoicePayerChoice } from "@/components/billing/prepare-invoice-launcher";
@@ -131,7 +131,18 @@ export function SchoolManagementNav({ schoolId, timeZone, lessonCreationOptions,
         { label: "Families", href: `${base}/families`, active: pathname.startsWith(`${base}/families`), directory: "families" as const, icon: MdFamilyRestroom },
         ...(can("school.staff.directory_manage") ? [{ label: "Staff", href: `${base}/staff`, active: pathname.startsWith(`${base}/staff`), directory: "staff" as const, icon: MdGroups }] : []),
       ];
-  const currentMobileItem = items.find((item) => item.active) ?? items[0];
+  const secondaryMobileItem = pathname.startsWith(`${base}/invoices`) || pathname.startsWith(`${base}/payments`)
+    ? { label: "Billing", icon: MdReceiptLong }
+    : pathname.startsWith(`${base}/approvals`)
+      ? { label: "Approvals", icon: MdApproval }
+      : pathname.startsWith(`${base}/notifications`) || pathname.startsWith(`${base}/notification-settings`)
+        ? { label: "Notifications", icon: MdNotificationsNone }
+        : pathname.startsWith(`${base}/onboarding`)
+          ? { label: "Setup guide", icon: MdSettings }
+          : pathname !== base && pathname !== `${base}/teacher`
+            ? { label: "School settings", icon: MdSettings }
+            : null;
+  const currentMobileItem = items.find((item) => item.active) ?? secondaryMobileItem ?? items[0];
   const CurrentMobileIcon = currentMobileItem?.icon ?? MdDashboard;
 
   return (
