@@ -74,11 +74,12 @@ export function FocusedModal({
       <div className="pt-5 sm:pt-7">{children}</div>
     </section>
   </div> : null;
+  const portalRoot = typeof document !== "undefined" ? document.querySelector<HTMLElement>("[data-school-theme]") ?? document.body : null;
 
   return <>
     {!hideTrigger ? <button ref={triggerRef} type="button" disabled={disabled} onClick={() => setOpen(true)} className={triggerClassName ?? `border px-5 py-3 text-sm transition disabled:cursor-not-allowed disabled:border-line disabled:bg-transparent disabled:text-muted ${variant === "primary" ? "border-brand bg-brand text-canvas hover:bg-brand-hover" : "border-line bg-transparent text-ink hover:border-brand hover:text-brand"}`}>
       {triggerContent ?? triggerLabel}
     </button> : null}
-    {dialog && typeof document !== "undefined" ? createPortal(dialog, document.body) : null}
+    {dialog && portalRoot ? createPortal(dialog, portalRoot) : null}
   </>;
 }
