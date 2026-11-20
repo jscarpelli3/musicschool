@@ -12,7 +12,6 @@ import { InvoiceList } from "@/components/billing/invoice-list";
 import { loadSchoolInvoiceSummary } from "@/lib/billing/school-invoices";
 import { StudentDirectory } from "@/components/students/student-directory";
 import { SectionHeading } from "@/components/ui/section-heading";
-import { PageHeading } from "@/components/ui/page-heading";
 import { lessonPlaceLabel } from "@/lib/scheduling/lesson-place-label";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { personDisplayName } from "@/lib/people/display-name";
@@ -337,7 +336,6 @@ export async function SchoolWorkspace({ schoolId, view, initialLessonId,previewD
         sections={dashboardSections}
         initialSettings={dashboardLayoutPreference?.settings}
         save={saveDashboardLayout}
-        heading={<PageHeading kind="dashboard" title="Dashboard." description="Your school’s schedule, outstanding work, invoices, and student activity in one place." />}
         dailyBriefing={membership.role==="owner"?{profileId,dateKey:initialDate,dateLabel:todayLabel,lessonNames:todayLessonNames,teacherLessons:todayTeacherLessons,invoiceCount:invoiceSummary.attentionCount,rescheduleCount:entitlements.length,forceOpen:previewDailyBriefing}:undefined}
       />:null}
     </main>
