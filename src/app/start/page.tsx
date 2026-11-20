@@ -5,7 +5,7 @@ import {ParallaxPhoto} from "@/components/marketing/parallax-photo";
 import {ProductTourSlideshow} from "@/components/marketing/product-tour-slideshow";
 
 export const metadata:Metadata={
- title:{absolute:"Music Lesson Scheduling & Billing Software | Common Time"},
+ title:{absolute:"Common Time | Music Lesson Scheduling & Billing"},
  description:"Music lesson scheduling, invoicing, payments, rescheduling, and student management software for independent music teachers and music schools. Start free for seven days.",
  alternates:{canonical:"https://www.commontime.studio"},
  robots:{index:true,follow:true},
@@ -13,10 +13,18 @@ export const metadata:Metadata={
   type:"website",
   url:"https://www.commontime.studio",
   siteName:"Common Time",
-  title:"Music Lesson Scheduling & Billing Software | Common Time",
+  title:"Common Time | Music Lesson Scheduling & Billing",
   description:"Run lesson schedules, families, invoices, payments, and rescheduling from one calm workspace built for music teachers.",
  },
  twitter:{card:"summary_large_image",title:"Common Time for Music Teachers",description:"Music lesson scheduling, billing, payments, and school management in one calm workspace."},
+};
+const structuredData={
+ "@context":"https://schema.org",
+ "@graph":[
+  {"@type":"WebSite","@id":"https://www.commontime.studio/#website",url:"https://www.commontime.studio/",name:"Common Time",alternateName:"Common Time Studio",description:"Music lesson scheduling, billing, payments, and student management software for independent teachers and music schools."},
+  {"@type":"Organization","@id":"https://www.commontime.studio/#organization",name:"Common Time",url:"https://www.commontime.studio/",logo:"https://www.commontime.studio/icon.png"},
+  {"@type":"SoftwareApplication","@id":"https://www.commontime.studio/#software",name:"Common Time",url:"https://www.commontime.studio/",applicationCategory:"BusinessApplication",applicationSubCategory:"Music school management software",operatingSystem:"Web",description:"Scheduling, invoicing, payments, rescheduling, and student management for independent music teachers and music schools.",offers:{"@type":"Offer",price:"10",priceCurrency:"USD",category:"subscription"},publisher:{"@id":"https://www.commontime.studio/#organization"}},
+ ],
 };
 const coming=[
  {title:"The Resource Commons",text:"A friendly school community for sharing teaching PDFs, useful links, studio resources, and practical ideas for running a school.",accent:true,label:"Community"},
@@ -31,6 +39,7 @@ const appUrl="https://app.commontime.studio";
 const trialHref=`${appUrl}/login?next=%2Fsetup%3Ftrial%3D1`;
 
 export default function StartPage(){return <main className="min-h-screen bg-canvas text-ink">
+ <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(structuredData)}}/>
  <section className="relative overflow-hidden border-b border-line/70">
   <ParallaxPhoto src="/images/unsplash/music-ensemble.webp" alt="" sizes="100vw" objectPosition="center 58%" tintClassName="bg-canvas/85"/>
   <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between border-b border-white/20 px-5 py-6 sm:px-8"><CommonTimeLogo light className="-ml-2 w-44 sm:ml-0"/><a href={`${appUrl}/login`} className="text-sm text-white/75 transition hover:text-white">Log in</a></header>
